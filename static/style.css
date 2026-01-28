@@ -683,3 +683,21 @@ body h2 + hr {
   border: 0;
   background: transparent;
 }
+
+
+.site-footer {
+  margin-top: 64px;
+  padding: 24px 16px;
+  border-top: 1px solid #e5e7eb;
+  background: #fafafa;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.site-footer .shell {
+  max-width: 1024px;
+  margin: 0 auto;
+  text-align: center;
+  line-height: 1.6;
+}
+
