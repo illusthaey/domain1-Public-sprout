@@ -1,4 +1,4 @@
-<!--! 2026.1.30.(금) 오전 4:30 기상 -->
+<!-- 2026.1.30.(금) 오전 4:30 기상 -->
 
 <!doctype html>
 <html lang="ko">
@@ -82,16 +82,6 @@ table-wrap에 여유 */
         </div>
       </div>
 
-      <div class="header-actions">
-        <div class="toolbar">
-          <button class="btn ghost" id="btnAddRow" type="button">행 추가하기</button>
-          <button class="btn ghost" id="btnReset" type="button">초기화</button>
-          <button class="btn ghost" id="btnDownloadCsv" type="button">CSV 다운로드</button>
-          <button class="btn ghost" id="btnDownloadExcel" type="button">엑셀 다운로드</button>
-          <button class="btn primary" id="btnCopy" type="button">표 복사하기</button>
-        </div>
-      </div>
-
       <div class="card help-box">
         <div class="small">
           ·기본값: 필요경비율 14.9%, 산재보험요율 0.33%, 기준보수 하한 1,330,000원 적용.<br/>
@@ -161,6 +151,17 @@ table-wrap에 여유 */
         ·고용보험료 산정 시 기준보수 적용 후 보험요율을 곱함. (관련 자료 참고)<br/>
         ·원단위 절삭.
       </p>
+
+      <div class="table-actions">
+        <div class="toolbar">
+          <button class="btn ghost" id="btnAddRow" type="button">행 추가하기</button>
+          <button class="btn ghost" id="btnReset" type="button">초기화</button>
+          <button class="btn primary" id="btnCopy" type="button">표 복사하기</button>          
+          <button class="btn ghost" id="btnDownloadCsv" type="button">CSV 다운로드</button>
+          <button class="btn ghost" id="btnDownloadExcel" type="button">엑셀 다운로드</button>
+        </div>
+      </div>
+      
     </section>
   </main>
 
@@ -237,7 +238,7 @@ table-wrap에 여유 */
       const tr = document.createElement("tr");
 
       tr.innerHTML = `
-        <td><input type="text" placeholder="예: 홍길동" class="row-teacher"/></td>
+        <td><input type="text" placeholder="예: 고천재" class="row-teacher"/></td>
         <td><input type="text" inputmode="numeric" placeholder="예: 1500000" class="row-amount num"/></td>
         <td><input type="number" step="0.1" value="${defaultRate}" class="row-rate num"/></td>
         <td class="num row-expense">0</td>
