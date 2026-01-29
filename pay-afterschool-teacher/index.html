@@ -11,34 +11,32 @@
   <link rel="stylesheet" href="/static/style.css" />
 
   <style>
-    .page-title { margin-bottom: 6px; }
+    .page-title { margin-bottom: 6px; text-align: center; } /* ✅ 제목 가운데 정렬 */
     .help-box { margin-top: 8px; }
-    .table-wrap table { min-width: 1100px; }
+    .table-wrap table { min-width: 1360px; } /* 고용보험 칸 추가로 폭 증가 */
     .sheetlike th { white-space: nowrap; }
     .sheetlike td { vertical-align: middle; }
     .num { text-align: right; }
     .name { min-width: 120px; }
     .rate { width: 110px; }
     .money { width: 160px; }
+    .memo { min-width: 180px; }
+    .idx { width: 60px; text-align: center; }
     .sumrow td { font-weight: 700; background: #fafafa; }
     .small { font-size: 0.95rem; color: #555; }
     .hint { font-size: 0.95rem; color:#666; margin: 8px 0 0; }
-    .badge { display:inline-block; padding:2px 8px; border:1px solid #e5e7eb; border-radius:999px; font-size:0.9rem; color:#555; background:#fff; }
 
+    /* 스크롤바가 설명을 덮지 않도록 */
+    .table-wrap { padding-bottom: 14px; }
 
-    .header-top {
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      align-items: flex-start;
-    }
-    .header-actions {
+    .table-note { margin-top: 10px; }
+
+    /* 표 하단 버튼 영역 */
+    .table-actions {
       margin-top: 12px;
       display: flex;
       justify-content: flex-end;
     }
-
-    /* 버튼 영역 */
     .toolbar {
       display:flex;
       gap:8px;
@@ -48,20 +46,11 @@
     }
     .toolbar .btn { padding: 9px 14px; border-radius: 12px; }
 
-table-wrap에 여유 */
-    .table-wrap {
-      padding-bottom: 14px; 
-    }
+    /* 입력이 많은 칸들은 조금 더 타이트하게 */
+    .sheetlike input { width: 100%; box-sizing: border-box; }
 
-
-    .table-note {
-      margin-top: 10px;
-    }
-
-    /* 모바일/좁은 화면 대응: 버튼은 좌측으로도 자연스럽게 내려옴 */
     @media (max-width: 920px) {
-      .header-top { flex-direction: column; }
-      .header-actions { justify-content: flex-start; }
+      .table-actions { justify-content: flex-start; }
       .toolbar { justify-content: flex-start; }
     }
   </style>
@@ -70,31 +59,26 @@ table-wrap에 여유 */
 <body>
   <header class="site-header">
     <div class="shell">
-
-
-      <div class="header-top">
-        <div>
-          <h2 class="page-title">방과후강사 월보수액 계산기</h2>
-          <div class="small">
+      <div>
+        <h2 class="page-title">방과후강사 월보수액 계산기</h2>
+        <div class="small">
             ·품의금액(강사료) 입력하면 월보수액 및 산재보험료 개인부담금 자동으로 산출해드립니다.<br/>
             ·관련: 강원도교육청 인성생활교육과-15279(2025.7.23.), 고용노동부 고시 제2025-34호 및 제2025-36호
-          </div>
         </div>
       </div>
 
       <div class="card help-box">
         <div class="small">
-          ·기본값: 필요경비율 14.9%, 산재보험요율 0.33%, 기준보수 하한 1,330,000원 적용.<br/>
-          ※ 월보수액이 1,330,000원 미만이면 고용보험료 산정 시 월보수액을 1,330,000원으로 간주함.
+          ·기본값: 필요경비율 14.9%, 산재보험요율(개인) 0.33%, 고용보험요율(개인) 0.8%, 기준보수 하한 1,330,000원 적용.<br/>
+          ※ 월보수액이 800,000원 이상~1,330,000원 미만 구간에 해당하면 고용보험료 산정 시 월보수액을 1,330,000원으로 간주함.
         </div>
       </div>
-
     </div>
   </header>
 
   <main class="container">
     <section class="section">
-      <h3 class="local-h2 local-tight">기본 설정 (변경 가능)</h3>
+      <h3 class="local-h2 local-tight">기준 설정 (변경 가능)</h3>
       <div class="grid three">
         <div class="field">
           <label class="small">필요경비율(%)</label><br/>
@@ -121,12 +105,15 @@ table-wrap에 여유 */
         <table class="sheetlike" id="calcTable">
           <thead>
             <tr>
+              <th class="idx">순번</th>
               <th class="name">강사명</th>
-              <th class="money">강사료 지급금액</th>
+              <th class="money">강사료 지급액</th>
               <th class="rate">필요경비율(%)</th>
               <th class="money">필요경비</th>
               <th class="money">월보수액</th>
               <th class="money">산재보험료(개인)</th>
+              <th class="money">고용보험료(개인)</th>
+              <th class="memo">비고</th>
               <th>행</th>
             </tr>
           </thead>
@@ -134,17 +121,19 @@ table-wrap에 여유 */
           <tfoot>
             <tr class="sumrow">
               <td>합계</td>
+              <td></td>
               <td class="num" id="sumAmount">0</td>
               <td class="num">-</td>
               <td class="num" id="sumExpense">0</td>
               <td class="num" id="sumMonthlyPay">0</td>
               <td class="num" id="sumWcFee">0</td>
+              <td class="num" id="sumEiFee">0</td>
+              <td></td>
               <td></td>
             </tr>
           </tfoot>
         </table>
       </div>
-
 
       <p class="small table-note">
         ·월보수액 =(강사료)-(필요경비)<br/>
@@ -159,14 +148,17 @@ table-wrap에 여유 */
           <button class="btn primary" id="btnCopy" type="button">표 복사하기</button>          
           <button class="btn ghost" id="btnDownloadCsv" type="button">CSV 다운로드</button>
           <button class="btn ghost" id="btnDownloadExcel" type="button">엑셀 다운로드</button>
+
         </div>
       </div>
-      
     </section>
   </main>
 
   <script>
     //계산
+
+    // 고용보험요율(개인) 기본값: 0.8%
+    const EI_PERSONAL_RATE = 0.8 / 100.0;
 
     function toInt(val) {
       if (val === null || val === undefined) return 0;
@@ -175,7 +167,7 @@ table-wrap에 여유 */
       return Number.isFinite(n) ? n : 0;
     }
 
-    //원단위 절삭
+    //원단위 절삭(10원 단위 절삭)
     function cutWon10(n) {
       n = Math.floor(toInt(n));
       if (!Number.isFinite(n) || n <= 0) return 0;
@@ -233,22 +225,35 @@ table-wrap에 여유 */
     const elSumExpense = document.getElementById("sumExpense");
     const elSumMonthlyPay = document.getElementById("sumMonthlyPay");
     const elSumWcFee = document.getElementById("sumWcFee");
+    const elSumEiFee = document.getElementById("sumEiFee");
+
+    function renumberRows() {
+      const rows = [...tbody.querySelectorAll("tr")];
+      rows.forEach((tr, i) => {
+        const cell = tr.querySelector(".row-idx");
+        if (cell) cell.textContent = String(i + 1);
+      });
+    }
 
     function makeRow(defaultRate) {
       const tr = document.createElement("tr");
 
       tr.innerHTML = `
-        <td><input type="text" placeholder="예: 고천재" class="row-teacher"/></td>
+        <td class="idx row-idx">-</td>
+        <td><input type="text" placeholder="예: 홍길동" class="row-teacher"/></td>
         <td><input type="text" inputmode="numeric" placeholder="예: 1500000" class="row-amount num"/></td>
         <td><input type="number" step="0.1" value="${defaultRate}" class="row-rate num"/></td>
         <td class="num row-expense">0</td>
         <td class="num row-monthly">0</td>
         <td class="num row-wcfee">0</td>
+        <td class="num row-eifee">0</td>
+        <td><input type="text" placeholder="예: 과목명/반/메모" class="row-memo"/></td>
         <td><button type="button" class="btn ghost row-del">삭제</button></td>
       `;
 
       tr.querySelector(".row-del").addEventListener("click", () => {
         tr.remove();
+        renumberRows();
         recalcAll();
       });
 
@@ -275,6 +280,7 @@ table-wrap에 여유 */
     function recalcRow(tr) {
       const baseExpenseRate = clampRate(elBaseExpenseRate.value);
       const wcPersonalRate = clampRate(elWcPersonalRate.value) / 100.0;
+      const floorMonthlyPay = cutWon10(elFloorMonthlyPay.value);
 
       const amountStr = tr.querySelector(".row-amount").value;
       const amount = toInt(amountStr);
@@ -289,30 +295,40 @@ table-wrap에 여유 */
       // 산재보험료(개인) = 월보수액 * 개인부담율 (기준보수 하한 미적용)
       const wcFee = cutWon10(Math.floor(monthlyPay * wcPersonalRate));
 
+      // 고용보험료(개인) = (월보수액 기준) * 0.8%
+      // ✅ 기준보수 하한 적용 조건: 월보수액이 800,000원 이상 ~ 1,330,000원 미만이면 1,330,000원으로 간주
+      const eiBase =
+        (monthlyPay >= 800000 && monthlyPay < floorMonthlyPay) ? floorMonthlyPay : monthlyPay;
+      const eiFee = cutWon10(Math.floor(eiBase * EI_PERSONAL_RATE));
+
       tr.querySelector(".row-expense").textContent = fmt(expense);
       tr.querySelector(".row-monthly").textContent = fmt(monthlyPay);
       tr.querySelector(".row-wcfee").textContent = fmt(wcFee);
+      tr.querySelector(".row-eifee").textContent = fmt(eiFee);
     }
 
     function recalcSums() {
-      let sumAmount = 0, sumExpense = 0, sumMonthly = 0, sumWc = 0;
+      let sumAmount = 0, sumExpense = 0, sumMonthly = 0, sumWc = 0, sumEi = 0;
 
       [...tbody.querySelectorAll("tr")].forEach(tr => {
         const amount = toInt(tr.querySelector(".row-amount").value);
         const expense = toInt(tr.querySelector(".row-expense").textContent);
         const monthly = toInt(tr.querySelector(".row-monthly").textContent);
         const wc = toInt(tr.querySelector(".row-wcfee").textContent);
+        const ei = toInt(tr.querySelector(".row-eifee").textContent);
 
         sumAmount += amount;
         sumExpense += expense;
         sumMonthly += monthly;
         sumWc += wc;
+        sumEi += ei;
       });
 
       elSumAmount.textContent = fmt(cutWon10(sumAmount));
       elSumExpense.textContent = fmt(cutWon10(sumExpense));
       elSumMonthlyPay.textContent = fmt(cutWon10(sumMonthly));
       elSumWcFee.textContent = fmt(cutWon10(sumWc));
+      elSumEiFee.textContent = fmt(cutWon10(sumEi));
     }
 
     function recalcAll() {
@@ -323,41 +339,50 @@ table-wrap에 여유 */
     function collectRowsForExport() {
       const rows = [];
       [...tbody.querySelectorAll("tr")].forEach(tr => {
+        const idx = tr.querySelector(".row-idx")?.textContent?.trim() || "";
         const teacher = tr.querySelector(".row-teacher").value.trim();
         const amount = toInt(tr.querySelector(".row-amount").value);
         const rate = tr.querySelector(".row-rate").value;
         const expense = toInt(tr.querySelector(".row-expense").textContent);
         const monthly = toInt(tr.querySelector(".row-monthly").textContent);
         const wc = toInt(tr.querySelector(".row-wcfee").textContent);
+        const ei = toInt(tr.querySelector(".row-eifee").textContent);
+        const memo = tr.querySelector(".row-memo").value.trim();
 
-        if (!teacher && amount === 0) return;
+        if (!teacher && amount === 0 && !memo) return;
 
         rows.push({
+          idx,
           teacher,
           amount,
           rate: (rate === "" ? toInt(elBaseExpenseRate.value) : rate),
           expense,
           monthly,
-          wc
+          wc,
+          ei,
+          memo
         });
       });
       return rows;
     }
 
     function buildCsvText() {
-      const header = ["강사명","품의금액","필요경비율(%)","필요경비","월보수액","산재보험료(개인)"];
+      const header = ["순번","강사명","품의금액","필요경비율(%)","필요경비","월보수액","산재보험료(개인)","고용보험료(개인)","비고"];
       const rows = collectRowsForExport();
 
       const lines = [];
       lines.push(header.map(csvEscape).join(","));
       rows.forEach(r => {
         lines.push([
+          csvEscape(r.idx),
           csvEscape(r.teacher),
           csvEscape(r.amount),
           csvEscape(r.rate),
           csvEscape(r.expense),
           csvEscape(r.monthly),
-          csvEscape(r.wc)
+          csvEscape(r.wc),
+          csvEscape(r.ei),
+          csvEscape(r.memo)
         ].join(","));
       });
 
@@ -366,7 +391,7 @@ table-wrap에 여유 */
 
     function buildExcelHtml() {
       const rows = collectRowsForExport();
-      const header = ["강사명","품의금액","필요경비율(%)","필요경비","월보수액","산재보험료(개인)"];
+      const header = ["순번","강사명","품의금액","필요경비율(%)","필요경비","월보수액","산재보험료(개인)","고용보험료(개인)","비고"];
 
       const escapeHtml = (s) => String(s ?? "")
         .replace(/&/g,"&amp;")
@@ -378,12 +403,15 @@ table-wrap에 여유 */
       const trHeader = `<tr>${header.map(h => `<th>${escapeHtml(h)}</th>`).join("")}</tr>`;
       const trBody = rows.map(r => (
         `<tr>` +
+          `<td style="text-align:center;">${escapeHtml(r.idx)}</td>` +
           `<td>${escapeHtml(r.teacher)}</td>` +
           `<td style="mso-number-format:'0'; text-align:right;">${escapeHtml(r.amount)}</td>` +
           `<td style="text-align:right;">${escapeHtml(r.rate)}</td>` +
           `<td style="mso-number-format:'0'; text-align:right;">${escapeHtml(r.expense)}</td>` +
           `<td style="mso-number-format:'0'; text-align:right;">${escapeHtml(r.monthly)}</td>` +
           `<td style="mso-number-format:'0'; text-align:right;">${escapeHtml(r.wc)}</td>` +
+          `<td style="mso-number-format:'0'; text-align:right;">${escapeHtml(r.ei)}</td>` +
+          `<td>${escapeHtml(r.memo)}</td>` +
         `</tr>`
       )).join("");
 
@@ -423,6 +451,7 @@ table-wrap에 여유 */
       for (let i = 0; i < n; i++) {
         tbody.appendChild(makeRow(defaultRate));
       }
+      renumberRows();
       recalcAll();
     }
 
@@ -433,6 +462,7 @@ table-wrap에 여유 */
     document.getElementById("btnAddRow").addEventListener("click", () => {
       const defaultRate = clampRate(elBaseExpenseRate.value || 14.9);
       tbody.appendChild(makeRow(defaultRate));
+      renumberRows();
       recalcAll();
     });
 
@@ -457,32 +487,18 @@ table-wrap에 여유 */
 
     document.getElementById("btnCopy").addEventListener("click", async () => {
       const lines = [];
-      lines.push(["강사명","품의금액","필요경비율(%)","필요경비","월보수액","산재보험료(개인)"].join("\t"));
+      lines.push(["순번","강사명","품의금액","필요경비율(%)","필요경비","월보수액","산재보험료(개인)","고용보험료(개인)","비고"].join("\t"));
 
-      [...tbody.querySelectorAll("tr")].forEach(tr => {
-        const teacher = tr.querySelector(".row-teacher").value.trim();
-        const amount = toInt(tr.querySelector(".row-amount").value);
-        const rate = tr.querySelector(".row-rate").value;
-        const expense = toInt(tr.querySelector(".row-expense").textContent);
-        const monthly = toInt(tr.querySelector(".row-monthly").textContent);
-        const wc = toInt(tr.querySelector(".row-wcfee").textContent);
-
-        if (!teacher && amount === 0) return;
-
+      collectRowsForExport().forEach(r => {
         lines.push([
-          teacher,
-          amount,
-          rate === "" ? toInt(elBaseExpenseRate.value) : rate,
-          expense,
-          monthly,
-          wc
+          r.idx, r.teacher, r.amount, r.rate, r.expense, r.monthly, r.wc, r.ei, r.memo
         ].join("\t"));
       });
 
       const text = lines.join("\n");
       try {
         await navigator.clipboard.writeText(text);
-        alert("복사 완료 (엑셀에 붙여넣기 가능).");
+        alert("복사 완료.");
       } catch (e) {
         const ta = document.createElement("textarea");
         ta.value = text;
