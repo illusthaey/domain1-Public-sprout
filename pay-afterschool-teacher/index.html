@@ -104,7 +104,7 @@
 
       <p class="small table-note">
         ·월보수액 =(강사료)-(필요경비)<br/>
-        ·고용보험료 산정 시 기준보수 적용 후 보험요율을 곱함. (관련 자료 참고)<br/>
+        ·고용보험료는 예상값이며, 다른 학교 신고 내역에 따라 변동가능성 있음. 기관부담금 어느정도 나올지 예상하려고 기능 넣음.<br/>
         ·원단위 절삭.
       </p>
 
@@ -119,7 +119,7 @@
               <th class="money">필요경비</th>
               <th class="money">월보수액</th>
               <th class="money">산재보험료(개인)</th>
-              <th class="money">고용보험료(개인)</th>
+              <th class="money">고용보험료(개인, 예상값)</th>
               <th class="memo">비고</th>
               <th>행</th>
             </tr>
@@ -168,7 +168,7 @@
       return Number.isFinite(n) ? n : 0;
     }
 
-    //원단위 절삭(10원 단위 절삭)
+    //원단위 절삭
     function cutWon10(n) {
       n = Math.floor(toInt(n));
       if (!Number.isFinite(n) || n <= 0) return 0;
