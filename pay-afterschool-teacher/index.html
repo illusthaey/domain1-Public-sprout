@@ -1,0 +1,508 @@
+<!--! 2026.1.30.(금) 오전 4:30 기상 -->
+
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <title>방과후강사 월보수액 계산기</title>
+
+  <link rel="stylesheet" href="/static/style.css" />
+
+  <style>
+    .page-title { margin-bottom: 6px; }
+    .help-box { margin-top: 8px; }
+    .table-wrap table { min-width: 1100px; }
+    .sheetlike th { white-space: nowrap; }
+    .sheetlike td { vertical-align: middle; }
+    .num { text-align: right; }
+    .name { min-width: 120px; }
+    .rate { width: 110px; }
+    .money { width: 160px; }
+    .sumrow td { font-weight: 700; background: #fafafa; }
+    .small { font-size: 0.95rem; color: #555; }
+    .hint { font-size: 0.95rem; color:#666; margin: 8px 0 0; }
+    .badge { display:inline-block; padding:2px 8px; border:1px solid #e5e7eb; border-radius:999px; font-size:0.9rem; color:#555; background:#fff; }
+
+    /* ====== 레이아웃 수정 핵심 ====== */
+
+    /* 1) 헤더 상단: 제목/설명만 두고, 버튼은 아래로 내림 */
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .header-actions {
+      margin-top: 12px;            /* 제목/설명 아래로 내려오게 */
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    /* 버튼 영역 */
+    .toolbar {
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content: flex-end;
+    }
+    .toolbar .btn { padding: 9px 14px; border-radius: 12px; }
+
+    /* 2) 표 가로 스크롤바가 설명 문구를 덮지 않도록 table-wrap에 여유 */
+    .table-wrap {
+      padding-bottom: 14px; /* 스크롤바 영역만큼 여유(브라우저별 여유 조금 더) */
+    }
+
+    /* 3) 표 하단 설명은 가로스크롤 컨테이너 밖에서 안정적으로 표시 */
+    .table-note {
+      margin-top: 10px;
+    }
+
+    /* 모바일/좁은 화면 대응: 버튼은 좌측으로도 자연스럽게 내려옴 */
+    @media (max-width: 920px) {
+      .header-top { flex-direction: column; }
+      .header-actions { justify-content: flex-start; }
+      .toolbar { justify-content: flex-start; }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="shell">
+
+      <!-- 상단: 제목/설명만 -->
+      <div class="header-top">
+        <div>
+          <div class="badge">킹갓천재 고주무관</div>
+          <h2 class="page-title">방과후강사 월보수액 계산기</h2>
+          <div class="small">
+            ·품의금액(강사료) 입력하면 월보수액 및 산재보험료 개인부담금 자동으로 산출해드립니다.<br/>
+            ·관련: 강원도교육청 인성생활교육과-15279(2025.7.23.), 고용노동부 고시 제2025-34호 및 제2025-36호
+          </div>
+        </div>
+      </div>
+
+      <!-- 버튼: 제목/설명 아래로 내려서 우측 정렬 -->
+      <div class="header-actions">
+        <div class="toolbar">
+          <button class="btn ghost" id="btnAddRow" type="button">행 추가하기</button>
+          <button class="btn ghost" id="btnReset" type="button">초기화</button>
+          <button class="btn ghost" id="btnDownloadCsv" type="button">CSV 다운로드</button>
+          <button class="btn ghost" id="btnDownloadExcel" type="button">엑셀 다운로드</button>
+          <button class="btn primary" id="btnCopy" type="button">표 복사하기</button>
+        </div>
+      </div>
+
+      <div class="card help-box">
+        <div class="small">
+          ·기본값: 필요경비율 14.9%, 산재보험요율 0.33%, 기준보수 하한 1,330,000원 적용.<br/>
+          ※ 월보수액이 1,330,000원 미만이면 고용보험료 산정 시 월보수액을 1,330,000원으로 간주함.
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="section">
+      <h3 class="local-h2 local-tight">기준 설정 (변경 가능)</h3>
+      <div class="grid three">
+        <div class="field">
+          <label class="small">필요경비율(%)</label><br/>
+          <input id="baseExpenseRate" type="number" step="0.1" value="14.9" />
+        </div>
+        <div class="field">
+          <label class="small">산재보험료율(개인부담금)</label><br/>
+          <input id="wcPersonalRate" type="number" step="0.01" value="0.33" />
+        </div>
+        <div class="field">
+          <label class="small">기준보수 하한값</label><br/>
+          <input id="floorMonthlyPay" type="number" step="10" value="1330000" />
+        </div>
+      </div>
+      <p class="hint">
+        ·필요경비율 기본값을 14.9%로 설정 해둠. (개발 시기: 2026.1월)<br/>
+        ·수기 입력 가능합니다.
+      </p>
+    </section>
+
+    <section class="section">
+      <h3 class="local-h2 local-tight">월보수액 산출 내역</h3>
+
+      <div class="table-wrap">
+        <table class="sheetlike" id="calcTable">
+          <thead>
+            <tr>
+              <th class="name">강사명</th>
+              <th class="money">품의금액(강사료 지급금액)</th>
+              <th class="rate">필요경비율(%)</th>
+              <th class="money">필요경비</th>
+              <th class="money">월보수액</th>
+              <th class="money">산재보험료(개인부담금)</th>
+              <th>행</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+          <tfoot>
+            <tr class="sumrow">
+              <td>합계</td>
+              <td class="num" id="sumAmount">0</td>
+              <td class="num">-</td>
+              <td class="num" id="sumExpense">0</td>
+              <td class="num" id="sumMonthlyPay">0</td>
+              <td class="num" id="sumWcFee">0</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <!-- 표 하단 설명: table-wrap(스크롤 컨테이너) 밖에서 표시 -->
+      <p class="small table-note">
+        ·월보수액 =(품의금액)-(필요경비)<br/>
+        ·고용보험료 산정 시 기준보수 적용 후 보험요율을 곱함. (관련 자료 참고)<br/>
+        · 원단위 절삭함.
+      </p>
+    </section>
+  </main>
+
+  <script>
+    //계산
+
+    function toInt(val) {
+      if (val === null || val === undefined) return 0;
+      const s = String(val).replace(/[^\d.-]/g, "");
+      const n = Number(s);
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    //원단위 절삭
+    function cutWon10(n) {
+      n = Math.floor(toInt(n));
+      if (!Number.isFinite(n) || n <= 0) return 0;
+      return Math.floor(n / 10) * 10;
+    }
+
+    //천원 단위로 쉼표 넣기
+    function fmt(n) {
+      n = toInt(n);
+      return n.toLocaleString("ko-KR");
+    }
+
+    function clampRate(r) {
+      r = Number(r);
+      if (!Number.isFinite(r)) return 0;
+      if (r < 0) return 0;
+      if (r > 100) return 100;
+      return r;
+    }
+
+    function pad2(n) {
+      return String(n).padStart(2, "0");
+    }
+
+    function ymd() {
+      const d = new Date();
+      return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+    }
+
+    function downloadBlob(filename, mime, content) {
+      const blob = new Blob([content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function csvEscape(v) {
+      const s = String(v ?? "");
+      if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    }
+
+    const tbody = document.getElementById("tbody");
+
+    const elBaseExpenseRate = document.getElementById("baseExpenseRate");
+    const elWcPersonalRate = document.getElementById("wcPersonalRate");
+    const elFloorMonthlyPay = document.getElementById("floorMonthlyPay");
+
+    const elSumAmount = document.getElementById("sumAmount");
+    const elSumExpense = document.getElementById("sumExpense");
+    const elSumMonthlyPay = document.getElementById("sumMonthlyPay");
+    const elSumWcFee = document.getElementById("sumWcFee");
+
+    function makeRow(defaultRate) {
+      const tr = document.createElement("tr");
+
+      tr.innerHTML = `
+        <td><input type="text" placeholder="예: 홍길동" class="row-teacher"/></td>
+        <td><input type="text" inputmode="numeric" placeholder="예: 1500000" class="row-amount num"/></td>
+        <td><input type="number" step="0.1" value="${defaultRate}" class="row-rate num"/></td>
+        <td class="num row-expense">0</td>
+        <td class="num row-monthly">0</td>
+        <td class="num row-wcfee">0</td>
+        <td><button type="button" class="btn ghost row-del">삭제</button></td>
+      `;
+
+      tr.querySelector(".row-del").addEventListener("click", () => {
+        tr.remove();
+        recalcAll();
+      });
+
+      const amountInput = tr.querySelector(".row-amount");
+      const rateInput = tr.querySelector(".row-rate");
+
+      function normalizeMoneyInput(e) {
+        const raw = e.target.value;
+        const cleaned = raw.replace(/[^\d]/g, "");
+        e.target.value = cleaned ? fmt(Number(cleaned)) : "";
+        recalcRow(tr);
+        recalcSums();
+      }
+
+      amountInput.addEventListener("input", normalizeMoneyInput);
+      rateInput.addEventListener("input", () => {
+        recalcRow(tr);
+        recalcSums();
+      });
+
+      return tr;
+    }
+
+    function recalcRow(tr) {
+      const baseExpenseRate = clampRate(elBaseExpenseRate.value);
+      const wcPersonalRate = clampRate(elWcPersonalRate.value) / 100.0;
+
+      const amountStr = tr.querySelector(".row-amount").value;
+      const amount = toInt(amountStr);
+      const rowRateVal = tr.querySelector(".row-rate").value;
+      const rate = rowRateVal === "" ? baseExpenseRate : clampRate(rowRateVal);
+
+      const expenseRaw = amount * (rate / 100.0);
+      const expense = cutWon10(expenseRaw);
+
+      const monthlyPay = cutWon10(Math.max(amount - expense, 0));
+
+      // 산재보험료(개인) = 월보수액 * 개인부담율 (기준보수 하한 미적용)
+      const wcFee = cutWon10(Math.floor(monthlyPay * wcPersonalRate));
+
+      tr.querySelector(".row-expense").textContent = fmt(expense);
+      tr.querySelector(".row-monthly").textContent = fmt(monthlyPay);
+      tr.querySelector(".row-wcfee").textContent = fmt(wcFee);
+    }
+
+    function recalcSums() {
+      let sumAmount = 0, sumExpense = 0, sumMonthly = 0, sumWc = 0;
+
+      [...tbody.querySelectorAll("tr")].forEach(tr => {
+        const amount = toInt(tr.querySelector(".row-amount").value);
+        const expense = toInt(tr.querySelector(".row-expense").textContent);
+        const monthly = toInt(tr.querySelector(".row-monthly").textContent);
+        const wc = toInt(tr.querySelector(".row-wcfee").textContent);
+
+        sumAmount += amount;
+        sumExpense += expense;
+        sumMonthly += monthly;
+        sumWc += wc;
+      });
+
+      elSumAmount.textContent = fmt(cutWon10(sumAmount));
+      elSumExpense.textContent = fmt(cutWon10(sumExpense));
+      elSumMonthlyPay.textContent = fmt(cutWon10(sumMonthly));
+      elSumWcFee.textContent = fmt(cutWon10(sumWc));
+    }
+
+    function recalcAll() {
+      [...tbody.querySelectorAll("tr")].forEach(tr => recalcRow(tr));
+      recalcSums();
+    }
+
+    function collectRowsForExport() {
+      const rows = [];
+      [...tbody.querySelectorAll("tr")].forEach(tr => {
+        const teacher = tr.querySelector(".row-teacher").value.trim();
+        const amount = toInt(tr.querySelector(".row-amount").value);
+        const rate = tr.querySelector(".row-rate").value;
+        const expense = toInt(tr.querySelector(".row-expense").textContent);
+        const monthly = toInt(tr.querySelector(".row-monthly").textContent);
+        const wc = toInt(tr.querySelector(".row-wcfee").textContent);
+
+        if (!teacher && amount === 0) return;
+
+        rows.push({
+          teacher,
+          amount,
+          rate: (rate === "" ? toInt(elBaseExpenseRate.value) : rate),
+          expense,
+          monthly,
+          wc
+        });
+      });
+      return rows;
+    }
+
+    function buildCsvText() {
+      const header = ["강사명","품의금액","필요경비율(%)","필요경비","월보수액","산재보험료(개인)"];
+      const rows = collectRowsForExport();
+
+      const lines = [];
+      lines.push(header.map(csvEscape).join(","));
+      rows.forEach(r => {
+        lines.push([
+          csvEscape(r.teacher),
+          csvEscape(r.amount),
+          csvEscape(r.rate),
+          csvEscape(r.expense),
+          csvEscape(r.monthly),
+          csvEscape(r.wc)
+        ].join(","));
+      });
+
+      return "\uFEFF" + lines.join("\r\n");
+    }
+
+    function buildExcelHtml() {
+      const rows = collectRowsForExport();
+      const header = ["강사명","품의금액","필요경비율(%)","필요경비","월보수액","산재보험료(개인)"];
+
+      const escapeHtml = (s) => String(s ?? "")
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#39;");
+
+      const trHeader = `<tr>${header.map(h => `<th>${escapeHtml(h)}</th>`).join("")}</tr>`;
+      const trBody = rows.map(r => (
+        `<tr>` +
+          `<td>${escapeHtml(r.teacher)}</td>` +
+          `<td style="mso-number-format:'0'; text-align:right;">${escapeHtml(r.amount)}</td>` +
+          `<td style="text-align:right;">${escapeHtml(r.rate)}</td>` +
+          `<td style="mso-number-format:'0'; text-align:right;">${escapeHtml(r.expense)}</td>` +
+          `<td style="mso-number-format:'0'; text-align:right;">${escapeHtml(r.monthly)}</td>` +
+          `<td style="mso-number-format:'0'; text-align:right;">${escapeHtml(r.wc)}</td>` +
+        `</tr>`
+      )).join("");
+
+      return `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office"
+              xmlns:x="urn:schemas-microsoft-com:office:excel"
+              xmlns="http://www.w3.org/TR/REC-html40">
+          <head>
+            <meta charset="utf-8" />
+            <!--[if gte mso 9]>
+              <xml>
+                <x:ExcelWorkbook>
+                  <x:ExcelWorksheets>
+                    <x:ExcelWorksheet>
+                      <x:Name>월보수액</x:Name>
+                      <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+                    </x:ExcelWorksheet>
+                  </x:ExcelWorksheets>
+                </x:ExcelWorkbook>
+              </xml>
+            <![endif]-->
+          </head>
+          <body>
+            <table border="1">
+              ${trHeader}
+              ${trBody}
+            </table>
+          </body>
+        </html>
+      `.trim();
+    }
+
+    function initRows(n = 10) {
+      tbody.innerHTML = "";
+      const defaultRate = clampRate(elBaseExpenseRate.value || 14.9);
+
+      for (let i = 0; i < n; i++) {
+        tbody.appendChild(makeRow(defaultRate));
+      }
+      recalcAll();
+    }
+
+    [elBaseExpenseRate, elWcPersonalRate, elFloorMonthlyPay].forEach(el => {
+      el.addEventListener("input", () => recalcAll());
+    });
+
+    document.getElementById("btnAddRow").addEventListener("click", () => {
+      const defaultRate = clampRate(elBaseExpenseRate.value || 14.9);
+      tbody.appendChild(makeRow(defaultRate));
+      recalcAll();
+    });
+
+    document.getElementById("btnReset").addEventListener("click", () => {
+      elBaseExpenseRate.value = "14.9";
+      elWcPersonalRate.value = "0.33";
+      elFloorMonthlyPay.value = "1330000";
+      initRows(10);
+    });
+
+    document.getElementById("btnDownloadCsv").addEventListener("click", () => {
+      const csv = buildCsvText();
+      const filename = `방과후강사_월보수액_${ymd()}.csv`;
+      downloadBlob(filename, "text/csv;charset=utf-8", csv);
+    });
+
+    document.getElementById("btnDownloadExcel").addEventListener("click", () => {
+      const html = buildExcelHtml();
+      const filename = `방과후강사_월보수액_${ymd()}.xls`;
+      downloadBlob(filename, "application/vnd.ms-excel;charset=utf-8", html);
+    });
+
+    document.getElementById("btnCopy").addEventListener("click", async () => {
+      const lines = [];
+      lines.push(["강사명","품의금액","필요경비율(%)","필요경비","월보수액","산재보험료(개인)"].join("\t"));
+
+      [...tbody.querySelectorAll("tr")].forEach(tr => {
+        const teacher = tr.querySelector(".row-teacher").value.trim();
+        const amount = toInt(tr.querySelector(".row-amount").value);
+        const rate = tr.querySelector(".row-rate").value;
+        const expense = toInt(tr.querySelector(".row-expense").textContent);
+        const monthly = toInt(tr.querySelector(".row-monthly").textContent);
+        const wc = toInt(tr.querySelector(".row-wcfee").textContent);
+
+        if (!teacher && amount === 0) return;
+
+        lines.push([
+          teacher,
+          amount,
+          rate === "" ? toInt(elBaseExpenseRate.value) : rate,
+          expense,
+          monthly,
+          wc
+        ].join("\t"));
+      });
+
+      const text = lines.join("\n");
+      try {
+        await navigator.clipboard.writeText(text);
+        alert("복사 완료 (엑셀에 붙여넣기 가능).");
+      } catch (e) {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        ta.remove();
+        alert("복사 완료. 고주무관 천재");
+      }
+    });
+
+    initRows(10);
+  </script>
+
+  <script src="/static/disable-copy.js"></script>
+  <script src="/static/footer.js"></script>
+  <script src="/static/global-loader.js?v=1"></script>
+</body>
+</html>
