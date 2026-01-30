@@ -499,7 +499,7 @@
       const text = lines.join("\n");
       try {
         await navigator.clipboard.writeText(text);
-        alert("복사 완료 (엑셀에 붙여넣기 가능).");
+        alert("복사 완료.");
       } catch (e) {
         const ta = document.createElement("textarea");
         ta.value = text;
