@@ -1,4 +1,3 @@
-<!-- 2026.1.30.(금) 오전 4:30 기상 -->
 
 <!doctype html>
 <html lang="ko">
@@ -11,7 +10,7 @@
   <link rel="stylesheet" href="/static/style.css" />
 
   <style>
-    .page-title { margin-bottom: 6px; text-align: center; } /* ✅ 제목 가운데 정렬 */
+    .page-title { margin-bottom: 6px; text-align: center; }
     .help-box { margin-top: 8px; }
     .table-wrap table { min-width: 1360px; } /* 고용보험 칸 추가로 폭 증가 */
     .sheetlike th { white-space: nowrap; }
@@ -70,7 +69,7 @@
         <div class="small">
           ·관련: 강원도교육청 인성생활교육과-15279(2025.7.23.), 고용노동부 고시 제2025-34호 및 제2025-36호<br/>
           ·기본값: 필요경비율 14.9%, 산재보험요율(개인) 0.33%, 고용보험요율(개인) 0.8%, 기준보수 하한 1,330,000원 적용.<br/>
-          ※ 월보수액이 80만원 이상~1,33만원 미만 구간에 해당하면 고용보험료 산정 시 월보수액을 1,330,000원으로 간주함.
+          ※ 월보수액이 80만원 이상~133만원 미만 구간에 해당하면 고용보험료 산정 시 월보수액을 1,330,000원으로 간주함.
         </div>
       </div>
     </div>
@@ -513,6 +512,50 @@
 
     initRows(10);
   </script>
+
+
+   <section class="section dl-section">
+    <h2 class="local-h2">프로그램 다운로드하기</h2>
+    <hr/>
+
+    <div class="tool-grid">
+
+      <article class="tool-card">
+        <header class="tool-head">
+          <h3 class="tool-title">[사회보험료] 방과후강사 월보수액 계산기</h3>
+        </header>
+
+        <a class="btn primary tool-btn" id="downloadafterschoolpay" href="#" download>
+          [사회보험료] 방과후강사 월보수액 계산기
+        </a>
+
+        <div class="tool-body">
+          <ul class="tool-list">
+            ·웹페이지 기능과 동일한 구성의 프로그램입니다.<br/>
+            ·입력한 내용대로 엑셀파일 생성함.<br/>
+          </ul>
+
+          <details class="shot-details">
+            <summary class="shot-summary">프로그램 실행 화면 보기</summary>
+            <figure class="tool-shot">
+              <img src="/static/program_afterschool_teacher_01.jpg" alt="프로그램 실행 화면" class="tool-thumb" loading="lazy" /><br/>
+              <img src="/static/program_afterschool_teacher_02.jpg" alt="생성된 엑셀파일 예시 화면 " class="tool-thumb" loading="lazy" /><br/>
+            </figure>
+          </details>
+        </div>
+      </article>
+    </div>
+
+    <script>
+      const afterschoolpay_URL =
+        "https://github.com/comicshaey/FILErealease/releases/download/exe-to-excel/v.260130_1.exe";
+
+      window.addEventListener("DOMContentLoaded", () => {
+        const afterschoolpay = document.getElementById("downloadafterschoolpay");
+        if (afterschoolpay) afterschoolpay.href = afterschoolpay_URL;
+      });
+    </script>
+  </section>
 
   <script src="/static/disable-copy.js"></script>
   <script src="/static/footer.js"></script>
