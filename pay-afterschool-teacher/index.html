@@ -1,7 +1,7 @@
-
 <!doctype html>
 <html lang="ko">
 <head>
+
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light" />
@@ -52,6 +52,10 @@
       .table-actions { justify-content: flex-start; }
       .toolbar { justify-content: flex-start; }
     }
+
+    /* ✅ <li> 없이 tool-list를 쓰기 위한 보강 스타일 */
+    .tool-list { margin: 10px 0 0; padding: 0; }
+    .tool-list .tool-line { margin: 0 0 6px; }
   </style>
 </head>
 
@@ -69,7 +73,7 @@
         <div class="small">
           ·관련: 강원도교육청 인성생활교육과-15279(2025.7.23.), 고용노동부 고시 제2025-34호 및 제2025-36호<br/>
           ·기본값: 필요경비율 14.9%, 산재보험요율(개인) 0.33%, 고용보험요율(개인) 0.8%, 기준보수 하한 1,330,000원 적용.<br/>
-          ※ 월보수액이 80만원 이상~133만원 미만 구간에 해당하면 고용보험료 산정 시 월보수액을 1,330,000원으로 간주함.
+          ※ 월보수액이 80만원 이상~1,33만원 미만 구간에 해당하면 고용보험료 산정 시 월보수액을 1,330,000원으로 간주함.
         </div>
       </div>
     </div>
@@ -145,11 +149,43 @@
         <div class="toolbar">
           <button class="btn ghost" id="btnAddRow" type="button">행 추가하기</button>
           <button class="btn ghost" id="btnReset" type="button">초기화</button>
-          <button class="btn primary" id="btnCopy" type="button">표 복사하기</button>          
+          <button class="btn primary" id="btnCopy" type="button">표 복사하기</button>
           <button class="btn ghost" id="btnDownloadCsv" type="button">CSV 다운로드</button>
           <button class="btn ghost" id="btnDownloadExcel" type="button">엑셀 다운로드</button>
-
         </div>
+      </div>
+    </section>
+
+
+    <section class="section dl-section">
+      <h2 class="local-h2">프로그램 다운로드하기</h2>
+      <hr/>
+
+      <div class="tool-grid">
+        <article class="tool-card">
+          <header class="tool-head">
+            <h3 class="tool-title">[사회보험료] 방과후강사 월보수액 계산기</h3>
+          </header>
+
+          <div class="tool-body">
+            <div class="tool-list">
+              <div class="tool-line">·웹페이지 기능과 동일한 구성의 프로그램입니다.</div>
+              <div class="tool-line">·입력한 내용대로 엑셀파일 생성함.</div>
+            </div>
+
+            <details class="shot-details">
+              <summary class="shot-summary">프로그램 실행 화면 보기</summary>
+              <figure class="tool-shot">
+                <img src="/static/program_afterschool_teacher_01.jpg" alt="프로그램 실행 화면" class="tool-thumb" loading="lazy" /><br/>
+                <img src="/static/program_afterschool_teacher_02.jpg" alt="생성된 엑셀파일 예시 화면 " class="tool-thumb" loading="lazy" /><br/>
+              </figure>
+            </details>
+          </div>
+
+          <a class="btn primary tool-btn" id="downloadafterschoolpay" href="#" download>
+            [사회보험료] 방과후강사 월보수액 계산기
+          </a>
+        </article>
       </div>
     </section>
   </main>
@@ -511,51 +547,13 @@
     });
 
     initRows(10);
+
+    const afterschoolpay_URL =
+      "https://github.com/comicshaey/FILErealease/releases/download/exe-to-excel/v.260130_1.exe";
+
+    const afterschoolpay = document.getElementById("downloadafterschoolpay");
+    if (afterschoolpay) afterschoolpay.href = afterschoolpay_URL;
   </script>
-
-
-   <section class="section dl-section">
-    <h2 class="local-h2">프로그램 다운로드하기</h2>
-    <hr/>
-
-    <div class="tool-grid">
-
-      <article class="tool-card">
-        <header class="tool-head">
-          <h3 class="tool-title">[사회보험료] 방과후강사 월보수액 계산기</h3>
-        </header>
-
-        <a class="btn primary tool-btn" id="downloadafterschoolpay" href="#" download>
-          [사회보험료] 방과후강사 월보수액 계산기
-        </a>
-
-        <div class="tool-body">
-          <ul class="tool-list">
-            ·웹페이지 기능과 동일한 구성의 프로그램입니다.<br/>
-            ·입력한 내용대로 엑셀파일 생성함.<br/>
-          </ul>
-
-          <details class="shot-details">
-            <summary class="shot-summary">프로그램 실행 화면 보기</summary>
-            <figure class="tool-shot">
-              <img src="/static/program_afterschool_teacher_01.jpg" alt="프로그램 실행 화면" class="tool-thumb" loading="lazy" /><br/>
-              <img src="/static/program_afterschool_teacher_02.jpg" alt="생성된 엑셀파일 예시 화면 " class="tool-thumb" loading="lazy" /><br/>
-            </figure>
-          </details>
-        </div>
-      </article>
-    </div>
-
-    <script>
-      const afterschoolpay_URL =
-        "https://github.com/comicshaey/FILErealease/releases/download/exe-to-excel/v.260130_1.exe";
-
-      window.addEventListener("DOMContentLoaded", () => {
-        const afterschoolpay = document.getElementById("downloadafterschoolpay");
-        if (afterschoolpay) afterschoolpay.href = afterschoolpay_URL;
-      });
-    </script>
-  </section>
 
   <script src="/static/disable-copy.js"></script>
   <script src="/static/footer.js"></script>
