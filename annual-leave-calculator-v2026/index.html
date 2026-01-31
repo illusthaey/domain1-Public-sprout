@@ -9,7 +9,6 @@
   
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 
-  <!-- 공통 CSS에 없는 앱 전용 최소 스타일만 추가 -->
   <style>
     .msg { border:1px solid #e5e5e5; border-radius:12px; padding:10px 12px; background:#fafafa; }
     .msg.ok { border-color:#b7eb8f; background:#f6ffed; }
@@ -36,8 +35,9 @@
     .danger-line { border-left: 4px solid #ff4d4f; padding-left: 10px; }
     .warn-line { border-left: 4px solid #faad14; padding-left: 10px; }
 
-    /* select 폭: 공통 CSS에 field select rule이 있지만, 여기선 표 내부 select도 안정화 */
     table select { min-width: 140px; }
+
+    .site-header .shell, .site-header h1, .site-header .subtitle { text-align:left !important; }
   </style>
 </head>
 
@@ -312,7 +312,6 @@
         <div class="row gap" style="margin-top:12px;">
           <button class="btn primary" id="btnRun">계산 실행하기</button>
           <button class="btn" id="btnDownload">계산 결과 엑셀 저장</button>
-          <button class="btn ghost" 
         </div>
 
         <div id="runMsg" class="msg" style="margin-top:12px;"></div>
@@ -352,21 +351,9 @@
   </main>
 
 <script>
-/** =========================================================
- *  2026학년도 연차 계산기 (단일 HTML / JS-only)
- *  - 기준기간: 2025-03-01 ~ 2026-02-28
- *  - 부여기준일: 2026-03-01
- *  - 토요일 제외(분모), 방학(학기 분모에서 제외)
- *  - 비상시: 출근율 3종
- *  - 입력: 인사/근무상황 각 "파일 or 수기" 선택
- *  ========================================================= */
-
 (() => {
   "use strict";
 
-  /** ---------------------------
-   *  고정 상수(일회성: 2026학년도 전용)
-   *  --------------------------- */
   const PERIOD_START = ymdToUTC("2025-03-01");
   const PERIOD_END   = ymdToUTC("2026-02-28"); // inclusive
   const GRANT_DATE   = ymdToUTC("2026-03-01");
@@ -381,38 +368,28 @@
     auto: "자동"
   };
 
-  // 2026학년도 전용 자동 분류 룰(필요 시 여기만 수정하면 됨)
-  // - 실제 NAIS 종별/사유 표기가 학교/교육청마다 다를 수 있으므로 "키워드 포함" 방식으로 보수적으로 구현
   const RULES_2026 = {
-    // 산정제외(분모·분자 제외) 키워드
     excludedKeywords: [
       "질병휴직", "가족돌봄휴직", "노조전임", "유학휴직", "행방불명",
       "파업", "쟁의", "휴업", "사용자귀책"
     ],
-    // 결근성(출근율↓ / 개근월수 제외) 키워드
     absenceKeywords: [
       "결근", "무단", "연차초과", "미승인", "무급결근"
     ],
-    // 출근간주(분자 포함) 키워드
     deemedKeywords: [
       "연가", "연차", "공가", "특별휴가", "경조", "유급병가", "병가",
       "산재", "요양", "출산", "유산", "사산", "배우자출산",
       "예비군", "민방위", "동원", "공민권", "보상휴가", "휴일대체",
       "가족돌봄휴가", "생리휴가", "난임", "임신기", "육아기"
     ],
-    // 방학근무크레딧 추정 키워드(방학 기간과 겹치면 분자에 더해줌)
     creditKeywords: [
       "방학", "급식실", "청소", "우선채용", "산업안전", "직무연수", "연수", "교육"
     ],
-    // 검토 필요 키워드(애매하거나 학교별 처리차 큰 유형)
     reviewKeywords: [
       "재량휴업", "개교기념", "단축", "외근", "출장", "조합", "노조", "대체"
     ]
   };
 
-  /** ---------------------------
-   *  상태(State)
-   *  --------------------------- */
   const state = {
     calendar: {
       summerStart: null,
@@ -420,17 +397,14 @@
       winterStart: null,
       winterEnd: null,
       applied: false,
-      sets: null, // {fullSet, semesterSet, vacationSet, counts...}
+      sets: null,
     },
-    workers: new Map(), // key -> worker
-    records: [], // {id, workerKey, start, end, type, reason, minutes, autoClass, finalClass, credit}
-    results: [], // 계산 결과
+    workers: new Map(),
+    records: [],
+    results: [],
     lastRunAt: null,
   };
 
-  /** ---------------------------
-   *  DOM Helpers
-   *  --------------------------- */
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
@@ -448,11 +422,7 @@
       .replaceAll("'", "&#039;");
   }
 
-  /** ---------------------------
-   *  Date Utilities (UTC 기반)
-   *  --------------------------- */
   function ymdToUTC(ymd) {
-    // ymd: "YYYY-MM-DD"
     const [y, m, d] = ymd.split("-").map(Number);
     return new Date(Date.UTC(y, m - 1, d));
   }
@@ -465,8 +435,7 @@
   }
 
   function addDaysUTC(date, days) {
-    const t = date.getTime() + days * 86400000;
-    return new Date(t);
+    return new Date(date.getTime() + days * 86400000);
   }
 
   function clampToPeriod(date) {
@@ -476,12 +445,7 @@
   }
 
   function isSaturdayUTC(date) {
-    // 0 Sun ... 6 Sat
     return date.getUTCDay() === 6;
-  }
-
-  function isWithinInclusive(date, start, end) {
-    return date >= start && date <= end;
   }
 
   function normalizeRange(start, end) {
@@ -493,23 +457,15 @@
     return { start, end };
   }
 
-  /** ---------------------------
-   *  Calendar Sets
-   *  - fullSet: 기준기간 내 "토요일 제외" 날짜
-   *  - vacationSet: 여름+겨울방학 기간 내 "토요일 제외" 날짜
-   *  - semesterSet: fullSet - vacationSet
-   *  --------------------------- */
   function buildCalendarSets() {
     const fullSet = new Set();
     const vacationSet = new Set();
 
-    // full set
     for (let d = PERIOD_START; d <= PERIOD_END; d = addDaysUTC(d, 1)) {
       if (isSaturdayUTC(d)) continue;
       fullSet.add(utcToYmd(d));
     }
 
-    // vacation set
     const ss = state.calendar.summerStart;
     const se = state.calendar.summerEnd;
     const ws = state.calendar.winterStart;
@@ -534,17 +490,13 @@
       if (!vacationSet.has(ymd)) semesterSet.add(ymd);
     }
 
-    const fullCount = fullSet.size;
-    const vacCount = vacationSet.size;
-    const semCount = semesterSet.size;
-
     state.calendar.sets = {
       fullSet,
       vacationSet,
       semesterSet,
-      fullCount,
-      vacCount,
-      semCount
+      fullCount: fullSet.size,
+      vacCount: vacationSet.size,
+      semCount: semesterSet.size
     };
   }
 
@@ -580,9 +532,6 @@
     `);
   }
 
-  /** ---------------------------
-   *  Worker Utilities
-   *  --------------------------- */
   function workerKeyOf(name, pid) {
     const p = (pid || "").trim();
     if (p) return p;
@@ -590,7 +539,6 @@
   }
 
   function computeServiceYears(hireDateUTC) {
-    // 2026-03-01 기준 "완료 연수" 계산 (예: 2023-03-01 -> 3년)
     if (!hireDateUTC) return 0;
     const y = GRANT_DATE.getUTCFullYear() - hireDateUTC.getUTCFullYear();
     const m = GRANT_DATE.getUTCMonth() - hireDateUTC.getUTCMonth();
@@ -601,7 +549,6 @@
   }
 
   function addOrUpdateWorker(w) {
-    // w: {key,name,pid,group,pattern,hireDateUTC,dailyHours}
     if (!w.key) w.key = workerKeyOf(w.name, w.pid);
     if (!w.key) throw new Error("대상자 나이스 개인번호 생성 실패");
 
@@ -637,21 +584,16 @@
       tbody.appendChild(tr);
     }
 
-    // delete bindings
     tbody.querySelectorAll("button[data-del]").forEach(btn => {
       btn.addEventListener("click", () => {
         const key = btn.getAttribute("data-del");
         state.workers.delete(key);
-
-        // 관련 레코드 제거
         state.records = state.records.filter(r => r.workerKey !== key);
-
         renderWorkersTable();
         renderWorkerSelect();
       });
     });
 
-    // message
     setMsg($("#hrManualMsg"), arr.length ? "ok" : "warn", `
       <div><b>대상자 수</b>: ${arr.length}명</div>
       <div class="muted">※ 수기 입력 시, 근무상황(복무)도 수기 입력으로 충분히 산정 가능합니다.</div>
@@ -682,34 +624,8 @@
     }
   }
 
-  /** ---------------------------
-   *  Records Utilities
-   *  --------------------------- */
   function nextRecordId() {
     return "R" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-  }
-
-  function autoClassify(type, reason) {
-    const t = String(type || "");
-    const r = String(reason || "");
-    const hay = (t + " " + r).trim();
-
-    if (!hay) return "review";
-
-    // 우선순위: excluded > absence > deemed > review
-    if (includesAny(hay, RULES_2026.excludedKeywords)) return "excluded";
-    if (includesAny(hay, RULES_2026.absenceKeywords)) return "absence";
-    if (includesAny(hay, RULES_2026.deemedKeywords)) return "deemed";
-    if (includesAny(hay, RULES_2026.reviewKeywords)) return "review";
-
-    // 아무것도 매칭 안 되면 검토
-    return "review";
-  }
-
-  function autoCreditGuess(type, reason) {
-    const hay = (String(type||"") + " " + String(reason||"")).trim();
-    if (!hay) return false;
-    return includesAny(hay, RULES_2026.creditKeywords);
   }
 
   function includesAny(text, keywords) {
@@ -717,31 +633,22 @@
     return keywords.some(k => s.includes(String(k).replace(/\s+/g, "")));
   }
 
-  function addRecord(rec) {
-    // rec: {workerKey, startUTC, endUTC, type, reason, minutes(optional), classMode(optional), finalClass(optional), credit(optional)}
-    const range = normalizeRange(rec.startUTC, rec.endUTC);
-    if (!range) throw new Error("복무 기간이 기준기간과 겹치지 않습니다.");
+  function autoClassify(type, reason) {
+    const t = String(type || "");
+    const r = String(reason || "");
+    const hay = (t + " " + r).trim();
+    if (!hay) return "review";
+    if (includesAny(hay, RULES_2026.excludedKeywords)) return "excluded";
+    if (includesAny(hay, RULES_2026.absenceKeywords)) return "absence";
+    if (includesAny(hay, RULES_2026.deemedKeywords)) return "deemed";
+    if (includesAny(hay, RULES_2026.reviewKeywords)) return "review";
+    return "review";
+  }
 
-    const r = {
-      id: nextRecordId(),
-      workerKey: rec.workerKey,
-      startUTC: range.start,
-      endUTC: range.end,
-      type: rec.type || "",
-      reason: rec.reason || "",
-      minutes: rec.minutes ?? null, // null이면 날짜 범위로 일수 계산(1일=일근로시간)
-      autoClass: autoClassify(rec.type, rec.reason),
-      finalClass: rec.finalClass || null, // null이면 autoClass 사용
-      credit: !!rec.credit
-    };
-
-    // credit 기본 추정(수기/파일 공통): 방학과 겹치고 키워드 매칭이면 true
-    if (!r.credit && state.calendar.sets) {
-      const anyVac = rangeOverlapsVacation(r.startUTC, r.endUTC);
-      if (anyVac && autoCreditGuess(r.type, r.reason)) r.credit = true;
-    }
-
-    state.records.push(r);
+  function autoCreditGuess(type, reason) {
+    const hay = (String(type||"") + " " + String(reason||"")).trim();
+    if (!hay) return false;
+    return includesAny(hay, RULES_2026.creditKeywords);
   }
 
   function rangeOverlapsVacation(startUTC, endUTC) {
@@ -753,13 +660,36 @@
     return false;
   }
 
+  function addRecord(rec) {
+    const range = normalizeRange(rec.startUTC, rec.endUTC);
+    if (!range) throw new Error("복무 기간이 기준기간과 겹치지 않습니다.");
+
+    const r = {
+      id: nextRecordId(),
+      workerKey: rec.workerKey,
+      startUTC: range.start,
+      endUTC: range.end,
+      type: rec.type || "",
+      reason: rec.reason || "",
+      minutes: rec.minutes ?? null,
+      autoClass: autoClassify(rec.type, rec.reason),
+      finalClass: rec.finalClass || null,
+      credit: !!rec.credit
+    };
+
+    if (!r.credit && state.calendar.sets) {
+      const anyVac = rangeOverlapsVacation(r.startUTC, r.endUTC);
+      if (anyVac && autoCreditGuess(r.type, r.reason)) r.credit = true;
+    }
+
+    state.records.push(r);
+  }
+
   function recordClass(r) {
     return r.finalClass || r.autoClass || "review";
   }
 
   function computeRecordMinutesOnSet(r, dateSet, dailyMinutes) {
-    // r.minutes가 있는 경우: 범위 내 포함 날짜 수 기준으로 캡
-    // r.minutes가 없으면: 포함 날짜 수 * dailyMinutes
     let count = 0;
     for (let d = r.startUTC; d <= r.endUTC; d = addDaysUTC(d, 1)) {
       const ymd = utcToYmd(d);
@@ -768,70 +698,46 @@
     }
     if (count === 0) return 0;
 
-    if (r.minutes == null) {
-      return count * dailyMinutes;
-    }
+    if (r.minutes == null) return count * dailyMinutes;
 
-    // minutes 제공된 경우
     const cap = count * dailyMinutes;
     return Math.max(0, Math.min(cap, Number(r.minutes) || 0));
   }
 
-  /** ---------------------------
-   *  Attendance & Leave Calculation
-   *  --------------------------- */
+  function safeDiv(a, b) {
+    if (!b || b <= 0) return 0;
+    return a / b;
+  }
 
   function baseDaysForWorker(w, rates) {
-    // 기본일수 결정(요구 반영)
-    // - 상시(교육공무직): 15
-    // - 비상시(교육공무직): 기본 12, 단 연간출근율(상시기준) 80% 이상이면 15로 전환
-    // - 비상시(특수운영직군): 기본 11, 단 연간출근율 80% 이상이면 15로 전환(가산효과 4일)
     const rFull = rates.rateFull ?? 0;
     const isEmergency = (w.pattern === "emergency");
     const isSpecial = (w.group === "special");
 
-    if (!isEmergency) {
-      return 15;
-    }
+    if (!isEmergency) return 15;
 
-    // emergency
-    if (!isSpecial) {
-      return (rFull >= 0.8) ? 15 : 12;
-    } else {
-      return (rFull >= 0.8) ? 15 : 11;
-    }
+    if (!isSpecial) return (rFull >= 0.8) ? 15 : 12;
+    return (rFull >= 0.8) ? 15 : 11;
   }
 
   function totalStandardDays(w, baseDays) {
-    // 근속가산 + 25일 상한
     const add = w.addDays ?? 0;
     return Math.min(25, baseDays + add);
   }
 
   function calcRatesForWorker(w) {
-    // returns:
-    // - for always: rateFull, rateRecalcFull (재산정은 내부 참고용), rateSemester=null, rateRecalcSemester=null
-    // - for emergency: rateSemester, rateFull, rateRecalcSemester
     const dailyHours = Number(w.dailyHours || DEFAULT_DAILY_HOURS);
     const dailyMinutes = dailyHours * 60;
 
-    if (!state.calendar.sets) {
-      // 캘린더 미적용 상태에서도 상시는 계산 가능, 비상시는 경고
-      buildCalendarSets();
-    }
+    if (!state.calendar.sets) buildCalendarSets();
     const sets = state.calendar.sets;
 
     const workerRecords = state.records.filter(r => r.workerKey === w.key);
 
-    // 집계(분류별)
-    // - excluded/absence는 출근율에 직접 영향
-    // - deemed는 정보성
-    // - credit는 비상시 연간출근율 분자(방학근무)로 사용
     let excludedFull = 0, absenceFull = 0;
     let excludedSem = 0, absenceSem = 0;
     let creditVac = 0;
 
-    // full year 기준: 토요일 제외 전체
     for (const r of workerRecords) {
       const cls = recordClass(r);
       const mFull = computeRecordMinutesOnSet(r, sets.fullSet, dailyMinutes);
@@ -839,12 +745,10 @@
       if (cls === "excluded") excludedFull += mFull;
       if (cls === "absence") absenceFull += mFull;
 
-      // semester 기준(비상시)
       const mSem = computeRecordMinutesOnSet(r, sets.semesterSet, dailyMinutes);
       if (cls === "excluded") excludedSem += mSem;
       if (cls === "absence") absenceSem += mSem;
 
-      // vacation credit: 방학기간 + credit 체크된 항목만 분자에 더함
       if (r.credit) {
         const mVac = computeRecordMinutesOnSet(r, sets.vacationSet, dailyMinutes);
         creditVac += mVac;
@@ -854,7 +758,6 @@
     const fullTotal = sets.fullCount * dailyMinutes;
 
     if (w.pattern !== "emergency") {
-      // 상시
       const attended = Math.max(0, fullTotal - excludedFull - absenceFull);
       const rateFull = safeDiv(attended, fullTotal);
       const rateRecalcFull = safeDiv(attended, Math.max(1, fullTotal - excludedFull));
@@ -875,12 +778,8 @@
       };
     }
 
-    // 비상시
     const semTotal = sets.semCount * dailyMinutes;
     const attendedSem = Math.max(0, semTotal - excludedSem - absenceSem);
-
-    // 연간 분자(상시 기준): 학기 출근(가정) + 방학근무크레딧
-    // ※ 방학은 원칙적으로 근로제공 정지 기간이므로 기본 분자는 0, 크레딧만 반영
     const attendedFull = Math.max(0, attendedSem + creditVac);
 
     const rateSemester = safeDiv(attendedSem, semTotal);
@@ -891,7 +790,7 @@
       dailyMinutes,
       fullTotal,
       semTotal,
-      excludedFull, absenceFull, // 참고용
+      excludedFull, absenceFull,
       excludedSem, absenceSem,
       creditVac,
       attendedFull,
@@ -901,11 +800,6 @@
       rateRecalcSemester,
       rateRecalcFull: null
     };
-  }
-
-  function safeDiv(a, b) {
-    if (!b || b <= 0) return 0;
-    return a / b;
   }
 
   function roundToOneDecimalDays(days) {
@@ -921,6 +815,88 @@
     return { days: dd, hours: h };
   }
 
+  function enumerateMonths(startUTC, endUTC) {
+    const res = [];
+    let y = startUTC.getUTCFullYear();
+    let m = startUTC.getUTCMonth() + 1;
+    const ey = endUTC.getUTCFullYear();
+    const em = endUTC.getUTCMonth() + 1;
+
+    while (y < ey || (y === ey && m <= em)) {
+      res.push(`${y}-${String(m).padStart(2,"0")}`);
+      m += 1;
+      if (m === 13) { m = 1; y += 1; }
+    }
+    return res;
+  }
+
+  function anyAbsenceInMonth(absenceDates, ym) {
+    for (const ymd of absenceDates) {
+      if (ymd.startsWith(ym + "-")) return true;
+    }
+    return false;
+  }
+
+  function anyAbsenceInVacation(absenceDates) {
+    const sets = state.calendar.sets;
+    if (!sets) return false;
+    for (const ymd of absenceDates) {
+      if (sets.vacationSet.has(ymd)) return true;
+    }
+    return false;
+  }
+
+  function calcMonthlyAccrual(w) {
+    const dailyHours = Number(w.dailyHours || DEFAULT_DAILY_HOURS);
+    const dailyMinutes = dailyHours * 60;
+
+    const workerRecords = state.records.filter(r => r.workerKey === w.key && recordClass(r) === "absence");
+    const sets = state.calendar.sets;
+
+    const absenceDates = new Set();
+
+    for (const r of workerRecords) {
+      for (let d = r.startUTC; d <= r.endUTC; d = addDaysUTC(d, 1)) {
+        if (isSaturdayUTC(d)) continue;
+        const ymd = utcToYmd(d);
+        if (!sets || sets.fullSet.has(ymd)) absenceDates.add(ymd);
+      }
+    }
+
+    if (w.pattern !== "emergency") {
+      const months = enumerateMonths(PERIOD_START, PERIOD_END);
+      let okCount = 0;
+      for (const ym of months) {
+        const hasAbs = anyAbsenceInMonth(absenceDates, ym);
+        if (!hasAbs) okCount += 1;
+      }
+      const capped = Math.min(11, okCount);
+      return {
+        days: capped,
+        hours: 0,
+        note: `개근월수(상시): ${okCount}개월 중 ${capped}일(최대11) 부여`
+      };
+    }
+
+    const bucketMonths = ["2025-03","2025-04","2025-05","2025-06","2025-09","2025-10","2025-11"];
+    let ok = 0;
+
+    for (const ym of bucketMonths) {
+      const hasAbs = anyAbsenceInMonth(absenceDates, ym);
+      if (!hasAbs) ok += 1;
+    }
+
+    const hasVacAbs = anyAbsenceInVacation(absenceDates);
+    if (!hasVacAbs) ok += 2;
+
+    const capped = Math.min(9, ok);
+    return {
+      days: capped,
+      hours: 0,
+      note: `개근월수(비상시): 버킷 ${ok}개 중 ${capped}일(최대9) 부여`
+    };
+  }
+
   function calcGrantForWorker(w) {
     const rates = calcRatesForWorker(w);
     const baseDays = baseDaysForWorker(w, rates);
@@ -929,7 +905,6 @@
     const serviceYears = w.serviceYears ?? 0;
     const isEmergency = (w.pattern === "emergency");
 
-    // 1년 미만: 월 단위 1일(개근월수) 산정
     if (serviceYears < 1) {
       const monthly = calcMonthlyAccrual(w);
       return {
@@ -945,9 +920,7 @@
       };
     }
 
-    // 1년 이상: 80% / 비례 / 개근월수(80 미만) 경로
     if (!isEmergency) {
-      // 상시: 연간 1종 기준
       const rate1 = rates.rateFull ?? 0;
       const rate2 = rates.rateRecalcFull ?? 0;
 
@@ -966,7 +939,6 @@
       }
 
       if (rate2 >= 0.8) {
-        // 비례부여: (기본+가산) * (총일수-제외)/총일수
         const fullDays = state.calendar.sets ? state.calendar.sets.fullCount : 0;
         const excludedDays = Math.round((rates.excludedFull ?? 0) / rates.dailyMinutes);
         const ratio = safeDiv(Math.max(0, fullDays - excludedDays), Math.max(1, fullDays));
@@ -986,7 +958,6 @@
         };
       }
 
-      // 재산정도 80 미만 → 개근월수
       const monthly = calcMonthlyAccrual(w);
       return {
         workerKey: w.key,
@@ -1001,7 +972,6 @@
       };
     }
 
-    // 비상시: 학기 80% / 학기 재산정 80% / 개근월수
     const rateSem = rates.rateSemester ?? 0;
     const rateSem2 = rates.rateRecalcSemester ?? 0;
 
@@ -1053,112 +1023,187 @@
     };
   }
 
-  function calcMonthlyAccrual(w) {
-    // 단순화된 “개근월수” 계산
-    // - 결근성(absence) 레코드가 해당 월(또는 방학 버킷)에 1건이라도 있으면 개근 불인정
-    // - 상시: 2025-03 ~ 2026-02 월별(최대 11로 캡)
-    // - 비상시: 학기월(3~6,9~11) + 여름방학(7~8) 1 + 겨울방학(12~2) 1 → 최대 9
-    const dailyHours = Number(w.dailyHours || DEFAULT_DAILY_HOURS);
-    const dailyMinutes = dailyHours * 60;
+  function pct(x) {
+    return (x * 100).toFixed(1) + "%";
+  }
 
-    const workerRecords = state.records.filter(r => r.workerKey === w.key && recordClass(r) === "absence");
-    const sets = state.calendar.sets;
+  function minutesToDays(mins, dailyMinutes) {
+    const days = (mins / dailyMinutes);
+    const rounded = Math.round(days * 10) / 10;
+    const dh = daysToDaysHours(rounded, dailyMinutes/60);
+    return (dh.hours > 0) ? `${dh.days}일 ${dh.hours}시간` : `${dh.days}일`;
+  }
 
-    const absenceDates = new Set();
+  function renderRecordRow(rec) {
+    const auto = rec.autoClass || "review";
+    const fin = rec.finalClass || "auto";
+    const range = `${utcToYmd(rec.startUTC)} ~ ${utcToYmd(rec.endUTC)}`;
+    const opt = (value, label) => `<option value="${value}" ${fin===value ? "selected":""}>${label}</option>`;
 
-    // 결근성 기록의 날짜를 수집(토요일 제외)
-    for (const r of workerRecords) {
-      for (let d = r.startUTC; d <= r.endUTC; d = addDaysUTC(d, 1)) {
-        if (isSaturdayUTC(d)) continue;
-        const ymd = utcToYmd(d);
-        if (!sets || sets.fullSet.has(ymd)) absenceDates.add(ymd);
+    return `
+      <tr>
+        <td class="nowrap">${escapeHtml(range)}</td>
+        <td class="nowrap">${escapeHtml(rec.type || "")}</td>
+        <td class="nowrap">${escapeHtml(rec.reason || "")}</td>
+        <td class="nowrap">${escapeHtml(CLASS_LABEL[auto] || auto)}</td>
+        <td class="nowrap">
+          <select data-rec-id="${rec.id}" data-field="finalClass">
+            ${opt("auto","자동(기본)")}
+            ${opt("deemed","출근간주")}
+            ${opt("excluded","산정제외")}
+            ${opt("absence","결근성")}
+            ${opt("review","검토")}
+          </select>
+        </td>
+        <td class="center nowrap">
+          <input type="checkbox" data-rec-id="${rec.id}" data-field="credit" ${rec.credit ? "checked":""} />
+        </td>
+        <td class="center nowrap">
+          <button class="btn btn-lightgrey" data-rec-id="${rec.id}" data-field="delete">삭제</button>
+        </td>
+      </tr>
+    `;
+  }
+
+  function renderDetail() {
+    const box = $("#detailBox");
+    box.innerHTML = "";
+
+    const resArr = state.results.slice().sort((a,b) => {
+      const wa = state.workers.get(a.workerKey);
+      const wb = state.workers.get(b.workerKey);
+      return (wa?.name || "").localeCompare(wb?.name || "", "ko");
+    });
+
+    for (const rr of resArr) {
+      const w = state.workers.get(rr.workerKey);
+      const records = state.records.filter(x => x.workerKey === rr.workerKey)
+        .sort((a,b) => a.startUTC - b.startUTC);
+
+      const sets = state.calendar.sets;
+      const dailyMinutes = rr.rates.dailyMinutes || (Number(w?.dailyHours||DEFAULT_DAILY_HOURS)*60);
+
+      const sum = { deemed:0, excluded:0, absence:0, review:0, creditVac:0, total:0 };
+      if (sets) sum.total = sets.fullCount * dailyMinutes;
+
+      for (const rec of records) {
+        const cls = recordClass(rec);
+        const mFull = sets ? computeRecordMinutesOnSet(rec, sets.fullSet, dailyMinutes) : 0;
+        sum[cls] = (sum[cls] || 0) + mFull;
+
+        if (rec.credit && sets) {
+          sum.creditVac += computeRecordMinutesOnSet(rec, sets.vacationSet, dailyMinutes);
+        }
       }
+
+      const rateSem = (rr.rates.rateSemester == null) ? "-" : pct(rr.rates.rateSemester);
+      const rateFull = pct(rr.rates.rateFull ?? 0);
+      const rateRe = (rr.rates.rateRecalcSemester == null)
+        ? (rr.rates.rateRecalcFull == null ? "-" : pct(rr.rates.rateRecalcFull))
+        : pct(rr.rates.rateRecalcSemester);
+
+      const final = (rr.finalHours > 0) ? `${rr.finalDays}일 ${rr.finalHours}시간` : `${rr.finalDays}일`;
+      const std = `${rr.baseDays}+${rr.addDays}=${rr.standardDays}`;
+
+      const details = document.createElement("details");
+      details.className = "card";
+      details.open = false;
+
+      details.innerHTML = `
+        <summary>
+          ${escapeHtml(w?.name || rr.workerKey)} (${escapeHtml(w?.key || rr.workerKey)})
+          · <span class="pill">${w?.group==="special" ? "특수운영" : "교육공무직"}</span>
+          · <span class="pill">${w?.pattern==="emergency" ? "비상시" : "상시"}</span>
+          · 최종 <b>${final}</b> (${escapeHtml(rr.method)})
+        </summary>
+
+        <div style="margin-top:12px;" class="grid two">
+          <div class="msg">
+            <div><b>기본/가산</b>: ${std} (상한 25 적용)</div>
+            <div><b>근속</b>: ${escapeHtml(String(w?.serviceYears ?? 0))}년 (기준일 2026-03-01)</div>
+            <div><b>출근율</b>: 학기 ${rateSem} · 연간 ${rateFull} · 재산정 ${rateRe}</div>
+            ${rr.note ? `<div class="muted">※ ${escapeHtml(rr.note)}</div>` : ""}
+          </div>
+
+          <div class="msg">
+            <div><b>복무 분류 합계(연간 기준)</b></div>
+            <ul>
+              <li>산정제외: ${minutesToDays(sum.excluded, dailyMinutes)}</li>
+              <li>결근성: ${minutesToDays(sum.absence, dailyMinutes)}</li>
+              <li>출근간주: ${minutesToDays(sum.deemed, dailyMinutes)} <span class="muted">(정보성)</span></li>
+              <li>검토: ${minutesToDays(sum.review, dailyMinutes)}</li>
+              ${w?.pattern==="emergency" ? `<li>비상시직종 방학중 근무 (분자 가산): ${minutesToDays(sum.creditVac, dailyMinutes)}</li>` : ""}
+            </ul>
+            <div class="muted">※애매한 건 검토 필요로 분류함.</div>
+          </div>
+        </div>
+
+        <hr />
+
+        <div class="msg warn">
+          <div><b>안내 사항</b></div>
+          <ul>
+            <li>확인 또는 검토 필요로 분류된 항목은 담당자가 직접 반영 여부를 확인하세요.</li>
+            <li>비상시근로자의 방학근무로 인한 분자 가산은 “방학기간과 겹치는 유급근무”에만 체크하기를 권장드립니다.</li>
+          </ul>
+        </div>
+
+        <h4>복무 전체 목록(최종분류 수정 가능)</h4>
+        <div class="table-wrap">
+          <table class="sheetlike table-compact">
+            <thead>
+              <tr>
+                <th class="nowrap">기간</th>
+                <th class="nowrap">종별</th>
+                <th class="nowrap">사유</th>
+                <th class="nowrap">자동</th>
+                <th class="nowrap">최종</th>
+                <th class="nowrap">비상시직종방학추가근무</th>
+                <th class="nowrap center">삭제</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${records.map(rec => renderRecordRow(rec)).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      box.appendChild(details);
     }
 
-    if (w.pattern !== "emergency") {
-      // 상시: 월별
-      const months = enumerateMonths(PERIOD_START, PERIOD_END);
-      let okCount = 0;
-      const okMonths = [];
+    box.querySelectorAll("[data-rec-id]").forEach(el => {
+      const rid = el.getAttribute("data-rec-id");
+      const field = el.getAttribute("data-field");
 
-      for (const ym of months) {
-        // 해당 월에 결근성 날짜가 하나라도 있으면 미개근
-        const hasAbs = anyAbsenceInMonth(absenceDates, ym);
-        if (!hasAbs) { okCount += 1; okMonths.push(ym); }
+      if (field === "finalClass") {
+        el.addEventListener("change", () => {
+          const rec = state.records.find(x => x.id === rid);
+          if (!rec) return;
+          const v = el.value;
+          rec.finalClass = (v === "auto") ? null : v;
+          runCalculation();
+        });
       }
 
-      const capped = Math.min(11, okCount); // 상시 최대 11(사용자 정리 반영)
-      return {
-        days: capped,
-        hours: 0,
-        note: `개근월수(상시): ${okCount}개월 중 ${capped}일(최대11) 부여`
-      };
-    }
+      if (field === "credit") {
+        el.addEventListener("change", () => {
+          const rec = state.records.find(x => x.id === rid);
+          if (!rec) return;
+          rec.credit = !!el.checked;
+          runCalculation();
+        });
+      }
 
-    // 비상시: 9 버킷(학기월 7 + 방학2)
-    // 학기월: 2025-03,04,05,06,09,10,11
-    const bucketMonths = ["2025-03","2025-04","2025-05","2025-06","2025-09","2025-10","2025-11"];
-    let ok = 0;
-
-    // 학기월
-    for (const ym of bucketMonths) {
-      const hasAbs = anyAbsenceInMonth(absenceDates, ym);
-      if (!hasAbs) ok += 1;
-    }
-
-    // 여름방학 버킷(7~8): 방학기간에 결근성 있으면 미개근 처리(실무상 거의 없지만 방어)
-    const hasSummerAbs = anyAbsenceInVacation(absenceDates, "summer");
-    if (!hasSummerAbs) ok += 1;
-
-    // 겨울방학 버킷(12~2)
-    const hasWinterAbs = anyAbsenceInVacation(absenceDates, "winter");
-    if (!hasWinterAbs) ok += 1;
-
-    const capped = Math.min(9, ok);
-    return {
-      days: capped,
-      hours: 0,
-      note: `개근월수(비상시): 버킷 ${ok}개 중 ${capped}일(최대9) 부여`
-    };
+      if (field === "delete") {
+        el.addEventListener("click", () => {
+          state.records = state.records.filter(x => x.id !== rid);
+          runCalculation();
+        });
+      }
+    });
   }
 
-  function enumerateMonths(startUTC, endUTC) {
-    const res = [];
-    let y = startUTC.getUTCFullYear();
-    let m = startUTC.getUTCMonth() + 1;
-    const ey = endUTC.getUTCFullYear();
-    const em = endUTC.getUTCMonth() + 1;
-
-    while (y < ey || (y === ey && m <= em)) {
-      res.push(`${y}-${String(m).padStart(2,"0")}`);
-      m += 1;
-      if (m === 13) { m = 1; y += 1; }
-    }
-    return res;
-  }
-
-  function anyAbsenceInMonth(absenceDates, ym) {
-    for (const ymd of absenceDates) {
-      if (ymd.startsWith(ym + "-")) return true;
-    }
-    return false;
-  }
-
-  function anyAbsenceInVacation(absenceDates, which) {
-    const sets = state.calendar.sets;
-    if (!sets) return false;
-
-    const targetSet = sets.vacationSet;
-    // which 구분은 현재 별도 사용 안 하고 vacationSet 전체로 판단
-    for (const ymd of absenceDates) {
-      if (targetSet.has(ymd)) return true;
-    }
-    return false;
-  }
-
-  /** ---------------------------
-   *  Rendering Results
-   *  --------------------------- */
   function renderResults() {
     const tbody = $("#resultTable tbody");
     tbody.innerHTML = "";
@@ -1211,196 +1256,6 @@
     renderDetail();
   }
 
-  function pct(x) {
-    return (x * 100).toFixed(1) + "%";
-  }
-
-  function renderDetail() {
-    const box = $("#detailBox");
-    box.innerHTML = "";
-
-    const resArr = state.results.slice().sort((a,b) => {
-      const wa = state.workers.get(a.workerKey);
-      const wb = state.workers.get(b.workerKey);
-      return (wa?.name || "").localeCompare(wb?.name || "", "ko");
-    });
-
-    for (const rr of resArr) {
-      const w = state.workers.get(rr.workerKey);
-      const records = state.records.filter(x => x.workerKey === rr.workerKey)
-        .sort((a,b) => a.startUTC - b.startUTC);
-
-      const sets = state.calendar.sets;
-      const dailyMinutes = rr.rates.dailyMinutes || (Number(w?.dailyHours||DEFAULT_DAILY_HOURS)*60);
-
-      // 분류별 합계(연간 기준으로 표시)
-      const sum = { deemed:0, excluded:0, absence:0, review:0, creditVac:0, total:0 };
-      if (sets) sum.total = sets.fullCount * dailyMinutes;
-
-      for (const rec of records) {
-        const cls = recordClass(rec);
-        const mFull = sets ? computeRecordMinutesOnSet(rec, sets.fullSet, dailyMinutes) : 0;
-        sum[cls] = (sum[cls] || 0) + mFull;
-
-        if (rec.credit && sets) {
-          sum.creditVac += computeRecordMinutesOnSet(rec, sets.vacationSet, dailyMinutes);
-        }
-      }
-
-      const rateSem = (rr.rates.rateSemester == null) ? "-" : pct(rr.rates.rateSemester);
-      const rateFull = pct(rr.rates.rateFull ?? 0);
-      const rateRe = (rr.rates.rateRecalcSemester == null)
-        ? (rr.rates.rateRecalcFull == null ? "-" : pct(rr.rates.rateRecalcFull))
-        : pct(rr.rates.rateRecalcSemester);
-
-      const final = (rr.finalHours > 0) ? `${rr.finalDays}일 ${rr.finalHours}시간` : `${rr.finalDays}일`;
-      const std = `${rr.baseDays}+${rr.addDays}=${rr.standardDays}`;
-
-      const details = document.createElement("details");
-      details.className = "card";
-      details.open = false;
-
-      details.innerHTML = `
-        <summary>
-          ${escapeHtml(w?.name || rr.workerKey)} (${escapeHtml(w?.key || rr.workerKey)})
-          · <span class="pill">${w?.group==="special" ? "특수운영" : "교육공무직"}</span>
-          · <span class="pill">${w?.pattern==="emergency" ? "비상시" : "상시"}</span>
-          · 최종 <b>${final}</b> (${escapeHtml(rr.method)})
-        </summary>
-
-        <div style="margin-top:12px;" class="grid two">
-          <div class="msg">
-            <div><b>기본/가산</b>: ${std} (상한 25 적용)</div>
-            <div><b>근속</b>: ${escapeHtml(String(w?.serviceYears ?? 0))}년 (기준일 2026-03-01)</div>
-            <div><b>출근율</b>:
-              학기 ${rateSem} · 연간 ${rateFull} · 재산정 ${rateRe}
-            </div>
-            ${rr.note ? `<div class="muted">※ ${escapeHtml(rr.note)}</div>` : ""}
-          </div>
-
-          <div class="msg">
-            <div><b>복무 분류 합계(연간 기준)</b></div>
-            <ul>
-              <li>산정제외: ${minutesToDays(sum.excluded, dailyMinutes)}</li>
-              <li>결근성: ${minutesToDays(sum.absence, dailyMinutes)}</li>
-              <li>출근간주: ${minutesToDays(sum.deemed, dailyMinutes)} <span class="muted">(정보성)</span></li>
-              <li>검토: ${minutesToDays(sum.review, dailyMinutes)}</li>
-              ${w?.pattern==="emergency" ? `<li>비상시직종 방학중 근무 (분자 가산): ${minutesToDays(sum.creditVac, dailyMinutes)}</li>` : ""}
-            </ul>
-            <div class="muted">※애매한 건 검토 필요로 분류함.</div>
-          </div>
-        </div>
-
-        <hr />
-
-        <div class="msg warn">
-          <div><b>안내 사항</b></div>
-          <ul>
-            <li>확인 또는 검토 필요로 분류된 항목은 담당자가 직접 반영 여부를 확인하세요.</li>
-            <li>비상시근로자의 방학근무로 인한 분자 가산은 “방학기간과 겹치는 유급근무”에만 체크하기를 권장드립니다.</li>
-          </ul>
-        </div>
-
-        <h4>복무 전체 목록(최종분류 수정 가능)</h4>
-        <div class="table-wrap">
-          <table class="sheetlike table-compact">
-            <thead>
-              <tr>
-                <th class="nowrap">기간</th>
-                <th class="nowrap">종별</th>
-                <th class="nowrap">사유</th>
-                <th class="nowrap">자동</th>
-                <th class="nowrap">최종</th>
-                <th class="nowrap">비상시직종방학추가근무</th>
-                <th class="nowrap center">삭제</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${records.map(rec => renderRecordRow(rec)).join("")}
-            </tbody>
-          </table>
-        </div>
-      `;
-
-      box.appendChild(details);
-    }
-
-    // 이벤트 바인딩(최종분류/크레딧/삭제)
-    box.querySelectorAll("[data-rec-id]").forEach(el => {
-      const rid = el.getAttribute("data-rec-id");
-      const field = el.getAttribute("data-field");
-
-      if (field === "finalClass") {
-        el.addEventListener("change", () => {
-          const rec = state.records.find(x => x.id === rid);
-          if (!rec) return;
-          const v = el.value;
-          rec.finalClass = (v === "auto") ? null : v;
-          runCalculation(); // 수정 즉시 재계산
-        });
-      }
-
-      if (field === "credit") {
-        el.addEventListener("change", () => {
-          const rec = state.records.find(x => x.id === rid);
-          if (!rec) return;
-          rec.credit = !!el.checked;
-          runCalculation();
-        });
-      }
-
-      if (field === "delete") {
-        el.addEventListener("click", () => {
-          state.records = state.records.filter(x => x.id !== rid);
-          runCalculation();
-        });
-      }
-    });
-  }
-
-  function minutesToDays(mins, dailyMinutes) {
-    const days = (mins / dailyMinutes);
-    const rounded = Math.round(days * 10) / 10;
-    const dh = daysToDaysHours(rounded, dailyMinutes/60);
-    return (dh.hours > 0) ? `${dh.days}일 ${dh.hours}시간` : `${dh.days}일`;
-  }
-
-  function renderRecordRow(rec) {
-    const auto = rec.autoClass || "review";
-    const fin = rec.finalClass || "auto";
-    const range = `${utcToYmd(rec.startUTC)} ~ ${utcToYmd(rec.endUTC)}`;
-    const opt = (value, label) => `<option value="${value}" ${fin===value ? "selected":""}>${label}</option>`;
-
-    return `
-      <tr>
-        <td class="nowrap">${escapeHtml(range)}</td>
-        <td class="nowrap">${escapeHtml(rec.type || "")}</td>
-        <td class="nowrap">${escapeHtml(rec.reason || "")}</td>
-        <td class="nowrap">${escapeHtml(CLASS_LABEL[auto] || auto)}</td>
-        <td class="nowrap">
-          <select data-rec-id="${rec.id}" data-field="finalClass">
-            ${opt("auto","자동(기본)") }
-            ${opt("deemed","출근간주") }
-            ${opt("excluded","산정제외") }
-            ${opt("absence","결근성") }
-            ${opt("review","검토") }
-          </select>
-        </td>
-        <td class="center nowrap">
-          <input type="checkbox" data-rec-id="${rec.id}" data-field="credit" ${rec.credit ? "checked":""} />
-        </td>
-        <td class="center nowrap">
-          <button class="btn btn-lightgrey" data-rec-id="${rec.id}" data-field="delete">삭제</button>
-        </td>
-      </tr>
-    `;
-  }
-
-  /** ---------------------------
-   *  XLSX Parsing (파일 업로드 모드)
-   *  - 인사기록, 근무상황목록은 양식이 조금씩 달라서 "헤더 후보 탐색" 방식으로 구현
-   *  --------------------------- */
-
   function ensureXLSX() {
     if (typeof XLSX === "undefined") {
       throw new Error("XLSX 라이브러리를 찾을 수 없습니다. (CDN 차단 여부 확인 필요)");
@@ -1417,10 +1272,9 @@
   }
 
   function sheetToJson(workbook) {
-    // 첫번째 시트를 기본 사용
     const sheetName = workbook.SheetNames[0];
     const ws = workbook.Sheets[sheetName];
-    return XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: "" }); // 2D array
+    return XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: "" });
   }
 
   function normalizeHeader(s) {
@@ -1428,7 +1282,6 @@
   }
 
   function findHeaderRow(rows, mustHaveAny) {
-    // mustHaveAny: ["성명","이름"] 같은 키워드 중 하나라도 포함되면 후보
     let bestIdx = -1;
     let bestScore = -1;
 
@@ -1442,7 +1295,6 @@
       const hit = mustHaveAny.some(k => joined.includes(normalizeHeader(k)));
       if (!hit) continue;
 
-      // 점수: 유효한 헤더 셀 개수
       const score = nh.filter(x => x && x.length >= 2).length;
       if (score > bestScore) {
         bestScore = score;
@@ -1459,7 +1311,6 @@
       const idx = nh.findIndex(h => h === nc);
       if (idx >= 0) return idx;
     }
-    // includes 매칭
     for (const c of candidates) {
       const nc = normalizeHeader(c);
       const idx = nh.findIndex(h => h.includes(nc) || nc.includes(h));
@@ -1471,8 +1322,6 @@
   function parseDateLoose(v) {
     const s = String(v || "").trim();
     if (!s) return null;
-
-    // 2025-03-01, 2025.03.01, 2025/03/01 지원
     const m = s.match(/(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})/);
     if (m) {
       const y = Number(m[1]);
@@ -1489,14 +1338,12 @@
     const wb = XLSX.read(buf, { type: "array" });
     const rows = sheetToJson(wb);
 
-    // 헤더 행 탐색
     const headerIdx = findHeaderRow(rows, ["성명", "이름", "직종", "근무"]);
     if (headerIdx < 0) throw new Error("인사기록 파일에서 헤더 행을 찾지 못했습니다. (양식 확인 필요)");
 
     const headers = rows[headerIdx].map(x => String(x || "").trim());
     const dataRows = rows.slice(headerIdx + 1).filter(r => Array.isArray(r) && r.some(x => String(x||"").trim() !== ""));
 
-    // 컬럼 매핑(보수적)
     const colName = findColumnIndex(headers, ["성명","이름"]);
     const colPid  = findColumnIndex(headers, ["개인번호","사번","인적번호","개인번호(아이디)"]);
     const colHire = findColumnIndex(headers, ["최초임용일","근무시작일","임용일","현소속교육청근무일","최초계약일","계약시작일"]);
@@ -1518,16 +1365,13 @@
       const pid = (colPid >= 0) ? String(row[colPid] || "").trim() : "";
       const hire = (colHire >= 0) ? parseDateLoose(row[colHire]) : null;
 
-      // 직군(특수운영직군 여부) 추정
       const groupRaw = (colGroup >= 0) ? String(row[colGroup] || "").trim() : "";
       const jobRaw = (colJob >= 0) ? String(row[colJob] || "").trim() : "";
       const group = (groupRaw.includes("특수") || jobRaw.includes("특수")) ? "special" : "regular";
 
-      // 근무형태(상시/비상시) 추정
       const patRaw = (colPattern >= 0) ? String(row[colPattern] || "").trim() : "";
       const pattern = (patRaw.includes("비상") || patRaw.includes("방학") || patRaw.includes("비근무")) ? "emergency" : "always";
 
-      // 1일시간 추정
       let dailyHours = DEFAULT_DAILY_HOURS;
       if (colDailyH >= 0) {
         const v = Number(String(row[colDailyH]).replace(/[^0-9.]/g, ""));
@@ -1535,7 +1379,6 @@
       } else if (colWeeklyH >= 0) {
         const v = Number(String(row[colWeeklyH]).replace(/[^0-9.]/g, ""));
         if (Number.isFinite(v) && v > 0) {
-          // 주40시간이면 8시간으로 환산 (단순)
           dailyHours = Math.round((v / 5) * 10) / 10;
         }
       }
@@ -1556,6 +1399,154 @@
     renderWorkerSelect();
 
     return { loaded, skipped, headers };
+  }
+
+  function csvToRows(text) {
+    const lines = text.split(/\r?\n/).filter(x => x.trim() !== "");
+    return lines.map(line => parseCsvLine(line));
+  }
+
+  function parseCsvLine(line) {
+    const res = [];
+    let cur = "";
+    let inQ = false;
+
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"' ) {
+        if (inQ && line[i+1] === '"') { cur += '"'; i++; continue; }
+        inQ = !inQ; continue;
+      }
+      if (ch === "," && !inQ) { res.push(cur); cur = ""; continue; }
+      cur += ch;
+    }
+    res.push(cur);
+    return res;
+  }
+
+  function parseRangeLoose(s) {
+    const str = String(s||"").trim();
+    if (!str) return null;
+    const parts = str.split("~").map(x => x.trim());
+    if (parts.length === 2) {
+      const a = parseDateLoose(parts[0]);
+      const b = parseDateLoose(parts[1]);
+      if (a && b) return { start: a, end: b };
+    }
+    const d = parseDateLoose(str);
+    if (d) return { start: d, end: d };
+    return null;
+  }
+
+  function parseMinutesLoose(v) {
+    const s = String(v||"").trim();
+    if (!s) return null;
+
+    let days = 0, hours = 0, mins = 0;
+
+    const md = s.match(/(\d+(?:\.\d+)?)\s*일/);
+    const mh = s.match(/(\d+(?:\.\d+)?)\s*시간/);
+    const mm = s.match(/(\d+(?:\.\d+)?)\s*분/);
+
+    if (md) days = Number(md[1]);
+    if (mh) hours = Number(mh[1]);
+    if (mm) mins = Number(mm[1]);
+
+    if (md || mh || mm) {
+      return Math.round(days * 24 * 60 + hours * 60 + mins);
+    }
+
+    return null;
+  }
+
+  function parseWorkRows(rows, filename) {
+    const headerIdx = findHeaderRow(rows, ["성명", "기간", "종별", "근무", "복무"]);
+    if (headerIdx < 0) throw new Error(`[${filename}] 헤더 행을 찾지 못했습니다.`);
+
+    const headers = rows[headerIdx].map(x => String(x||"").trim());
+    const dataRows = rows.slice(headerIdx + 1).filter(r => Array.isArray(r) && r.some(x => String(x||"").trim() !== ""));
+
+    const colName = findColumnIndex(headers, ["성명","이름"]);
+    const colPid  = findColumnIndex(headers, ["개인번호","사번","인적번호"]);
+    const colType = findColumnIndex(headers, ["종별","복무종별","근무상황","근태종류","복무구분"]);
+    const colReason = findColumnIndex(headers, ["사유","상세사유","용무","비고"]);
+    const colStart = findColumnIndex(headers, ["시작일","시작","from","시작일자"]);
+    const colEnd   = findColumnIndex(headers, ["종료일","종료","to","종료일자"]);
+    const colRange = findColumnIndex(headers, ["기간","일시","기간(일시)"]);
+    const colMinutes = findColumnIndex(headers, ["시간","분","사용시간","근무시간","일수","기간(일수)"]);
+
+    if (colName < 0) throw new Error(`[${filename}] 성명 열을 찾지 못했습니다.`);
+    if (colType < 0 && colRange < 0) throw new Error(`[${filename}] 종별/기간 열을 찾지 못했습니다.`);
+
+    let recs = 0;
+    let newWorkers = 0;
+
+    for (const row of dataRows) {
+      const nameRaw = String(row[colName] || "").trim();
+      if (!nameRaw) continue;
+
+      let name = nameRaw;
+      let pidFromName = "";
+      const m = nameRaw.match(/\((K[0-9A-Za-z]+)\)/);
+      if (m) pidFromName = m[1];
+      name = nameRaw.replace(/\(.*?\)/g, "").trim();
+
+      const pid = (colPid >= 0 ? String(row[colPid]||"").trim() : "") || pidFromName;
+      const key = workerKeyOf(name, pid);
+
+      if (!state.workers.has(key)) {
+        addOrUpdateWorker({
+          key,
+          name,
+          pid,
+          group: "regular",
+          pattern: "always",
+          hireDateUTC: null,
+          dailyHours: DEFAULT_DAILY_HOURS
+        });
+        newWorkers++;
+      }
+
+      let start = null, end = null;
+
+      if (colRange >= 0) {
+        const rangeStr = String(row[colRange] || "").trim();
+        const parsed = parseRangeLoose(rangeStr);
+        if (parsed) { start = parsed.start; end = parsed.end; }
+      }
+
+      if ((!start || !end) && colStart >= 0 && colEnd >= 0) {
+        const s = parseDateLoose(row[colStart]);
+        const e = parseDateLoose(row[colEnd]);
+        if (s && e) { start = s; end = e; }
+      }
+
+      if (!start && colStart >= 0) start = parseDateLoose(row[colStart]);
+      if (!end && colEnd >= 0) end = parseDateLoose(row[colEnd]);
+      if (start && !end) end = start;
+      if (end && !start) start = end;
+
+      if (!start || !end) continue;
+
+      const type = (colType >= 0) ? String(row[colType] || "").trim() : "";
+      const reason = (colReason >= 0) ? String(row[colReason] || "").trim() : "";
+
+      let minutes = null;
+      if (colMinutes >= 0) minutes = parseMinutesLoose(row[colMinutes]);
+
+      addRecord({
+        workerKey: key,
+        startUTC: start,
+        endUTC: end,
+        type,
+        reason,
+        minutes,
+        credit: false
+      });
+      recs++;
+    }
+
+    return { recs, newWorkers };
   }
 
   async function loadWorkFiles(files) {
@@ -1591,200 +1582,8 @@
     return { totalRecs, createdWorkers };
   }
 
-  function csvToRows(text) {
-    // 단순 CSV 파서(따옴표 일부 지원)
-    const lines = text.split(/\r?\n/).filter(x => x.trim() !== "");
-    return lines.map(line => parseCsvLine(line));
-  }
-
-  function parseCsvLine(line) {
-    const res = [];
-    let cur = "";
-    let inQ = false;
-
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (ch === '"' ) {
-        if (inQ && line[i+1] === '"') { cur += '"'; i++; continue; }
-        inQ = !inQ; continue;
-      }
-      if (ch === "," && !inQ) { res.push(cur); cur = ""; continue; }
-      cur += ch;
-    }
-    res.push(cur);
-    return res;
-  }
-
-  function parseWorkRows(rows, filename) {
-
-    const headerIdx = findHeaderRow(rows, ["성명", "기간", "종별", "근무", "복무"]);
-    if (headerIdx < 0) throw new Error(`[${filename}] 헤더 행을 찾지 못했습니다.`);
-
-    const headers = rows[headerIdx].map(x => String(x||"").trim());
-    const dataRows = rows.slice(headerIdx + 1).filter(r => Array.isArray(r) && r.some(x => String(x||"").trim() !== ""));
-
-    const colName = findColumnIndex(headers, ["성명","이름"]);
-    const colPid  = findColumnIndex(headers, ["개인번호","사번","인적번호"]);
-    const colType = findColumnIndex(headers, ["종별","복무종별","근무상황","근태종류","복무구분"]);
-    const colReason = findColumnIndex(headers, ["사유","상세사유","용무","비고"]);
-    const colStart = findColumnIndex(headers, ["시작일","시작","from","시작일자"]);
-    const colEnd   = findColumnIndex(headers, ["종료일","종료","to","종료일자"]);
-    const colRange = findColumnIndex(headers, ["기간","일시","기간(일시)"]);
-    const colMinutes = findColumnIndex(headers, ["시간","분","사용시간","근무시간","일수","기간(일수)"]);
-
-    if (colName < 0) throw new Error(`[${filename}] 성명 열을 찾지 못했습니다.`);
-    if (colType < 0 && colRange < 0) throw new Error(`[${filename}] 종별/기간 열을 찾지 못했습니다.`);
-
-    let recs = 0;
-    let newWorkers = 0;
-
-    for (const row of dataRows) {
-      const nameRaw = String(row[colName] || "").trim();
-      if (!nameRaw) continue;
-
-      // "홍길동 (K123...)" 형태면 pid 추출
-      let name = nameRaw;
-      let pidFromName = "";
-      const m = nameRaw.match(/\((K[0-9A-Za-z]+)\)/);
-      if (m) pidFromName = m[1];
-      name = nameRaw.replace(/\(.*?\)/g, "").trim();
-
-      const pid = (colPid >= 0 ? String(row[colPid]||"").trim() : "") || pidFromName;
-      const key = workerKeyOf(name, pid);
-
-      if (!state.workers.has(key)) {
-        // 인사파일이 없는 경우를 대비해 임시 대상자 생성(최소값)
-        addOrUpdateWorker({
-          key,
-          name,
-          pid,
-          group: "regular",
-          pattern: "always",
-          hireDateUTC: null,
-          dailyHours: DEFAULT_DAILY_HOURS
-        });
-        newWorkers++;
-      }
-
-      // 기간/시작/종료 파싱
-      let start = null, end = null;
-
-      if (colRange >= 0) {
-        const rangeStr = String(row[colRange] || "").trim();
-        const parsed = parseRangeLoose(rangeStr);
-        if (parsed) { start = parsed.start; end = parsed.end; }
-      }
-
-      if ((!start || !end) && colStart >= 0 && colEnd >= 0) {
-        const s = parseDateLoose(row[colStart]);
-        const e = parseDateLoose(row[colEnd]);
-        if (s && e) { start = s; end = e; }
-      }
-
-      // 단일 일자만 있는 경우 보정
-      if (!start && colStart >= 0) start = parseDateLoose(row[colStart]);
-      if (!end && colEnd >= 0) end = parseDateLoose(row[colEnd]);
-      if (start && !end) end = start;
-      if (end && !start) start = end;
-
-      if (!start || !end) continue;
-
-      const type = (colType >= 0) ? String(row[colType] || "").trim() : "";
-      const reason = (colReason >= 0) ? String(row[colReason] || "").trim() : "";
-
-      // minutes 파싱(가능하면)
-      let minutes = null;
-      if (colMinutes >= 0) {
-        minutes = parseMinutesLoose(row[colMinutes]);
-      }
-
-      // credit는 방학+키워드로 기본 추정
-      addRecord({
-        workerKey: key,
-        startUTC: start,
-        endUTC: end,
-        type,
-        reason,
-        minutes,
-        credit: false
-      });
-      recs++;
-    }
-
-    return { recs, newWorkers };
-  }
-
-  function parseRangeLoose(s) {
-    // "2025-03-01 ~ 2025-03-05" / "2025.03.01~2025.03.05" 등
-    const str = String(s||"").trim();
-    if (!str) return null;
-    const parts = str.split("~").map(x => x.trim());
-    if (parts.length === 2) {
-      const a = parseDateLoose(parts[0]);
-      const b = parseDateLoose(parts[1]);
-      if (a && b) return { start: a, end: b };
-    }
-    // 단일 날짜
-    const d = parseDateLoose(str);
-    if (d) return { start: d, end: d };
-    return null;
-  }
-
-  function parseMinutesLoose(v) {
-    const s = String(v||"").trim();
-    if (!s) return null;
-
-    // "1일 2시간 30분", "2시간", "30분", "1.5" 등
-    let days = 0, hours = 0, mins = 0;
-
-    const md = s.match(/(\d+(?:\.\d+)?)\s*일/);
-    const mh = s.match(/(\d+(?:\.\d+)?)\s*시간/);
-    const mm = s.match(/(\d+(?:\.\d+)?)\s*분/);
-
-    if (md) days = Number(md[1]);
-    if (mh) hours = Number(mh[1]);
-    if (mm) mins = Number(mm[1]);
-
-    if (md || mh || mm) {
-      return Math.round(days * 24 * 60 + hours * 60 + mins);
-    }
-
-    // 숫자만 있으면 "일수"로 들어오는 케이스가 있어 보수적으로 minutes는 null 처리
-    return null;
-  }
-
-  /** ---------------------------
-   *  Run & Download
-   *  --------------------------- */
-  function runCalculation() {
-    // 사전 체크
-    if (!state.calendar.sets) buildCalendarSets();
-
-    const workers = Array.from(state.workers.values());
-    if (workers.length === 0) {
-      setMsg($("#runMsg"), "err", "대상자가 없습니다. 인사정보를 먼저 입력하세요.");
-      state.results = [];
-      renderResults();
-      return;
-    }
-
-    // 비상시가 존재하는데 방학 입력이 없으면 경고
-    const hasEmergency = workers.some(w => w.pattern === "emergency");
-    if (hasEmergency && !state.calendar.applied) {
-      setMsg($("#runMsg"), "warn", `
-        <div class="warn-line">
-          <b>경고</b>: 비상시근로자가 포함되어 있으나 학사일정이 입력되지 않았습니다.<br/>
-          비상시직종의 출근율 및 방학중 추가근무로 인한 출근율 산정 정확도가 떨어질 수 있습니다.
-        </div>
-      `);
-    } else {
-      setMsg($("#runMsg"), "ok", "계산 들어갑니다.");
-    }
-
-    state.results = workers.map(w => calcGrantForWorker(w));
-    state.lastRunAt = Date.now();
-
-    renderResults();
+  function pctValue(x) {
+    return (x * 100).toFixed(1) + "%";
   }
 
   function downloadXlsx() {
@@ -1797,7 +1596,6 @@
 
     const wb = XLSX.utils.book_new();
 
-    // 결과 시트
     const rows1 = [];
     rows1.push([
       "나이스개인번호","성명","직군","근무형태","최초임용일","근속(2026-03-01)",
@@ -1833,7 +1631,6 @@
     const ws1 = XLSX.utils.aoa_to_sheet(rows1);
     XLSX.utils.book_append_sheet(wb, ws1, "연차부여결과");
 
-    // 복무 전체 시트
     const rows2 = [];
     rows2.push([
       "나이스개인번호","성명","기간시작","기간종료","종별","사유","자동분류","최종분류","방학중근무(비상시직종)"
@@ -1870,13 +1667,6 @@
     a.remove();
   }
 
-  function pctValue(x) {
-    return (x * 100).toFixed(1) + "%";
-  }
-
-  /** ---------------------------
-   *  LocalStorage
-   *  --------------------------- */
   const LS_KEY = "annualLeave2026_state_v1";
 
   function saveLocal() {
@@ -1918,7 +1708,6 @@
 
     const p = JSON.parse(raw);
 
-    // calendar
     state.calendar.summerStart = p.calendar.summerStart ? ymdToUTC(p.calendar.summerStart) : null;
     state.calendar.summerEnd   = p.calendar.summerEnd ? ymdToUTC(p.calendar.summerEnd) : null;
     state.calendar.winterStart = p.calendar.winterStart ? ymdToUTC(p.calendar.winterStart) : null;
@@ -1928,14 +1717,12 @@
     if (state.calendar.applied) {
       buildCalendarSets();
       renderCalendarSummary();
-      // inputs 반영
       $("#summerStart").value = p.calendar.summerStart || "";
       $("#summerEnd").value = p.calendar.summerEnd || "";
       $("#winterStart").value = p.calendar.winterStart || "";
       $("#winterEnd").value = p.calendar.winterEnd || "";
     }
 
-    // workers
     state.workers.clear();
     for (const w of (p.workers || [])) {
       addOrUpdateWorker({
@@ -1946,7 +1733,6 @@
       });
     }
 
-    // records
     state.records = [];
     for (const r of (p.records || [])) {
       state.records.push({
@@ -1969,11 +1755,36 @@
     alert("불러오기 완료");
   }
 
-  /** ---------------------------
-   *  UI Events
-   *  --------------------------- */
+  function runCalculation() {
+    if (!state.calendar.sets) buildCalendarSets();
+
+    const workers = Array.from(state.workers.values());
+    if (workers.length === 0) {
+      setMsg($("#runMsg"), "err", "대상자가 없습니다. 인사정보를 먼저 입력하세요.");
+      state.results = [];
+      renderResults();
+      return;
+    }
+
+    const hasEmergency = workers.some(w => w.pattern === "emergency");
+    if (hasEmergency && !state.calendar.applied) {
+      setMsg($("#runMsg"), "warn", `
+        <div class="warn-line">
+          <b>경고</b>: 비상시근로자가 포함되어 있으나 학사일정이 입력되지 않았습니다.<br/>
+          비상시직종의 출근율 및 방학중 추가근무로 인한 출근율 산정 정확도가 떨어질 수 있습니다.
+        </div>
+      `);
+    } else {
+      setMsg($("#runMsg"), "ok", "계산 들어갑니다.");
+    }
+
+    state.results = workers.map(w => calcGrantForWorker(w));
+    state.lastRunAt = Date.now();
+
+    renderResults();
+  }
+
   function bindEvents() {
-    // calendar
     $("#btnApplyCalendar").addEventListener("click", () => {
       state.calendar.summerStart = $("#summerStart").value ? ymdToUTC($("#summerStart").value) : null;
       state.calendar.summerEnd   = $("#summerEnd").value ? ymdToUTC($("#summerEnd").value) : null;
@@ -1986,7 +1797,6 @@
     });
 
     $("#btnSetExampleCalendar").addEventListener("click", () => {
-      // 테스트용: 임의 입력(학교별로 반드시 수정)
       $("#summerStart").value = "2025-07-21";
       $("#summerEnd").value = "2025-08-20";
       $("#winterStart").value = "2025-12-26";
@@ -1994,7 +1804,6 @@
       $("#btnApplyCalendar").click();
     });
 
-    // hr mode toggle
     $$("input[name='hrMode']").forEach(r => {
       r.addEventListener("change", () => {
         const mode = $$("input[name='hrMode']").find(x => x.checked)?.value;
@@ -2003,7 +1812,6 @@
       });
     });
 
-    // work mode toggle
     $$("input[name='workMode']").forEach(r => {
       r.addEventListener("change", () => {
         const mode = $$("input[name='workMode']").find(x => x.checked)?.value;
@@ -2012,7 +1820,6 @@
       });
     });
 
-    // HR file load
     $("#btnLoadHr").addEventListener("click", async () => {
       const f = $("#hrFile").files?.[0];
       if (!f) { setMsg($("#hrMsg"), "err", "인사내역 파일을 선택하세요."); return; }
@@ -2021,9 +1828,7 @@
         const out = await loadHrFile(f);
         setMsg($("#hrMsg"), "ok", `
           <div><b>인사내역 파일 불러오기 성공</b></div>
-          <ul>
-            <li>로드: ${out.loaded}명</li>
-          </ul>
+          <ul><li>로드: ${out.loaded}명</li></ul>
           <div class="muted">목록 행 자동 탐색함. 임의로 나이스 서식 변경한 경우 못 읽을 수도 있음.</div>
         `);
       } catch (e) {
@@ -2041,7 +1846,6 @@
       setMsg($("#hrMsg"), "warn", "입력내역을 초기화했습니다.");
     });
 
-    // HR manual add
     $("#btnAddWorker").addEventListener("click", () => {
       const name = $("#mName").value.trim();
       const pid = $("#mPid").value.trim();
@@ -2063,7 +1867,6 @@
 
       $("#mName").value = "";
       $("#mPid").value = "";
-      // hire는 보존(연속 입력 편의)
 
       renderWorkersTable();
       renderWorkerSelect();
@@ -2078,7 +1881,6 @@
       setMsg($("#hrManualMsg"), "warn", "전체 삭제 완료");
     });
 
-    // Work file load
     $("#btnLoadWork").addEventListener("click", async () => {
       const files = $("#workFiles").files;
       if (!files || files.length === 0) { setMsg($("#workMsg"), "err", "근무상황 파일을 선택하세요."); return; }
@@ -2093,8 +1895,6 @@
           </ul>
           <div class="muted">※ 임시 생성자의 직군, 근무형태, 최초임용일 등의 인사 정보는 필요시 수기 입력하십시오. </div>
         `);
-
-        // 파일 업로드 후 즉시 계산까지는 자동 실행하지 않음(사용자 통제)
       } catch (e) {
         setMsg($("#workMsg"), "err", `<b>오류</b>: ${escapeHtml(e.message)}`);
       }
@@ -2107,7 +1907,6 @@
       setMsg($("#workMsg"), "warn", "복무사항 초기화 완료");
     });
 
-    // Work manual add record
     $("#btnAddRecord").addEventListener("click", () => {
       const wk = $("#wSelect").value;
       if (!wk) { setMsg($("#workManualMsg"), "err", "대상자를 선택해주십시오."); return; }
@@ -2144,43 +1943,28 @@
       setMsg($("#workManualMsg"), "warn", "전체 삭제 완료");
     });
 
-    // Run
     $("#btnRun").addEventListener("click", runCalculation);
 
-    // Download
     $("#btnDownload").addEventListener("click", () => {
-      try {
-        downloadXlsx();
-      } catch (e) {
-        alert(e.message);
-      }
+      try { downloadXlsx(); } catch (e) { alert(e.message); }
     });
 
-    // Local save/load
-    $("#btnSaveLocal").addEventListener("click", saveLocal);
-    $("#btnLoadLocal").addEventListener("click", loadLocal);
+    const btnSave = $("#btnSaveLocal");
+    if (btnSave) btnSave.addEventListener("click", saveLocal);
+
+    const btnLoad = $("#btnLoadLocal");
+    if (btnLoad) btnLoad.addEventListener("click", loadLocal);
   }
 
-  /** ---------------------------
-   *  init
-   *  --------------------------- */
   function init() {
-    // 기본 메시지
     setMsg($("#hrMsg"), "", "인사정보를 입력해주세요.");
     setMsg($("#workMsg"), "", "근무상황을 입력해주세요.");
     setMsg($("#runMsg"), "", "인사 및 복무사항 입력 후 계산 버튼을 눌러주세요.");
 
-    // 달력 초기 상태
     buildCalendarSets();
     renderCalendarSummary();
-
-    // worker select
     renderWorkerSelect();
-
-    // bind events
     bindEvents();
-
-    // 최초 렌더
     renderWorkersTable();
     renderResults();
   }
