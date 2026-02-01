@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>출장·초과근무 매칭기</title>
+
+  <!-- 기존 공통 CSS 연결 -->
+  <link rel="stylesheet" href="./common.css" />
+
+  <!-- 필요한 라이브러리: SheetJS(xlsx) -->
+  <!-- 인터넷이 안 되는 환경이면, xlsx.full.min.js를 내려받아 로컬 파일로 바꿔 끼우면 됩니다. -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- 이 페이지에서만 쓰는 최소 추가 스타일(선택) -->
+  <style>
+    .pill {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      border: 1px solid #d1d5db;
+      background: #f9fafb;
+      font-size: 0.92rem;
+      color: #374151;
+      white-space: nowrap;
+    }
+    .pill.bad { border-color: #fecaca; background: #fff1f2; color: #9f1239; }
+    .pill.good { border-color: #bbf7d0; background: #f0fdf4; color: #166534; }
+    .mono { font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .sticky-actions { position: sticky; top: 0; background: #fff; z-index: 5; padding-top: 10px; }
+  </style>
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="shell">
+      <div class="row between">
+        <div>
+          <div style="font-weight:800; font-size:1.05rem;">업무보조</div>
+          <div class="muted">출장 기간에 포함/겹치는 초과근무 자동 탐지</div>
+        </div>
+        <!-- 메인 페이지가 있다면 경로 맞춰서 사용 -->
+        <a class="btn-home" href="./index.html">← 메인</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <h1>출장·초과근무 매칭기</h1>
+    <p class="subtitle">
+      출장신청서(.xlsx)와 초과근무목록(.xlsx)을 올리면, 같은 사람 기준으로 기간이
+      <b>완전 포함</b> 또는 <b>겹침</b>인 내역을 찾아줍니다.
+    </p>
+
+    <section class="section sticky-actions">
+      <h2 class="local-h2">1) 파일 업로드</h2>
+
+      <div class="grid two">
+        <div class="card">
+          <h3 class="local-h3">출장신청서 (.xlsx)</h3>
+          <p class="muted">여러 파일 선택 가능(월별 파일을 한 번에 합쳐 분석)</p>
+          <input id="tripFiles" type="file" accept=".xlsx" multiple />
+          <div id="tripFileList" class="note muted">선택된 파일 없음</div>
+        </div>
+
+        <div class="card">
+          <h3 class="local-h3">초과근무목록 (.xlsx)</h3>
+          <p class="muted">여러 파일 선택 가능(월별 목록을 한 번에 합쳐 분석)</p>
+          <input id="otFiles" type="file" accept=".xlsx" multiple />
+          <div id="otFileList" class="note muted">선택된 파일 없음</div>
+        </div>
+      </div>
+
+      <hr />
+
+      <div class="grid two">
+        <div class="card">
+          <h3 class="local-h3">판정 기준</h3>
+          <div class="row gap" style="align-items:flex-start;">
+            <label class="row"><input type="radio" name="mode" value="contained" checked /> 완전 포함(추천)</label>
+            <label class="row"><input type="radio" name="mode" value="overlap" /> 겹침(더 넓게)</label>
+          </div>
+          <p class="muted" style="margin-top: 8px;">
+            - <b>완전 포함</b>: 초과근무 시작~종료가 출장 기간 안에 모두 들어올 때만 표시<br/>
+            - <b>겹침</b>: 시작/종료 중 하나라도 출장 기간과 겹치면 표시
+          </p>
+        </div>
+
+        <div class="card">
+          <h3 class="local-h3">이름 매칭</h3>
+          <label class="row">
+            <input id="stripParen" type="checkbox" checked />
+            괄호 제거 (예: 고해영(K106...) → 고해영)
+          </label>
+          <label class="row">
+            <input id="stripSpace" type="checkbox" checked />
+            공백 제거
+          </label>
+          <p class="muted" style="margin-top: 8px;">
+            초과근무 파일에 (사번)이 붙는 경우가 많아 기본 ON을 추천합니다.
+          </p>
+        </div>
+      </div>
+
+      <div class="row gap" style="margin-top: 14px;">
+        <button class="btn primary" id="runBtn">분석 실행</button>
+        <button class="btn ghost" id="resetBtn">초기화</button>
+        <button class="btn" id="downloadBtn" disabled>결과 엑셀 다운로드</button>
+        <span id="status" class="muted"></span>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="local-h2">2) 결과</h2>
+
+      <div class="grid three">
+        <div class="card">
+          <div class="muted">출장 건수</div>
+          <div id="tripCount" class="local-large" style="font-weight:800;">-</div>
+        </div>
+        <div class="card">
+          <div class="muted">초과근무 건수</div>
+          <div id="otCount" class="local-large" style="font-weight:800;">-</div>
+        </div>
+        <div class="card">
+          <div class="muted">매칭(문제 의심) 건수</div>
+          <div id="matchCount" class="local-large" style="font-weight:800;">-</div>
+        </div>
+      </div>
+
+      <p id="personNote" class="note muted" style="margin-top:10px;"></p>
+
+      <div class="table-wrap">
+        <table class="sheetlike" id="resultTable">
+          <thead>
+            <tr>
+              <th>판정</th>
+              <th>성명</th>
+              <th>초과근무일</th>
+              <th>초과근무 시간</th>
+              <th>초과 사유</th>
+              <th>출장기간</th>
+              <th>출장지</th>
+              <th>출장목적</th>
+              <th>출처(파일)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colspan="9" class="muted" style="text-align:center;">
+                파일을 업로드하고 “분석 실행”을 눌러주세요.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="note">
+        ※ 모든 처리는 브라우저(로컬)에서만 수행됩니다. 서버 업로드 없음.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2 class="local-h2">3) 미리보기(선택)</h2>
+      <p class="muted">제대로 읽혔는지, 파싱된 결과의 앞부분만 보여줍니다.</p>
+
+      <div class="grid two">
+        <div class="card">
+          <h3 class="local-h3">출장(파싱 결과 샘플)</h3>
+          <div class="table-wrap"><table class="sheetlike" id="tripPreview"></table></div>
+        </div>
+        <div class="card">
+          <h3 class="local-h3">초과근무(파싱 결과 샘플)</h3>
+          <div class="table-wrap"><table class="sheetlike" id="otPreview"></table></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell">
+      <p>업무보조 - 출장·초과근무 매칭기</p>
+    </div>
+  </footer>
+
+<script>
+(() => {
+  const $ = (sel) => document.querySelector(sel);
+
+  const els = {
+    tripFiles: $("#tripFiles"),
+    otFiles: $("#otFiles"),
+    tripFileList: $("#tripFileList"),
+    otFileList: $("#otFileList"),
+    runBtn: $("#runBtn"),
+    resetBtn: $("#resetBtn"),
+    downloadBtn: $("#downloadBtn"),
+    status: $("#status"),
+    tripCount: $("#tripCount"),
+    otCount: $("#otCount"),
+    matchCount: $("#matchCount"),
+    personNote: $("#personNote"),
+    resultTbody: $("#resultTable tbody"),
+    tripPreview: $("#tripPreview"),
+    otPreview: $("#otPreview"),
+    stripParen: $("#stripParen"),
+    stripSpace: $("#stripSpace"),
+  };
+
+  /** 마지막 결과(엑셀 다운로드용) */
+  let lastMatches = [];
+
+  function escapeHtml(s) {
+    return String(s ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function formatBytes(bytes) {
+    if (!Number.isFinite(bytes)) return "";
+    const units = ["B","KB","MB","GB"];
+    let v = bytes;
+    let i = 0;
+    while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+    return `${v.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+  }
+
+  function setStatus(msg, isError = false) {
+    els.status.textContent = msg || "";
+    els.status.style.color = isError ? "#b91c1c" : "";
+  }
+
+  function renderFileList(el, files) {
+    if (!files || files.length === 0) {
+      el.textContent = "선택된 파일 없음";
+      return;
+    }
+    el.innerHTML = files
+      .map(f => `• ${escapeHtml(f.name)} <span class="muted">(${formatBytes(f.size)})</span>`)
+      .join("<br/>");
+  }
+
+  function normText(v) {
+    return String(v ?? "").replace(/\s+/g, "").trim();
+  }
+
+  function makeNameNormalizer() {
+    const stripParen = !!els.stripParen.checked;
+    const stripSpace = !!els.stripSpace.checked;
+
+    return (nameRaw) => {
+      if (nameRaw == null) return "";
+      let s = String(nameRaw).trim();
+      if (stripParen) s = s.replace(/\(.*?\)/g, "");
+      if (stripSpace) s = s.replace(/\s+/g, "");
+      return s.trim();
+    };
+  }
+
+  function isValidDate(d) {
+    return d instanceof Date && !isNaN(d.getTime());
+  }
+
+  /** 셀 값(문자/Date/숫자)을 날짜(Date, 00:00)로 파싱 */
+  function parseDateCell(v) {
+    if (v instanceof Date && isValidDate(v)) {
+      return new Date(v.getFullYear(), v.getMonth(), v.getDate());
+    }
+
+    // Excel serial date/time number
+    if (typeof v === "number" && window.XLSX?.SSF?.parse_date_code) {
+      const dc = XLSX.SSF.parse_date_code(v);
+      if (dc && dc.y && dc.m && dc.d) {
+        return new Date(dc.y, dc.m - 1, dc.d);
+      }
+    }
+
+    const s = String(v ?? "").trim();
+    // 2026-01-25 or 2026.1.25 or 2026/1/25
+    const m = s.match(/(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/);
+    if (!m) return null;
+    const y = Number(m[1]);
+    const mo = Number(m[2]);
+    const d = Number(m[3]);
+    const dt = new Date(y, mo - 1, d);
+    return isValidDate(dt) ? dt : null;
+  }
+
+  /** 셀 값(문자/Date/숫자)을 시간({h,m})으로 파싱 */
+  function parseTimeCell(v) {
+    if (v instanceof Date && isValidDate(v)) {
+      return { h: v.getHours(), m: v.getMinutes() };
+    }
+
+    // Excel serial time number
+    if (typeof v === "number" && window.XLSX?.SSF?.parse_date_code) {
+      const dc = XLSX.SSF.parse_date_code(v);
+      if (dc && typeof dc.H === "number" && typeof dc.M === "number") {
+        return { h: dc.H, m: dc.M };
+      }
+    }
+
+    const s = String(v ?? "");
+    const m = s.match(/(\d{1,2}):(\d{2})/);
+    if (!m) return null;
+    return { h: Number(m[1]), m: Number(m[2]) };
+  }
+
+  function parseTimeRangeText(v) {
+    const s = String(v ?? "");
+    const m = s.match(/(\d{1,2}):(\d{2})\s*~\s*(\d{1,2}):(\d{2})/);
+    if (!m) return null;
+    return {
+      start: { h: Number(m[1]), m: Number(m[2]) },
+      end: { h: Number(m[3]), m: Number(m[4]) },
+    };
+  }
+
+  function pad2(n) { return String(n).padStart(2, "0"); }
+
+  function fmtDate(d) {
+    if (!(d instanceof Date) || !isValidDate(d)) return "";
+    return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+  }
+
+  function fmtTime(t) {
+    if (!t) return "";
+    return `${pad2(t.h)}:${pad2(t.m)}`;
+  }
+
+  function combineDateTime(dateOnly, timeObj) {
+    return new Date(
+      dateOnly.getFullYear(),
+      dateOnly.getMonth(),
+      dateOnly.getDate(),
+      timeObj.h,
+      timeObj.m,
+      0,
+      0
+    );
+  }
+
+  function detectTripHeader(row) {
+    const map = {};
+    for (let c = 0; c < row.length; c++) {
+      const t = normText(row[c]);
+      if (!t) continue;
+      if (t === "성명") map.nameCol = c;
+      else if (t === "출장기간") map.periodCol = c;
+      else if (t === "출장목적") map.purposeCol = c;
+      else if (t === "출장지") map.destCol = c;
+    }
+    if (map.nameCol != null && map.periodCol != null) return map;
+    return null;
+  }
+
+  function detectOvertimeHeader(row) {
+    const map = {};
+    for (let c = 0; c < row.length; c++) {
+      const t = normText(row[c]);
+      if (!t) continue;
+
+      if (t.includes("초과") && t.includes("근무일자")) map.dateCol = c;
+      else if (t === "성명") map.nameCol = c;
+      else if (t.includes("시작") && t.includes("시간")) map.startCol = c;
+      else if (t.includes("종료") && t.includes("시간")) map.endCol = c;
+      else if (t === "사유") map.reasonCol = c;
+    }
+    if (map.nameCol != null && map.dateCol != null) return map;
+    return null;
+  }
+
+  async function readAoaFromXlsx(file) {
+    const ab = await file.arrayBuffer();
+    const wb = XLSX.read(ab, { type: "array", cellDates: true });
+    const sheetName = wb.SheetNames[0];
+    const ws = wb.Sheets[sheetName];
+    // AoA(배열배열)로 변환, 빈칸은 ""로 채움
+    const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+    return aoa;
+  }
+
+  function parseTripsFromAoa(aoa, sourceFileName, normName) {
+    let header = null;
+    const trips = [];
+
+    for (let r = 0; r < aoa.length; r++) {
+      const row = aoa[r] || [];
+      const maybeHeader = detectTripHeader(row);
+      if (maybeHeader) {
+        header = maybeHeader;
+        continue;
+      }
+      if (!header) continue;
+
+      const nameRaw = row[header.nameCol];
+      if (normText(nameRaw) === "성명") continue;
+
+      const name = normName(nameRaw);
+      if (!name) continue;
+
+      const startCell = row[header.periodCol];
+      const timeCell  = (aoa[r + 1] || [])[header.periodCol];
+      const endCell   = (aoa[r + 2] || [])[header.periodCol];
+
+      const startDate = parseDateCell(startCell);
+      const endDate   = parseDateCell(endCell);
+      const timeRange = parseTimeRangeText(timeCell);
+
+      if (!startDate || !endDate) continue;
+
+      let startDt, endDt;
+      const sameDay = fmtDate(startDate) === fmtDate(endDate);
+
+      if (sameDay && timeRange) {
+        startDt = combineDateTime(startDate, timeRange.start);
+        endDt   = combineDateTime(endDate, timeRange.end);
+        if (endDt.getTime() < startDt.getTime()) {
+          endDt = new Date(endDt.getTime() + 24 * 3600 * 1000);
+        }
+      } else {
+        startDt = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 0, 0, 0, 0);
+        endDt   = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59, 999);
+      }
+
+      const purpose = header.purposeCol != null ? row[header.purposeCol] : "";
+      const dest    = header.destCol != null ? row[header.destCol] : "";
+
+      trips.push({
+        nameRaw: String(nameRaw ?? ""),
+        name,
+        tripStart: fmtDate(startDate),
+        tripEnd: fmtDate(endDate),
+        tripTime: timeRange ? `${fmtTime(timeRange.start)}~${fmtTime(timeRange.end)}` : "",
+        startMs: startDt.getTime(),
+        endMs: endDt.getTime(),
+        purpose: String(purpose ?? ""),
+        dest: String(dest ?? ""),
+        source: sourceFileName,
+        row: r + 1,
+      });
+
+      // 이 레이아웃은 보통 3줄(시작/시간/종료) 묶음이므로 2줄 건너뜀
+      r += 2;
+    }
+
+    return trips;
+  }
+
+  function parseOvertimeFromAoa(aoa, sourceFileName, normName) {
+    let header = null;
+    let headerRow = -1;
+
+    for (let r = 0; r < Math.min(20, aoa.length); r++) {
+      const maybe = detectOvertimeHeader(aoa[r] || []);
+      if (maybe) {
+        header = maybe;
+        headerRow = r;
+        break;
+      }
+    }
+
+    if (!header) {
+      throw new Error("초과근무목록에서 헤더(초과근무일자/성명/시작시간/종료시간 등)를 찾지 못했습니다.");
+    }
+
+    const ots = [];
+    for (let r = headerRow + 1; r < aoa.length; r++) {
+      const row = aoa[r] || [];
+
+      const nameRaw = row[header.nameCol];
+      if (normText(nameRaw) === "성명") continue;
+
+      const name = normName(nameRaw);
+      if (!name) continue;
+
+      const dateOnly = parseDateCell(row[header.dateCol]);
+      if (!dateOnly) continue;
+
+      const st = header.startCol != null ? parseTimeCell(row[header.startCol]) : null;
+      const et = header.endCol != null ? parseTimeCell(row[header.endCol]) : null;
+
+      const startTime = st || { h: 0, m: 0 };
+      const endTime   = et || { h: 23, m: 59 };
+
+      let startDt = combineDateTime(dateOnly, startTime);
+      let endDt   = combineDateTime(dateOnly, endTime);
+      if (endDt.getTime() < startDt.getTime()) {
+        endDt = new Date(endDt.getTime() + 24 * 3600 * 1000);
+      }
+
+      const reason = header.reasonCol != null ? row[header.reasonCol] : "";
+
+      ots.push({
+        nameRaw: String(nameRaw ?? ""),
+        name,
+        otDate: fmtDate(dateOnly),
+        otTime: `${fmtTime(startTime)}~${fmtTime(endTime)}`,
+        startMs: startDt.getTime(),
+        endMs: endDt.getTime(),
+        reason: String(reason ?? ""),
+        source: sourceFileName,
+        row: r + 1,
+      });
+    }
+
+    return ots;
+  }
+
+  function buildTripIndex(trips) {
+    const map = new Map();
+    for (const t of trips) {
+      if (!map.has(t.name)) map.set(t.name, []);
+      map.get(t.name).push(t);
+    }
+    for (const [, list] of map) {
+      list.sort((a, b) => a.startMs - b.startMs);
+    }
+    return map;
+  }
+
+  function matchTripsAndOvertime(trips, ots, mode) {
+    const idx = buildTripIndex(trips);
+    const matches = [];
+
+    for (const ot of ots) {
+      const list = idx.get(ot.name);
+      if (!list) continue;
+
+      for (const tr of list) {
+        const ok = (mode === "contained")
+          ? (tr.startMs <= ot.startMs && ot.endMs <= tr.endMs)
+          : (ot.startMs <= tr.endMs && tr.startMs <= ot.endMs);
+
+        if (ok) {
+          matches.push({
+            verdict: mode === "contained" ? "완전 포함" : "겹침",
+            name: ot.name,
+            otDate: ot.otDate,
+            otTime: ot.otTime,
+            reason: ot.reason,
+            tripPeriod: tr.tripStart === tr.tripEnd
+              ? `${tr.tripStart} ${tr.tripTime ? "(" + tr.tripTime + ")" : ""}`
+              : `${tr.tripStart} ~ ${tr.tripEnd}`,
+            dest: tr.dest,
+            purpose: tr.purpose,
+            source: `${tr.source}`,
+            // 내부 정렬/다운로드용
+            _otSource: ot.source,
+            _otRow: ot.row,
+            _trRow: tr.row,
+          });
+        }
+      }
+    }
+
+    matches.sort((a, b) => {
+      if (a.name !== b.name) return a.name.localeCompare(b.name, "ko");
+      if (a.otDate !== b.otDate) return a.otDate.localeCompare(b.otDate);
+      return (a.otTime || "").localeCompare(b.otTime || "");
+    });
+
+    return matches;
+  }
+
+  function renderMatches(matches) {
+    els.resultTbody.innerHTML = "";
+
+    if (!matches || matches.length === 0) {
+      els.resultTbody.innerHTML = `
+        <tr>
+          <td colspan="9" class="muted" style="text-align:center;">
+            매칭된 내역이 없습니다.
+          </td>
+        </tr>`;
+      return;
+    }
+
+    const rowsHtml = matches.map(m => {
+      const pillClass = m.verdict === "완전 포함" ? "pill bad" : "pill";
+      return `
+        <tr>
+          <td><span class="${pillClass}">${escapeHtml(m.verdict)}</span></td>
+          <td><b>${escapeHtml(m.name)}</b></td>
+          <td class="mono">${escapeHtml(m.otDate)}</td>
+          <td class="mono">${escapeHtml(m.otTime)}</td>
+          <td>${escapeHtml(m.reason)}</td>
+          <td class="mono">${escapeHtml(m.tripPeriod)}</td>
+          <td>${escapeHtml(m.dest)}</td>
+          <td>${escapeHtml(m.purpose)}</td>
+          <td class="muted">${escapeHtml(m.source)}</td>
+        </tr>
+      `;
+    }).join("");
+
+    els.resultTbody.innerHTML = rowsHtml;
+  }
+
+  function renderPreviewTable(tableEl, columns, rows, maxRows = 8) {
+    const head = `
+      <thead><tr>${columns.map(c => `<th>${escapeHtml(c)}</th>`).join("")}</tr></thead>
+    `;
+    const bodyRows = rows.slice(0, maxRows).map(r =>
+      `<tr>${columns.map(c => `<td>${escapeHtml(r[c])}</td>`).join("")}</tr>`
+    ).join("");
+    const body = `<tbody>${bodyRows || `<tr><td colspan="${columns.length}" class="muted" style="text-align:center;">(표시할 데이터 없음)</td></tr>`}</tbody>`;
+    tableEl.innerHTML = head + body;
+  }
+
+  function getMode() {
+    const checked = document.querySelector('input[name="mode"]:checked');
+    return checked ? checked.value : "contained";
+  }
+
+  function resetUI() {
+    els.tripFiles.value = "";
+    els.otFiles.value = "";
+    els.tripFileList.textContent = "선택된 파일 없음";
+    els.otFileList.textContent = "선택된 파일 없음";
+    els.tripCount.textContent = "-";
+    els.otCount.textContent = "-";
+    els.matchCount.textContent = "-";
+    els.personNote.textContent = "";
+    els.tripPreview.innerHTML = "";
+    els.otPreview.innerHTML = "";
+    els.resultTbody.innerHTML = `
+      <tr>
+        <td colspan="9" class="muted" style="text-align:center;">
+          파일을 업로드하고 “분석 실행”을 눌러주세요.
+        </td>
+      </tr>`;
+    lastMatches = [];
+    els.downloadBtn.disabled = true;
+    setStatus("");
+  }
+
+  async function run() {
+    const tripFiles = Array.from(els.tripFiles.files || []);
+    const otFiles = Array.from(els.otFiles.files || []);
+    const mode = getMode();
+
+    if (tripFiles.length === 0 || otFiles.length === 0) {
+      setStatus("출장신청서(.xlsx)와 초과근무목록(.xlsx)을 모두 선택해주세요.", true);
+      return;
+    }
+
+    const normName = makeNameNormalizer();
+
+    els.runBtn.disabled = true;
+    els.downloadBtn.disabled = true;
+    setStatus("읽는 중... (파일 수가 많으면 조금 걸릴 수 있어요)");
+
+    try {
+      // 1) 출장 파싱
+      const allTrips = [];
+      for (const f of tripFiles) {
+        const aoa = await readAoaFromXlsx(f);
+        const trips = parseTripsFromAoa(aoa, f.name, normName);
+        allTrips.push(...trips);
+      }
+
+      // 2) 초과근무 파싱
+      const allOts = [];
+      for (const f of otFiles) {
+        const aoa = await readAoaFromXlsx(f);
+        const ots = parseOvertimeFromAoa(aoa, f.name, normName);
+        allOts.push(...ots);
+      }
+
+      // 3) 매칭
+      setStatus("매칭 중...");
+      const matches = matchTripsAndOvertime(allTrips, allOts, mode);
+
+      // 4) UI 출력
+      els.tripCount.textContent = String(allTrips.length);
+      els.otCount.textContent = String(allOts.length);
+      els.matchCount.textContent = String(matches.length);
+
+      const uniqPeople = new Set(matches.map(m => m.name)).size;
+      els.personNote.textContent = matches.length
+        ? `매칭된 인원: ${uniqPeople}명`
+        : "";
+
+      renderMatches(matches);
+      lastMatches = matches;
+
+      // 5) 미리보기(파싱 결과 기반)
+      renderPreviewTable(
+        els.tripPreview,
+        ["name", "tripStart", "tripEnd", "tripTime", "dest", "purpose", "source"],
+        allTrips.map(t => ({
+          name: t.name,
+          tripStart: t.tripStart,
+          tripEnd: t.tripEnd,
+          tripTime: t.tripTime,
+          dest: t.dest,
+          purpose: t.purpose,
+          source: t.source
+        }))
+      );
+
+      renderPreviewTable(
+        els.otPreview,
+        ["name", "otDate", "otTime", "reason", "source"],
+        allOts.map(o => ({
+          name: o.name,
+          otDate: o.otDate,
+          otTime: o.otTime,
+          reason: o.reason,
+          source: o.source
+        }))
+      );
+
+      els.downloadBtn.disabled = matches.length === 0;
+      setStatus(`완료! (${mode === "contained" ? "완전 포함" : "겹침"} 기준)`);
+
+    } catch (err) {
+      console.error(err);
+      setStatus(err?.message || "처리 중 오류가 발생했습니다.", true);
+    } finally {
+      els.runBtn.disabled = false;
+    }
+  }
+
+  function downloadResultXlsx() {
+    if (!lastMatches || lastMatches.length === 0) return;
+
+    const rows = lastMatches.map(m => ({
+      "판정": m.verdict,
+      "성명": m.name,
+      "초과근무일": m.otDate,
+      "초과근무 시간": m.otTime,
+      "초과 사유": m.reason,
+      "출장기간": m.tripPeriod,
+      "출장지": m.dest,
+      "출장목적": m.purpose,
+      "출처(출장파일)": m.source,
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "매칭결과");
+
+    const now = new Date();
+    const y = now.getFullYear();
+    const mo = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    const filename = `출장-초과근무-매칭결과_${y}${mo}${d}.xlsx`;
+
+    XLSX.writeFile(wb, filename);
+  }
+
+  // 이벤트 연결
+  els.tripFiles.addEventListener("change", () => renderFileList(els.tripFileList, Array.from(els.tripFiles.files || [])));
+  els.otFiles.addEventListener("change", () => renderFileList(els.otFileList, Array.from(els.otFiles.files || [])));
+  els.runBtn.addEventListener("click", run);
+  els.resetBtn.addEventListener("click", resetUI);
+  els.downloadBtn.addEventListener("click", downloadResultXlsx);
+
+  // 초기화
+  resetUI();
+})();
+</script>
+
+</body>
+</html>
