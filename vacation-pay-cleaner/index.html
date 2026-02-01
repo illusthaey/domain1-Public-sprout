@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>청소원(특수운영직군) 방학중 근무 인건비 계산기</title>
+  <title>청소원 방학중 근무 인건비 계산기</title>
   <link rel="stylesheet" href="/static/style.css" />
 
   <style>
@@ -156,37 +156,45 @@
   <main class="container" style="max-width:980px; margin:0 auto; padding:24px 16px;">
     <header class="site-header">
       <div class="shell">
-        <h1>청소원(특수운영직군) 방학중 근무 인건비 계산기</h1>
+        <h1>청소원 방학중 근무 인건비 계산기</h1>
         <p class="muted">
-          ·방학 중 비상시근로(청소원) 근무일/근무시간 + 주휴수당(일요일) 발생 여부를 반영해 인건비를 계산합니다.<br/>
-          ·기본 로직: 주 15시간 이상 + 해당 주 개근(선택한 근무일 모두 근무했다고 가정) + 다음 주 근로 예정일 때 주휴일(일요일) 1일 반영.
+          ·청소원 방학중 근무계획에 따른 인건비 계산 (주휴수당 포함) <br/>
+          ·관련: 2025년 교육공무직 업무편람, 2025년 교육공무직 보수 등 업무처리 요령, 도교육청 안전복지과-1898(2025.2.12.) 2025년 청소원 운영계획, 도교육청 예산과-2109(2025.2.13.) 통상임금 산정 변경사항 <br/>
         </p>
       </div>
     </header>
 
     <section class="card">
-      <h2>1) 인사 정보 및 계약 내용</h2>
+      <h2>1. 인사 정보 및 계약 내용</h2>
+
+      <p class="hint">
+        ·1일 소정 근로시간은 기본적으로 주당 소정 근로시간/5일로 자동 계산됨<br/>
+        ·주휴수당 정확히 반영하기 위해 방학 전후로 학기중 근무 일정이 있었는지 체크 옵션 둠.<br/>
+        ·기본 세팅은 주 20시간 근로자로 해둠. (개발자 학교 기준으로 함) <br/>
+
+
+      </p>
 
       <div class="grid-3">
         <div class="form-row">
-          <label for="empName">성명 (선택)</label>
-          <input id="empName" type="text" placeholder="예) 홍길동" />
+          <label for="empName">근로자 성명</label>
+          <input id="empName" type="text" placeholder="예시: 김청소" />
         </div>
         <div class="form-row">
-          <label for="empOrg">기관/학교 (선택)</label>
-          <input id="empOrg" type="text" placeholder="예) ○○초" />
+          <label for="empOrg">학교명</label>
+          <input id="empOrg" type="text" placeholder="예시: 정리초등학교" />
         </div>
         <div class="form-row">
-          <label for="contractWeeklyHours">주 소정근로시간</label>
+          <label for="contractWeeklyHours">주 소정 근로시간</label>
           <select id="contractWeeklyHours">
             <option value="20" selected>주 20시간 (기본: 1일 4시간×5일)</option>
-            <option value="15">주 15시간 (1일 3시간×5일)</option>
-            <option value="25">주 25시간 (1일 5시간×5일)</option>
-            <option value="30">주 30시간 (1일 6시간×5일)</option>
+            <option value="15">주 15시간 (1일 3시간*5일)</option>
+            <option value="25">주 25시간 (1일 5시간*5일)</option>
+            <option value="30">주 30시간 (1일 6시간*5일)</option>
+            <option value="40">주 40시간 (1일 8시간*5일)</option>
             <option value="12">주 12시간 (15시간 미만: 주휴수당 미발생)</option>
-            <option value="40">주 40시간 (1일 8시간×5일)</option>
           </select>
-          <p class="hint">운영계획에 예시로 등장하는 근무시간(25h/30h)과 15h 기준을 함께 넣어뒀습니다.</p>
+          
         </div>
       </div>
 
@@ -194,41 +202,46 @@
         <div class="form-row">
           <label for="contractDailyHours">1일 소정근로시간 (기본 자동)</label>
           <input id="contractDailyHours" type="number" step="0.5" min="0" />
-          <p class="hint">기본값은 <span class="mono">주 소정근로시간 ÷ 5</span>로 자동 설정됩니다. 필요하면 직접 수정 가능.</p>
+
         </div>
         <div class="form-row">
-          <label for="afterSemesterWork">방학 종료 후 다음 주에 학기중 근무 예정</label>
+          <label for="afterSemesterWork">방학 종료일 다음 주에 학기중 근무 예정 여부</label>
           <div class="inline">
             <input id="afterSemesterWork" type="checkbox" />
-            <label for="afterSemesterWork" style="display:inline;">개학 등으로 다음 주부터 다시 근무함 (마지막 주 주휴수당 판단에 사용)</label>
+
           </div>
-          <p class="hint">운영계획 예시처럼 “다음 주 근로 예정”이 없으면 주휴일(일요일)을 빼는 케이스가 있어 체크 옵션을 둡니다.</p>
+
         </div>
       </div>
     </section>
 
     <section class="card">
-      <h2>2) 학사일정(방학기간) 입력</h2>
+      <h2>2. 학사일정 입력</h2>
+
       <div class="grid two">
         <div class="form-row">
-          <label for="startDate">방학 시작일</label>
+          <label for="startDate">방학 시작일자</label>
           <input id="startDate" type="date" />
         </div>
         <div class="form-row">
-          <label for="endDate">방학 종료일</label>
+          <label for="endDate">방학 종료일자</label>
           <input id="endDate" type="date" />
         </div>
       </div>
-      <p class="note">
-        방학이 월을 걸치면 월별 “토요일 제외 일수(=분모)”가 달라서 월별로 계산됩니다.
-      </p>
+
     </section>
 
     <section class="card">
-      <h2>3) 방학 중 근무 계획 선택</h2>
+      <h2>3. 방학 중 근무 계획 설정</h2>
+
+
+      <p class="hint">
+        ·요일 선택 후 반영하기 누르면 방학 기간 동안 근무하는 전체 날짜가 선택됨.<br/>
+        ·아래 달력에서 개별 일자를 클릭하여 선택 해제 및 수동 추가 가능함.<br/>
+      </p>
 
       <div class="inline" style="margin:8px 0 10px;">
-        <span class="pill">요일 기반 자동 선택</span>
+        <span class="pill">근무 요일 선택</span>
         <label><input type="checkbox" class="dow" value="1" checked /> 월</label>
         <label><input type="checkbox" class="dow" value="2" checked /> 화</label>
         <label><input type="checkbox" class="dow" value="3" checked /> 수</label>
@@ -241,10 +254,7 @@
         <button type="button" class="btn" id="clearWorkBtn">전체 해제</button>
       </div>
 
-      <p class="hint">
-        ·캘린더에서 날짜를 클릭하면 근무일이 토글됩니다(요일 자동 선택 후에도 수동 수정 가능).<br/>
-        ·선택된 근무일은 아래 목록에서 <b>근무시간</b>을 수정할 수 있습니다.
-      </p>
+
 
       <div class="cal-wrap" id="calendar"></div>
 
