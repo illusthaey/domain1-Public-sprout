@@ -6,7 +6,6 @@
   <title>2026학년도 연차유급휴가 부여일수 계산기</title>
 
   <link rel="stylesheet" href="/static/style.css" />
-  
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 
   <style>
@@ -37,7 +36,9 @@
 
     table select { min-width: 140px; }
 
-    .site-header .shell, .site-header h1, .site-header .subtitle { text-align:left !important; }
+    .site-header .shell,
+    .site-header h1,
+    .site-header .subtitle { text-align:left !important; }
   </style>
 </head>
 
@@ -347,8 +348,11 @@
       <h3>개인별 상세(복무 취합/분류 포함)</h3>
       <div id="detailBox" class="stack"></div>
     </section>
-
   </main>
+
+  <div class="home-link-wrap">
+    <a class="btn-home" href="/">메인으로 돌아가기</a>
+  </div>
 
 <script>
 (() => {
@@ -715,7 +719,6 @@
     const isSpecial = (w.group === "special");
 
     if (!isEmergency) return 15;
-
     if (!isSpecial) return (rFull >= 0.8) ? 15 : 12;
     return (rFull >= 0.8) ? 15 : 11;
   }
@@ -871,11 +874,7 @@
         if (!hasAbs) okCount += 1;
       }
       const capped = Math.min(11, okCount);
-      return {
-        days: capped,
-        hours: 0,
-        note: `개근월수(상시): ${okCount}개월 중 ${capped}일(최대11) 부여`
-      };
+      return { days: capped, hours: 0, note: `개근월수(상시): ${okCount}개월 중 ${capped}일(최대11) 부여` };
     }
 
     const bucketMonths = ["2025-03","2025-04","2025-05","2025-06","2025-09","2025-10","2025-11"];
@@ -890,11 +889,7 @@
     if (!hasVacAbs) ok += 2;
 
     const capped = Math.min(9, ok);
-    return {
-      days: capped,
-      hours: 0,
-      note: `개근월수(비상시): 버킷 ${ok}개 중 ${capped}일(최대9) 부여`
-    };
+    return { days: capped, hours: 0, note: `개근월수(비상시): 버킷 ${ok}개 중 ${capped}일(최대9) 부여` };
   }
 
   function calcGrantForWorker(w) {
@@ -925,17 +920,7 @@
       const rate2 = rates.rateRecalcFull ?? 0;
 
       if (rate1 >= 0.8) {
-        return {
-          workerKey: w.key,
-          baseDays,
-          addDays: w.addDays ?? 0,
-          standardDays: standard,
-          finalDays: standard,
-          finalHours: 0,
-          method: "정상부여(연간 출근율 80% 이상)",
-          note: "",
-          rates
-        };
+        return { workerKey: w.key, baseDays, addDays: w.addDays ?? 0, standardDays: standard, finalDays: standard, finalHours: 0, method: "정상부여(연간 출근율 80% 이상)", note: "", rates };
       }
 
       if (rate2 >= 0.8) {
@@ -945,48 +930,18 @@
         const raw = standard * ratio;
         const rounded = roundToOneDecimalDays(raw);
         const dh = daysToDaysHours(rounded, (w.dailyHours || DEFAULT_DAILY_HOURS));
-        return {
-          workerKey: w.key,
-          baseDays,
-          addDays: w.addDays ?? 0,
-          standardDays: standard,
-          finalDays: dh.days,
-          finalHours: dh.hours,
-          method: "비례부여(제외기간 재산정 80% 충족)",
-          note: `비례: ${standard} × (${fullDays - excludedDays}/${fullDays}) = ${rounded}일`,
-          rates
-        };
+        return { workerKey: w.key, baseDays, addDays: w.addDays ?? 0, standardDays: standard, finalDays: dh.days, finalHours: dh.hours, method: "비례부여(제외기간 재산정 80% 충족)", note: `비례: ${standard} × (${fullDays - excludedDays}/${fullDays}) = ${rounded}일`, rates };
       }
 
       const monthly = calcMonthlyAccrual(w);
-      return {
-        workerKey: w.key,
-        baseDays,
-        addDays: w.addDays ?? 0,
-        standardDays: standard,
-        finalDays: monthly.days,
-        finalHours: monthly.hours,
-        method: "80% 미달 → 개근월수(1개월 1일)",
-        note: monthly.note,
-        rates
-      };
+      return { workerKey: w.key, baseDays, addDays: w.addDays ?? 0, standardDays: standard, finalDays: monthly.days, finalHours: monthly.hours, method: "80% 미달 → 개근월수(1개월 1일)", note: monthly.note, rates };
     }
 
     const rateSem = rates.rateSemester ?? 0;
     const rateSem2 = rates.rateRecalcSemester ?? 0;
 
     if (rateSem >= 0.8) {
-      return {
-        workerKey: w.key,
-        baseDays,
-        addDays: w.addDays ?? 0,
-        standardDays: standard,
-        finalDays: standard,
-        finalHours: 0,
-        method: "정상부여(학기 출근율 80% 이상)",
-        note: "",
-        rates
-      };
+      return { workerKey: w.key, baseDays, addDays: w.addDays ?? 0, standardDays: standard, finalDays: standard, finalHours: 0, method: "정상부여(학기 출근율 80% 이상)", note: "", rates };
     }
 
     if (rateSem2 >= 0.8) {
@@ -996,31 +951,11 @@
       const raw = standard * ratio;
       const rounded = roundToOneDecimalDays(raw);
       const dh = daysToDaysHours(rounded, (w.dailyHours || DEFAULT_DAILY_HOURS));
-      return {
-        workerKey: w.key,
-        baseDays,
-        addDays: w.addDays ?? 0,
-        standardDays: standard,
-        finalDays: dh.days,
-        finalHours: dh.hours,
-        method: "비례부여(제외기간 제거 후 학기 80% 충족)",
-        note: `비례: ${standard} × (${semDays - excludedDays}/${semDays}) = ${rounded}일`,
-        rates
-      };
+      return { workerKey: w.key, baseDays, addDays: w.addDays ?? 0, standardDays: standard, finalDays: dh.days, finalHours: dh.hours, method: "비례부여(제외기간 제거 후 학기 80% 충족)", note: `비례: ${standard} × (${semDays - excludedDays}/${semDays}) = ${rounded}일`, rates };
     }
 
     const monthly = calcMonthlyAccrual(w);
-    return {
-      workerKey: w.key,
-      baseDays,
-      addDays: w.addDays ?? 0,
-      standardDays: standard,
-      finalDays: monthly.days,
-      finalHours: monthly.hours,
-      method: "80% 미달 → 개근월수(1개월 1일)",
-      note: monthly.note,
-      rates
-    };
+    return { workerKey: w.key, baseDays, addDays: w.addDays ?? 0, standardDays: standard, finalDays: monthly.days, finalHours: monthly.hours, method: "80% 미달 → 개근월수(1개월 1일)", note: monthly.note, rates };
   }
 
   function pct(x) {
@@ -1077,8 +1012,7 @@
 
     for (const rr of resArr) {
       const w = state.workers.get(rr.workerKey);
-      const records = state.records.filter(x => x.workerKey === rr.workerKey)
-        .sort((a,b) => a.startUTC - b.startUTC);
+      const records = state.records.filter(x => x.workerKey === rr.workerKey).sort((a,b) => a.startUTC - b.startUTC);
 
       const sets = state.calendar.sets;
       const dailyMinutes = rr.rates.dailyMinutes || (Number(w?.dailyHours||DEFAULT_DAILY_HOURS)*60);
@@ -1322,6 +1256,7 @@
   function parseDateLoose(v) {
     const s = String(v || "").trim();
     if (!s) return null;
+
     const m = s.match(/(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})/);
     if (m) {
       const y = Number(m[1]);
@@ -1401,6 +1336,39 @@
     return { loaded, skipped, headers };
   }
 
+  async function loadWorkFiles(files) {
+    ensureXLSX();
+    if (!files || files.length === 0) throw new Error("근무상황 파일이 선택되지 않았습니다.");
+
+    let totalRecs = 0;
+    let createdWorkers = 0;
+
+    for (const file of files) {
+      const ext = (file.name.split(".").pop() || "").toLowerCase();
+
+      if (ext === "csv") {
+        const text = await file.text();
+        const rows = csvToRows(text);
+        const { recs, newWorkers } = parseWorkRows(rows, file.name);
+        totalRecs += recs;
+        createdWorkers += newWorkers;
+        continue;
+      }
+
+      const buf = await readFileAsArrayBuffer(file);
+      const wb = XLSX.read(buf, { type: "array" });
+      const rows = sheetToJson(wb);
+      const { recs, newWorkers } = parseWorkRows(rows, file.name);
+      totalRecs += recs;
+      createdWorkers += newWorkers;
+    }
+
+    renderWorkersTable();
+    renderWorkerSelect();
+
+    return { totalRecs, createdWorkers };
+  }
+
   function csvToRows(text) {
     const lines = text.split(/\r?\n/).filter(x => x.trim() !== "");
     return lines.map(line => parseCsvLine(line));
@@ -1422,41 +1390,6 @@
     }
     res.push(cur);
     return res;
-  }
-
-  function parseRangeLoose(s) {
-    const str = String(s||"").trim();
-    if (!str) return null;
-    const parts = str.split("~").map(x => x.trim());
-    if (parts.length === 2) {
-      const a = parseDateLoose(parts[0]);
-      const b = parseDateLoose(parts[1]);
-      if (a && b) return { start: a, end: b };
-    }
-    const d = parseDateLoose(str);
-    if (d) return { start: d, end: d };
-    return null;
-  }
-
-  function parseMinutesLoose(v) {
-    const s = String(v||"").trim();
-    if (!s) return null;
-
-    let days = 0, hours = 0, mins = 0;
-
-    const md = s.match(/(\d+(?:\.\d+)?)\s*일/);
-    const mh = s.match(/(\d+(?:\.\d+)?)\s*시간/);
-    const mm = s.match(/(\d+(?:\.\d+)?)\s*분/);
-
-    if (md) days = Number(md[1]);
-    if (mh) hours = Number(mh[1]);
-    if (mm) mins = Number(mm[1]);
-
-    if (md || mh || mm) {
-      return Math.round(days * 24 * 60 + hours * 60 + mins);
-    }
-
-    return null;
   }
 
   function parseWorkRows(rows, filename) {
@@ -1549,37 +1482,39 @@
     return { recs, newWorkers };
   }
 
-  async function loadWorkFiles(files) {
-    ensureXLSX();
-    if (!files || files.length === 0) throw new Error("근무상황 파일이 선택되지 않았습니다.");
+  function parseRangeLoose(s) {
+    const str = String(s||"").trim();
+    if (!str) return null;
+    const parts = str.split("~").map(x => x.trim());
+    if (parts.length === 2) {
+      const a = parseDateLoose(parts[0]);
+      const b = parseDateLoose(parts[1]);
+      if (a && b) return { start: a, end: b };
+    }
+    const d = parseDateLoose(str);
+    if (d) return { start: d, end: d };
+    return null;
+  }
 
-    let totalRecs = 0;
-    let createdWorkers = 0;
+  function parseMinutesLoose(v) {
+    const s = String(v||"").trim();
+    if (!s) return null;
 
-    for (const file of files) {
-      const ext = (file.name.split(".").pop() || "").toLowerCase();
+    let days = 0, hours = 0, mins = 0;
 
-      if (ext === "csv") {
-        const text = await file.text();
-        const rows = csvToRows(text);
-        const { recs, newWorkers } = parseWorkRows(rows, file.name);
-        totalRecs += recs;
-        createdWorkers += newWorkers;
-        continue;
-      }
+    const md = s.match(/(\d+(?:\.\d+)?)\s*일/);
+    const mh = s.match(/(\d+(?:\.\d+)?)\s*시간/);
+    const mm = s.match(/(\d+(?:\.\d+)?)\s*분/);
 
-      const buf = await readFileAsArrayBuffer(file);
-      const wb = XLSX.read(buf, { type: "array" });
-      const rows = sheetToJson(wb);
-      const { recs, newWorkers } = parseWorkRows(rows, file.name);
-      totalRecs += recs;
-      createdWorkers += newWorkers;
+    if (md) days = Number(md[1]);
+    if (mh) hours = Number(mh[1]);
+    if (mm) mins = Number(mm[1]);
+
+    if (md || mh || mm) {
+      return Math.round(days * 24 * 60 + hours * 60 + mins);
     }
 
-    renderWorkersTable();
-    renderWorkerSelect();
-
-    return { totalRecs, createdWorkers };
+    return null;
   }
 
   function pctValue(x) {
@@ -1665,94 +1600,6 @@
     document.body.appendChild(a);
     a.click();
     a.remove();
-  }
-
-  const LS_KEY = "annualLeave2026_state_v1";
-
-  function saveLocal() {
-    const payload = {
-      calendar: {
-        summerStart: state.calendar.summerStart ? utcToYmd(state.calendar.summerStart) : null,
-        summerEnd: state.calendar.summerEnd ? utcToYmd(state.calendar.summerEnd) : null,
-        winterStart: state.calendar.winterStart ? utcToYmd(state.calendar.winterStart) : null,
-        winterEnd: state.calendar.winterEnd ? utcToYmd(state.calendar.winterEnd) : null,
-        applied: state.calendar.applied
-      },
-      workers: Array.from(state.workers.values()).map(w => ({
-        key: w.key, name: w.name, pid: w.pid,
-        group: w.group, pattern: w.pattern,
-        hireDate: w.hireDateUTC ? utcToYmd(w.hireDateUTC) : null,
-        dailyHours: w.dailyHours
-      })),
-      records: state.records.map(r => ({
-        id: r.id,
-        workerKey: r.workerKey,
-        start: utcToYmd(r.startUTC),
-        end: utcToYmd(r.endUTC),
-        type: r.type,
-        reason: r.reason,
-        minutes: r.minutes,
-        autoClass: r.autoClass,
-        finalClass: r.finalClass,
-        credit: r.credit
-      }))
-    };
-
-    localStorage.setItem(LS_KEY, JSON.stringify(payload));
-    alert("로컬 저장 완료");
-  }
-
-  function loadLocal() {
-    const raw = localStorage.getItem(LS_KEY);
-    if (!raw) { alert("저장된 데이터가 없습니다."); return; }
-
-    const p = JSON.parse(raw);
-
-    state.calendar.summerStart = p.calendar.summerStart ? ymdToUTC(p.calendar.summerStart) : null;
-    state.calendar.summerEnd   = p.calendar.summerEnd ? ymdToUTC(p.calendar.summerEnd) : null;
-    state.calendar.winterStart = p.calendar.winterStart ? ymdToUTC(p.calendar.winterStart) : null;
-    state.calendar.winterEnd   = p.calendar.winterEnd ? ymdToUTC(p.calendar.winterEnd) : null;
-    state.calendar.applied = !!p.calendar.applied;
-
-    if (state.calendar.applied) {
-      buildCalendarSets();
-      renderCalendarSummary();
-      $("#summerStart").value = p.calendar.summerStart || "";
-      $("#summerEnd").value = p.calendar.summerEnd || "";
-      $("#winterStart").value = p.calendar.winterStart || "";
-      $("#winterEnd").value = p.calendar.winterEnd || "";
-    }
-
-    state.workers.clear();
-    for (const w of (p.workers || [])) {
-      addOrUpdateWorker({
-        key: w.key, name: w.name, pid: w.pid,
-        group: w.group, pattern: w.pattern,
-        hireDateUTC: w.hireDate ? ymdToUTC(w.hireDate) : null,
-        dailyHours: w.dailyHours
-      });
-    }
-
-    state.records = [];
-    for (const r of (p.records || [])) {
-      state.records.push({
-        id: r.id,
-        workerKey: r.workerKey,
-        startUTC: ymdToUTC(r.start),
-        endUTC: ymdToUTC(r.end),
-        type: r.type,
-        reason: r.reason,
-        minutes: r.minutes ?? null,
-        autoClass: r.autoClass || autoClassify(r.type, r.reason),
-        finalClass: r.finalClass || null,
-        credit: !!r.credit
-      });
-    }
-
-    renderWorkersTable();
-    renderWorkerSelect();
-    runCalculation();
-    alert("불러오기 완료");
   }
 
   function runCalculation() {
@@ -1973,5 +1820,10 @@
 
 })();
 </script>
+
+<script src="/static/global-loader.js?v=1"></script>
+<script src="/static/footer.js"></script>
+<script src="/static/disable-copy.js"></script>
+
 </body>
 </html>
