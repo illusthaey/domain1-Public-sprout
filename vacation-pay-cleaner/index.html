@@ -245,24 +245,24 @@
       <h2>2. 방학 중 근무 계획 설정</h2>
 
       <p class="hint">
-        ·요일 선택 + 1일 소정근로시간 입력 후 <b>“요일+소정시간 반영”</b>을 누르면 방학 기간 동안 근무일이 자동 선택(파랑)됩니다.<br/>
-        ·공휴일은 자동으로 제외됩니다. (예: 2026년 2월 설 연휴)<br/>
-        ·아래 달력에서 개별 날짜 클릭 → 선택 해제/수동 추가 가능 (공휴일을 수동으로 추가할 경우 확인창이 뜸)<br/>
-        ·<b>“주휴수당 지급일자 표시”</b>를 누르면, 조건을 충족하는 주의 <b>일요일</b>이 노란색으로 표시됩니다.<br/>
+        ·요일 선택 + 1일 소정근로시간 입력 후 요일 및 소정근무시간 반영하기버튼을 누르면 방학 기간 동안 근무일이 자동 선택됩니다. (파란색)<br/>
+        ·공휴일은 자동으로 제외됨 (2026.2월 설 연휴)<br/>
+        ·아래 달력에서 개별 날짜 클릭하면 선택 해제 및 수동 추가 가능<br/>
+        ·주휴수당 지급일자 표시하기 버튼을 누르면, 조건을 충족하는 주의 일요일이 노란색으로 표시됨. 수동으로 추가 가능.<br/>
       </p>
 
       <div class="grid two" style="margin-top:8px;">
         <div class="form-row">
           <label for="contractDailyHours">1일 소정근로시간</label>
           <input id="contractDailyHours" type="number" step="0.5" min="0" />
-          <p class="hint">기본은 주 소정근로시간/5로 자동 설정됩니다. (필요시 수정 가능)</p>
+          <p class="hint">기본은 주 소정근로시간/4시간으로 자동 설정됨 (수정 가능)</p>
         </div>
 
         <div class="form-row">
           <label for="afterSemesterWork">방학 종료일 다음 주에 학기중 근무 예정 여부</label>
           <div class="inline">
             <input id="afterSemesterWork" type="checkbox" />
-            <span class="hint">체크 시 “마지막 주” 주휴일(일요일) 조건에 반영</span>
+            <span class="hint">체크 시 마지막 주 일요일이 주휴일로 반영</span>
           </div>
         </div>
       </div>
@@ -277,8 +277,8 @@
         <label><input type="checkbox" class="dow" value="6" /> 토</label>
         <label><input type="checkbox" class="dow" value="0" /> 일</label>
 
-        <button type="button" class="btn" id="applyDowBtn">요일+소정시간 반영</button>
-        <button type="button" class="btn" id="toggleHolidayBtn">주휴수당 지급일자 표시</button>
+        <button type="button" class="btn" id="applyDowBtn">요일 및 소정근무시간 반영하기</button>
+        <button type="button" class="btn" id="toggleHolidayBtn">주휴수당 지급일자 표시하기</button>
         <button type="button" class="btn" id="clearWorkBtn">전체 해제</button>
       </div>
 
