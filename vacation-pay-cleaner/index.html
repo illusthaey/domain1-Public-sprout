@@ -237,7 +237,7 @@
       </div>
 
       <p class="hint" style="margin-top:8px;">
-        ·방학 종료일 이후 7일까지는 주휴수당 산정 때문에 달력에 나옴. (근무일 선택은 방학기간 내에서만 가능)
+        ·방학 종료일 이후 7일까지는 주휴수당 산정 때문에 달력에 나옵니다. (근무일 선택은 방학기간 내에서만 가능)
       </p>
     </section>
 
@@ -246,9 +246,8 @@
 
       <p class="hint">
         ·요일 선택 및 1일 소정근로시간 입력 후 "요일 및 소정근무시간 반영하기" 버튼을 누르면 방학 기간 동안 근무일이 파란색으로 자동 선택됩니다. (공휴일 자동 제외)<br/>
-
         ·달력에서 개별 날짜 클릭하면 선택 해제 및 수동 추가 가능<br/>
-        ·"주휴수당 지급일자 표시하기" 버튼을 누르면, 조건을 충족하는 주의 일요일이 노란색으로 표시됨.<br/>
+        ·"주휴수당 지급일자 표시하기" 버튼을 누르면, 조건을 충족하는 주의 일요일이 노란색으로 표시됩니다.<br/>
       </p>
 
       <div class="grid two" style="margin-top:8px;">
@@ -264,6 +263,14 @@
             <input id="afterSemesterWork" type="checkbox" />
             <span class="hint">체크 시 마지막 주 일요일이 주휴일로 반영</span>
           </div>
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-top:8px;">
+        <label for="beforeSemesterWork">방학 시작 주의 일요일을 주휴일로 반영</label>
+        <div class="inline">
+          <input id="beforeSemesterWork" type="checkbox" />
+          <span class="hint">학기중 근무로 이미 주휴수당 지급요건을 충족한 경우 체크</span>
         </div>
       </div>
 
@@ -287,12 +294,12 @@
       <details class="worklist" id="workListDetails">
         <summary>
           선택된 근무일 목록
-          <span class="summary-sub" id="workListSummarySub">(0일) · 기본은 접힘</span>
+          <span class="summary-sub" id="workListSummarySub">(0일) - 기본은 접힘</span>
         </summary>
         <div class="table-wrap" id="workListWrap" style="margin-top:10px;"></div>
       </details>
 
-      <h3 style="margin-top:16px;">월별 “토요일 제외 일수(분모)”</h3>
+      <h3 style="margin-top:16px;">월별 "토요일 제외 일수(분모)"</h3>
       <div class="table-wrap" id="monthDaysWrap"></div>
       <p class="hint">기본은 자동 계산되며 필요하면 월별로 직접 수정 가능합니다.</p>
     </section>
@@ -301,8 +308,8 @@
       <h2>3) 급여(기준) 설정</h2>
 
       <p class="muted">
-        계산은 “월 기준액”을 바탕으로 방학 중 실제 근무(시간) 및 주휴일(일요일)을 반영합니다.<br/>
-        <span class="small">※ 아래 기본값은 2025 운영계획 예시(기본급 2,066,000 / 정액급식비 150,000 / (주15시간 미만 시) 시급 11,200)를 참고해 넣어둔 값입니다. 필요하면 수정해서 쓰세요.</span>
+        계산은 "월 기준액"을 바탕으로 방학 중 실제 근무(시간) 및 주휴일(일요일)을 반영합니다.<br/>
+        <span class="small">- 아래 기본값은 2025 운영계획 예시(기본급 2,066,000 / 정액급식비 150,000 / (주15시간 미만 시) 시급 11,200)를 참고해 넣어둔 값입니다. 필요하면 수정해서 쓰세요.</span>
       </p>
 
       <div class="grid-3" style="margin-top:8px;">
@@ -325,11 +332,17 @@
         </div>
       </div>
 
-      <div class="grid two" style="margin-top:8px;">
+      <div class="grid-3" style="margin-top:8px;">
         <div class="form-row">
           <label for="otherAllowanceMonthly">월 기타 월정액 수당(선택)</label>
           <input id="otherAllowanceMonthly" type="number" min="0" step="10" value="0" />
           <p class="hint">월정액 성격이면 여기에 추가(일할계산).</p>
+        </div>
+
+        <div class="form-row">
+          <label for="familyAllowance">가족수당(일할계산 아님)</label>
+          <input id="familyAllowance" type="number" min="0" step="10" value="0" />
+          <p class="hint">가족수당은 일할계산 대상이 아니므로 지급액을 직접 입력합니다.</p>
         </div>
 
         <div class="form-row">
@@ -354,9 +367,9 @@
 
       <div class="result-grid" style="margin-top:14px;">
         <div class="result-block">
-          <div class="result-title">근무 현황</div>
+          <div class="result-title">근무 내역 산정</div>
           <div class="result-row">
-            <div class="result-label">선택 근무일수</div>
+            <div class="result-label">실근무 일수</div>
             <div class="result-value" id="resWorkDays">-</div>
           </div>
           <div class="result-row">
@@ -364,16 +377,19 @@
             <div class="result-value" id="resWorkHours">-</div>
           </div>
           <div class="result-row">
-            <div class="result-label">발생 유급 주휴일(일요일) 수</div>
+            <div class="result-label">유급주휴일수</div>
             <div class="result-value" id="resHolidayDays">-</div>
           </div>
           <div class="result-row">
-            <div class="result-label">주휴일(일요일) 날짜</div>
+            <div class="result-label">주휴일자</div>
             <div class="result-value" id="resHolidayDates">-</div>
           </div>
 
           <p class="hint" id="resCondHint">
-            주휴수당 요건: 주 소정근로시간 15시간 이상이면서 해당 주에 개근하였으며 그 다음 주에 근무가 예정됨
+            ·주휴수당 요건: 주 소정근로시간 15시간 이상이면서 해당 주에 개근하였으며 그 다음 주에 근무가 예정됨
+          </p>
+          <p class="hint small" id="resHolidayRuleHint" style="margin-top:6px;">
+            ·근무시간 합계가 주 15시간 이상인 주"만 유급주휴일로 표시됨
           </p>
         </div>
 
@@ -381,24 +397,28 @@
           <div class="result-title">금액</div>
 
           <div class="result-row">
-            <div class="result-label">근무(시간)분 기본급</div>
+            <div class="result-label">기본급 (일할 계산)</div>
             <div class="result-value" id="resBaseWorkPay">-</div>
           </div>
           <div class="result-row">
-            <div class="result-label">주휴일(일요일)분 기본급</div>
+            <div class="result-label">주휴수당</div>
             <div class="result-value" id="resBaseHolidayPay">-</div>
           </div>
           <div class="result-row">
-            <div class="result-label">정액급식비(일수 비례)</div>
+            <div class="result-label">정액급식비 (일할 계산)</div>
             <div class="result-value" id="resMealPay">-</div>
           </div>
           <div class="result-row">
-            <div class="result-label">기타 월정액 수당(일수 비례)</div>
+            <div class="result-label">기타 월정액 수당 (일할 계산)</div>
             <div class="result-value" id="resOtherPay">-</div>
+          </div>
+          <div class="result-row">
+            <div class="result-label">가족 수당 (일할 대상 아님)</div>
+            <div class="result-value" id="resFamilyPay">-</div>
           </div>
 
           <div class="result-row" style="margin-top:6px;">
-            <div class="result-label">총 인건비</div>
+            <div class="result-label">총 지급금액</div>
             <div class="result-total" id="resGrand">-</div>
           </div>
 
@@ -406,10 +426,7 @@
         </div>
       </div>
 
-      <p class="note small" style="margin-top:10px;">
-        ·본 계산기는 방학 중 선택한 “근무일”과 주휴일(일요일)을 반영해 추정하는 도구입니다. (최종 지급은 내부 기준/지침에 따라 달라질 수 있음)<br/>
-        ·월별 분모(토요일 제외 일수) 및 월 기본급/급식비는 기관 내부 기준값을 입력해 사용하세요.
-      </p>
+      
     </section>
 
     <div class="btns">
@@ -425,7 +442,9 @@
     const toYMD = (d) => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
     const fromYMD = (s) => {
       if (!s) return null;
-      const [y,m,d] = s.split('-').map(Number);
+      const parts = s.split('-').map(Number);
+      if (parts.length !== 3) return null;
+      const [y,m,d] = parts;
       if (!y || !m || !d) return null;
       const dt = new Date(y, m-1, d);
       dt.setHours(0,0,0,0);
@@ -434,6 +453,7 @@
     const addDays = (d, n) => {
       const x = new Date(d);
       x.setDate(x.getDate()+n);
+      x.setHours(0,0,0,0);
       return x;
     };
     const ymKey = (d) => `${d.getFullYear()}-${pad2(d.getMonth()+1)}`;
@@ -491,7 +511,6 @@
     // =========================
     // (내장) 공휴일 데이터
     // - 필요 포인트: 2026년 2월 설 연휴 등
-    // - 연도 범위 밖은 고정 공휴일만(양력) 최소 적용
     // =========================
     const KR_HOLIDAYS = {
       2025: [
@@ -578,6 +597,7 @@
       weeklyHours: document.getElementById('contractWeeklyHours'),
       dailyHours: document.getElementById('contractDailyHours'),
       afterSemesterWork: document.getElementById('afterSemesterWork'),
+      beforeSemesterWork: document.getElementById('beforeSemesterWork'),
 
       applyDowBtn: document.getElementById('applyDowBtn'),
       clearWorkBtn: document.getElementById('clearWorkBtn'),
@@ -594,6 +614,7 @@
       basePayMonthly: document.getElementById('basePayMonthly'),
       mealAllowanceMonthly: document.getElementById('mealAllowanceMonthly'),
       otherAllowanceMonthly: document.getElementById('otherAllowanceMonthly'),
+      familyAllowance: document.getElementById('familyAllowance'),
       hourlyWageUnder15: document.getElementById('hourlyWageUnder15'),
       hourlyHint: document.getElementById('hourlyHint'),
       payAutoNote: document.getElementById('payAutoNote'),
@@ -613,6 +634,7 @@
       resBaseHolidayPay: document.getElementById('resBaseHolidayPay'),
       resMealPay: document.getElementById('resMealPay'),
       resOtherPay: document.getElementById('resOtherPay'),
+      resFamilyPay: document.getElementById('resFamilyPay'),
       resGrand: document.getElementById('resGrand'),
       resMonthBreakdown: document.getElementById('resMonthBreakdown'),
     };
@@ -664,10 +686,10 @@
       // 기본급 자동
       if (wh === 20){
         els.basePayMonthly.value = '1033000';
-        els.payAutoNote.textContent = '자동: 주 20시간 → 월 기본급 1,033,000원 적용';
+        els.payAutoNote.textContent = '자동: 주 20시간 -> 월 기본급 1,033,000원 적용';
       } else if (wh === 40){
         els.basePayMonthly.value = '2066000';
-        els.payAutoNote.textContent = '자동: 주 40시간 → 월 기본급 2,066,000원 적용';
+        els.payAutoNote.textContent = '자동: 주 40시간 -> 월 기본급 2,066,000원 적용';
       } else {
         els.basePayMonthly.value = '';
         els.payAutoNote.textContent = '주 20/40시간이 아니면 월 기본급을 직접 입력해 주세요.';
@@ -678,9 +700,9 @@
       els.hourlyWageUnder15.disabled = !under15;
 
       if (under15){
-        els.hourlyHint.innerHTML = '<span class="danger">주 15시간 미만</span> → 주휴수당 미발생. 시급×근로시간 방식으로 계산합니다.';
+        els.hourlyHint.innerHTML = '<span class="danger">주 15시간 미만</span> -> 주휴수당 미발생. 시급 x 근로시간 방식으로 계산합니다.';
       } else {
-        els.hourlyHint.textContent = '주 소정근로시간이 15시간 미만이면 주휴수당이 없고, 시급×근로시간 방식으로 계산하는 용도로 둡니다.';
+        els.hourlyHint.textContent = '주 소정근로시간이 15시간 미만이면 주휴수당이 없고, 시급 x 근로시간 방식으로 계산하는 용도로 둡니다.';
       }
 
       // 1일 소정근로시간도 같이 맞춰줌
@@ -752,7 +774,7 @@
 
         const sub = document.createElement('div');
         sub.className = 'hint';
-        sub.textContent = '날짜 클릭 → 근무일 선택됨';
+        sub.textContent = '날짜 클릭 -> 근무일 선택됨';
 
         head.appendChild(title);
         head.appendChild(sub);
@@ -864,7 +886,7 @@
     // =========================
     function renderWorkList(){
       const dates = Array.from(state.workMap.keys()).sort();
-      els.workListSummarySub.textContent = `(${dates.length}일) · 기본은 접힘`;
+      els.workListSummarySub.textContent = `(${dates.length}일) - 기본은 접힘`;
 
       if (dates.length === 0){
         els.workListWrap.innerHTML = '<p class="hint" style="padding:10px 12px;">선택된 근무일이 없습니다. 캘린더에서 날짜를 클릭하세요.</p>';
@@ -969,14 +991,12 @@
       const defaultHours = Math.max(0, parseFloat(els.dailyHours.value) || 0);
 
       state.workMap.clear();
-      let excludedHolidays = 0;
 
       for(let d=new Date(s); d<=e; d=addDays(d,1)){
         const ds = toYMD(d);
         if (checkedDow.has(d.getDay())){
           if (isPublicHoliday(ds)){
-            excludedHolidays++;
-            continue;
+            continue; // 공휴일은 자동 제외
           }
           state.workMap.set(ds, { hours: defaultHours, manual: false });
         }
@@ -987,11 +1007,6 @@
         recalcHolidayPaySet();
       }
       buildCalendar();
-
-      if (excludedHolidays > 0){
-        // 사용자에게 은근히 알려주기
-        console.info(`공휴일 ${excludedHolidays}일은 자동 제외되었습니다.`);
-      }
     }
 
     function clearAllWork(){
@@ -1080,55 +1095,6 @@
     // =========================
     // 주휴일(일요일) 산출/표시
     // =========================
-    function computeHolidaySundays(workDates, rangeEnd, contractWeeklyHours, afterSemesterWork){
-      // workDates: array of {date:Date, hours:number}
-      // return: array of Date (sundays)
-      // ✅ 버그수정: "학기중 주 소정근로시간"만으로 주휴를 만들지 않고,
-      //            선택된 근무일(시간) 기준으로 '해당 주의 주간 근로시간'이 15h 이상인지 판단.
-      if (contractWeeklyHours < 15) return [];
-
-      // 주별로 묶기 (월~일)
-      const weeks = new Map(); // weekKey -> { mon:Date, workDays:int, workHours:number }
-      workDates.forEach((w)=>{
-        const wk = weekKey(w.date);
-        const rec = weeks.get(wk) || { mon: startOfWeekMon(w.date), workDays:0, workHours:0 };
-        rec.workDays += 1;
-        rec.workHours += (Math.max(0, parseFloat(w.hours) || 0));
-        weeks.set(wk, rec);
-      });
-
-      const holidayDates = [];
-      const weekKeys = Array.from(weeks.keys()).sort(); // 월요일 기준 문자열 정렬
-
-      weekKeys.forEach((wk)=>{
-        const rec = weeks.get(wk);
-        if (!rec || rec.workDays <= 0) return;
-
-        // 핵심 조건 1) "해당 주"의 근로시간(선택된 근무일/시간 기준) 15h 이상
-        if (rec.workHours < 15) return;
-
-        // 핵심 조건 2) 다음 주 근로 예정
-        const nextK = nextWeekKey(wk);
-        const nextMon = fromYMD(nextK);
-
-        const hasNextWork = weeks.has(nextK)
-          ? (weeks.get(nextK).workDays > 0)
-          : (afterSemesterWork && nextMon && nextMon > rangeEnd);
-
-        // 개근 가정: 선택된 근무일은 모두 근무했다고 간주
-        if (hasNextWork){
-          const sunday = addDays(rec.mon, 6);
-          sunday.setHours(0,0,0,0);
-          holidayDates.push(sunday);
-        }
-      });
-
-      // 같은 날짜 중복 제거
-      const uniq = new Map();
-      holidayDates.forEach(d=>uniq.set(toYMD(d), d));
-      return Array.from(uniq.values()).sort((a,b)=>a-b);
-    }
-
     function getWorkDatesFromMap(){
       const range = getRange();
       if (!range) return [];
@@ -1141,17 +1107,85 @@
         .sort((a,b)=>a.date-b.date);
     }
 
+    function computeHolidaySundaysCleaner(workDates, range, afterSemesterWork, beforeSemesterWork, contractWeeklyHours){
+      if (!range) return [];
+      const { e } = range;
+
+      // 계약 주 소정근로시간이 15 미만이면 주휴 미발생 처리
+      if ((contractWeeklyHours || 0) < 15) return [];
+
+      // 주별로 묶기 (주: 월요일 시작)
+      const weeks = new Map(); // weekKey -> { mon:Date, hoursSum:number }
+      workDates.forEach((w)=>{
+        const wk = weekKey(w.date);
+        const rec = weeks.get(wk) || { mon: startOfWeekMon(w.date), hoursSum:0 };
+        rec.hoursSum += w.hours;
+        weeks.set(wk, rec);
+      });
+
+      const holidayDates = [];
+      const weekKeys = Array.from(weeks.keys()).sort();
+
+      weekKeys.forEach((wk)=>{
+        const rec = weeks.get(wk);
+        if (!rec) return;
+
+        // 핵심 수정: 계약시간이 아니라 해당 주 선택된 근무시간 합계로 주 15시간 여부 판단
+        if ((rec.hoursSum || 0) < 15) return;
+
+        const nextK = nextWeekKey(wk);
+        const nextMon = fromYMD(nextK);
+
+        const hasNextWork = weeks.has(nextK)
+          ? ((weeks.get(nextK).hoursSum || 0) > 0)
+          : (afterSemesterWork && nextMon && nextMon > e);
+
+        if (hasNextWork){
+          const sunday = addDays(rec.mon, 6);
+          holidayDates.push(sunday);
+        }
+      });
+
+      // 방학 시작 주의 일요일을 포함할지(학기중 근무로 요건 충족 가정)
+      if (beforeSemesterWork){
+        const startMon = startOfWeekMon(range.s);
+        const startWk = toYMD(startMon);
+        const nextK = nextWeekKey(startWk);
+        const nextMon = fromYMD(nextK);
+
+        const hasNextWork = weeks.has(nextK)
+          ? ((weeks.get(nextK).hoursSum || 0) > 0)
+          : (afterSemesterWork && nextMon && nextMon > e);
+
+        if (hasNextWork){
+          const sunday = addDays(startMon, 6);
+          holidayDates.push(sunday);
+        }
+      }
+
+      // 중복 제거
+      const uniq = new Map();
+      holidayDates.forEach(d=>uniq.set(toYMD(d), d));
+      return Array.from(uniq.values()).sort((a,b)=>a-b);
+    }
+
     function recalcHolidayPaySet(){
       state.holidayPaySet = new Set();
       const range = getRange();
       if (!range) return;
-      const { e } = range;
 
       const contractWeeklyHours = Math.max(0, parseFloat(els.weeklyHours.value) || 0);
       const afterSemesterWork = !!els.afterSemesterWork.checked;
+      const beforeSemesterWork = !!els.beforeSemesterWork.checked;
 
       const workDates = getWorkDatesFromMap();
-      const holidaySundays = computeHolidaySundays(workDates, e, contractWeeklyHours, afterSemesterWork);
+      const holidaySundays = computeHolidaySundaysCleaner(
+        workDates,
+        range,
+        afterSemesterWork,
+        beforeSemesterWork,
+        contractWeeklyHours
+      );
 
       const workSet = new Set(workDates.map(w=>toYMD(w.date)));
       const holidayFinal = holidaySundays.filter(d=>!workSet.has(toYMD(d)));
@@ -1190,7 +1224,7 @@
       };
 
       addRow('방학기간', `${toYMD(res.range.s)} ~ ${toYMD(res.range.e)}`);
-      addRow('주 소정근로시간', `${res.weeklyHours}시간`, res.weeklyHours < 15 ? '주휴 미발생(시급제)' : '주휴 산정 가능');
+      addRow('학기중 주 소정근로시간', `${res.contractWeeklyHours}시간`, res.contractWeeklyHours < 15 ? '주휴 미발생(시급제)' : '주휴 산정 가능');
       addRow('1일 소정근로시간', `${res.dailyHours}시간`);
       addRow('선택 근무일수', `${res.workDaysCount}일`);
       addRow('총 유급근로시간', `${res.workHoursSum.toFixed(1)}시간`);
@@ -1200,6 +1234,7 @@
       addRow('주휴일(일요일)분 기본급', fmtKRW(res.baseHolidayPay));
       addRow('정액급식비(일수 비례)', fmtKRW(res.mealPay));
       addRow('기타 월정액 수당(일수 비례)', fmtKRW(res.otherPay));
+      addRow('가족수당(일할계산 아님)', fmtKRW(res.familyPay));
       addRow('총 인건비', fmtKRW(res.grand), '');
 
       table.appendChild(tbody);
@@ -1223,21 +1258,29 @@
 
       const contractWeeklyHours = Math.max(0, parseFloat(els.weeklyHours.value) || 0);
       const dailyHoursInput = Math.max(0, parseFloat(els.dailyHours.value) || 0);
+      const dailyHours = (dailyHoursInput > 0 ? dailyHoursInput : roundToHalf(contractWeeklyHours/5));
+
       const afterSemesterWork = !!els.afterSemesterWork.checked;
+      const beforeSemesterWork = !!els.beforeSemesterWork.checked;
 
       const workDates = getWorkDatesFromMap();
       const workDaysCount = workDates.length;
       const workHoursSum = workDates.reduce((sum,x)=>sum+x.hours,0);
 
-      // 주휴일(일요일) 계산
-      const holidaySundays = computeHolidaySundays(workDates, e, contractWeeklyHours, afterSemesterWork);
+      const holidaySundays = computeHolidaySundaysCleaner(
+        workDates,
+        range,
+        afterSemesterWork,
+        beforeSemesterWork,
+        contractWeeklyHours
+      );
 
       const workDateSet = new Set(workDates.map(x=>toYMD(x.date)));
       const holidayFinal = holidaySundays.filter(d=>!workDateSet.has(toYMD(d)));
 
       // 월별 집계
-      const workByMonth = new Map();   // ym -> { workDays, workHours }
-      const holByMonth = new Map();    // ym -> { holDays }
+      const workByMonth = new Map();
+      const holByMonth = new Map();
 
       workDates.forEach((w)=>{
         const k = ymKey(w.date);
@@ -1261,6 +1304,7 @@
       const basePayMonthly = Math.max(0, parseFloat(els.basePayMonthly.value) || 0);
       const mealMonthly = Math.max(0, parseFloat(els.mealAllowanceMonthly.value) || 0);
       const otherMonthly = Math.max(0, parseFloat(els.otherAllowanceMonthly.value) || 0);
+      const familyPay = Math.max(0, parseFloat(els.familyAllowance.value) || 0);
       const hourlyUnder15 = Math.max(0, parseFloat(els.hourlyWageUnder15.value) || 0);
 
       let baseWorkPay = 0;
@@ -1281,23 +1325,19 @@
         if (contractWeeklyHours < 15){
           const sub = w.workHours * hourlyUnder15;
           baseWorkPay += sub;
-          breakdownLines.push(`${mk}: 근무 ${w.workDays}일/${w.workHours.toFixed(1)}h → ${fmtKRW(sub)} (시급제)`);
+          breakdownLines.push(`${mk}: 근무 ${w.workDays}일/${w.workHours.toFixed(1)}h -> ${fmtKRW(sub)} (시급제)`);
           return;
         }
 
-        const safeDailyHours = dailyHoursInput > 0 ? dailyHoursInput : roundToHalf(contractWeeklyHours/5);
-
-        // 기본급: 시간 비례(근무시간 + 주휴일은 1일 소정근로시간)
-        const denomHours = mdays * safeDailyHours;
+        const denomHours = mdays * dailyHours;
         const baseHourly = denomHours > 0 ? (basePayMonthly / denomHours) : 0;
 
         const baseSubWork = baseHourly * w.workHours;
-        const baseSubHol  = baseHourly * (h.holDays * safeDailyHours);
+        const baseSubHol  = baseHourly * (h.holDays * dailyHours);
 
         baseWorkPay += baseSubWork;
         baseHolidayPay += baseSubHol;
 
-        // 정액급식비/기타월정액: 일수 비례(근무일수 + 주휴일수)
         const mealDaily = mdays > 0 ? (mealMonthly / mdays) : 0;
         const otherDaily = mdays > 0 ? (otherMonthly / mdays) : 0;
 
@@ -1307,40 +1347,46 @@
 
         breakdownLines.push(
           `${mk}: 근무 ${w.workDays}일/${w.workHours.toFixed(1)}h + 주휴 ${h.holDays}일, ` +
-          `분모 ${mdays}일 → 기본급 ${fmtKRW(baseSubWork+baseSubHol)}, 급식비 ${fmtKRW(mealDaily*paidDaysForAllow)}`
+          `분모 ${mdays}일 -> 기본급 ${fmtKRW(baseSubWork+baseSubHol)}, 급식비 ${fmtKRW(mealDaily*paidDaysForAllow)}`
         );
       });
 
-      const grand = baseWorkPay + baseHolidayPay + mealPay + otherPay;
+      const grand = baseWorkPay + baseHolidayPay + mealPay + otherPay + familyPay;
 
-      // 결과 저장(엑셀 포함)
       lastResult = {
         range,
         monthKeys,
-        weeklyHours: contractWeeklyHours,
-        dailyHours: (dailyHoursInput > 0 ? dailyHoursInput : roundToHalf(contractWeeklyHours/5)),
+        contractWeeklyHours,
+        dailyHours,
         afterSemesterWork,
+        beforeSemesterWork,
+
         workDates,
         holidayFinal,
+
         pay: {
           basePayMonthly,
           mealMonthly,
           otherMonthly,
+          familyPay,
           hourlyUnder15,
         },
+
         workDaysCount,
         workHoursSum,
+
         baseWorkPay,
         baseHolidayPay,
         mealPay,
         otherPay,
+        familyPay,
         grand,
+
         breakdownLines,
       };
 
       renderResult(lastResult);
 
-      // 주휴 표시가 켜져 있으면, 계산과 동시에 주휴 set도 최신화
       if (state.showHolidayPay){
         recalcHolidayPaySet();
         buildCalendar();
@@ -1355,29 +1401,27 @@
       els.resWorkDays.textContent = `${res.workDaysCount}일`;
       els.resWorkHours.textContent = `${res.workHoursSum.toFixed(1)}시간`;
 
-      if (res.weeklyHours < 15){
+      if (res.contractWeeklyHours < 15){
         els.resHolidayDays.textContent = '0일';
         els.resHolidayDates.textContent = '-';
-        els.resCondHint.innerHTML = '<span class="danger">주 소정근로시간 15시간 미만</span> → 주휴수당(일요일) 미발생(시급제 계산).';
+        els.resCondHint.innerHTML = '<span class="danger">주 소정근로시간 15시간 미만</span> -> 주휴수당(일요일) 미발생(시급제 계산).';
       } else {
         els.resHolidayDays.textContent = `${res.holidayFinal.length}일`;
         els.resHolidayDates.textContent = res.holidayFinal.length ? res.holidayFinal.map(toYMD).join(', ') : '-';
-
-        // ✅ 안내문 개선(선택 근무일 기준 주 15h 미만인 경우가 흔해서)
-        if (res.holidayFinal.length === 0){
-          els.resCondHint.textContent = '주휴수당 요건: 주 소정근로시간 15시간 이상 + 해당 주 개근 + 다음 주 근로 예정 (※ 선택된 근무일/근로시간 기준으로 주 15시간 이상인 주가 없으면 주휴일이 발생하지 않습니다.)';
-        } else {
-          els.resCondHint.textContent = '주휴수당 요건: 주 소정근로시간 15시간 이상 + 해당 주 개근 + 다음 주 근로 예정';
-        }
+        els.resCondHint.textContent = '주휴수당 요건: 주 소정근로시간 15시간 이상 + 해당 주 개근 + 다음 주 근로 예정';
       }
 
       els.resBaseWorkPay.textContent = fmtKRW(res.baseWorkPay);
       els.resBaseHolidayPay.textContent = fmtKRW(res.baseHolidayPay);
       els.resMealPay.textContent = fmtKRW(res.mealPay);
       els.resOtherPay.textContent = fmtKRW(res.otherPay);
+      els.resFamilyPay.textContent = fmtKRW(res.familyPay);
       els.resGrand.textContent = fmtKRW(res.grand);
 
-      els.resMonthBreakdown.textContent = res.breakdownLines.length ? ('월별 요약: ' + res.breakdownLines.join(' / ')) : '-';
+      const familyLine = res.familyPay > 0 ? ` / 가족수당 ${fmtKRW(res.familyPay)}(일할계산 아님)` : '';
+      els.resMonthBreakdown.textContent = res.breakdownLines.length
+        ? ('월별 요약: ' + res.breakdownLines.join(' / ') + familyLine)
+        : (res.familyPay > 0 ? ('가족수당: ' + fmtKRW(res.familyPay) + ' (일할계산 아님)') : '-');
     }
 
     // =========================
@@ -1385,25 +1429,23 @@
     // =========================
     function escapeHtml(s){
       return String(s)
-        .replaceAll('&','&amp;')
-        .replaceAll('<','&lt;')
-        .replaceAll('>','&gt;')
-        .replaceAll('"','&quot;')
-        .replaceAll("'","&#39;");
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#39;');
     }
 
     function buildDailyLedgerRows(res){
       const rows = [];
-      const wh = res.weeklyHours;
+      const wh = res.contractWeeklyHours;
 
-      // helper: month rates
       const monthRates = new Map();
       if (wh >= 15){
         res.monthKeys.forEach((mk)=>{
           const mdays = getMonthDays(mk);
           if (mdays <= 0) return;
 
-          // 해당 월에 실제 지급(근무/주휴)이 있는 달만 rate 계산
           const hasWork = res.workDates.some(w=>ymKey(w.date)===mk);
           const hasHol = res.holidayFinal.some(d=>ymKey(d)===mk);
           if (!hasWork && !hasHol) return;
@@ -1431,6 +1473,7 @@
             basePay: base,
             mealPay: 0,
             otherPay: 0,
+            familyPay: 0,
             total: base,
           });
           return;
@@ -1450,6 +1493,7 @@
           basePay: base,
           mealPay: meal,
           otherPay: other,
+          familyPay: 0,
           total,
         });
       });
@@ -1472,12 +1516,34 @@
             basePay: base,
             mealPay: meal,
             otherPay: other,
+            familyPay: 0,
             total,
           });
         });
       }
 
-      rows.sort((a,b)=>a.date-b.date);
+      // 가족수당: 별도 1행
+      if ((res.pay.familyPay || 0) > 0){
+        rows.push({
+          type: '가족수당',
+          date: new Date(res.range.e.getTime()),
+          dateStr: '',
+          dow: '',
+          hours: 0,
+          basePay: 0,
+          mealPay: 0,
+          otherPay: 0,
+          familyPay: res.pay.familyPay,
+          total: res.pay.familyPay,
+        });
+      }
+
+      rows.sort((a,b)=>{
+        const ta = a.date ? a.date.getTime() : 0;
+        const tb = b.date ? b.date.getTime() : 0;
+        return ta - tb;
+      });
+
       return rows;
     }
 
@@ -1494,18 +1560,21 @@
 
       const headerInfo = [
         ['방학기간', `${toYMD(res.range.s)} ~ ${toYMD(res.range.e)}`],
-        ['주 소정근로시간', `${res.weeklyHours}시간`],
+        ['학기중 주 소정근로시간', `${res.contractWeeklyHours}시간`],
         ['1일 소정근로시간', `${res.dailyHours}시간`],
         ['월 기본급', res.pay.basePayMonthly ? `${res.pay.basePayMonthly}` : ''],
         ['월 정액급식비', `${res.pay.mealMonthly}`],
         ['월 기타수당', `${res.pay.otherMonthly}`],
+        ['가족수당(일할계산 아님)', `${res.pay.familyPay}`],
         ['(주15h 미만) 시급', `${res.pay.hourlyUnder15}`],
       ];
 
-      // HTML 기반 XLS
       let html = '';
       html += '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
-      html += '<head><meta charset="UTF-8"></head><body>';
+      html += '<head>';
+      html += '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />';
+      html += '<meta charset="UTF-8">';
+      html += '</head><body>';
 
       html += `<h2>임금대장 (청소원 방학중 근무)</h2>`;
 
@@ -1519,22 +1588,24 @@
 
       html += '<table border="1" cellspacing="0" cellpadding="4">';
       html += '<tr>';
-      ['번호','구분','날짜','요일','유급근로시간','기본급','정액급식비','기타수당','일 합계'].forEach((h)=>{
+      ['번호','구분','날짜','요일','유급근로시간','기본급','정액급식비','기타수당','가족수당','일 합계'].forEach((h)=>{
         html += `<th>${escapeHtml(h)}</th>`;
       });
       html += '</tr>';
 
-      let sumBase=0, sumMeal=0, sumOther=0, sumTotal=0;
+      let sumBase=0, sumMeal=0, sumOther=0, sumFamily=0, sumTotal=0;
 
       rows.forEach((r, idx)=>{
-        const base = Math.round(r.basePay);
-        const meal = Math.round(r.mealPay);
-        const other = Math.round(r.otherPay);
-        const total = Math.round(r.total);
+        const base = Math.round(r.basePay || 0);
+        const meal = Math.round(r.mealPay || 0);
+        const other = Math.round(r.otherPay || 0);
+        const fam  = Math.round(r.familyPay || 0);
+        const total = Math.round(r.total || 0);
 
         sumBase += base;
         sumMeal += meal;
         sumOther += other;
+        sumFamily += fam;
         sumTotal += total;
 
         html += '<tr>';
@@ -1542,10 +1613,11 @@
         html += `<td>${escapeHtml(r.type)}</td>`;
         html += `<td>${escapeHtml(r.dateStr)}</td>`;
         html += `<td>${escapeHtml(r.dow)}</td>`;
-        html += `<td align="right">${r.hours.toFixed(1)}</td>`;
+        html += `<td align="right">${(r.hours || 0).toFixed(1)}</td>`;
         html += `<td align="right">${base}</td>`;
         html += `<td align="right">${meal}</td>`;
         html += `<td align="right">${other}</td>`;
+        html += `<td align="right">${fam}</td>`;
         html += `<td align="right">${total}</td>`;
         html += '</tr>';
       });
@@ -1555,17 +1627,18 @@
       html += `<th align="right">${sumBase}</th>`;
       html += `<th align="right">${sumMeal}</th>`;
       html += `<th align="right">${sumOther}</th>`;
+      html += `<th align="right">${sumFamily}</th>`;
       html += `<th align="right">${sumTotal}</th>`;
       html += '</tr>';
 
       html += '</table>';
 
       html += '<br/>';
-      html += `<p style="font-size:12px; color:#555;">※ 본 파일은 브라우저에서 생성된 “엑셀에서 열 수 있는(.xls)” 형식입니다. 급식비/기타수당은 월 분모 기준으로 일할 배분해 1일 단위로 표시됩니다.</p>`;
+      html += `<p style="font-size:12px; color:#555;">주의: 본 파일은 브라우저에서 생성된 "엑셀에서 열 수 있는(.xls)" 형식입니다. 급식비/기타수당은 월 분모 기준으로 일할 배분해 1일 단위로 표시됩니다.</p>`;
 
       html += '</body></html>';
 
-      const blob = new Blob(["\ufeff" + html], { type: 'application/vnd.ms-excel' });
+      const blob = new Blob(["\ufeff" + html], { type: 'application/vnd.ms-excel;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -1586,7 +1659,6 @@
         buildCalendar();
         buildMonthDaysTable();
 
-        // 기간이 바뀌면 범위 밖 근무일은 제거
         const range = getRange();
         if (range){
           const { s, e } = range;
@@ -1598,7 +1670,6 @@
           state.workMap.clear();
         }
 
-        // 공휴일세트 갱신 및 자동선택(요일반영) 공휴일 제거
         refreshHolidaySet();
 
         renderWorkList();
@@ -1626,14 +1697,15 @@
       buildCalendar();
     });
 
-    els.afterSemesterWork.addEventListener('change', ()=>{
-      if (state.showHolidayPay){
-        recalcHolidayPaySet();
-        buildCalendar();
-      }
+    [els.afterSemesterWork, els.beforeSemesterWork].forEach((el)=>{
+      el.addEventListener('change', ()=>{
+        if (state.showHolidayPay){
+          recalcHolidayPaySet();
+          buildCalendar();
+        }
+      });
     });
 
-    // 주 소정근로시간 변경
     els.weeklyHours.addEventListener('change', syncPayFromWeekly);
 
     els.calcBtn.addEventListener('click', calculate);
@@ -1642,7 +1714,7 @@
     // =========================
     // 초기
     // =========================
-    syncPayFromWeekly(); // weekly=20 기본값 기준 자동세팅(기본급/일소정/시급입력)
+    syncPayFromWeekly();
     refreshHolidaySet();
     buildCalendar();
     renderWorkList();
