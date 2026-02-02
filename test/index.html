@@ -367,9 +367,9 @@
 
       <div class="result-grid" style="margin-top:14px;">
         <div class="result-block">
-          <div class="result-title">근무 현황</div>
+          <div class="result-title">근무 내역 산정</div>
           <div class="result-row">
-            <div class="result-label">선택 근무일수</div>
+            <div class="result-label">실근무 일수</div>
             <div class="result-value" id="resWorkDays">-</div>
           </div>
           <div class="result-row">
@@ -377,19 +377,19 @@
             <div class="result-value" id="resWorkHours">-</div>
           </div>
           <div class="result-row">
-            <div class="result-label">발생 유급 주휴일(일요일) 수</div>
+            <div class="result-label">유급주휴일수</div>
             <div class="result-value" id="resHolidayDays">-</div>
           </div>
           <div class="result-row">
-            <div class="result-label">주휴일(일요일) 날짜</div>
+            <div class="result-label">주휴일자</div>
             <div class="result-value" id="resHolidayDates">-</div>
           </div>
 
           <p class="hint" id="resCondHint">
-            주휴수당 요건: 주 소정근로시간 15시간 이상이면서 해당 주에 개근하였으며 그 다음 주에 근무가 예정됨
+            ·주휴수당 요건: 주 소정근로시간 15시간 이상이면서 해당 주에 개근하였으며 그 다음 주에 근무가 예정됨
           </p>
           <p class="hint small" id="resHolidayRuleHint" style="margin-top:6px;">
-            참고: 이 계산기는 "선택된 근무시간 합계가 주 15시간 이상인 주"만 주휴일(일요일)로 표시합니다.
+            ·근무시간 합계가 주 15시간 이상인 주"만 유급주휴일로 표시됨
           </p>
         </div>
 
@@ -397,28 +397,28 @@
           <div class="result-title">금액</div>
 
           <div class="result-row">
-            <div class="result-label">근무(시간)분 기본급</div>
+            <div class="result-label">기본급 (일할 계산)</div>
             <div class="result-value" id="resBaseWorkPay">-</div>
           </div>
           <div class="result-row">
-            <div class="result-label">주휴일(일요일)분 기본급</div>
+            <div class="result-label">주휴수당</div>
             <div class="result-value" id="resBaseHolidayPay">-</div>
           </div>
           <div class="result-row">
-            <div class="result-label">정액급식비(일수 비례)</div>
+            <div class="result-label">정액급식비 (일할 계산)</div>
             <div class="result-value" id="resMealPay">-</div>
           </div>
           <div class="result-row">
-            <div class="result-label">기타 월정액 수당(일수 비례)</div>
+            <div class="result-label">기타 월정액 수당 (일할 계산)</div>
             <div class="result-value" id="resOtherPay">-</div>
           </div>
           <div class="result-row">
-            <div class="result-label">가족수당(일할계산 아님)</div>
+            <div class="result-label">가족 수당 (일할 대상 아님)</div>
             <div class="result-value" id="resFamilyPay">-</div>
           </div>
 
           <div class="result-row" style="margin-top:6px;">
-            <div class="result-label">총 인건비</div>
+            <div class="result-label">총 지급금액</div>
             <div class="result-total" id="resGrand">-</div>
           </div>
 
@@ -426,10 +426,7 @@
         </div>
       </div>
 
-      <p class="note small" style="margin-top:10px;">
-        - 본 계산기는 방학 중 선택한 "근무일"과 주휴일(일요일)을 반영해 추정하는 도구입니다. (최종 지급은 내부 기준/지침에 따라 달라질 수 있음)<br/>
-        - 월별 분모(토요일 제외 일수) 및 월 기본급/급식비는 기관 내부 기준값을 입력해 사용하세요.
-      </p>
+      
     </section>
 
     <div class="btns">
