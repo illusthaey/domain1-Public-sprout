@@ -246,7 +246,7 @@
 
       <p class="hint">
         ·요일 선택 및 1일 소정근로시간 입력 후 "요일 및 소정근무시간 반영하기" 버튼을 누르면 방학 기간 동안 근무일이 파란색으로 자동 선택됩니다. (공휴일 자동 제외)<br/>
-        
+
         ·달력에서 개별 날짜 클릭하면 선택 해제 및 수동 추가 가능<br/>
         ·"주휴수당 지급일자 표시하기" 버튼을 누르면, 조건을 충족하는 주의 일요일이 노란색으로 표시됨. 수동으로 조정 가능.<br/>
       </p>
@@ -1080,17 +1080,20 @@
     // =========================
     // 주휴일(일요일) 산출/표시
     // =========================
-    function computeHolidaySundays(workDates, rangeEnd, weeklyHours, afterSemesterWork){
+    function computeHolidaySundays(workDates, rangeEnd, contractWeeklyHours, afterSemesterWork){
       // workDates: array of {date:Date, hours:number}
       // return: array of Date (sundays)
-      if (weeklyHours < 15) return [];
+      // ✅ 버그수정: "학기중 주 소정근로시간"만으로 주휴를 만들지 않고,
+      //            선택된 근무일(시간) 기준으로 '해당 주의 주간 근로시간'이 15h 이상인지 판단.
+      if (contractWeeklyHours < 15) return [];
 
-      // 주별로 묶기
-      const weeks = new Map(); // weekKey -> { mon:Date, workCount:int }
+      // 주별로 묶기 (월~일)
+      const weeks = new Map(); // weekKey -> { mon:Date, workDays:int, workHours:number }
       workDates.forEach((w)=>{
         const wk = weekKey(w.date);
-        const rec = weeks.get(wk) || { mon: startOfWeekMon(w.date), workCount:0 };
-        rec.workCount += 1;
+        const rec = weeks.get(wk) || { mon: startOfWeekMon(w.date), workDays:0, workHours:0 };
+        rec.workDays += 1;
+        rec.workHours += (Math.max(0, parseFloat(w.hours) || 0));
         weeks.set(wk, rec);
       });
 
@@ -1099,13 +1102,17 @@
 
       weekKeys.forEach((wk)=>{
         const rec = weeks.get(wk);
-        if (!rec || rec.workCount <= 0) return;
+        if (!rec || rec.workDays <= 0) return;
 
+        // 핵심 조건 1) "해당 주"의 근로시간(선택된 근무일/시간 기준) 15h 이상
+        if (rec.workHours < 15) return;
+
+        // 핵심 조건 2) 다음 주 근로 예정
         const nextK = nextWeekKey(wk);
         const nextMon = fromYMD(nextK);
 
         const hasNextWork = weeks.has(nextK)
-          ? (weeks.get(nextK).workCount > 0)
+          ? (weeks.get(nextK).workDays > 0)
           : (afterSemesterWork && nextMon && nextMon > rangeEnd);
 
         // 개근 가정: 선택된 근무일은 모두 근무했다고 간주
@@ -1140,11 +1147,11 @@
       if (!range) return;
       const { e } = range;
 
-      const weeklyHours = Math.max(0, parseFloat(els.weeklyHours.value) || 0);
+      const contractWeeklyHours = Math.max(0, parseFloat(els.weeklyHours.value) || 0);
       const afterSemesterWork = !!els.afterSemesterWork.checked;
 
       const workDates = getWorkDatesFromMap();
-      const holidaySundays = computeHolidaySundays(workDates, e, weeklyHours, afterSemesterWork);
+      const holidaySundays = computeHolidaySundays(workDates, e, contractWeeklyHours, afterSemesterWork);
 
       const workSet = new Set(workDates.map(w=>toYMD(w.date)));
       const holidayFinal = holidaySundays.filter(d=>!workSet.has(toYMD(d)));
@@ -1214,8 +1221,8 @@
 
       refreshHolidaySet();
 
-      const weeklyHours = Math.max(0, parseFloat(els.weeklyHours.value) || 0);
-      const dailyHours = Math.max(0, parseFloat(els.dailyHours.value) || 0);
+      const contractWeeklyHours = Math.max(0, parseFloat(els.weeklyHours.value) || 0);
+      const dailyHoursInput = Math.max(0, parseFloat(els.dailyHours.value) || 0);
       const afterSemesterWork = !!els.afterSemesterWork.checked;
 
       const workDates = getWorkDatesFromMap();
@@ -1223,7 +1230,7 @@
       const workHoursSum = workDates.reduce((sum,x)=>sum+x.hours,0);
 
       // 주휴일(일요일) 계산
-      const holidaySundays = computeHolidaySundays(workDates, e, weeklyHours, afterSemesterWork);
+      const holidaySundays = computeHolidaySundays(workDates, e, contractWeeklyHours, afterSemesterWork);
 
       const workDateSet = new Set(workDates.map(x=>toYMD(x.date)));
       const holidayFinal = holidaySundays.filter(d=>!workDateSet.has(toYMD(d)));
@@ -1271,14 +1278,14 @@
 
         if (w.workDays === 0 && h.holDays === 0) return;
 
-        if (weeklyHours < 15){
+        if (contractWeeklyHours < 15){
           const sub = w.workHours * hourlyUnder15;
           baseWorkPay += sub;
           breakdownLines.push(`${mk}: 근무 ${w.workDays}일/${w.workHours.toFixed(1)}h → ${fmtKRW(sub)} (시급제)`);
           return;
         }
 
-        const safeDailyHours = dailyHours > 0 ? dailyHours : roundToHalf(weeklyHours/5);
+        const safeDailyHours = dailyHoursInput > 0 ? dailyHoursInput : roundToHalf(contractWeeklyHours/5);
 
         // 기본급: 시간 비례(근무시간 + 주휴일은 1일 소정근로시간)
         const denomHours = mdays * safeDailyHours;
@@ -1310,8 +1317,8 @@
       lastResult = {
         range,
         monthKeys,
-        weeklyHours,
-        dailyHours: (dailyHours > 0 ? dailyHours : roundToHalf(weeklyHours/5)),
+        weeklyHours: contractWeeklyHours,
+        dailyHours: (dailyHoursInput > 0 ? dailyHoursInput : roundToHalf(contractWeeklyHours/5)),
         afterSemesterWork,
         workDates,
         holidayFinal,
@@ -1355,7 +1362,13 @@
       } else {
         els.resHolidayDays.textContent = `${res.holidayFinal.length}일`;
         els.resHolidayDates.textContent = res.holidayFinal.length ? res.holidayFinal.map(toYMD).join(', ') : '-';
-        els.resCondHint.textContent = '주휴수당 요건: 주 소정근로시간 15시간 이상 + 해당 주 개근 + 다음 주 근로 예정';
+
+        // ✅ 안내문 개선(선택 근무일 기준 주 15h 미만인 경우가 흔해서)
+        if (res.holidayFinal.length === 0){
+          els.resCondHint.textContent = '주휴수당 요건: 주 소정근로시간 15시간 이상 + 해당 주 개근 + 다음 주 근로 예정 (※ 선택된 근무일/근로시간 기준으로 주 15시간 이상인 주가 없으면 주휴일이 발생하지 않습니다.)';
+        } else {
+          els.resCondHint.textContent = '주휴수당 요건: 주 소정근로시간 15시간 이상 + 해당 주 개근 + 다음 주 근로 예정';
+        }
       }
 
       els.resBaseWorkPay.textContent = fmtKRW(res.baseWorkPay);
@@ -1376,7 +1389,7 @@
         .replaceAll('<','&lt;')
         .replaceAll('>','&gt;')
         .replaceAll('"','&quot;')
-        .replaceAll("'",'&#39;');
+        .replaceAll("'","&#39;");
     }
 
     function buildDailyLedgerRows(res){
@@ -1608,7 +1621,7 @@
         els.toggleHolidayBtn.textContent = '주휴수당 지급일자 숨기기';
       } else {
         state.holidayPaySet = new Set();
-        els.toggleHolidayBtn.textContent = '주휴수당 지급일자 표시';
+        els.toggleHolidayBtn.textContent = '주휴수당 지급일자 표시하기';
       }
       buildCalendar();
     });
