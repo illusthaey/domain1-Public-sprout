@@ -329,13 +329,13 @@
         <div class="form-row">
           <label for="otherAllowanceMonthly">월 기타 월정액 수당(선택)</label>
           <input id="otherAllowanceMonthly" type="number" min="0" step="10" value="0" />
-          <p class="hint">예) 위험수당, 직무수당 등 “월정액” 성격이면 여기에 추가(일수 비례로 일할 계산).</p>
+          <p class="hint">월정액 성격이면 여기에 추가(일할계산).</p>
         </div>
 
         <div class="form-row">
-          <label for="hourlyWageUnder15">주15h 미만 시급(선택)</label>
+          <label for="hourlyWageUnder15">주 15시간 미만 시급</label>
           <input id="hourlyWageUnder15" type="number" min="0" step="10" value="11200" />
-          <p class="hint" id="hourlyHint">주 소정근로시간이 15시간 미만이면 주휴수당이 없고, 시급×근로시간 방식으로 계산하는 용도로 둡니다.</p>
+          <p class="hint" id="hourlyHint">주 소정근로시간이 15시간 미만이면 주휴수당 지급 요건 미충족. 시급*근로시간 방식으로 인건비 산정함</p>
         </div>
       </div>
     </section>
@@ -343,10 +343,10 @@
     <section class="card">
       <div class="btn-row" style="margin-bottom:10px;">
         <button type="button" class="btn" id="calcBtn">계산하기</button>
-        <button type="button" class="btn" id="downloadBtn" disabled>임금대장(엑셀) 다운로드</button>
+        <button type="button" class="btn" id="downloadBtn" disabled>결과 엑셀 다운로드</button>
       </div>
 
-      <h2>4) 계산 결과</h2>
+      <h2>4. 계산 결과</h2>
 
       <div class="table-wrap" id="resultSummaryWrap">
         <p class="hint" style="padding:10px 12px;">계산하기 버튼을 누르면 요약 표가 여기에 표시됩니다.</p>
@@ -373,7 +373,7 @@
           </div>
 
           <p class="hint" id="resCondHint">
-            주휴수당 요건: 주 소정근로시간 15시간 이상 + 해당 주 개근 + 다음 주 근로 예정
+            주휴수당 요건: 주 소정근로시간 15시간 이상이면서 해당 주에 개근하였으며 그 다음 주에 근무가 예정됨
           </p>
         </div>
 
