@@ -1,4 +1,5 @@
 <!doctype html>
+
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
@@ -11,12 +12,19 @@
     .note{ color:#555; font-size:0.95rem; }
     .small{ font-size:0.9rem; }
     .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-
     .grid-3{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
     .grid-2{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
     @media (max-width: 860px){
       .grid-3,.grid-2{ grid-template-columns:1fr; }
     }
+    /* 그리드 안에 테이블이 있어도 가로로 밀리지 않게 */
+    .grid-2 > *, .grid-3 > * { min-width:0; }
+
+    /* 입력 줄 */
+    .form-row{ display:flex; flex-direction:column; gap:6px; min-width:0; }
+    .form-row > label{ font-weight:700; }
+    .form-row .inline{ margin-top:2px; }
+
     .inline{ display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; }
     .inline label{ margin:0; }
     .pill{
@@ -30,12 +38,13 @@
     }
 
     /* 캘린더 */
-    .cal-wrap{ display:flex; flex-direction:column; gap:12px; }
+    .cal-wrap{ display:flex; flex-direction:column; gap:12px; min-width:0; }
     .cal-month{
       border:1px solid #e9e9e9;
       border-radius:14px;
       padding:12px;
       background:#fff;
+      min-width:0;
     }
     .cal-head{
       display:flex;
@@ -64,6 +73,7 @@
       display:grid;
       grid-template-columns:repeat(7,1fr);
       gap:6px;
+      min-width:0;
     }
     .cal-dow{
       font-size:0.85rem;
@@ -130,6 +140,13 @@
     .result-value{ min-width:160px; text-align:right; }
     .danger{ color:#b00020; font-weight:900; }
     .btn-row{ display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; }
+
+    /* 표(결과/기준값)는 너무 넓지 않게 */
+    .table-wrap{ min-width:0; }
+    .table-wrap.compact table{ min-width:520px; }
+    .table-wrap.compact td{ white-space:nowrap; }
+    .table-wrap.compact td:first-child{ white-space:normal; }
+    .wrap-text{ white-space:normal; overflow-wrap:anywhere; word-break:break-word; }
   </style>
 </head>
 <body>
@@ -146,10 +163,9 @@
 
     <section class="card">
       <h2>1. 기본 정보</h2>
-        <p class="hint">
-            ·0명이면 계산에서 제외함.</p>
+      <p class="hint">·0명이면 계산에서 제외함.</p>
 
-      <div class="grid-3">
+      <div class="grid-2">
         <div class="form-row">
           <label for="cookCount">조리사 인원수</label>
           <input id="cookCount" type="number" min="0" step="1" value="1" />
@@ -158,13 +174,6 @@
         <div class="form-row">
           <label for="helperCount">조리실무사 인원수</label>
           <input id="helperCount" type="number" min="0" step="1" value="0" />
-        </div>
-
-        <div class="form-row">
-          <label>3월 발생 주휴수당이 지원청 지급분일 경우 체크</label>
-          <div class="inline">
-            <input id="splitSupport" type="checkbox" checked />
-          </div>
         </div>
       </div>
 
@@ -179,10 +188,20 @@
         </div>
       </div>
 
-      <div class="form-row" style="margin-top:8px;">
-        <label>방학 종료 후 그 다음주 근무가 예정된 경우 체크</label>
-        <div class="inline">
-          <input id="afterSemesterWork" type="checkbox" checked />
+      <!-- 날짜 설정란 밑줄(아래)에 체크 2개 배치 -->
+      <div class="grid-2" style="margin-top:8px;">
+        <div class="form-row">
+          <label>3월 발생 주휴수당이 지원청 지급분일 경우 체크</label>
+          <div class="inline">
+            <input id="splitSupport" type="checkbox" checked />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label>방학 종료 후 그 다음주 근무가 예정된 경우 체크</label>
+          <div class="inline">
+            <input id="afterSemesterWork" type="checkbox" checked />
+          </div>
         </div>
       </div>
     </section>
@@ -191,10 +210,10 @@
       <h2>2. 일정 선택</h2>
 
       <p class="hint">
-            ·입력모드에서 "급식소 청소 일자"를 선택하면 근무일자 선택 및 해제 가능 (하늘색)<br/>
-            ·입력모드에서 "산안보 교육일자"를 선택하면 산업안전보건 교육 일정 선택 가능함. 주휴수당 지급에 영향을 주는 요소라서 넣었습니다. (보라색)<br/>
-            ·방학중비근무자 설 전날과 당일은 유급휴일이며, 방학중에는 주말 이틀 모두 유급주휴일임. <br/>
-        </p>
+        ·입력모드에서 "급식소 청소 일자"를 선택하면 근무일자 선택 및 해제 가능 (하늘색)<br/>
+        ·입력모드에서 "산안보 교육일자"를 선택하면 산업안전보건 교육 일정 선택 가능함. 주휴수당 지급에 영향을 주는 요소라서 넣었습니다. (보라색)<br/>
+        ·방학중비근무자 설 전날과 당일은 유급휴일이며, 방학중에는 주말 이틀 모두 유급주휴일임. <br/>
+      </p>
 
       <div class="inline" style="margin:8px 0 10px;">
         <span class="pill">입력 모드</span>
@@ -228,17 +247,17 @@
       <div class="cal-wrap" id="calendar"></div>
 
       <h3 style="margin-top:16px;">선택된 날짜 목록</h3>
-      <div class="grid-2">
-        <div>
-          <h4 style="margin:0 0 8px;">청소일자 (실근무일)</h4>
-          <div class="table-wrap" id="cleanListWrap"></div>
-        </div>
-        <div>
-          <h4 style="margin:0 0 8px;">교육 및 유급휴일 (주휴 판단용)</h4>
-          <div class="table-wrap" id="trainListWrap"></div>
-        </div>
+
+      <!-- 가로 나열하지 않고, 청소일자 -> 교육 및 유급휴일 순으로 세로 배치 -->
+      <div>
+        <h4 style="margin:0 0 8px;">청소일자 (실근무일)</h4>
+        <div class="table-wrap" id="cleanListWrap"></div>
       </div>
 
+      <div style="margin-top:12px;">
+        <h4 style="margin:0 0 8px;">교육 및 유급휴일 (주휴 판단용)</h4>
+        <div class="table-wrap" id="trainListWrap"></div>
+      </div>
     </section>
 
     <section class="card">
@@ -252,72 +271,52 @@
         <button type="button" class="btn" id="fillPayBtn">월별 급여 불러오기(2025회계 기준)</button>
       </div>
 
+      <!-- 월별 월 일수 먼저, 그 밑줄로 분리해서 급여 표 -->
       <div class="table-wrap" id="monthPayWrap"></div>
+
+      <!-- 계산하기 버튼을 3번 맨 밑으로 이동 -->
+      <div class="btn-row" style="margin-top:10px;">
+        <button type="button" class="btn" id="calcBtn">계산하기</button>
+      </div>
     </section>
 
     <section class="card">
-              <h2>4. 계산 결과</h2>
-      <div class="btn-row" style="margin-bottom:10px;">
-        <button type="button" class="btn" id="calcBtn">계산하기</button>
-      </div>
+      <h2>4. 계산 결과</h2>
 
       <div class="result-grid">
         <div class="result-block">
           <div class="result-title">산정내역</div>
 
-          <div class="result-row">
-            <div class="result-label">실근무일수 (급식소 청소)</div>
-            <div class="result-value" id="resCleanDays">-</div>
-          </div>
-          <div class="result-row">
-            <div class="result-label">실근무시간 합계</div>
-            <div class="result-value" id="resCleanHours">-</div>
+          <div class="table-wrap compact" id="resSummaryTableWrap"></div>
+
+          <div class="note small" style="margin-top:8px;">
+            <div><span class="result-label">유급주휴 날짜 (학교 지급)</span> <span class="wrap-text" id="resSchoolHolidayDates">-</span></div>
+            <div style="margin-top:4px;"><span class="result-label">유급주휴 날짜 (지원청 지급)</span> <span class="wrap-text" id="resSupportHolidayDates">-</span></div>
           </div>
 
-          <div class="result-row">
-            <div class="result-label">교육 및 유급휴일 일수</div>
-            <div class="result-value" id="resTrainDays">-</div>
-          </div>
-          <div class="result-row">
-            <div class="result-label">교육 및 유급휴일 시간 합계</div>
-            <div class="result-value" id="resTrainHours">-</div>
-          </div>
-
-          <div class="result-row" style="margin-top:8px;">
-            <div class="result-label">유급주휴일수 (수당 학교 지급)</div>
-            <div class="result-value" id="resSchoolHolidayDays">-</div>
-          </div>
-          <div class="result-row">
-            <div class="result-label">유급주휴 날짜 (학교 지급)</div>
-            <div class="result-value" id="resSchoolHolidayDates">-</div>
-          </div>
-
-          <div class="result-row" style="margin-top:8px;">
-            <div class="result-label">유급주휴일수 (수당 지원청 지급)</div>
-            <div class="result-value" id="resSupportHolidayDays">-</div>
-          </div>
-          <div class="result-row">
-            <div class="result-label">유급주휴 날짜 (지원청 지급)</div>
-            <div class="result-value" id="resSupportHolidayDates">-</div>
-          </div>
-
+          <p class="note small" id="resCondHint" style="margin-top:6px;">-</p>
         </div>
 
         <div class="result-block">
           <div class="result-title">인건비 학교 지급분</div>
-
-          <div class="table-wrap" id="resPayTableWrap"></div>
+          <div class="table-wrap compact" id="resPayTableWrap"></div>
 
           <p class="note small" id="resMonthBreakdown" style="margin-top:10px;">-</p>
+        </div>
+
+        <div class="result-block">
+          <div class="result-title">지원청 지급분</div>
+          <div class="table-wrap compact" id="resSupportPayTableWrap"></div>
+
           <p class="note small" id="resSupportInfo" style="margin-top:6px;">-</p>
         </div>
       </div>
-
     </section>
 
     <div class="btns">
       <a class="btn" href="/">메인으로 돌아가기</a>
     </div>
+
   </main>
 
   <script>
@@ -338,9 +337,12 @@
       return x;
     };
     const dayNames = ['일','월','화','수','목','금','토'];
+
+    // 금액 표시는 반올림하지 않고 원단위 절삭 기준으로 맞춤
     const fmtKRW = (v) => {
       if (v === null || v === undefined || isNaN(v)) return '-';
-      return Math.round(v).toLocaleString('ko-KR') + '원';
+      const n = Math.trunc(v);
+      return n.toLocaleString('ko-KR') + '원';
     };
     const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
     const ymKey = (d) => `${d.getFullYear()}-${pad2(d.getMonth()+1)}`;
@@ -413,7 +415,8 @@
 
     const state = {
       dateMap: new Map(),
-      monthPayMap: new Map(),
+      monthPayMap: new Map(), // { monthDays }
+      payConst: { mealAllow:150000, hazardAllow:50000, baseCook:0, baseHelper:0, manual:false },
       weeklyHolidaySet: new Set(),
       publicHolidaySet: new Set(),
       lockedHolidaySet: new Set(),
@@ -442,21 +445,15 @@
 
       fillPayBtn: document.getElementById('fillPayBtn'),
       monthPayWrap: document.getElementById('monthPayWrap'),
-
       calcBtn: document.getElementById('calcBtn'),
 
-      resCleanDays: document.getElementById('resCleanDays'),
-      resCleanHours: document.getElementById('resCleanHours'),
-      resTrainDays: document.getElementById('resTrainDays'),
-      resTrainHours: document.getElementById('resTrainHours'),
-
-      resSchoolHolidayDays: document.getElementById('resSchoolHolidayDays'),
+      resSummaryTableWrap: document.getElementById('resSummaryTableWrap'),
       resSchoolHolidayDates: document.getElementById('resSchoolHolidayDates'),
-      resSupportHolidayDays: document.getElementById('resSupportHolidayDays'),
       resSupportHolidayDates: document.getElementById('resSupportHolidayDates'),
       resCondHint: document.getElementById('resCondHint'),
 
       resPayTableWrap: document.getElementById('resPayTableWrap'),
+      resSupportPayTableWrap: document.getElementById('resSupportPayTableWrap'),
       resMonthBreakdown: document.getElementById('resMonthBreakdown'),
       resSupportInfo: document.getElementById('resSupportInfo'),
     };
@@ -610,6 +607,32 @@
       return isAfter ? 2066000 : 1986000;
     }
 
+    function ensurePayConstDefaults(force=false){
+      const range = getRange();
+      if (!range) return;
+
+      const monthStart = new Date(range.s.getFullYear(), range.s.getMonth(), 1);
+      const defaults = {
+        mealAllow: 150000,
+        hazardAllow: 50000,
+        baseCook: inferBasePay('cook', monthStart),
+        baseHelper: inferBasePay('helper', monthStart),
+      };
+
+      if (force || !state.payConst || !state.payConst.manual){
+        state.payConst = { ...defaults, manual:false };
+        return;
+      }
+      // manual이면 유지(안전하게 숫자만 보정)
+      state.payConst = {
+        mealAllow: Math.max(0, parseFloat(state.payConst.mealAllow)||0),
+        hazardAllow: Math.max(0, parseFloat(state.payConst.hazardAllow)||0),
+        baseCook: Math.max(0, parseFloat(state.payConst.baseCook)||0),
+        baseHelper: Math.max(0, parseFloat(state.payConst.baseHelper)||0),
+        manual:true
+      };
+    }
+
     function ensureMonthPayDefaults(force=false){
       const range = getRange();
       if (!range) return;
@@ -618,29 +641,14 @@
       keys.forEach(mk=>{
         const ym = parseYmKey(mk);
         if (!ym) return;
-        const monthStart = new Date(ym.y, ym.m-1, 1);
         const autoDays = daysInMonth(ym.y, ym.m-1);
 
-        const defaults = {
-          monthDays: autoDays,
-          mealAllow: 150000,
-          hazardAllow: 50000,
-          baseCook: inferBasePay('cook', monthStart),
-          baseHelper: inferBasePay('helper', monthStart),
-        };
-
         const prev = state.monthPayMap.get(mk);
-        if (force || !prev){
-          state.monthPayMap.set(mk, { ...defaults, manual:false });
-          return;
+        if (force || !prev || !(prev.monthDays > 0)){
+          state.monthPayMap.set(mk, { monthDays:autoDays });
+        } else {
+          state.monthPayMap.set(mk, { monthDays: clamp(parseInt(prev.monthDays,10)||autoDays, 1, 31) });
         }
-        if (prev.manual){
-          const fixed = { ...prev };
-          if (!(fixed.monthDays > 0)) fixed.monthDays = autoDays;
-          state.monthPayMap.set(mk, fixed);
-          return;
-        }
-        state.monthPayMap.set(mk, { ...prev, ...defaults, monthDays: (prev.monthDays>0?prev.monthDays:autoDays), manual:false });
       });
 
       const keySet = new Set(keys);
@@ -656,72 +664,144 @@
         els.monthPayWrap.innerHTML = '<p class="hint" style="padding:10px 12px;">겨울방학 기간을 입력하면 월별 급여 항목이 생성됩니다.</p>';
         return;
       }
+
       ensureMonthPayDefaults(false);
+      ensurePayConstDefaults(false);
+
       const keys = monthKeysBetween(range.s, range.e);
 
-      const table = document.createElement('table');
-      const thead = document.createElement('thead');
-      const trh = document.createElement('tr');
-      ['월(YYYY-MM)','월 일수(분모, 토 포함)','정액급식비(월)','위험수당(월)','조리사 기본급(월)','조리실무사 기본급(월)']
-        .forEach(t=>{ const th=document.createElement('th'); th.textContent=t; trh.appendChild(th); });
-      thead.appendChild(trh);
-      table.appendChild(thead);
+      // 1) 월별 월 일수
+      const daysTitle = document.createElement('div');
+      daysTitle.className = 'note small';
+      daysTitle.textContent = '월별 월 일수(분모, 토 포함)';
+      els.monthPayWrap.appendChild(daysTitle);
 
-      const tbody = document.createElement('tbody');
+      const tableDays = document.createElement('table');
+      const thead1 = document.createElement('thead');
+      const trh1 = document.createElement('tr');
+      ['월(YYYY-MM)','월 일수(분모, 토 포함)'].forEach(t=>{
+        const th=document.createElement('th'); th.textContent=t; trh1.appendChild(th);
+      });
+      thead1.appendChild(trh1);
+      tableDays.appendChild(thead1);
+
+      const tbody1 = document.createElement('tbody');
       keys.forEach(mk=>{
         const ym = parseYmKey(mk);
         if (!ym) return;
         const autoDays = daysInMonth(ym.y, ym.m-1);
-        const saved = state.monthPayMap.get(mk) || { monthDays:autoDays, mealAllow:0, hazardAllow:0, baseCook:0, baseHelper:0, manual:false };
+        const saved = state.monthPayMap.get(mk) || { monthDays:autoDays };
 
-        const row = document.createElement('tr');
-        const td0=document.createElement('td'); td0.textContent = mk; row.appendChild(td0);
+        const tr=document.createElement('tr');
+        const td0=document.createElement('td'); td0.textContent=mk; tr.appendChild(td0);
 
-        function makeInp(value, cls, step='10'){
-          const td=document.createElement('td');
-          const inp=document.createElement('input');
-          inp.type='number';
-          inp.min='0';
-          inp.step=step;
-          inp.className=cls;
-          inp.value = String(value ?? 0);
-          td.appendChild(inp);
-          return { td, inp };
-        }
+        const td1=document.createElement('td');
+        const inp=document.createElement('input');
+        inp.type='number'; inp.min='1'; inp.max='31'; inp.step='1';
+        inp.value=String(saved.monthDays ?? autoDays);
+        inp.addEventListener('change', ()=>{
+          const v = clamp(parseInt(inp.value,10)||autoDays, 1, 31);
+          state.monthPayMap.set(mk, { monthDays:v });
+        });
+        td1.appendChild(inp);
+        tr.appendChild(td1);
 
-        const daysCell = makeInp(saved.monthDays ?? autoDays, 'monthDays', '1');
-        daysCell.inp.max = '31';
-        row.appendChild(daysCell.td);
+        tbody1.appendChild(tr);
+      });
+      tableDays.appendChild(tbody1);
+      els.monthPayWrap.appendChild(tableDays);
 
-        const meal = makeInp(saved.mealAllow ?? 0, 'mealAllow');
-        row.appendChild(meal.td);
+      const hr = document.createElement('hr');
+      hr.style.margin = '14px 0';
+      els.monthPayWrap.appendChild(hr);
 
-        const haz = makeInp(saved.hazardAllow ?? 0, 'hazardAllow');
-        row.appendChild(haz.td);
+      // 2) 급여(한번만)
+      const payTitle = document.createElement('div');
+      payTitle.className = 'note small';
+      payTitle.textContent = '급여';
+      els.monthPayWrap.appendChild(payTitle);
 
-        const bc = makeInp(saved.baseCook ?? 0, 'baseCook');
-        row.appendChild(bc.td);
+      const tablePay = document.createElement('table');
+      const thead2 = document.createElement('thead');
+      const trh2 = document.createElement('tr');
+      ['직종','기본급','정액급식비','위험수당'].forEach(t=>{
+        const th=document.createElement('th'); th.textContent=t; trh2.appendChild(th);
+      });
+      thead2.appendChild(trh2);
+      tablePay.appendChild(thead2);
 
-        const bh = makeInp(saved.baseHelper ?? 0, 'baseHelper');
-        row.appendChild(bh.td);
+      const tbody2 = document.createElement('tbody');
 
-        const saveRow = ()=>{
-          state.monthPayMap.set(mk, {
-            monthDays: clamp(parseInt(daysCell.inp.value,10)||autoDays, 1, 31),
-            mealAllow: Math.max(0, parseFloat(meal.inp.value)||0),
-            hazardAllow: Math.max(0, parseFloat(haz.inp.value)||0),
-            baseCook: Math.max(0, parseFloat(bc.inp.value)||0),
-            baseHelper: Math.max(0, parseFloat(bh.inp.value)||0),
-            manual:true
-          });
-        };
-        [daysCell.inp, meal.inp, haz.inp, bc.inp, bh.inp].forEach(inp=>inp.addEventListener('change', saveRow));
+      const makeNumInput = (value, step='10')=>{
+        const inp=document.createElement('input');
+        inp.type='number';
+        inp.min='0';
+        inp.step=step;
+        inp.value=String(value ?? 0);
+        return inp;
+      };
 
-        tbody.appendChild(row);
+      const cookRow = document.createElement('tr');
+      const cookTd0=document.createElement('td'); cookTd0.textContent='조리사'; cookRow.appendChild(cookTd0);
+
+      const cookBaseInp = makeNumInput(state.payConst.baseCook, '100');
+      const cookMealInp = makeNumInput(state.payConst.mealAllow, '1000');
+      const cookHazInp = makeNumInput(state.payConst.hazardAllow, '1000');
+
+      [cookBaseInp, cookMealInp, cookHazInp].forEach(inp=>{
+        const td=document.createElement('td'); td.appendChild(inp); cookRow.appendChild(td);
+      });
+      tbody2.appendChild(cookRow);
+
+      const helperRow = document.createElement('tr');
+      const helperTd0=document.createElement('td'); helperTd0.textContent='조리실무사'; helperRow.appendChild(helperTd0);
+
+      const helperBaseInp = makeNumInput(state.payConst.baseHelper, '100');
+      const helperMealInp = makeNumInput(state.payConst.mealAllow, '1000');
+      const helperHazInp = makeNumInput(state.payConst.hazardAllow, '1000');
+
+      [helperBaseInp, helperMealInp, helperHazInp].forEach(inp=>{
+        const td=document.createElement('td'); td.appendChild(inp); helperRow.appendChild(td);
+      });
+      tbody2.appendChild(helperRow);
+
+      tablePay.appendChild(tbody2);
+      els.monthPayWrap.appendChild(tablePay);
+
+      // 입력 저장 + (정액급식비/위험수당은 두 행을 같이 움직이게)
+      const syncShared = ()=>{
+        helperMealInp.value = String(state.payConst.mealAllow ?? 0);
+        cookMealInp.value = String(state.payConst.mealAllow ?? 0);
+        helperHazInp.value = String(state.payConst.hazardAllow ?? 0);
+        cookHazInp.value = String(state.payConst.hazardAllow ?? 0);
+      };
+
+      cookBaseInp.addEventListener('change', ()=>{
+        state.payConst.baseCook = Math.max(0, parseFloat(cookBaseInp.value)||0);
+        state.payConst.manual = true;
+      });
+      helperBaseInp.addEventListener('change', ()=>{
+        state.payConst.baseHelper = Math.max(0, parseFloat(helperBaseInp.value)||0);
+        state.payConst.manual = true;
       });
 
-      table.appendChild(tbody);
-      els.monthPayWrap.appendChild(table);
+      const onMealChange = (src)=>{
+        const v = Math.max(0, parseFloat(src.value)||0);
+        state.payConst.mealAllow = v;
+        state.payConst.manual = true;
+        syncShared();
+      };
+      const onHazChange = (src)=>{
+        const v = Math.max(0, parseFloat(src.value)||0);
+        state.payConst.hazardAllow = v;
+        state.payConst.manual = true;
+        syncShared();
+      };
+
+      cookMealInp.addEventListener('change', ()=>onMealChange(cookMealInp));
+      helperMealInp.addEventListener('change', ()=>onMealChange(helperMealInp));
+      cookHazInp.addEventListener('change', ()=>onHazChange(cookHazInp));
+      helperHazInp.addEventListener('change', ()=>onHazChange(helperHazInp));
     }
 
     function getMonthPay(mk){
@@ -729,13 +809,13 @@
       if (!ym) return null;
       const autoDays = daysInMonth(ym.y, ym.m-1);
       const rec = state.monthPayMap.get(mk);
-      if (!rec) return { monthDays:autoDays, mealAllow:0, hazardAllow:0, baseCook:0, baseHelper:0 };
+      const md = rec?.monthDays ?? autoDays;
       return {
-        monthDays: rec.monthDays ?? autoDays,
-        mealAllow: rec.mealAllow ?? 0,
-        hazardAllow: rec.hazardAllow ?? 0,
-        baseCook: rec.baseCook ?? 0,
-        baseHelper: rec.baseHelper ?? 0,
+        monthDays: md,
+        mealAllow: state.payConst?.mealAllow ?? 0,
+        hazardAllow: state.payConst?.hazardAllow ?? 0,
+        baseCook: state.payConst?.baseCook ?? 0,
+        baseHelper: state.payConst?.baseHelper ?? 0,
       };
     }
 
@@ -1053,26 +1133,37 @@
       }
     }
 
+    function countByMonthFromDates(dates){
+      const m = new Map();
+      dates.forEach(d=>{
+        const k = ymKey(d);
+        m.set(k, (m.get(k)||0)+1);
+      });
+      return m;
+    }
+
     function calculate(){
       const range = getRange();
       if (!range){
         alert('방학 시작일자와 종료일자를 입력하세요.');
         return;
       }
+
       syncLockedHolidays();
       ensureMonthPayDefaults(false);
+      ensurePayConstDefaults(false);
 
       const cookN = Math.max(0, parseInt(els.cookCount.value,10)||0);
       const helperN = Math.max(0, parseInt(els.helperCount.value,10)||0);
+      const totalN = cookN + helperN;
+
       const splitSupport = !!els.splitSupport.checked;
       const afterSemester = !!els.afterSemesterWork.checked;
 
       const ev = collectEvents();
 
       const cleanPayPerPerson = ev.clean.reduce((sum,it)=>sum + cleanPayPerDay(it.hours), 0);
-      const cleanHoursSum = ev.clean.reduce((sum,it)=>sum + it.hours, 0);
       const trainDays = ev.train.length + ev.hol.length;
-      const trainHoursSum = ev.train.reduce((sum,it)=>sum + it.hours, 0) + ev.hol.reduce((sum,it)=>sum + it.hours, 0);
 
       const allEvents = [...ev.clean, ...ev.train, ...ev.hol];
       const holidayWeekend = computeWeekendHolidays(allEvents, range, afterSemester);
@@ -1080,10 +1171,8 @@
       const workLikeSet = new Set(allEvents.map(x=>toYMD(x.date)));
       const holidayFinal = holidayWeekend.filter(d=>!workLikeSet.has(toYMD(d)));
 
-      const isSupportMonth = (d)=>{
-        const m = d.getMonth()+1;
-        return (m >= 3 && m <= 11);
-      };
+      // 겨울방학 화면에서는 3월만 분리해도 충분 (체크 문구도 3월 기준)
+      const isSupportMonth = (d)=> (d.getMonth()+1) === 3;
 
       const schoolHolidays = [];
       const supportHolidays = [];
@@ -1092,21 +1181,15 @@
         else schoolHolidays.push(d);
       });
 
-      const countByMonth = (dates)=>{
-        const m = new Map();
-        dates.forEach(d=>{
-          const k = ymKey(d);
-          m.set(k, (m.get(k)||0)+1);
-        });
-        return m;
-      };
+      const schoolByMonth = countByMonthFromDates(schoolHolidays);
+      const supportByMonth = countByMonthFromDates(supportHolidays);
+      const cleanByMonth = countByMonthFromDates(ev.clean.map(x=>x.date));
 
-      const schoolByMonth = countByMonth(schoolHolidays);
-      const supportByMonth = countByMonth(supportHolidays);
-
+      // 주휴수당: 1일분 먼저 구해서 원단위 절삭 -> 그 다음에 일수 곱
       function calcWeeklyPayPerPerson(byMonthMap, role){
         let sum = 0;
         const details = [];
+
         Array.from(byMonthMap.keys()).sort().forEach(mk=>{
           const cnt = byMonthMap.get(mk)||0;
           if (cnt<=0) return;
@@ -1116,83 +1199,205 @@
 
           const base = (role==='cook' ? mp.baseCook : mp.baseHelper) + mp.mealAllow + mp.hazardAllow;
           const md = mp.monthDays;
+
           if (!(base > 0 && md > 0)){
             details.push({ month: mk, days: cnt, perDay: 0, amount: 0, note: '입력 필요' });
             return;
           }
 
           const perDay = base / md;
-          const amount = Math.round(perDay * cnt);
+          const perDayTrunc = Math.trunc(perDay); // 원단위 절삭
+          const amount = perDayTrunc * cnt;
+
           sum += amount;
-          details.push({ month: mk, days: cnt, perDay: perDay, amount: amount, note: '' });
+          details.push({ month: mk, days: cnt, perDay: perDayTrunc, amount: amount, note: '' });
         });
+
         return { sum, details };
+      }
+
+      // 지원청 지급분(요청): 방학중 근무에 대한 기본급/정액급식비 일할계산
+      function calcWorkProrationPerPerson(role){
+        let baseSum = 0;
+        let mealSum = 0;
+        const details = [];
+
+        Array.from(cleanByMonth.keys()).sort().forEach(mk=>{
+          const cnt = cleanByMonth.get(mk)||0;
+          if (cnt<=0) return;
+
+          const mp = getMonthPay(mk);
+          if (!mp) return;
+
+          const md = mp.monthDays;
+          const baseRole = (role==='cook' ? mp.baseCook : mp.baseHelper);
+          const meal = mp.mealAllow;
+
+          if (!(md > 0)){
+            details.push({ month: mk, days: cnt, basePerDay: 0, mealPerDay: 0, baseAmt: 0, mealAmt: 0, note: '입력 필요' });
+            return;
+          }
+
+          const basePerDay = (baseRole>0) ? Math.trunc(baseRole / md) : 0;
+          const mealPerDay = (meal>0) ? Math.trunc(meal / md) : 0;
+
+          const baseAmt = basePerDay * cnt;
+          const mealAmt = mealPerDay * cnt;
+
+          baseSum += baseAmt;
+          mealSum += mealAmt;
+
+          details.push({ month: mk, days: cnt, basePerDay, mealPerDay, baseAmt, mealAmt, note: '' });
+        });
+
+        return { baseSum, mealSum, details };
       }
 
       const cookSchool = calcWeeklyPayPerPerson(schoolByMonth, 'cook');
       const helperSchool = calcWeeklyPayPerPerson(schoolByMonth, 'helper');
+
       const cookSupport = calcWeeklyPayPerPerson(supportByMonth, 'cook');
       const helperSupport = calcWeeklyPayPerPerson(supportByMonth, 'helper');
 
-      const cookPerPersonSchool = cleanPayPerPerson + cookSchool.sum;
-      const helperPerPersonSchool = cleanPayPerPerson + helperSchool.sum;
+      const cookWorkPro = calcWorkProrationPerPerson('cook');
+      const helperWorkPro = calcWorkProrationPerPerson('helper');
 
-      const cookTotalSchool = cookN * cookPerPersonSchool;
-      const helperTotalSchool = helperN * helperPerPersonSchool;
-      const kitchenTotalSchool = cookTotalSchool + helperTotalSchool;
+      const totalCleanPaySchool = cleanPayPerPerson * totalN;
+      const totalWeeklyPaySchool = (cookSchool.sum * cookN) + (helperSchool.sum * helperN);
+      const totalWeeklyPaySupport = (cookSupport.sum * cookN) + (helperSupport.sum * helperN);
 
-      els.resCleanDays.textContent = `${ev.clean.length}일`;
-      els.resCleanHours.textContent = `${cleanHoursSum.toFixed(1)}시간`;
-      els.resTrainDays.textContent = `${trainDays}일`;
-      els.resTrainHours.textContent = `${trainHoursSum.toFixed(1)}시간`;
+      const supportBaseTotal = (cookWorkPro.baseSum * cookN) + (helperWorkPro.baseSum * helperN);
+      // 정액급식비는 직종과 무관하게 동일하다고 가정하여도 되지만(표도 동일), 입력값은 두 행이 동기화됨.
+      const supportMealTotal = (cookWorkPro.mealSum * cookN) + (helperWorkPro.mealSum * helperN);
 
-      els.resSchoolHolidayDays.textContent = `${schoolHolidays.length}일`;
-      els.resSchoolHolidayDates.textContent = schoolHolidays.length ? schoolHolidays.map(toYMD).join(', ') : '-';
+      const supportTotal = supportBaseTotal + supportMealTotal + totalWeeklyPaySupport;
 
-      els.resSupportHolidayDays.textContent = `${supportHolidays.length}일`;
-      els.resSupportHolidayDates.textContent = supportHolidays.length ? supportHolidays.map(toYMD).join(', ') : '-';
-
-      els.resCondHint.innerHTML = `주휴수당 발생 요건: 해당 주 소정근무시간이 15시간 이상이면서 개근하였고 그 다음주 근무가 예정되어있음. 또는 유급휴일로 근무 간주하는 일정이 예정되어있음.</b>`;
-
-      const table = document.createElement('table');
+      // (A) 산정내역 표
+      const sumTable = document.createElement('table');
       const thead = document.createElement('thead');
       const trh = document.createElement('tr');
-      ['구분','인원','방학중근무수당','주휴수당 학교지급분','1인당 총 지급분','전체 인원 지급 총액']
-        .forEach(t=>{ const th=document.createElement('th'); th.textContent=t; trh.appendChild(th); });
+      ['항목','일수','인건비 금액'].forEach(t=>{
+        const th=document.createElement('th'); th.textContent=t; trh.appendChild(th);
+      });
       thead.appendChild(trh);
-      table.appendChild(thead);
+      sumTable.appendChild(thead);
 
       const tbody = document.createElement('tbody');
 
-      function addRow(label, n, perClean, perHol, perSum, total){
+      const addSumRow = (label, daysText, amountText)=>{
         const tr=document.createElement('tr');
-        const cells=[label, `${n}명`, fmtKRW(perClean), fmtKRW(perHol), fmtKRW(perSum), fmtKRW(total)];
+        [label, daysText, amountText].forEach((v,i)=>{
+          const td=document.createElement('td');
+          td.textContent=v;
+          if (i>=1) td.style.textAlign='right';
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      };
+
+      addSumRow('실근무일수 (급식소 청소)', `${ev.clean.length}일`, totalN>0 ? fmtKRW(totalCleanPaySchool) : '-');
+      addSumRow('교육 및 유급휴일 일수', `${trainDays}일`, '-');
+      addSumRow('유급주휴일수 (수당 학교 지급)', `${schoolHolidays.length}일`, totalN>0 ? fmtKRW(totalWeeklyPaySchool) : '-');
+      addSumRow('유급주휴일수 (수당 지원청 지급)', `${supportHolidays.length}일`, (splitSupport && totalN>0) ? fmtKRW(totalWeeklyPaySupport) : '-');
+
+      sumTable.appendChild(tbody);
+      els.resSummaryTableWrap.innerHTML = '';
+      els.resSummaryTableWrap.appendChild(sumTable);
+
+      // 주휴 날짜
+      els.resSchoolHolidayDates.textContent = schoolHolidays.length ? schoolHolidays.map(toYMD).join(', ') : '-';
+      els.resSupportHolidayDates.textContent = supportHolidays.length ? supportHolidays.map(toYMD).join(', ') : '-';
+
+      // 주휴 요건 안내(오류 방지 + 문구 유지)
+      els.resCondHint.textContent = '주휴수당 발생 요건: 해당 주 소정근무시간이 15시간 이상이면서 개근하였고 그 다음주 근무가 예정되어있음. 또는 유급휴일로 근무 간주하는 일정이 예정되어있음.';
+
+      // (B) 인건비 학교 지급분 표
+      const schoolTable = document.createElement('table');
+      const theadS = document.createElement('thead');
+      const trhS = document.createElement('tr');
+      ['구분','인원','방학중근무수당','주휴수당 학교지급분','합계'].forEach(t=>{
+        const th=document.createElement('th'); th.textContent=t; trhS.appendChild(th);
+      });
+      theadS.appendChild(trhS);
+      schoolTable.appendChild(theadS);
+
+      const tbodyS = document.createElement('tbody');
+
+      const addSchoolRow = (label, n, weeklyPerPerson)=>{
+        const cleanTotal = cleanPayPerPerson * n;
+        const weeklyTotal = weeklyPerPerson * n;
+        const total = cleanTotal + weeklyTotal;
+
+        const tr=document.createElement('tr');
+        const cells = [
+          label,
+          `${n}명`,
+          fmtKRW(cleanTotal),
+          fmtKRW(weeklyTotal),
+          fmtKRW(total),
+        ];
         cells.forEach((v,i)=>{
           const td=document.createElement('td');
           td.textContent=v;
           if (i>=2) td.style.textAlign='right';
           tr.appendChild(td);
         });
-        tbody.appendChild(tr);
-      }
+        tbodyS.appendChild(tr);
+      };
 
-      if (cookN>0) addRow('조리사', cookN, cleanPayPerPerson, cookSchool.sum, cookPerPersonSchool, cookTotalSchool);
-      if (helperN>0) addRow('조리실무사', helperN, cleanPayPerPerson, helperSchool.sum, helperPerPersonSchool, helperTotalSchool);
+      if (cookN>0) addSchoolRow('조리사', cookN, cookSchool.sum);
+      if (helperN>0) addSchoolRow('조리실무사', helperN, helperSchool.sum);
 
-      const trSum = document.createElement('tr');
-      trSum.style.fontWeight='900';
-      const td0=document.createElement('td'); td0.textContent='조리종사원 합계'; trSum.appendChild(td0);
-      const td1=document.createElement('td'); td1.textContent=`${cookN+helperN}명`; trSum.appendChild(td1);
-      const td2=document.createElement('td'); td2.textContent='-'; td2.style.textAlign='right'; trSum.appendChild(td2);
-      const td3=document.createElement('td'); td3.textContent='-'; td3.style.textAlign='right'; trSum.appendChild(td3);
-      const td4=document.createElement('td'); td4.textContent='-'; td4.style.textAlign='right'; trSum.appendChild(td4);
-      const td5=document.createElement('td'); td5.textContent=fmtKRW(kitchenTotalSchool); td5.style.textAlign='right'; trSum.appendChild(td5);
-      tbody.appendChild(trSum);
+      const trSsum = document.createElement('tr');
+      trSsum.style.fontWeight='900';
+      const cellsSum = [
+        '조리종사원 합계',
+        `${totalN}명`,
+        totalN>0 ? fmtKRW(totalCleanPaySchool) : '-',
+        totalN>0 ? fmtKRW(totalWeeklyPaySchool) : '-',
+        totalN>0 ? fmtKRW(totalCleanPaySchool + totalWeeklyPaySchool) : '-',
+      ];
+      cellsSum.forEach((v,i)=>{
+        const td=document.createElement('td');
+        td.textContent=v;
+        if (i>=2) td.style.textAlign='right';
+        trSsum.appendChild(td);
+      });
+      tbodyS.appendChild(trSsum);
 
-      table.appendChild(tbody);
+      schoolTable.appendChild(tbodyS);
       els.resPayTableWrap.innerHTML = '';
-      els.resPayTableWrap.appendChild(table);
+      els.resPayTableWrap.appendChild(schoolTable);
 
+      // (C) 지원청 지급분 표
+      const supportTable = document.createElement('table');
+      const theadP = document.createElement('thead');
+      const trhP = document.createElement('tr');
+      ['항목','금액'].forEach(t=>{
+        const th=document.createElement('th'); th.textContent=t; trhP.appendChild(th);
+      });
+      theadP.appendChild(trhP);
+      supportTable.appendChild(theadP);
+
+      const tbodyP = document.createElement('tbody');
+      const addSupportRow = (label, amount, isTotal=false)=>{
+        const tr=document.createElement('tr');
+        if (isTotal) tr.style.fontWeight='900';
+        const td1=document.createElement('td'); td1.textContent=label; tr.appendChild(td1);
+        const td2=document.createElement('td'); td2.textContent=amount; td2.style.textAlign='right'; tr.appendChild(td2);
+        tbodyP.appendChild(tr);
+      };
+
+      addSupportRow('방학중 근무 기본급 일할계산금액', totalN>0 ? fmtKRW(supportBaseTotal) : '-');
+      addSupportRow('방학중 근무 정액급식비 일할계산 금액', totalN>0 ? fmtKRW(supportMealTotal) : '-');
+      addSupportRow('3월 주휴수당 지급분', (splitSupport && totalN>0) ? fmtKRW(totalWeeklyPaySupport) : '-');
+      addSupportRow('지원청 지급분 합계', (totalN>0) ? fmtKRW(supportTotal) : '-', true);
+
+      supportTable.appendChild(tbodyP);
+      els.resSupportPayTableWrap.innerHTML = '';
+      els.resSupportPayTableWrap.appendChild(supportTable);
+
+      // 월별(학교지급) 주휴수당 상세
       const lines = [];
       if (schoolByMonth.size){
         Array.from(schoolByMonth.keys()).sort().forEach(mk=>{
@@ -1202,22 +1407,23 @@
           const mp = getMonthPay(mk);
           const baseCook = (mp.baseCook + mp.mealAllow + mp.hazardAllow);
           const baseHelper = (mp.baseHelper + mp.mealAllow + mp.hazardAllow);
-          const perCook = (mp.monthDays>0 && baseCook>0) ? (baseCook/mp.monthDays) : 0;
-          const perHelper = (mp.monthDays>0 && baseHelper>0) ? (baseHelper/mp.monthDays) : 0;
+
+          const perCook = (mp.monthDays>0 && baseCook>0) ? Math.trunc(baseCook/mp.monthDays) : 0;
+          const perHelper = (mp.monthDays>0 && baseHelper>0) ? Math.trunc(baseHelper/mp.monthDays) : 0;
 
           const part = [`${mk}: 주휴 ${cnt}일`];
-          if (cookN>0 && perCook>0) part.push(`조리사(1일≈${Math.round(perCook).toLocaleString('ko-KR')}원)=${fmtKRW(Math.round(perCook*cnt))}`);
-          if (helperN>0 && perHelper>0) part.push(`조리실무사(1일≈${Math.round(perHelper).toLocaleString('ko-KR')}원)=${fmtKRW(Math.round(perHelper*cnt))}`);
+          if (cookN>0 && perCook>0) part.push(`조리사(1일=${perCook.toLocaleString('ko-KR')}원)=${fmtKRW(perCook*cnt)}`);
+          if (helperN>0 && perHelper>0) part.push(`조리실무사(1일=${perHelper.toLocaleString('ko-KR')}원)=${fmtKRW(perHelper*cnt)}`);
           lines.push(part.join(' / '));
         });
       }
       els.resMonthBreakdown.textContent = lines.length ? ('방학중 주휴수당 (학교지급분): ' + lines.join(' | ')) : '-';
 
       if (splitSupport){
-        const infoParts = [];
         if (supportHolidays.length){
-          if (cookN>0) infoParts.push(`조리사 지원청 주휴 ${fmtKRW(cookSupport.sum)}`);
-          if (helperN>0) infoParts.push(`조리실무사 지원청 주휴 ${fmtKRW(helperSupport.sum)}`);
+          const infoParts = [];
+          if (cookN>0) infoParts.push(`조리사 지원청 주휴 ${fmtKRW(cookSupport.sum * cookN)}`);
+          if (helperN>0) infoParts.push(`조리실무사 지원청 주휴 ${fmtKRW(helperSupport.sum * helperN)}`);
           els.resSupportInfo.textContent = `지원청 지급분: ${infoParts.join(' / ')} (학교 합계에는 미포함)`;
         } else {
           els.resSupportInfo.textContent = '지원청 지급분: 해당 없음';
@@ -1264,6 +1470,7 @@
         refreshPublicHolidays();
         syncLockedHolidays();
         ensureMonthPayDefaults(false);
+        ensurePayConstDefaults(false);
         buildMonthPayTable();
         renderLists();
         updateWeeklyHolidaySet();
@@ -1281,6 +1488,7 @@
 
     els.fillPayBtn.addEventListener('click', ()=>{
       ensureMonthPayDefaults(true);
+      ensurePayConstDefaults(true);
       buildMonthPayTable();
     });
 
@@ -1293,6 +1501,7 @@
       refreshPublicHolidays();
       syncLockedHolidays();
       ensureMonthPayDefaults(false);
+      ensurePayConstDefaults(false);
 
       buildMonthPayTable();
       renderLists();
@@ -1300,8 +1509,6 @@
       buildCalendar();
     })();
   </script>
-
-  
 
   <script src="/static/global-loader.js?v=1"></script>
   <script src="/static/footer.js"></script>
