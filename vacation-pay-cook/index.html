@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>겨울방학중 급식소 청소 인건비 계산기 (조리사/조리실무사)</title>
+  <title>조리종사원 겨울방학 중 급식소 청소 인건비 계산기</title>
   <link rel="stylesheet" href="/static/style.css" />
   <style>
     .muted{ color:#666; }
@@ -136,94 +136,93 @@
   <main class="container" style="max-width:1080px; margin:0 auto; padding:24px 16px;">
     <header class="site-header">
       <div class="shell">
-        <h1>겨울방학중 급식소 청소 인건비 계산기 (조리사/조리실무사)</h1>
+        <h1>조리종사원 겨울방학 중 급식소 청소 인건비 계산기</h1>
         <p class="muted">
-          ·학교 지급분 산정: <b>청소수당 + 주휴수당(토/일)</b><br/>
-          ·주휴수당(겨울방학 급식소 청소 기준):
-          <span class="mono">(기본급 + 정액급식비 + 위험수당) ÷ 월일수(토요일 포함) × 주휴일수(토/일)</span><br/>
-          ·주휴 발생 판단(방학중 청소 기준): <b>해당 주 인정근무시간 합계 15시간 이상</b> + <b>다음 주(월~금) 근무/유급휴일 예정</b>
+          ·조리종사원 방학중 급식소 청소일정 입력하면 인건비 학교지급분 계산해줌<br/>
+          ·관련: 2025년 교육공무직 업무편람, 2025년 교육공무직 보수 등 업무처리 요령<br/>
         </p>
       </div>
     </header>
 
     <section class="card">
-      <h2>1) 기본 정보</h2>
+      <h2>1. 기본 정보</h2>
+        <p class="hint">
+            ·0명이면 계산에서 제외함.</p>
 
       <div class="grid-3">
         <div class="form-row">
-          <label for="cookCount">조리사 인원</label>
+          <label for="cookCount">조리사 인원수</label>
           <input id="cookCount" type="number" min="0" step="1" value="1" />
-          <p class="hint">0명이면 조리사 계산 제외</p>
         </div>
 
         <div class="form-row">
-          <label for="helperCount">조리실무사 인원</label>
+          <label for="helperCount">조리실무사 인원수</label>
           <input id="helperCount" type="number" min="0" step="1" value="0" />
-          <p class="hint">0명이면 조리실무사 계산 제외</p>
         </div>
 
         <div class="form-row">
-          <label>3~11월 주휴수당 분리(지원청 지급분)</label>
+          <label>3월 발생 주휴수당이 지원청 지급분일 경우 체크</label>
           <div class="inline">
             <input id="splitSupport" type="checkbox" checked />
-            <label for="splitSupport" style="display:inline;">3~11월 발생분은 학교 합계에서 제외</label>
           </div>
-          <p class="hint">겨울방학 청소로 인해 3월 이후 주휴가 발생하면 지원청 급여로 지급되는 경우를 분리</p>
         </div>
       </div>
 
       <div class="grid-2" style="margin-top:8px;">
         <div class="form-row">
-          <label for="startDate">방학(비근무) 기간 시작일</label>
+          <label for="startDate">겨울방학 시작일자</label>
           <input id="startDate" type="date" />
         </div>
         <div class="form-row">
-          <label for="endDate">방학(비근무) 기간 종료일</label>
+          <label for="endDate">겨울방학 종료일자</label>
           <input id="endDate" type="date" />
         </div>
       </div>
 
       <div class="form-row" style="margin-top:8px;">
-        <label>방학 종료 후 다음 주 근무 예정(개학 등)</label>
+        <label>방학 종료 후 그 다음주 근무가 예정된 경우 체크</label>
         <div class="inline">
           <input id="afterSemesterWork" type="checkbox" checked />
-          <label for="afterSemesterWork" style="display:inline;">마지막 주 주휴(토/일) 발생 판단에 사용</label>
         </div>
       </div>
     </section>
 
     <section class="card">
-      <h2>2) 일정 선택</h2>
+      <h2>2. 일정 선택</h2>
+
+      <p class="hint">
+            ·입력모드에서 "급식소 청소 일자"를 선택하면 근무일자 선택 및 해제 가능 (하늘색)<br/>
+            ·입력모드에서 "산안보 교육일자"를 선택하면 산업안전보건 교육 일정 선택 가능함. 주휴수당 지급에 영향을 주는 요소라서 넣었습니다. (보라색)<br/>
+            ·방학중비근무자 설 전날과 당일은 유급휴일이며, 방학중에는 주말 이틀 모두 유급주휴일임. <br/>
+        </p>
 
       <div class="inline" style="margin:8px 0 10px;">
-        <span class="pill">선택 모드</span>
+        <span class="pill">입력 모드</span>
         <select id="pickMode" style="max-width:260px;">
-          <option value="clean" selected>청소일(수당 대상)</option>
-          <option value="train">산업안전보건교육(주휴 판단용)</option>
-          <option value="erase">해제(삭제)</option>
+          <option value="clean" selected>급식소 청소일자</option>
+          <option value="train">산안보 교육일자</option>
         </select>
 
-        <span class="pill">기본 근무시간</span>
-        <label>청소일: <input id="defaultCleanHours" type="number" min="0" step="0.5" value="8" style="width:110px; display:inline-block;" />시간</label>
-        <label>교육일: <input id="defaultTrainHours" type="number" min="0" step="0.5" value="8" style="width:110px; display:inline-block;" />시간</label>
+        <span class="pill">근무시간</span>
+        <label>청소 시간: <input id="defaultCleanHours" type="number" min="0" step="0.5" value="8" style="width:110px; display:inline-block;" />시간</label>
+        <label>산안보 교육: <input id="defaultTrainHours" type="number" min="0" step="0.5" value="8" style="width:110px; display:inline-block;" />시간</label>
 
-        <button type="button" class="btn" id="clearAllBtn">전체 해제</button>
+        <button type="button" class="btn" id="clearAllBtn">전체 일정 선택 해제하기</button>
       </div>
 
       <div class="inline" style="margin:10px 0 6px;">
-        <span class="pill">설연휴(유급휴일, 고정)</span>
+        <span class="pill">유급 휴일</span>
         <label>설 전날 <input id="seollalEve" type="date" style="width:170px; display:inline-block;" value="2026-02-16" /></label>
         <label>설 당일 <input id="seollalDay" type="date" style="width:170px; display:inline-block;" value="2026-02-17" /></label>
-        <button type="button" class="btn" id="applySeollalBtn">캘린더에 반영</button>
-        <span class="hint">설 전날/설 당일은 <b>유급휴일(1일 8시간 근무간주)</b>로 자동 고정되며 체크 해제 불가</span>
+        <button type="button" class="btn" id="applySeollalBtn">달력에 잊ㄹ정 반영하기</button>
       </div>
 
       <div class="cal-legend" style="margin:10px 0 6px;">
-        <span><span class="dot clean"></span>청소일</span>
-        <span><span class="dot train"></span>산업안전보건교육</span>
-        <span><span class="dot paid"></span>유급휴일(설 등)</span>
-        <span><span class="dot weekly"></span>주휴일(토/일, 계산결과)</span>
-        <span><span class="dot off"></span>미선택</span>
+        <span><span class="dot clean"></span>급식소 청소일자</span>
+        <span><span class="dot train"></span>산업안전보건 교육일자</span>
+        <span><span class="dot paid"></span>유급휴일</span>
+        <span><span class="dot weekly"></span>유급주휴일</span>
+        <span><span class="dot off"></span>방학중비근무</span>
       </div>
 
       <div class="cal-wrap" id="calendar"></div>
@@ -231,90 +230,81 @@
       <h3 style="margin-top:16px;">선택된 날짜 목록</h3>
       <div class="grid-2">
         <div>
-          <h4 style="margin:0 0 8px;">청소일(수당 대상)</h4>
+          <h4 style="margin:0 0 8px;">청소일자 (실근무일)</h4>
           <div class="table-wrap" id="cleanListWrap"></div>
         </div>
         <div>
-          <h4 style="margin:0 0 8px;">산업안전보건교육/유급휴일(주휴 판단용)</h4>
+          <h4 style="margin:0 0 8px;">교육 및 유급휴일 (주휴 판단용)</h4>
           <div class="table-wrap" id="trainListWrap"></div>
         </div>
       </div>
 
-      <p class="note small" style="margin-top:10px;">
-        ·<b>산업안전보건교육/유급휴일</b>은 이 계산기에서 “주휴 발생 판단(15시간/다음주)”에만 반영합니다.<br/>
-        ·설 전날/설 당일은 <b>유급휴일(근무간주 8시간)</b>로 고정되며, 필요 시 위 날짜를 바꾸고 “반영”을 누르세요.
-      </p>
     </section>
 
     <section class="card">
-      <h2>3) 주휴수당 일할계산 기준(기본급+정액급식비+위험수당)</h2>
+      <h2>3. 주휴수당 산정 기준값</h2>
       <p class="muted">
-        주휴수당(토/일) = <span class="mono">(기본급 + 정액급식비 + 위험수당) ÷ 월일수(토요일 포함) × 주휴일수</span><br/>
-        아래 값은 예시 자동채움(2025 기준)이며, <b>2026 기준표에 맞게 월별로 수정</b>해서 사용하세요.
+        ·주휴수당 =((기본급+정액급식비+위험수당)/월일수)*유급주휴일수<br/>
+        ·2025회계 기준으로 자동 설정해둠 (정액급식비 150,000원, 위험수당 50,000원). 수기 입력 가능.<br/>
       </p>
 
       <div class="inline" style="margin:8px 0 10px;">
-        <button type="button" class="btn" id="fillPayBtn">월별 급여 자동 채우기(예시값)</button>
-        <span class="hint">예시: 정액급식비 150,000 / 위험수당 50,000 / 기본급은 2025 예시(필요시 수정)</span>
+        <button type="button" class="btn" id="fillPayBtn">월별 급여 불러오기(2025회계 기준)</button>
       </div>
 
       <div class="table-wrap" id="monthPayWrap"></div>
     </section>
 
     <section class="card">
+              <h2>4. 계산 결과</h2>
       <div class="btn-row" style="margin-bottom:10px;">
         <button type="button" class="btn" id="calcBtn">계산하기</button>
       </div>
 
-      <h2>4) 계산 결과</h2>
-
       <div class="result-grid">
         <div class="result-block">
-          <div class="result-title">일정/주휴일</div>
+          <div class="result-title">산정내역</div>
 
           <div class="result-row">
-            <div class="result-label">청소일수</div>
+            <div class="result-label">실근무일수 (급식소 청소)</div>
             <div class="result-value" id="resCleanDays">-</div>
           </div>
           <div class="result-row">
-            <div class="result-label">청소 총 근무시간</div>
+            <div class="result-label">실근무시간 합계</div>
             <div class="result-value" id="resCleanHours">-</div>
           </div>
 
           <div class="result-row">
-            <div class="result-label">교육/유급휴일 일수</div>
+            <div class="result-label">교육 및 유급휴일 일수</div>
             <div class="result-value" id="resTrainDays">-</div>
           </div>
           <div class="result-row">
-            <div class="result-label">교육/유급휴일 인정시간 합계</div>
+            <div class="result-label">교육 및 유급휴일 시간 합계</div>
             <div class="result-value" id="resTrainHours">-</div>
           </div>
 
           <div class="result-row" style="margin-top:8px;">
-            <div class="result-label">학교 지급분 주휴일(토/일) 수</div>
+            <div class="result-label">유급주휴일수 (수당 학교 지급)</div>
             <div class="result-value" id="resSchoolHolidayDays">-</div>
           </div>
           <div class="result-row">
-            <div class="result-label">학교 지급분 주휴일 날짜</div>
+            <div class="result-label">유급주휴 날짜 (학교 지급)</div>
             <div class="result-value" id="resSchoolHolidayDates">-</div>
           </div>
 
           <div class="result-row" style="margin-top:8px;">
-            <div class="result-label">지원청 지급분(3~11월) 주휴일 수</div>
+            <div class="result-label">유급주휴일수 (수당 지원청 지급)</div>
             <div class="result-value" id="resSupportHolidayDays">-</div>
           </div>
           <div class="result-row">
-            <div class="result-label">지원청 지급분 주휴일 날짜</div>
+            <div class="result-label">유급주휴 날짜 (지원청 지급)</div>
             <div class="result-value" id="resSupportHolidayDates">-</div>
           </div>
 
-          <p class="note small" id="resCondHint" style="margin-top:8px;">
-            주휴 발생 판단(요약): 해당 주 인정근무시간 합계 15시간 이상 + 다음 주(월~금) 근무/유급휴일 예정
-          </p>
         </div>
 
         <div class="result-block">
-          <div class="result-title">금액(학교 지급분)</div>
+          <div class="result-title">인건비 학교 지급분</div>
 
           <div class="table-wrap" id="resPayTableWrap"></div>
 
@@ -323,10 +313,6 @@
         </div>
       </div>
 
-      <p class="note small" style="margin-top:10px;">
-        ·청소수당: 1일 근무시간 기준 <b>4시간 이하 10,000원 / 4시간 초과 20,000원</b><br/>
-        ·달력의 <b>노란색(주휴일)</b>은 계산 결과이며, 선택/해제는 청소일/교육일 입력을 바꾸면 자동 갱신됩니다.
-      </p>
     </section>
 
     <div class="btns">
@@ -667,7 +653,7 @@
       els.monthPayWrap.innerHTML = '';
       const range = getRange();
       if (!range){
-        els.monthPayWrap.innerHTML = '<p class="hint" style="padding:10px 12px;">방학 기간을 입력하면 월별 급여 항목이 생성됩니다.</p>';
+        els.monthPayWrap.innerHTML = '<p class="hint" style="padding:10px 12px;">겨울방학 기간을 입력하면 월별 급여 항목이 생성됩니다.</p>';
         return;
       }
       ensureMonthPayDefaults(false);
@@ -790,7 +776,7 @@
       els.calendar.innerHTML = '';
       const range = getRange();
       if (!range){
-        els.calendar.innerHTML = '<p class="hint">방학 시작/종료일을 입력하면 달력이 생성됩니다.</p>';
+        els.calendar.innerHTML = '<p class="hint">방학 시작일자랑 종료일자 입력하면 달력 생성됨.</p>';
         return;
       }
       const { s, e } = range;
@@ -817,7 +803,7 @@
         title.textContent = `${year}년 ${month+1}월`;
         const sub = document.createElement('div');
         sub.className = 'hint';
-        sub.textContent = '날짜 클릭 → 선택 모드에 따라 기록(주휴일은 자동 표시)';
+        sub.textContent = '날짜 클릭해서 선택 및 해제 가능';
         head.appendChild(title);
         head.appendChild(sub);
         wrap.appendChild(head);
@@ -940,12 +926,12 @@
         .sort((a,b)=>a.ds.localeCompare(b.ds));
 
       if (cleanDates.length === 0){
-        els.cleanListWrap.innerHTML = '<p class="hint" style="padding:10px 12px;">청소일이 없습니다. “선택 모드: 청소일”로 날짜를 클릭하세요.</p>';
+        els.cleanListWrap.innerHTML = '<p class="hint" style="padding:10px 12px;">급식소 청소 (실근무일)이 있어야 계산 가능.</p>';
       } else {
         const table = document.createElement('table');
         const thead = document.createElement('thead');
         const trh = document.createElement('tr');
-        ['날짜','요일','근무시간','청소수당(자동)','삭제'].forEach(t=>{
+        ['날짜','요일','근무시간','방학중근무수당','삭제'].forEach(t=>{
           const th=document.createElement('th'); th.textContent=t; trh.appendChild(th);
         });
         thead.appendChild(trh);
@@ -1000,7 +986,7 @@
       }
 
       if (trainDates.length === 0){
-        els.trainListWrap.innerHTML = '<p class="hint" style="padding:10px 12px;">산업안전보건교육/유급휴일이 없습니다.</p>';
+        els.trainListWrap.innerHTML = '<p class="hint" style="padding:10px 12px;">교육 및 유급휴일 선택 내역이 없음.</p>';
       } else {
         const table = document.createElement('table');
         const thead = document.createElement('thead');
@@ -1020,7 +1006,7 @@
           const td2=document.createElement('td'); td2.textContent=d?dayNames[d.getDay()]:'-'; tr.appendChild(td2);
 
           const td3=document.createElement('td');
-          td3.textContent = (it.kind==='holiday') ? '유급휴일(근무간주)' : '산업안전보건교육';
+          td3.textContent = (it.kind==='holiday') ? '유급휴일' : '산업안전보건교육';
           tr.appendChild(td3);
 
           const td4=document.createElement('td');
@@ -1070,7 +1056,7 @@
     function calculate(){
       const range = getRange();
       if (!range){
-        alert('방학 시작/종료일을 입력하세요.');
+        alert('방학 시작일자와 종료일자를 입력하세요.');
         return;
       }
       syncLockedHolidays();
@@ -1166,12 +1152,12 @@
       els.resSupportHolidayDays.textContent = `${supportHolidays.length}일`;
       els.resSupportHolidayDates.textContent = supportHolidays.length ? supportHolidays.map(toYMD).join(', ') : '-';
 
-      els.resCondHint.innerHTML = `주휴 발생 판단(요약): 해당 주 인정근무시간 합계 <b>15시간 이상</b> + 다음 주(월~금) <b>근무/유급휴일 예정</b>`;
+      els.resCondHint.innerHTML = `주휴수당 발생 요건: 해당 주 소정근무시간이 15시간 이상이면서 개근하였고 그 다음주 근무가 예정되어있음. 또는 유급휴일로 근무 간주하는 일정이 예정되어있음.</b>`;
 
       const table = document.createElement('table');
       const thead = document.createElement('thead');
       const trh = document.createElement('tr');
-      ['구분','인원','청소수당(1인)','주휴수당(1인, 학교)','1인 합계(학교)','총액(학교지급)']
+      ['구분','인원','방학중근무수당','주휴수당 학교지급분','1인당 총 지급분','전체 인원 지급 총액']
         .forEach(t=>{ const th=document.createElement('th'); th.textContent=t; trh.appendChild(th); });
       thead.appendChild(trh);
       table.appendChild(thead);
@@ -1195,7 +1181,7 @@
 
       const trSum = document.createElement('tr');
       trSum.style.fontWeight='900';
-      const td0=document.createElement('td'); td0.textContent='조리실 합계'; trSum.appendChild(td0);
+      const td0=document.createElement('td'); td0.textContent='조리종사원 합계'; trSum.appendChild(td0);
       const td1=document.createElement('td'); td1.textContent=`${cookN+helperN}명`; trSum.appendChild(td1);
       const td2=document.createElement('td'); td2.textContent='-'; td2.style.textAlign='right'; trSum.appendChild(td2);
       const td3=document.createElement('td'); td3.textContent='-'; td3.style.textAlign='right'; trSum.appendChild(td3);
@@ -1225,19 +1211,19 @@
           lines.push(part.join(' / '));
         });
       }
-      els.resMonthBreakdown.textContent = lines.length ? ('월별 주휴수당(학교지급) 요약: ' + lines.join(' | ')) : '-';
+      els.resMonthBreakdown.textContent = lines.length ? ('방학중 주휴수당 (학교지급분): ' + lines.join(' | ')) : '-';
 
       if (splitSupport){
         const infoParts = [];
         if (supportHolidays.length){
-          if (cookN>0) infoParts.push(`조리사 지원청 주휴(1인) ${fmtKRW(cookSupport.sum)}`);
-          if (helperN>0) infoParts.push(`조리실무사 지원청 주휴(1인) ${fmtKRW(helperSupport.sum)}`);
-          els.resSupportInfo.textContent = `참고(지원청 지급분): ${infoParts.join(' / ')} (학교 합계에는 미포함)`;
+          if (cookN>0) infoParts.push(`조리사 지원청 주휴 ${fmtKRW(cookSupport.sum)}`);
+          if (helperN>0) infoParts.push(`조리실무사 지원청 주휴 ${fmtKRW(helperSupport.sum)}`);
+          els.resSupportInfo.textContent = `지원청 지급분: ${infoParts.join(' / ')} (학교 합계에는 미포함)`;
         } else {
-          els.resSupportInfo.textContent = '참고(지원청 지급분): 해당 없음';
+          els.resSupportInfo.textContent = '지원청 지급분: 해당 없음';
         }
       } else {
-        els.resSupportInfo.textContent = '※ 3~11월 분리를 해제하면 주휴수당은 모두 “학교 지급분”으로 합산됩니다.';
+        els.resSupportInfo.textContent = '※ 3월 주휴수당 지원청 지급 여부 체크 해제하면, 3월에 발생한 주휴수당이 있더라도 학교지급분에 합산됨.';
       }
 
       updateWeeklyHolidaySet();
@@ -1314,6 +1300,8 @@
       buildCalendar();
     })();
   </script>
+
+  
 
   <script src="/static/global-loader.js?v=1"></script>
   <script src="/static/footer.js"></script>
