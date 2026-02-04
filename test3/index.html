@@ -147,6 +147,10 @@
     .table-wrap.compact td{ white-space:nowrap; }
     .table-wrap.compact td:first-child{ white-space:normal; }
     .wrap-text{ white-space:normal; overflow-wrap:anywhere; word-break:break-word; }
+
+    /* 표(경계/패딩) - 항목명끼리 붙어 보이는 문제 방지 */
+    .sheetlike{ width:100%; table-layout:auto; background:#fff; }
+    .sheetlike th, .sheetlike td{ vertical-align:middle; }
   </style>
 </head>
 <body>
@@ -415,11 +419,11 @@
 
     const state = {
       dateMap: new Map(),
-      monthPayMap: new Map(), // { monthDays }
-      payConst: { mealAllow:150000, hazardAllow:50000, baseCook:0, baseHelper:0, manual:false },
+      monthPayMap: new Map(),
       weeklyHolidaySet: new Set(),
       publicHolidaySet: new Set(),
       lockedHolidaySet: new Set(),
+      payConst: { mealAllow:150000, hazardAllow:50000, baseCook:0, baseHelper:0, manual:false },
     };
 
     const els = {
@@ -677,6 +681,7 @@
       els.monthPayWrap.appendChild(daysTitle);
 
       const tableDays = document.createElement('table');
+      tableDays.className = 'sheetlike';
       const thead1 = document.createElement('thead');
       const trh1 = document.createElement('tr');
       ['월(YYYY-MM)','월 일수(분모, 토 포함)'].forEach(t=>{
@@ -722,6 +727,7 @@
       els.monthPayWrap.appendChild(payTitle);
 
       const tablePay = document.createElement('table');
+      tablePay.className = 'sheetlike';
       const thead2 = document.createElement('thead');
       const trh2 = document.createElement('tr');
       ['직종','기본급','정액급식비','위험수당'].forEach(t=>{
@@ -1009,6 +1015,7 @@
         els.cleanListWrap.innerHTML = '<p class="hint" style="padding:10px 12px;">급식소 청소 (실근무일)이 있어야 계산 가능.</p>';
       } else {
         const table = document.createElement('table');
+        table.className = 'sheetlike';
         const thead = document.createElement('thead');
         const trh = document.createElement('tr');
         ['날짜','요일','근무시간','방학중근무수당','삭제'].forEach(t=>{
@@ -1069,6 +1076,7 @@
         els.trainListWrap.innerHTML = '<p class="hint" style="padding:10px 12px;">교육 및 유급휴일 선택 내역이 없음.</p>';
       } else {
         const table = document.createElement('table');
+        table.className = 'sheetlike';
         const thead = document.createElement('thead');
         const trh = document.createElement('tr');
         ['날짜','요일','구분','인정시간','삭제'].forEach(t=>{
@@ -1274,6 +1282,7 @@
 
       // (A) 산정내역 표
       const sumTable = document.createElement('table');
+      sumTable.className = 'sheetlike';
       const thead = document.createElement('thead');
       const trh = document.createElement('tr');
       ['항목','일수','인건비 금액'].forEach(t=>{
@@ -1304,15 +1313,14 @@
       els.resSummaryTableWrap.innerHTML = '';
       els.resSummaryTableWrap.appendChild(sumTable);
 
-      // 주휴 날짜
       els.resSchoolHolidayDates.textContent = schoolHolidays.length ? schoolHolidays.map(toYMD).join(', ') : '-';
       els.resSupportHolidayDates.textContent = supportHolidays.length ? supportHolidays.map(toYMD).join(', ') : '-';
 
-      // 주휴 요건 안내(오류 방지 + 문구 유지)
       els.resCondHint.textContent = '주휴수당 발생 요건: 해당 주 소정근무시간이 15시간 이상이면서 개근하였고 그 다음주 근무가 예정되어있음. 또는 유급휴일로 근무 간주하는 일정이 예정되어있음.';
 
-      // (B) 인건비 학교 지급분 표
+      // (B) 학교 지급분 표
       const schoolTable = document.createElement('table');
+      schoolTable.className = 'sheetlike';
       const theadS = document.createElement('thead');
       const trhS = document.createElement('tr');
       ['구분','인원','방학중근무수당','주휴수당 학교지급분','합계'].forEach(t=>{
@@ -1323,18 +1331,17 @@
 
       const tbodyS = document.createElement('tbody');
 
-      const addSchoolRow = (label, n, weeklyPerPerson)=>{
-        const cleanTotal = cleanPayPerPerson * n;
-        const weeklyTotal = weeklyPerPerson * n;
-        const total = cleanTotal + weeklyTotal;
-
+      function addSchoolRow(label, n, cleanPerPerson, weeklyPerPerson){
         const tr=document.createElement('tr');
+        const perSum = cleanPerPerson + weeklyPerPerson;
+        const totalSum = perSum * n;
+
         const cells = [
           label,
           `${n}명`,
-          fmtKRW(cleanTotal),
-          fmtKRW(weeklyTotal),
-          fmtKRW(total),
+          fmtKRW(cleanPerPerson * n),
+          fmtKRW(weeklyPerPerson * n),
+          fmtKRW(totalSum)
         ];
         cells.forEach((v,i)=>{
           const td=document.createElement('td');
@@ -1343,27 +1350,23 @@
           tr.appendChild(td);
         });
         tbodyS.appendChild(tr);
-      };
+      }
 
-      if (cookN>0) addSchoolRow('조리사', cookN, cookSchool.sum);
-      if (helperN>0) addSchoolRow('조리실무사', helperN, helperSchool.sum);
+      if (cookN>0){
+        addSchoolRow('조리사', cookN, cleanPayPerPerson, cookSchool.sum);
+      }
+      if (helperN>0){
+        addSchoolRow('조리실무사', helperN, cleanPayPerPerson, helperSchool.sum);
+      }
 
-      const trSsum = document.createElement('tr');
-      trSsum.style.fontWeight='900';
-      const cellsSum = [
-        '조리종사원 합계',
-        `${totalN}명`,
-        totalN>0 ? fmtKRW(totalCleanPaySchool) : '-',
-        totalN>0 ? fmtKRW(totalWeeklyPaySchool) : '-',
-        totalN>0 ? fmtKRW(totalCleanPaySchool + totalWeeklyPaySchool) : '-',
-      ];
-      cellsSum.forEach((v,i)=>{
-        const td=document.createElement('td');
-        td.textContent=v;
-        if (i>=2) td.style.textAlign='right';
-        trSsum.appendChild(td);
-      });
-      tbodyS.appendChild(trSsum);
+      const trSum = document.createElement('tr');
+      trSum.style.fontWeight='900';
+      const td0=document.createElement('td'); td0.textContent='조리종사원 합계'; trSum.appendChild(td0);
+      const td1=document.createElement('td'); td1.textContent=`${totalN}명`; trSum.appendChild(td1);
+      const td2=document.createElement('td'); td2.textContent= totalN>0 ? fmtKRW(totalCleanPaySchool) : '-'; td2.style.textAlign='right'; trSum.appendChild(td2);
+      const td3=document.createElement('td'); td3.textContent= totalN>0 ? fmtKRW(totalWeeklyPaySchool) : '-'; td3.style.textAlign='right'; trSum.appendChild(td3);
+      const td4=document.createElement('td'); td4.textContent= totalN>0 ? fmtKRW(totalCleanPaySchool + totalWeeklyPaySchool) : '-'; td4.style.textAlign='right'; trSum.appendChild(td4);
+      tbodyS.appendChild(trSum);
 
       schoolTable.appendChild(tbodyS);
       els.resPayTableWrap.innerHTML = '';
@@ -1371,6 +1374,7 @@
 
       // (C) 지원청 지급분 표
       const supportTable = document.createElement('table');
+      supportTable.className = 'sheetlike';
       const theadP = document.createElement('thead');
       const trhP = document.createElement('tr');
       ['항목','금액'].forEach(t=>{
