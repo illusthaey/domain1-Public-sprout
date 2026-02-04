@@ -1,0 +1,877 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PDF 하단 출력정보 제거</title>
+
+  <style>
+/* ====== 사용자 제공 CSS (그대로 포함) ====== */
+/* 251204목 공통 스타일 */
+
+/* 박스 모델 통일 */
+* {
+  box-sizing: border-box;
+}
+
+/* =============================
+   기본 타이포 & 반응형 글자 크기
+   ============================= */
+html {
+  font-size: 16px; /* PC 기본 rem 기준 */
+}
+
+@media (max-width: 600px) {
+  html {
+    font-size: 15px; /* 모바일은 전체 스케일 자연스럽게 감소 */
+  }
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  color: #111;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, "Apple SD Gothic Neo", "Noto Sans KR", "맑은 고딕", sans-serif;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
+/* 링크 기본 */
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* =============================
+   전역 헤딩 계층
+   ============================= */
+
+/* 페이지 제목: 사이트 전체에서 최우선 */
+body h1 {
+  font-size: 2.2rem;
+  margin: 28px 0 18px;
+  text-align: center !important;
+  color: #111;
+  font-weight: 700;
+}
+
+/* 큰 섹션 제목 */
+body h2 {
+  font-size: 1.6rem;
+  margin: 28px 0 12px;
+  color: #222;
+  font-weight: 700;
+}
+
+/* 중간 소제목 */
+body h3 {
+  font-size: 1.4rem;
+  margin: 20px 0 10px;
+  color: #222;
+  font-weight: 600;
+}
+
+/* 소단락 제목 */
+body h4 {
+  font-size: 1.2rem;
+  margin: 16px 0 8px;
+  color: #333;
+  font-weight: 600;
+}
+
+/* =============================
+   본문 텍스트
+   ============================= */
+
+body p,
+body li,
+body div,
+body span {
+  font-size: 1.1rem;
+  line-height: 1.65;
+  color: #333;
+}
+
+body p {
+  margin: 14px 0;
+}
+
+body li {
+  margin: 4px 0;
+  line-height: 1.55;
+}
+
+ul, ol {
+  margin: 12px 0 18px;
+  padding-left: 22px;
+}
+
+body .muted {
+  font-size: 0.95rem;
+  color: #666;
+}
+
+/* =============================
+   예외 클래스(local-*)
+   ============================= */
+
+.local-h2 { font-size: 1.3rem !important; }
+.local-h3 { font-size: 1.1rem !important; }
+.local-large { font-size: 1.2rem !important; }
+.local-small { font-size: 0.9rem !important; }
+.local-tight { margin-bottom: 6px !important; }
+.local-accent { color: #0051a8 !important; }
+
+/* =============================
+   레이아웃 공통
+   ============================= */
+
+.shell {
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+/* main에 컨테이너 역할(폭/패딩)을 주지 않음: .container에서 관리 */
+main {
+  margin: 0 auto;
+}
+
+.sub {
+  margin: 0.25rem 0 0;
+  font-size: 1rem;
+  color: #555;
+}
+
+/* 상단 헤더 */
+.site-header {
+  background: #fff;
+  border-bottom: 1px solid #e8e8ef;
+}
+
+.site-header .shell {
+  padding: 16px;
+}
+
+/* 섹션 카드 */
+.section {
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  padding: 20px 22px;
+  margin: 18px 0;
+  background: #fff;
+}
+
+/* 내부 카드 */
+.card {
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin: 14px 0;
+  background: #fafafa;
+}
+
+/* =============================
+   레이아웃 유틸
+   ============================= */
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.row.between { justify-content: space-between; }
+.row.gap { gap: 10px; }
+
+.grid {
+  display: grid;
+  gap: 12px;
+}
+
+.grid.two { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.grid.three { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+
+@media (max-width: 640px) {
+  .row { flex-wrap: wrap; align-items: flex-start; }
+  .grid.two, .grid.three { grid-template-columns: 1fr; }
+}
+
+/* =============================
+   버튼 스타일
+   ============================= */
+
+.btn {
+  display: inline-block;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid #222;
+  font-weight: 600;
+  font-size: 1rem;
+  color: #111;
+  background: #fff;
+  cursor: pointer;
+}
+
+.btn + .btn { margin-left: 10px; }
+.btn:hover { background: #f3f4f6; }
+
+.btn.primary { background: #111; color: #fff; }
+.btn.primary:hover { background: #000; }
+
+.btn.ghost { background: #f9fafb; border-color: #d4d4d8; }
+.btn.ghost:hover { background: #eef2ff; }
+
+.btn-desc {
+  font-size: 1rem;
+  margin: 6px 0 18px;
+  color: #333;
+}
+
+.btn-lightgrey {
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: #f3f4f6;
+  border: 1px solid #d4d4d8;
+}
+
+/* =============================
+   푸터
+   ============================= */
+
+.site-footer {
+  border-top: 1px solid #e8e8ef;
+  margin-top: 32px;
+  padding: 16px 0 20px;
+  color: #444;
+  font-size: 1rem;
+}
+
+.site-footer p { margin: 4px 0; }
+
+/* =============================
+   입력 UI
+   ============================= */
+
+input,
+select,
+button,
+textarea {
+  font: inherit;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="time"],
+input[type="date"],
+select,
+textarea {
+  padding: 10px 12px;
+  border: 1px solid #d9d9e3;
+  border-radius: 12px;
+  background: #f9fafb;
+  outline: none;
+  min-width: 0;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.02);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: #b4b4d0;
+  box-shadow: 0 0 0 2px rgba(180, 180, 208, 0.25);
+  background: #fff;
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background: #f6f7fb;
+  color: #888;
+}
+
+.numeric { text-align: right; }
+
+/* =============================
+   구분선(hr)
+   ============================= */
+
+hr {
+  border-top: 1px solid #ddd;
+  margin: 26px 0;
+  opacity: 0.9;
+}
+
+body h2 + hr {
+  margin-top: 10px !important;
+}
+
+/* =============================
+   header/footer 레이아웃 통일
+   ============================= */
+
+.site-header .shell,
+.site-footer .shell {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+/* =========================================================
+   index.html 전용(기존 인라인 스타일 제거 후 통합)
+   ========================================================= */
+
+/* main 컨테이너 */
+.container {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+/* site-footer (하단 재정의) */
+.site-footer {
+  margin-top: 64px;
+  padding: 24px 16px;
+  border-top: 1px solid #e5e7eb;
+  background: #fafafa;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.site-footer .shell {
+  max-width: 1024px;
+  margin: 0 auto;
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* ====== 도구 전용 추가 스타일 ====== */
+.preview-canvas {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  background: #fafafa;
+  display: block;
+}
+
+.kbd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+.progress-rail {
+  margin-top: 8px;
+  height: 10px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.progress-bar {
+  height: 10px;
+  width: 0%;
+  background: #111;
+  border-radius: 999px;
+  transition: width 120ms linear;
+}
+
+.small-note {
+  font-size: 0.95rem;
+  color: #555;
+  margin: 8px 0 0;
+}
+  </style>
+
+  <!-- 라이브러리 (CDN) -->
+  <!-- pdf-lib: 빠른 가림(벡터 유지) -->
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+
+  <!-- pdf.js + jsPDF: 완전삭제(이미지화) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="shell">
+      <div class="row between">
+        <div>
+          <div class="local-large" style="font-weight:800; color:#111;">업무경감 · PDF 하단 출력정보 제거</div>
+          <div class="sub">하단의 <strong>출력자/출력일자/소속기관명</strong>을 지우고 새 PDF로 다운로드합니다. (가운데 페이지 번호는 유지)</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <h1>PDF 하단 출력정보 지우기</h1>
+
+    <section class="section">
+      <h2 class="local-h2">1) PDF 선택</h2>
+      <p class="btn-desc">
+        PDF 파일을 선택하면, 하단 좌/우의 출력정보를 제거(또는 가림)한 새 PDF를 생성합니다.
+      </p>
+
+      <div class="row gap">
+        <input id="file" type="file" accept="application/pdf" />
+        <button id="btnPreview" class="btn ghost" disabled>첫 페이지 미리보기</button>
+      </div>
+
+      <div id="fileInfo" class="small-note"></div>
+    </section>
+
+    <section class="section">
+      <h2 class="local-h2">2) 제거 옵션</h2>
+
+      <div class="grid two">
+        <div class="card">
+          <div style="font-weight:800; margin-bottom:6px;">처리 모드</div>
+          <select id="mode">
+            <option value="raster" selected>완전 삭제 (이미지 기반 PDF로 재생성)</option>
+            <option value="overlay">빠른 처리 (겉으로만 가림 · 원본 텍스트는 남을 수 있음)</option>
+          </select>
+          <div class="small-note">
+            - <strong>완전 삭제</strong>: 개인정보가 PDF 내부 텍스트로도 남지 않게 하려면 이 모드를 권장합니다(대신 검색/복사 불가).<br>
+            - <strong>빠른 처리</strong>: 문서 품질/검색을 유지하지만, 가려진 텍스트가 내부에 남을 수 있습니다.
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="font-weight:800; margin-bottom:6px;">푸터 높이 (pt)</div>
+          <input id="footerHeight" type="number" min="10" max="200" value="52" />
+          <div class="small-note">기본값 52pt: 하단 출력정보만 덮고, 바로 위 가로선은 보통 유지됩니다.</div>
+        </div>
+
+        <div class="card">
+          <div style="font-weight:800; margin-bottom:6px;">중앙 여백 (pt)</div>
+          <input id="centerGap" type="number" min="40" max="240" value="90" />
+          <div class="small-note">가운데 페이지 번호 영역을 남기기 위한 “빈 구간”입니다.</div>
+        </div>
+
+        <div class="card">
+          <div style="font-weight:800; margin-bottom:6px;">렌더 스케일 (완전삭제 모드)</div>
+          <input id="renderScale" type="number" min="1" max="4" step="0.5" value="2" />
+          <div class="small-note">클수록 선명하지만 파일 크기/처리 시간이 증가합니다.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="local-h2">3) 실행</h2>
+
+      <div class="row gap">
+        <button id="btnRun" class="btn primary" disabled>하단 출력정보 제거 → PDF 다운로드</button>
+        <button id="btnReset" class="btn" disabled>초기화</button>
+      </div>
+
+      <div id="status" class="small-note"></div>
+
+      <div id="progressWrap" class="card" style="display:none;">
+        <div class="row between">
+          <div id="progressText" class="local-small">-</div>
+          <div id="progressPct" class="local-small">0%</div>
+        </div>
+        <div class="progress-rail">
+          <div id="progressBar" class="progress-bar"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="local-h2">미리보기</h2>
+      <p class="small-note">
+        첫 페이지를 렌더링한 뒤, 선택한 옵션대로 하단 좌/우 영역을 제거한 모습을 보여줍니다.
+      </p>
+      <canvas id="previewCanvas" class="preview-canvas"></canvas>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell">
+      <p>※ 파일은 브라우저에서만 처리됩니다. (서버 업로드 없음)</p>
+      <p class="muted">단, CDN 라이브러리를 사용하므로 사내망 환경에서는 해당 URL 접근이 가능해야 합니다.</p>
+    </div>
+  </footer>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+
+  const elFile = $("file");
+  const elBtnPreview = $("btnPreview");
+  const elBtnRun = $("btnRun");
+  const elBtnReset = $("btnReset");
+
+  const elMode = $("mode");
+  const elFooterHeight = $("footerHeight");
+  const elCenterGap = $("centerGap");
+  const elRenderScale = $("renderScale");
+
+  const elFileInfo = $("fileInfo");
+  const elStatus = $("status");
+
+  const elProgressWrap = $("progressWrap");
+  const elProgressText = $("progressText");
+  const elProgressPct = $("progressPct");
+  const elProgressBar = $("progressBar");
+
+  const elPreviewCanvas = $("previewCanvas");
+
+  let currentFile = null;
+  let currentBytes = null;
+
+  let pdfjsInited = false;
+  let workerBlobUrl = null;
+
+  function clamp(n, min, max) {
+    n = Number.isFinite(n) ? n : min;
+    return Math.max(min, Math.min(max, n));
+  }
+
+  function formatBytes(bytes) {
+    const mb = bytes / (1024 * 1024);
+    if (mb >= 1) return `${mb.toFixed(2)}MB`;
+    const kb = bytes / 1024;
+    return `${kb.toFixed(0)}KB`;
+  }
+
+  function setStatus(msg) {
+    elStatus.textContent = msg || "";
+  }
+
+  function setFileInfo(msg) {
+    elFileInfo.textContent = msg || "";
+  }
+
+  function showProgress(show) {
+    elProgressWrap.style.display = show ? "" : "none";
+  }
+
+  function updateProgress(done, total, label) {
+    const pct = total > 0 ? Math.floor((done / total) * 100) : 0;
+    elProgressText.textContent = label ? `${label} (${done}/${total})` : `${done}/${total}`;
+    elProgressPct.textContent = `${pct}%`;
+    elProgressBar.style.width = `${pct}%`;
+  }
+
+  function setBusy(busy) {
+    elFile.disabled = busy;
+    elBtnPreview.disabled = busy || !currentFile;
+    elBtnRun.disabled = busy || !currentFile;
+    elBtnReset.disabled = busy || !currentFile;
+
+    elMode.disabled = busy;
+    elFooterHeight.disabled = busy;
+    elCenterGap.disabled = busy;
+    elRenderScale.disabled = busy;
+
+    if (busy) {
+      showProgress(true);
+    }
+  }
+
+  function readOptions() {
+    const mode = elMode.value;
+    const footerHeightPt = clamp(parseFloat(elFooterHeight.value), 10, 200);
+    const centerGapPt = clamp(parseFloat(elCenterGap.value), 40, 240);
+    const renderScale = clamp(parseFloat(elRenderScale.value), 1, 4);
+
+    return { mode, footerHeightPt, centerGapPt, renderScale };
+  }
+
+  function buildOutputName(inputName) {
+    const base = inputName.replace(/\.pdf$/i, "");
+    return `${base}_하단정보삭제.pdf`;
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  function drawFooterMaskOnCanvas(ctx, canvasW, canvasH, options, scalePxPerPt) {
+    const maskHeightPx = options.footerHeightPt * scalePxPerPt;
+    const gapPx = options.centerGapPt * scalePxPerPt;
+
+    const mid = canvasW / 2;
+    const leftW = Math.max(0, mid - gapPx / 2);
+    const rightX = Math.min(canvasW, mid + gapPx / 2);
+
+    const y = canvasH - maskHeightPx;
+
+    ctx.save();
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, y, leftW, maskHeightPx);
+    ctx.fillRect(rightX, y, canvasW - rightX, maskHeightPx);
+    ctx.restore();
+  }
+
+  async function nextFrame() {
+    return new Promise((r) => requestAnimationFrame(() => r()));
+  }
+
+  async function ensurePdfjsReady() {
+    if (pdfjsInited) return;
+    if (!window.pdfjsLib) {
+      throw new Error("pdf.js 로드에 실패했습니다. (CDN 차단/오프라인 여부 확인)");
+    }
+
+    // file:// 에서도 동작하도록 worker를 blob URL로 만들어 시도
+    const workerCdn = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+    try {
+      const res = await fetch(workerCdn, { mode: "cors" });
+      if (!res.ok) throw new Error("pdf.worker fetch failed");
+      const js = await res.text();
+      const blob = new Blob([js], { type: "application/javascript" });
+      workerBlobUrl = URL.createObjectURL(blob);
+      pdfjsLib.GlobalWorkerOptions.workerSrc = workerBlobUrl;
+    } catch (e) {
+      // fallback: worker를 쓰지 않고 메인스레드 실행(느릴 수 있음)
+      pdfjsLib.disableWorker = true;
+      pdfjsLib.GlobalWorkerOptions.workerSrc = workerCdn;
+    }
+
+    pdfjsInited = true;
+  }
+
+  async function renderPreviewFirstPage() {
+    if (!currentBytes) return;
+
+    const opt = readOptions();
+
+    setStatus("첫 페이지 미리보기 렌더링 중...");
+    setBusy(true);
+
+    try {
+      await ensurePdfjsReady();
+
+      const pdf = await pdfjsLib.getDocument({ data: currentBytes }).promise;
+      const page = await pdf.getPage(1);
+
+      // 캔버스를 화면 폭에 맞춰 렌더링
+      const viewport1 = page.getViewport({ scale: 1 });
+      const targetW = Math.min(820, elPreviewCanvas.parentElement.clientWidth || 820);
+      const scaleFit = targetW / viewport1.width;
+      const viewport = page.getViewport({ scale: scaleFit });
+
+      elPreviewCanvas.width = Math.ceil(viewport.width);
+      elPreviewCanvas.height = Math.ceil(viewport.height);
+
+      const ctx = elPreviewCanvas.getContext("2d", { alpha: false });
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, elPreviewCanvas.width, elPreviewCanvas.height);
+
+      await page.render({ canvasContext: ctx, viewport }).promise;
+
+      // 미리보기에도 동일한 마스크 적용
+      drawFooterMaskOnCanvas(ctx, elPreviewCanvas.width, elPreviewCanvas.height, opt, scaleFit);
+
+      setStatus("미리보기 완료");
+    } catch (err) {
+      console.error(err);
+      setStatus(`미리보기 실패: ${err?.message || err}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function processOverlayMode() {
+    const opt = readOptions();
+
+    if (!window.PDFLib) throw new Error("pdf-lib 로드 실패 (CDN 차단/오프라인 여부 확인)");
+
+    const { PDFDocument, rgb } = window.PDFLib;
+
+    const pdfDoc = await PDFDocument.load(currentBytes);
+    const pages = pdfDoc.getPages();
+
+    updateProgress(0, pages.length, "페이지 처리");
+    await nextFrame();
+
+    for (let i = 0; i < pages.length; i++) {
+      const page = pages[i];
+      const size = page.getSize();
+      const pageW = size.width;
+
+      const gap = opt.centerGapPt;
+      const h = opt.footerHeightPt;
+
+      const leftW = Math.max(0, (pageW / 2) - (gap / 2));
+      const rightX = Math.min(pageW, (pageW / 2) + (gap / 2));
+      const rightW = Math.max(0, pageW - rightX);
+
+      // 좌/우 하단만 흰색으로 덮기 (가운데 페이지 번호는 남김)
+      page.drawRectangle({ x: 0, y: 0, width: leftW, height: h, color: rgb(1, 1, 1) });
+      page.drawRectangle({ x: rightX, y: 0, width: rightW, height: h, color: rgb(1, 1, 1) });
+
+      updateProgress(i + 1, pages.length, "페이지 처리");
+      if (i % 2 === 0) await nextFrame();
+    }
+
+    const outBytes = await pdfDoc.save();
+    return new Blob([outBytes], { type: "application/pdf" });
+  }
+
+  async function processRasterMode() {
+    const opt = readOptions();
+
+    if (!window.pdfjsLib) throw new Error("pdf.js 로드 실패");
+    if (!window.jspdf || !window.jspdf.jsPDF) throw new Error("jsPDF 로드 실패");
+
+    await ensurePdfjsReady();
+
+    const pdf = await pdfjsLib.getDocument({ data: currentBytes }).promise;
+    const total = pdf.numPages;
+
+    const { jsPDF } = window.jspdf;
+    let out = null;
+
+    updateProgress(0, total, "렌더링");
+    await nextFrame();
+
+    for (let pageNo = 1; pageNo <= total; pageNo++) {
+      const page = await pdf.getPage(pageNo);
+
+      const viewportPt = page.getViewport({ scale: 1 });
+      const viewportPx = page.getViewport({ scale: opt.renderScale });
+
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.ceil(viewportPx.width);
+      canvas.height = Math.ceil(viewportPx.height);
+
+      const ctx = canvas.getContext("2d", { alpha: false });
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      await page.render({ canvasContext: ctx, viewport: viewportPx }).promise;
+
+      // 하단 좌/우 마스크 적용
+      drawFooterMaskOnCanvas(ctx, canvas.width, canvas.height, opt, opt.renderScale);
+
+      const imgData = canvas.toDataURL("image/png");
+
+      if (!out) {
+        out = new jsPDF({
+          unit: "pt",
+          format: [viewportPt.width, viewportPt.height],
+          compress: true
+        });
+      } else {
+        out.addPage([viewportPt.width, viewportPt.height]);
+      }
+
+      out.addImage(imgData, "PNG", 0, 0, viewportPt.width, viewportPt.height);
+
+      // 메모리 해제 힌트
+      canvas.width = 0;
+      canvas.height = 0;
+
+      updateProgress(pageNo, total, "렌더링");
+      if (pageNo % 1 === 0) await nextFrame();
+    }
+
+    const blob = out.output("blob");
+    return blob;
+  }
+
+  async function run() {
+    if (!currentFile || !currentBytes) return;
+
+    const opt = readOptions();
+    setBusy(true);
+    setStatus("처리 시작...");
+    showProgress(true);
+    updateProgress(0, 1, "준비");
+
+    try {
+      let outBlob = null;
+
+      if (opt.mode === "overlay") {
+        setStatus("빠른 처리(겉으로만 가림) 모드로 진행 중...");
+        outBlob = await processOverlayMode();
+      } else {
+        setStatus("완전 삭제(이미지 기반 PDF) 모드로 진행 중...");
+        outBlob = await processRasterMode();
+      }
+
+      const outName = buildOutputName(currentFile.name);
+      downloadBlob(outBlob, outName);
+
+      setStatus(`완료: ${outName} 다운로드를 시작했습니다.`);
+      updateProgress(1, 1, "완료");
+    } catch (err) {
+      console.error(err);
+      setStatus(`실패: ${err?.message || err}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function resetAll() {
+    currentFile = null;
+    currentBytes = null;
+
+    elFile.value = "";
+    elBtnPreview.disabled = true;
+    elBtnRun.disabled = true;
+    elBtnReset.disabled = true;
+
+    setFileInfo("");
+    setStatus("");
+
+    showProgress(false);
+    updateProgress(0, 1, "");
+
+    const ctx = elPreviewCanvas.getContext("2d");
+    elPreviewCanvas.width = 0;
+    elPreviewCanvas.height = 0;
+    ctx && ctx.clearRect(0, 0, 1, 1);
+  }
+
+  elFile.addEventListener("change", async (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+
+    if (!/\.pdf$/i.test(f.name) && f.type !== "application/pdf") {
+      setStatus("PDF 파일만 선택할 수 있습니다.");
+      return;
+    }
+
+    currentFile = f;
+    currentBytes = await f.arrayBuffer();
+
+    setFileInfo(`선택됨: ${f.name} (${formatBytes(f.size)})`);
+    setStatus("준비됨. 미리보기로 확인하거나 바로 실행하세요.");
+
+    elBtnPreview.disabled = false;
+    elBtnRun.disabled = false;
+    elBtnReset.disabled = false;
+
+    // 선택 즉시 미리보기까지 해주고 싶다면 아래 주석 해제
+    // await renderPreviewFirstPage();
+  });
+
+  elBtnPreview.addEventListener("click", renderPreviewFirstPage);
+  elBtnRun.addEventListener("click", run);
+  elBtnReset.addEventListener("click", resetAll);
+
+  // 옵션 변경 시, 미리보기 갱신이 필요하면 자동으로 갱신하도록(선택)
+  // 여기서는 사용자가 버튼을 눌러 갱신하게 둠.
+
+})();
+</script>
+</body>
+</html>
