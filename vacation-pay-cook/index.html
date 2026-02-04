@@ -147,10 +147,6 @@
     .table-wrap.compact td{ white-space:nowrap; }
     .table-wrap.compact td:first-child{ white-space:normal; }
     .wrap-text{ white-space:normal; overflow-wrap:anywhere; word-break:break-word; }
-
-    /* 표(경계/패딩) - 항목명끼리 붙어 보이는 문제 방지 */
-    .sheetlike{ width:100%; table-layout:auto; background:#fff; }
-    .sheetlike th, .sheetlike td{ vertical-align:middle; }
   </style>
 </head>
 <body>
@@ -419,11 +415,11 @@
 
     const state = {
       dateMap: new Map(),
-      monthPayMap: new Map(),
+      monthPayMap: new Map(), // { monthDays }
+      payConst: { mealAllow:150000, hazardAllow:50000, baseCook:0, baseHelper:0, manual:false },
       weeklyHolidaySet: new Set(),
       publicHolidaySet: new Set(),
       lockedHolidaySet: new Set(),
-      payConst: { mealAllow:150000, hazardAllow:50000, baseCook:0, baseHelper:0, manual:false },
     };
 
     const els = {
@@ -1214,7 +1210,7 @@
           }
 
           const perDay = base / md;
-          const perDayTrunc = Math.trunc(perDay); // 원단위 절삭
+          const perDayTrunc = Math.trunc(perDay / 10) * 10; // 원단위 절삭(일의자리 버림)
           const amount = perDayTrunc * cnt;
 
           sum += amount;
@@ -1313,12 +1309,14 @@
       els.resSummaryTableWrap.innerHTML = '';
       els.resSummaryTableWrap.appendChild(sumTable);
 
+      // 주휴 날짜
       els.resSchoolHolidayDates.textContent = schoolHolidays.length ? schoolHolidays.map(toYMD).join(', ') : '-';
       els.resSupportHolidayDates.textContent = supportHolidays.length ? supportHolidays.map(toYMD).join(', ') : '-';
 
+      // 주휴 요건 안내(오류 방지 + 문구 유지)
       els.resCondHint.textContent = '주휴수당 발생 요건: 해당 주 소정근무시간이 15시간 이상이면서 개근하였고 그 다음주 근무가 예정되어있음. 또는 유급휴일로 근무 간주하는 일정이 예정되어있음.';
 
-      // (B) 학교 지급분 표
+      // (B) 인건비 학교 지급분 표
       const schoolTable = document.createElement('table');
       schoolTable.className = 'sheetlike';
       const theadS = document.createElement('thead');
@@ -1331,17 +1329,18 @@
 
       const tbodyS = document.createElement('tbody');
 
-      function addSchoolRow(label, n, cleanPerPerson, weeklyPerPerson){
-        const tr=document.createElement('tr');
-        const perSum = cleanPerPerson + weeklyPerPerson;
-        const totalSum = perSum * n;
+      const addSchoolRow = (label, n, weeklyPerPerson)=>{
+        const cleanTotal = cleanPayPerPerson * n;
+        const weeklyTotal = weeklyPerPerson * n;
+        const total = cleanTotal + weeklyTotal;
 
+        const tr=document.createElement('tr');
         const cells = [
           label,
           `${n}명`,
-          fmtKRW(cleanPerPerson * n),
-          fmtKRW(weeklyPerPerson * n),
-          fmtKRW(totalSum)
+          fmtKRW(cleanTotal),
+          fmtKRW(weeklyTotal),
+          fmtKRW(total),
         ];
         cells.forEach((v,i)=>{
           const td=document.createElement('td');
@@ -1350,23 +1349,27 @@
           tr.appendChild(td);
         });
         tbodyS.appendChild(tr);
-      }
+      };
 
-      if (cookN>0){
-        addSchoolRow('조리사', cookN, cleanPayPerPerson, cookSchool.sum);
-      }
-      if (helperN>0){
-        addSchoolRow('조리실무사', helperN, cleanPayPerPerson, helperSchool.sum);
-      }
+      if (cookN>0) addSchoolRow('조리사', cookN, cookSchool.sum);
+      if (helperN>0) addSchoolRow('조리실무사', helperN, helperSchool.sum);
 
-      const trSum = document.createElement('tr');
-      trSum.style.fontWeight='900';
-      const td0=document.createElement('td'); td0.textContent='조리종사원 합계'; trSum.appendChild(td0);
-      const td1=document.createElement('td'); td1.textContent=`${totalN}명`; trSum.appendChild(td1);
-      const td2=document.createElement('td'); td2.textContent= totalN>0 ? fmtKRW(totalCleanPaySchool) : '-'; td2.style.textAlign='right'; trSum.appendChild(td2);
-      const td3=document.createElement('td'); td3.textContent= totalN>0 ? fmtKRW(totalWeeklyPaySchool) : '-'; td3.style.textAlign='right'; trSum.appendChild(td3);
-      const td4=document.createElement('td'); td4.textContent= totalN>0 ? fmtKRW(totalCleanPaySchool + totalWeeklyPaySchool) : '-'; td4.style.textAlign='right'; trSum.appendChild(td4);
-      tbodyS.appendChild(trSum);
+      const trSsum = document.createElement('tr');
+      trSsum.style.fontWeight='900';
+      const cellsSum = [
+        '조리종사원 합계',
+        `${totalN}명`,
+        totalN>0 ? fmtKRW(totalCleanPaySchool) : '-',
+        totalN>0 ? fmtKRW(totalWeeklyPaySchool) : '-',
+        totalN>0 ? fmtKRW(totalCleanPaySchool + totalWeeklyPaySchool) : '-',
+      ];
+      cellsSum.forEach((v,i)=>{
+        const td=document.createElement('td');
+        td.textContent=v;
+        if (i>=2) td.style.textAlign='right';
+        trSsum.appendChild(td);
+      });
+      tbodyS.appendChild(trSsum);
 
       schoolTable.appendChild(tbodyS);
       els.resPayTableWrap.innerHTML = '';
@@ -1412,8 +1415,8 @@
           const baseCook = (mp.baseCook + mp.mealAllow + mp.hazardAllow);
           const baseHelper = (mp.baseHelper + mp.mealAllow + mp.hazardAllow);
 
-          const perCook = (mp.monthDays>0 && baseCook>0) ? Math.trunc(baseCook/mp.monthDays) : 0;
-          const perHelper = (mp.monthDays>0 && baseHelper>0) ? Math.trunc(baseHelper/mp.monthDays) : 0;
+          const perCook = (mp.monthDays>0 && baseCook>0) ? Math.trunc((baseCook/mp.monthDays)/10)*10 : 0;
+          const perHelper = (mp.monthDays>0 && baseHelper>0) ? Math.trunc((baseHelper/mp.monthDays)/10)*10 : 0;
 
           const part = [`${mk}: 주휴 ${cnt}일`];
           if (cookN>0 && perCook>0) part.push(`조리사(1일=${perCook.toLocaleString('ko-KR')}원)=${fmtKRW(perCook*cnt)}`);
