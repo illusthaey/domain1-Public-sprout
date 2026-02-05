@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <title>텍스트 비교 도구</title>
+
+  <link rel="icon" href="/static/favicon.ico" />
+  <link rel="stylesheet" href="/static/style.css" />
+
+  <!-- jsdiff 라이브러리 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/5.1.0/diff.min.js"></script>
+
+  <!-- 이 페이지 전용(최소) 스타일: 공통 style.css 톤을 해치지 않는 선에서만 -->
+  <style>
+    /* 결과/표시 영역에서만 모노스페이스 사용 */
+    .diff-wrap .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+      font-size: 0.95rem;
+      line-height: 1.55;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .page-subtitle {
+      text-align: center;
+      margin: -6px 0 12px;
+      color: #666;
+      font-size: 0.98rem;
+    }
+
+    .view-options {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .view-options label {
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    /* 결과 컨테이너 */
+    .diff-result {
+      border: 1px solid #e5e5e5;
+      border-radius: 12px;
+      padding: 14px 16px;
+      background: #fff;
+      max-height: 55vh;
+      overflow: auto;
+    }
+
+    .diff-placeholder {
+      color: #666;
+      text-align: center;
+      padding: 18px 10px;
+    }
+
+    /* Inline diff */
+    .inline-content {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .inline-added {
+      background: #e6ffec;
+      color: #1a7f37;
+    }
+    .inline-removed {
+      background: #ffebe9;
+      color: #cf222e;
+      text-decoration: line-through;
+    }
+
+    /* Side-by-side diff table */
+    .diff-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    .diff-table td {
+      border: 1px solid #e5e7eb;
+      padding: 6px 8px;
+      vertical-align: top;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .diff-table td.left,
+    .diff-table td.right {
+      width: 50%;
+    }
+
+    .diff-table tr.removed td.left {
+      background: #ffebe9;
+      color: #cf222e;
+    }
+    .diff-table tr.removed td.right {
+      background: #f9fafb;
+      color: transparent; /* 빈칸 느낌 */
+      user-select: none;
+    }
+
+    .diff-table tr.added td.left {
+      background: #f9fafb;
+      color: transparent; /* 빈칸 느낌 */
+      user-select: none;
+    }
+    .diff-table tr.added td.right {
+      background: #e6ffec;
+      color: #1a7f37;
+    }
+
+    .diff-table tr.common td {
+      background: #fff;
+      color: #333;
+    }
+
+    @media (max-width: 640px) {
+      .diff-result {
+        max-height: 50vh;
+      }
+    }
+  </style>
+</head>
+
+<body>
+<main class="container diff-wrap">
+
+  <div class="home-link-wrap">
+    <a class="btn-home" href="/">← 메인으로</a>
+  </div>
+
+  <h1>텍스트 비교 도구</h1>
+  <p class="page-subtitle">원본/수정본을 입력하면 자동으로 차이점을 표시합니다.</p>
+
+  <section class="section">
+    <h2 class="local-h2">입력</h2>
+    <hr/>
+
+    <div class="grid two">
+      <div class="card">
+        <h3 class="local-h3 local-tight">원본 텍스트</h3>
+        <textarea id="original" class="mono" rows="10" placeholder="비교할 원본 내용을 입력하세요."></textarea>
+      </div>
+
+      <div class="card">
+        <h3 class="local-h3 local-tight">수정된 텍스트</h3>
+        <textarea id="modified" class="mono" rows="10" placeholder="수정된 내용을 입력하세요."></textarea>
+      </div>
+    </div>
+
+    <div class="row between" style="margin-top: 12px; gap: 12px;">
+      <div class="view-options">
+        <strong>보기 방식</strong>
+        <label>
+          <input type="radio" name="viewMode" value="inline" checked />
+          합쳐서 보기
+        </label>
+        <label>
+          <input type="radio" name="viewMode" value="side" />
+          좌우 나눠 보기
+        </label>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="btn ghost" id="resetBtn">초기화</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2 class="local-h2">결과</h2>
+    <hr/>
+
+    <div id="result" class="diff-result mono" aria-live="polite">
+      <div class="diff-placeholder">원본과 수정된 텍스트를 모두 입력하면 비교 결과가 나타납니다.</div>
+    </div>
+  </section>
+
+</main>
+
+<!-- index.html처럼 공통 스크립트 연결(필요 없으면 제거해도 됨) -->
+<script src="/static/footer.js"></script>
+<script src="/static/global-loader.js?v=1"></script>
+
+<script>
+(() => {
+  const $ = (sel) => document.querySelector(sel);
+
+  const originalEl = $('#original');
+  const modifiedEl = $('#modified');
+  const resultEl = $('#result');
+  const resetBtn = $('#resetBtn');
+  const viewModeEls = Array.from(document.querySelectorAll('input[name="viewMode"]'));
+
+  function setPlaceholder() {
+    resultEl.innerHTML =
+      '<div class="diff-placeholder">원본과 수정된 텍스트를 모두 입력하면 비교 결과가 나타납니다.</div>';
+  }
+
+  function renderInlineDiff(a, b) {
+    const parts = Diff.diffWords(a, b);
+    const wrapper = document.createElement('div');
+    wrapper.className = 'inline-content';
+
+    for (const part of parts) {
+      const span = document.createElement('span');
+      if (part.added) span.className = 'inline-added';
+      else if (part.removed) span.className = 'inline-removed';
+      span.textContent = part.value; // XSS 안전(textContent)
+      wrapper.appendChild(span);
+    }
+
+    resultEl.innerHTML = '';
+    resultEl.appendChild(wrapper);
+  }
+
+  function renderSideBySideDiff(a, b) {
+    const diff = Diff.diffLines(a, b);
+
+    const table = document.createElement('table');
+    table.className = 'diff-table';
+
+    const tbody = document.createElement('tbody');
+
+    for (const part of diff) {
+      const lines = part.value.split('\n');
+      // 마지막에 빈 줄이 붙는 경우가 있어 제거
+      if (lines.length && lines[lines.length - 1] === '') lines.pop();
+
+      while (lines.length) {
+        const line = lines.shift();
+
+        const tr = document.createElement('tr');
+        tr.className = part.removed ? 'removed' : part.added ? 'added' : 'common';
+
+        const left = document.createElement('td');
+        left.className = 'left';
+
+        const right = document.createElement('td');
+        right.className = 'right';
+
+        if (part.removed) {
+          left.textContent = line;
+          right.textContent = '';
+        } else if (part.added) {
+          left.textContent = '';
+          right.textContent = line;
+        } else {
+          left.textContent = line;
+          right.textContent = line;
+        }
+
+        tr.append(left, right);
+        tbody.appendChild(tr);
+      }
+    }
+
+    table.appendChild(tbody);
+
+    resultEl.innerHTML = '';
+    resultEl.appendChild(table);
+  }
+
+  function compareText() {
+    const a = originalEl.value;
+    const b = modifiedEl.value;
+    const mode = (viewModeEls.find(el => el.checked) || {}).value || 'inline';
+
+    if (!a || !b) {
+      setPlaceholder();
+      return;
+    }
+
+    if (mode === 'inline') renderInlineDiff(a, b);
+    else renderSideBySideDiff(a, b);
+  }
+
+  // 입력할 때 디바운스(큰 텍스트에서 타이핑 부드럽게)
+  let timer = 0;
+  function compareDebounced() {
+    window.clearTimeout(timer);
+    timer = window.setTimeout(compareText, 120);
+  }
+
+  function resetFields() {
+    originalEl.value = '';
+    modifiedEl.value = '';
+    setPlaceholder();
+    originalEl.focus();
+  }
+
+  originalEl.addEventListener('input', compareDebounced);
+  modifiedEl.addEventListener('input', compareDebounced);
+  viewModeEls.forEach(el => el.addEventListener('change', compareText));
+  resetBtn.addEventListener('click', resetFields);
+
+  setPlaceholder();
+})();
+</script>
+
+</body>
+</html>
