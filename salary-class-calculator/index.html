@@ -1,0 +1,746 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <title>기간제교원 호봉획정표</title>
+
+  <!-- 기존 공통 스타일 그대로 사용 -->
+  <link rel="stylesheet" href="/static/style.css" />
+
+  <!-- 엑셀 생성용 (SheetJS) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <style>
+    /* 이 페이지에서만 필요한 최소 보정 (공통 style.css는 유지) */
+    .field { display: grid; gap: 6px; }
+    .field label { font-weight: 700; color: #222; font-size: 0.98rem; }
+    .mini { font-size: 0.95rem; color: #666; }
+    .kbd {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 0.92rem;
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      padding: 2px 6px;
+      border-radius: 8px;
+    }
+    .pill {
+      display: inline-block;
+      padding: 4px 10px;
+      border: 1px solid #e5e7eb;
+      background: #fafafa;
+      border-radius: 999px;
+      font-size: 0.95rem;
+      color: #333;
+      margin-right: 6px;
+      white-space: nowrap;
+    }
+    .danger { color: #b42318; font-weight: 700; }
+    .ok { color: #067647; font-weight: 700; }
+
+    .sheetlike td input, .sheetlike td select {
+      width: 100%;
+      min-width: 120px;
+    }
+    .sheetlike td .numeric {
+      width: 100%;
+    }
+    .sheetlike td.out {
+      white-space: nowrap;
+      color: #111;
+      font-variant-numeric: tabular-nums;
+    }
+    .tight td, .tight th { padding: 6px 8px; }
+    .right { text-align: right; }
+    .center { text-align: center; }
+
+    @media (max-width: 640px) {
+      .sheetlike td input, .sheetlike td select { min-width: 150px; }
+    }
+  </style>
+</head>
+
+<body>
+<main class="container">
+  <div class="home-link-wrap">
+    <a class="btn-home" href="/">← 메인으로</a>
+  </div>
+
+  <h1>기간제교원 호봉획정표</h1>
+  <p class="subtitle">경력 입력 → 환산연수/호봉 자동 산정 → 엑셀 다운로드</p>
+
+  <section class="section">
+    <h2 class="local-h2">기본 정보</h2>
+    <hr/>
+
+    <div class="grid two">
+      <div class="field">
+        <label for="org">소속</label>
+        <input id="org" type="text" placeholder="예: ○○초등학교 병설유치원" />
+      </div>
+
+      <div class="field">
+        <label for="position">현 직위(직급)</label>
+        <input id="position" type="text" placeholder="예: 시간제근무 기간제교사" />
+      </div>
+
+      <div class="field">
+        <label for="name">성명</label>
+        <input id="name" type="text" placeholder="예: 홍길동" />
+      </div>
+
+      <div class="field">
+        <label for="license">교원 자격</label>
+        <select id="license">
+          <option value="정교사(1급)">정교사(1급)</option>
+          <option value="정교사(2급)">정교사(2급)</option>
+          <option value="준교사">준교사</option>
+          <option value="전문상담교사(1급)">전문상담교사(1급)</option>
+          <option value="전문상담교사(2급)">전문상담교사(2급)</option>
+          <option value="사서교사(1급)">사서교사(1급)</option>
+          <option value="사서교사(2급)">사서교사(2급)</option>
+          <option value="실기교사">실기교사</option>
+          <option value="보건교사(1급)">보건교사(1급)</option>
+          <option value="보건교사(2급)">보건교사(2급)</option>
+          <option value="영양교사(1급)">영양교사(1급)</option>
+          <option value="영양교사(2급)">영양교사(2급)</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="edu">학령구분</label>
+        <select id="edu">
+          <option value="대학교(6년제)">대학교(6년제)</option>
+          <option value="대학교(5년제)">대학교(5년제)</option>
+          <option value="대학교(4년제)" selected>대학교(4년제)</option>
+          <option value="전문대학(3년제)">전문대학(3년제)</option>
+          <option value="전문대학(2년제)">전문대학(2년제)</option>
+          <option value="사범학교(1년)">사범학교(1년)</option>
+          <option value="고등학교졸업">고등학교졸업</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="bonus">가산여부</label>
+        <select id="bonus">
+          <option value="없음" selected>없음</option>
+          <option value="사범계">사범계</option>
+          <option value="특수">특수</option>
+          <option value="특수+사범계">특수+사범계</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="baseDate">호봉획정일</label>
+        <input id="baseDate" type="date" />
+        <div class="mini">※ 차기승급일은 ‘참고용(360일=1년/30일=1월 환산)’로만 계산합니다.</div>
+      </div>
+
+      <div class="field">
+        <label for="nextDate">차기승급일(참고)</label>
+        <input id="nextDate" type="date" disabled />
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row gap" style="flex-wrap:wrap;">
+        <span class="pill">공제(학령) 연수: <b id="eduAdjOut">0</b></span>
+        <span class="pill">가산 연수: <b id="bonusAdjOut">0</b></span>
+        <span class="pill">기산호봉: <b id="baseStepOut">9</b></span>
+        <span class="pill">환산 총 경력연수: <b id="totalOut">0년 0월 0일</b></span>
+        <span class="pill">잔여기간: <b id="remainOut">0월 0일</b></span>
+        <span class="pill">사정 호봉: <b id="finalStepOut">9</b></span>
+      </div>
+      <p class="muted" style="margin:10px 0 0;">
+        · 경력기간은 “부터~까지”를 <b>포함(말일 포함)</b>해서 계산합니다.<br/>
+        · 환산율은 숫자(예: <span class="kbd">1</span>, <span class="kbd">0.5</span>, <span class="kbd">0.33</span>) 또는 <span class="kbd">120일</span>처럼 “일” 입력도 지원합니다.
+      </p>
+    </div>
+
+    <div class="row between" style="flex-wrap:wrap; gap:10px;">
+      <div class="row" style="flex-wrap:wrap; gap:10px;">
+        <button class="btn" id="addRowBtn" type="button">경력 행 추가</button>
+        <button class="btn ghost" id="loadSampleBtn" type="button">예시 채우기</button>
+        <button class="btn ghost" id="resetBtn" type="button">초기화</button>
+      </div>
+      <button class="btn primary" id="downloadBtn" type="button">엑셀(.xlsx) 다운로드</button>
+    </div>
+
+    <p class="note">
+      <span class="danger">주의</span>:
+      이 도구는 “예시 서식의 계산 방식(30일=1월, 360일=1년 환산 + 일부 절사)”을 그대로 구현한 계산기입니다.
+      실제 인정경력/환산율 판단은 반드시 해당 지침·증빙으로 최종 확인하세요.
+    </p>
+  </section>
+
+  <section class="section">
+    <h2 class="local-h2">경력 입력</h2>
+    <hr/>
+
+    <div class="table-wrap">
+      <table class="sheetlike tight" id="careerTable">
+        <thead>
+          <tr>
+            <th class="center">부터</th>
+            <th class="center">까지</th>
+            <th>경력 내용</th>
+            <th class="center">환산율</th>
+            <th class="center">기간(년)</th>
+            <th class="center">기간(월)</th>
+            <th class="center">기간(일)</th>
+            <th class="center">환산(년)</th>
+            <th class="center">환산(월)</th>
+            <th class="center">환산(일)</th>
+            <th>비고</th>
+            <th class="center">삭제</th>
+          </tr>
+        </thead>
+        <tbody id="careerTbody">
+          <!-- rows injected -->
+        </tbody>
+        <tfoot>
+          <tr>
+            <th colspan="4" class="right">합계</th>
+            <td class="out center" id="sumRawY">0</td>
+            <td class="out center" id="sumRawM">0</td>
+            <td class="out center" id="sumRawD">0</td>
+            <td class="out center" id="sumConvY">0</td>
+            <td class="out center" id="sumConvM">0</td>
+            <td class="out center" id="sumConvD">0</td>
+            <td colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <datalist id="rateList">
+      <option value="1"></option>
+      <option value="0.5"></option>
+      <option value="0.33"></option>
+      <option value="0.313"></option>
+      <option value="0.31"></option>
+      <option value="120일"></option>
+      <option value="180일"></option>
+      <option value="360일"></option>
+    </datalist>
+
+    <p class="muted">
+      팁: 환산율 입력칸에서 <span class="kbd">↑/↓</span> 키로 이전 값들 선택하기 쉽습니다(브라우저 자동완성).
+    </p>
+  </section>
+
+  <section class="section">
+    <h2 class="local-h2">엑셀 다운로드 포함 내용</h2>
+    <hr/>
+    <ul class="muted">
+      <li>기본정보(소속/성명/자격/학령/가산/호봉획정일)</li>
+      <li>경력 목록(부터~까지/내용/환산율/기간/환산연수/비고)</li>
+      <li>합계(환산 총 경력연수, 잔여기간, 기산호봉, 사정호봉)</li>
+    </ul>
+  </section>
+
+</main>
+
+<script>
+(() => {
+  // ========= 유틸: 날짜 =========
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+  function pad2(n) { return String(n).padStart(2, "0"); }
+
+  // yyyy-mm-dd -> {y,m,d} (로컬 타임존 흔들림 방지: 숫자로만)
+  function parseYMD(s) {
+    if (!s) return null;
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+    if (!m) return null;
+    return { y: +m[1], m: +m[2], d: +m[3] };
+  }
+
+  function ymdToISO(ymd) {
+    if (!ymd) return "";
+    return `${ymd.y}-${pad2(ymd.m)}-${pad2(ymd.d)}`;
+  }
+
+  function daysInMonth(y, m) {
+    return new Date(Date.UTC(y, m, 0)).getUTCDate(); // m: 1~12
+  }
+
+  function toUTCts(ymd) {
+    return Date.UTC(ymd.y, ymd.m - 1, ymd.d);
+  }
+
+  function fromUTCts(ts) {
+    const dt = new Date(ts);
+    return { y: dt.getUTCFullYear(), m: dt.getUTCMonth() + 1, d: dt.getUTCDate() };
+  }
+
+  function addDays(ymd, days) {
+    return fromUTCts(toUTCts(ymd) + days * MS_PER_DAY);
+  }
+
+  function addMonths(ymd, months) {
+    const idx = (ymd.m - 1) + months;
+    const y = ymd.y + Math.floor(idx / 12);
+    const m = (idx % 12 + 12) % 12 + 1;
+    const d = Math.min(ymd.d, daysInMonth(y, m));
+    return { y, m, d };
+  }
+
+  // inclusive 기간 차이(말일 포함): Excel의 DATEDIF(start, end+1, "Y"/"YM"/"MD") 방식 구현
+  function diffYMDInclusive(start, end) {
+    const s = start, e = end;
+    const endP1 = addDays(e, 1);
+
+    if (toUTCts(endP1) < toUTCts(s)) return { y: 0, m: 0, d: 0, invalid: true };
+
+    // years
+    let years = endP1.y - s.y;
+    let anniv = addMonths(s, years * 12);
+    if (toUTCts(anniv) > toUTCts(endP1)) {
+      years -= 1;
+      anniv = addMonths(s, years * 12);
+    }
+
+    // months
+    let months = (endP1.y - anniv.y) * 12 + (endP1.m - anniv.m);
+    let monAnniv = addMonths(anniv, months);
+    if (toUTCts(monAnniv) > toUTCts(endP1)) {
+      months -= 1;
+      monAnniv = addMonths(anniv, months);
+    }
+
+    // days
+    const days = Math.round((toUTCts(endP1) - toUTCts(monAnniv)) / MS_PER_DAY);
+
+    return { y: years, m: months, d: days, invalid: false };
+  }
+
+  // ========= 유틸: 환산(서식 로직 그대로) =========
+  function trunc(x) { return Math.trunc(x); } // toward 0
+  function trunc1(x) { return Math.trunc(x * 10) / 10; } // 소수 1자리 절사
+
+  // rate가 "120일" 같은 형태면 그 일수로 바로 환산연수 계산(360/30 규칙)
+  function parseDaysText(rateText) {
+    if (!rateText) return null;
+    const t = String(rateText).trim();
+    const m = /^(\d+)\s*일$/.exec(t);
+    if (!m) return null;
+    return parseInt(m[1], 10);
+  }
+
+  function normalizeYMDFrom360(totalDays) {
+    const y = Math.floor(totalDays / 360);
+    const rem = totalDays % 360;
+    const m = Math.floor(rem / 30);
+    const d = rem % 30;
+    return { y, m, d };
+  }
+
+  // 서식의 환산 계산을 JS로 그대로 구현
+  function convertByRate(rawYMD, rate) {
+    const y = rawYMD.y, m = rawYMD.m, d = rawYMD.d;
+
+    const yRate = y * rate;
+    const M = Math.floor(yRate);
+    const yearFrac = (yRate - trunc(yRate));        // TRUNC는 양수면 소수부
+    const N = Math.floor(12 * yearFrac);
+    const O = (12 * yearFrac - trunc(12 * yearFrac)) * 30;
+
+    const mRate = m * rate;
+    const P = Math.floor(mRate);
+    const Q = 30 * (mRate - trunc(mRate));
+
+    const R = trunc1(d * rate);
+
+    const daySum = O + Q + R;
+    const carryMonths = Math.floor(daySum / 30);
+
+    const monthsTotal = N + P + carryMonths;
+    const carryYears = Math.floor(monthsTotal / 12);
+
+    const convY = M + carryYears;
+    const convM = ((monthsTotal % 12) + 12) % 12;
+    const convD = (Math.floor(daySum) % 30 + 30) % 30;
+
+    return { y: convY, m: convM, d: convD };
+  }
+
+  // ========= 호봉 계산(서식 옵션 그대로) =========
+  function eduAdj(edu) {
+    const map = {
+      "대학교(6년제)": 2,
+      "대학교(5년제)": 1,
+      "대학교(4년제)": 0,
+      "전문대학(3년제)": -1,
+      "전문대학(2년제)": -2,
+      "사범학교(1년)": -3,
+      "고등학교졸업": -4
+    };
+    return (edu in map) ? map[edu] : 0;
+  }
+
+  function bonusAdj(bonus) {
+    if (bonus === "특수+사범계") return 2;
+    if (bonus === "사범계" || bonus === "특수") return 1;
+    return 0;
+  }
+
+  function baseStep(license) {
+    const group1 = new Set(["정교사(1급)","전문상담교사(1급)","사서교사(1급)","보건교사(1급)","영양교사(1급)"]);
+    const group2 = new Set(["정교사(2급)","전문상담교사(2급)","사서교사(2급)","보건교사(2급)","영양교사(2급)"]);
+    if (group1.has(license)) return 9;
+    if (group2.has(license)) return 8;
+    return 5;
+  }
+
+  // ========= DOM =========
+  const $ = (sel) => document.querySelector(sel);
+
+  const els = {
+    org: $("#org"),
+    position: $("#position"),
+    name: $("#name"),
+    license: $("#license"),
+    edu: $("#edu"),
+    bonus: $("#bonus"),
+    baseDate: $("#baseDate"),
+    nextDate: $("#nextDate"),
+
+    eduAdjOut: $("#eduAdjOut"),
+    bonusAdjOut: $("#bonusAdjOut"),
+    baseStepOut: $("#baseStepOut"),
+    totalOut: $("#totalOut"),
+    remainOut: $("#remainOut"),
+    finalStepOut: $("#finalStepOut"),
+
+    tbody: $("#careerTbody"),
+    addRowBtn: $("#addRowBtn"),
+    loadSampleBtn: $("#loadSampleBtn"),
+    resetBtn: $("#resetBtn"),
+    downloadBtn: $("#downloadBtn"),
+
+    sumRawY: $("#sumRawY"),
+    sumRawM: $("#sumRawM"),
+    sumRawD: $("#sumRawD"),
+    sumConvY: $("#sumConvY"),
+    sumConvM: $("#sumConvM"),
+    sumConvD: $("#sumConvD"),
+  };
+
+  // ========= 경력 행 =========
+  function makeRow(data = {}) {
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td><input type="date" class="from" value="${data.from || ""}"/></td>
+      <td><input type="date" class="to" value="${data.to || ""}"/></td>
+      <td><input type="text" class="desc" placeholder="예: ○○어린이집" value="${escapeHtml(data.desc || "")}"/></td>
+      <td>
+        <input type="text" class="rate center" list="rateList" placeholder="1 / 0.5 / 0.33 / 120일" value="${data.rate || "1"}"/>
+      </td>
+      <td class="out center rawY">0</td>
+      <td class="out center rawM">0</td>
+      <td class="out center rawD">0</td>
+      <td class="out center convY">0</td>
+      <td class="out center convM">0</td>
+      <td class="out center convD">0</td>
+      <td><input type="text" class="note" placeholder="" value="${escapeHtml(data.note || "")}"/></td>
+      <td class="center"><button type="button" class="btn-lightgrey del">삭제</button></td>
+    `;
+
+    tr.querySelector(".del").addEventListener("click", () => {
+      tr.remove();
+      recalcAll();
+    });
+
+    // any change triggers recalc
+    tr.querySelectorAll("input").forEach(inp => {
+      inp.addEventListener("input", recalcAll);
+      inp.addEventListener("change", recalcAll);
+    });
+
+    return tr;
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function getRows() {
+    return Array.from(els.tbody.querySelectorAll("tr"));
+  }
+
+  function getRowData(tr) {
+    return {
+      from: tr.querySelector(".from").value,
+      to: tr.querySelector(".to").value,
+      desc: tr.querySelector(".desc").value.trim(),
+      rate: tr.querySelector(".rate").value.trim(),
+      note: tr.querySelector(".note").value.trim(),
+    };
+  }
+
+  function setRowOutputs(tr, raw, conv) {
+    tr.querySelector(".rawY").textContent = raw.y;
+    tr.querySelector(".rawM").textContent = raw.m;
+    tr.querySelector(".rawD").textContent = raw.d;
+
+    tr.querySelector(".convY").textContent = conv.y;
+    tr.querySelector(".convM").textContent = conv.m;
+    tr.querySelector(".convD").textContent = conv.d;
+  }
+
+  // ========= 전체 재계산 =========
+  function recalcAll() {
+    const rows = getRows();
+
+    let sumRawDays = 0;
+    let sumConvDays = 0;
+
+    rows.forEach(tr => {
+      const data = getRowData(tr);
+
+      // raw 계산
+      let raw = { y: 0, m: 0, d: 0, invalid: false };
+      let conv = { y: 0, m: 0, d: 0 };
+
+      const daysText = parseDaysText(data.rate);
+
+      if (daysText !== null) {
+        // "120일" 모드: raw는 0으로 두고 conv만 일수에서 계산
+        conv = normalizeYMDFrom360(daysText);
+      } else {
+        const start = parseYMD(data.from);
+        const end = parseYMD(data.to);
+
+        if (start && end) {
+          raw = diffYMDInclusive(start, end);
+          if (!raw.invalid) {
+            let rate = parseFloat(String(data.rate || "1").replaceAll(",", ""));
+            if (!Number.isFinite(rate)) rate = 1;
+            conv = convertByRate(raw, rate);
+          }
+        }
+      }
+
+      // 합계용 day 환산(360/30 규칙)
+      sumRawDays += (raw.y * 360 + raw.m * 30 + raw.d);
+      sumConvDays += (conv.y * 360 + conv.m * 30 + conv.d);
+
+      setRowOutputs(tr, raw, conv);
+    });
+
+    const sumRaw = normalizeYMDFrom360(sumRawDays);
+    const sumConv = normalizeYMDFrom360(sumConvDays);
+
+    els.sumRawY.textContent = sumRaw.y;
+    els.sumRawM.textContent = sumRaw.m;
+    els.sumRawD.textContent = sumRaw.d;
+
+    els.sumConvY.textContent = sumConv.y;
+    els.sumConvM.textContent = sumConv.m;
+    els.sumConvD.textContent = sumConv.d;
+
+    // 호봉 계산
+    const eAdj = eduAdj(els.edu.value);
+    const bAdj = bonusAdj(els.bonus.value);
+    const bStep = baseStep(els.license.value);
+
+    els.eduAdjOut.textContent = eAdj;
+    els.bonusAdjOut.textContent = bAdj;
+    els.baseStepOut.textContent = bStep;
+
+    const totalText = `${sumConv.y}년 ${sumConv.m}월 ${sumConv.d}일`;
+    els.totalOut.textContent = totalText;
+    els.remainOut.textContent = `${sumConv.m}월 ${sumConv.d}일`;
+
+    const finalStep = bStep + eAdj + bAdj + sumConv.y;
+    els.finalStepOut.textContent = finalStep;
+
+    // 차기승급일(참고): 360일-잔여(월/일) 만큼 뒤로 (30일=1월 규칙)
+    // ※ 실제는 지침/기관별 적용이 달라질 수 있어 "참고용"으로만 표기
+    const base = parseYMD(els.baseDate.value);
+    if (base) {
+      const remainDays = sumConv.m * 30 + sumConv.d;
+      const daysToNext = 360 - remainDays;
+      const next = addDays(base, daysToNext);
+      els.nextDate.value = ymdToISO(next);
+    } else {
+      els.nextDate.value = "";
+    }
+  }
+
+  // ========= 버튼 동작 =========
+  els.addRowBtn.addEventListener("click", () => {
+    els.tbody.appendChild(makeRow({ rate: "1" }));
+    recalcAll();
+  });
+
+  els.loadSampleBtn.addEventListener("click", () => {
+    // 기존 입력 유지 + 경력만 샘플로 교체(원하면 여기 로직 바꿔도 됨)
+    els.org.value = "문막초등학교 병설유치원";
+    els.position.value = "시간제근무 기간제교사";
+    els.name.value = "김라미";
+    els.license.value = "정교사(1급)";
+    els.edu.value = "대학교(4년제)";
+    els.bonus.value = "없음";
+    els.baseDate.value = "2025-03-01";
+
+    els.tbody.innerHTML = "";
+    const sampleRows = [
+      { from: "1991-03-20", to: "1992-01-14", desc: "중앙유치원", rate: "1", note: "" },
+      { from: "2002-02-27", to: "2003-02-27", desc: "예쁜어린이집", rate: "1", note: "" },
+      { from: "2003-03-01", to: "2004-02-29", desc: "○○유치원", rate: "0.5", note: "예시(0.5 환산)" },
+      { from: "", to: "", desc: "군 복무(예시)", rate: "180일", note: "일수 입력 예시" }
+    ];
+    sampleRows.forEach(r => els.tbody.appendChild(makeRow(r)));
+    recalcAll();
+  });
+
+  els.resetBtn.addEventListener("click", () => {
+    els.org.value = "";
+    els.position.value = "";
+    els.name.value = "";
+    els.license.value = "정교사(1급)";
+    els.edu.value = "대학교(4년제)";
+    els.bonus.value = "없음";
+    els.baseDate.value = "";
+    els.nextDate.value = "";
+
+    els.tbody.innerHTML = "";
+    // 기본 5행 깔아주기
+    for (let i = 0; i < 5; i++) els.tbody.appendChild(makeRow({ rate: "1" }));
+    recalcAll();
+  });
+
+  // ========= 엑셀 다운로드 =========
+  function buildExcelAOA() {
+    const rows = getRows().map(getRowData);
+
+    const eAdj = eduAdj(els.edu.value);
+    const bAdj = bonusAdj(els.bonus.value);
+    const bStep = baseStep(els.license.value);
+
+    const sumConvY = parseInt(els.sumConvY.textContent, 10) || 0;
+    const sumConvM = parseInt(els.sumConvM.textContent, 10) || 0;
+    const sumConvD = parseInt(els.sumConvD.textContent, 10) || 0;
+
+    const finalStep = bStep + eAdj + bAdj + sumConvY;
+
+    const aoa = [];
+    aoa.push(["호 봉 획 정 표"]);
+    aoa.push([]);
+    aoa.push(["소속", els.org.value || "", "", "현 직위(직급)", els.position.value || ""]);
+    aoa.push(["성명", els.name.value || "", "", "교원 자격", els.license.value || ""]);
+    aoa.push(["학령구분", els.edu.value || "", "", "가산여부", els.bonus.value || ""]);
+    aoa.push(["호봉획정일", els.baseDate.value || "", "", "차기승급일(참고)", els.nextDate.value || ""]);
+    aoa.push([]);
+    aoa.push([
+      "환산 총 경력연수", `${sumConvY}년 ${sumConvM}월 ${sumConvD}일`,
+      "", "공제(학령) 연수", eAdj,
+      "가산 연수", bAdj,
+      "기산호봉", bStep,
+      "사정 호봉", finalStep,
+      "잔여기간", `${sumConvM}월 ${sumConvD}일`
+    ]);
+    aoa.push([]);
+    aoa.push(["부터","까지","경력 내용","환산율","기간(년)","기간(월)","기간(일)","환산(년)","환산(월)","환산(일)","비고"]);
+
+    // 각 행 계산을 다시 한번 수행(엑셀에 raw/conv를 같이 실어주기)
+    rows.forEach(r => {
+      const daysText = parseDaysText(r.rate);
+
+      let raw = { y: 0, m: 0, d: 0, invalid: false };
+      let conv = { y: 0, m: 0, d: 0 };
+
+      if (daysText !== null) {
+        conv = normalizeYMDFrom360(daysText);
+      } else {
+        const s = parseYMD(r.from);
+        const e = parseYMD(r.to);
+        if (s && e) {
+          raw = diffYMDInclusive(s, e);
+          if (!raw.invalid) {
+            let rate = parseFloat(String(r.rate || "1").replaceAll(",", ""));
+            if (!Number.isFinite(rate)) rate = 1;
+            conv = convertByRate(raw, rate);
+          }
+        }
+      }
+
+      aoa.push([
+        r.from || "",
+        r.to || "",
+        r.desc || "",
+        r.rate || "",
+        raw.y, raw.m, raw.d,
+        conv.y, conv.m, conv.d,
+        r.note || ""
+      ]);
+    });
+
+    aoa.push([]);
+    aoa.push(["합계","","","",
+      parseInt(els.sumRawY.textContent,10)||0,
+      parseInt(els.sumRawM.textContent,10)||0,
+      parseInt(els.sumRawD.textContent,10)||0,
+      sumConvY, sumConvM, sumConvD,
+      ""
+    ]);
+
+    return aoa;
+  }
+
+  function downloadXlsx() {
+    if (!window.XLSX) {
+      alert("엑셀 라이브러리(XLSX)를 불러오지 못했습니다. 인터넷 연결/CDN 차단 여부를 확인해주세요.");
+      return;
+    }
+
+    const aoa = buildExcelAOA();
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+    // 보기 좋은 열 너비
+    ws["!cols"] = [
+      { wch: 12 }, { wch: 12 }, { wch: 28 }, { wch: 10 },
+      { wch: 9 }, { wch: 9 }, { wch: 9 },
+      { wch: 9 }, { wch: 9 }, { wch: 9 },
+      { wch: 22 }
+    ];
+
+    // 타이틀 병합(첫 줄 A1:K1)
+    ws["!merges"] = ws["!merges"] || [];
+    ws["!merges"].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 10 } });
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "호봉획정표");
+
+    const safeName = (els.name.value || "기간제교원").replace(/[\\/:*?"<>|]/g, "_");
+    const fileName = `기간제교원_호봉획정표_${safeName}.xlsx`;
+
+    XLSX.writeFile(wb, fileName);
+  }
+
+  els.downloadBtn.addEventListener("click", downloadXlsx);
+
+  // ========= 초기 상태 =========
+  // 기본 5행
+  for (let i = 0; i < 5; i++) els.tbody.appendChild(makeRow({ rate: "1" }));
+
+  // 기본정보 변화도 재계산
+  [els.license, els.edu, els.bonus, els.baseDate].forEach(el => {
+    el.addEventListener("change", recalcAll);
+    el.addEventListener("input", recalcAll);
+  });
+
+  recalcAll();
+})();
+</script>
+</body>
+</html>
