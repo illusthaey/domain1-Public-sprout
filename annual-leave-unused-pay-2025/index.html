@@ -99,28 +99,31 @@
       <div class="msg warn" style="margin-top:10px;">
         <div><b>주의 사항</b></div>
         <div class="help">
-          ·통상임금 산정 시 반영하는 수당은 지역 및 시기 등에 따라 변동될 수 있음에 유의하십시오.<br/>
-          ·정기상여금 포함 여부를 선택 가능하게 만들어두었습니다.
+          ·통상임금 산정 시 "정기상여금" 포함 여부를 선택 가능하게 만들어두었습니다. <br/>
+          ·통상임금 반영 수당은 지역 및 시기 등에 따라 변동될 수 있음에 유의하십시오. <br/>
         </div>
       </div>
     </section>
 
     <section class="section">
-      <h2>1. 인사기록카드(나이스 원자료) 업로드</h2>
-      <p class="muted">·인사기록카드(조회내역) 엑셀 원본을 그대로 업로드하세요. (드래그&드롭 지원)</p>
+      <h2>1. 인사기록 조회내역 업로드</h2>
+      <p class="muted">
+        ·나이스 교육공무직등인사-인사기록(교육공무직)-인사기록관리-인사기록(인사권한 조회)에서 엑셀 파일 다운로드 가능<br/>
+        ·1행에 적힌 항목 열 삭제 없이 다운받은 파일 그대로 올려주십시오.
+      </p>
 
       <div class="card">
         <div class="grid two">
           <div>
             <div class="dropzone" id="hrDrop">
-              <p class="dz-title">인사기록카드 엑셀 드롭</p>
-              <p class="dz-desc">여기에 파일을 끌어다 놓거나 클릭해서 선택하세요. (1개)</p>
+              <p class="dz-title">인사기록 조회내역 엑셀파일 업로드</p>
+              <p class="dz-desc">파일 드래그 가능</p>
             </div>
             <input type="file" id="hrFile" accept=".xlsx,.xls" class="hidden" />
 
             <div class="row gap" style="margin-top:10px;">
-              <button class="btn primary" id="btnLoadHr">인사정보 추출</button>
-              <button class="btn" id="btnClearAll">전체 초기화</button>
+              <button class="btn primary" id="btnLoadHr">인사정보 내역추출</button>
+              <button class="btn" id="btnClearAll">초기화</button>
             </div>
             <div id="hrMsg" class="msg" style="margin-top:12px;"></div>
           </div>
