@@ -85,22 +85,20 @@
           <ul>
             <li>집계 대상 유형: 지각·조퇴·외출·반일연차·연차</li>
             <li>연차 외 다른 복무는 집계 안 함.</li>
-            <li class="muted">※ 병가·병지각·병조퇴·병외출 등은 연차가 아니므로 제외합니다.</li>
           </ul>
         </div>
         <div class="msg">
           <div><b>미사용 수당 산정 기준</b></div>
           <ul>
             <li>연차 미사용 일수 = (2025회계 부여 연차 일수) - (2025회계 사용 연차 일수)</li>
-            <li>연차 미사용 수당 = (미사용 연차 <span class="muted">분 단위</span>) × (시간당 통상임금 ÷ 60)</li>
-            <li><b>10원 단위로 남겨두고 절사</b> (예: 1,111원 → 1,110원)</li>
+            <li>연차 미사용 수당 = (미사용 연차)*(통상임금/60)</li>
           </ul>
         </div>
       </div>
       <div class="msg warn" style="margin-top:10px;">
         <div><b>주의 사항</b></div>
         <div class="help">
-          ·통상임금 산정 시 <b>정기상여금</b> 포함 여부를 선택할 수 있게 해두었습니다. <br/>
+          ·통상임금 산정 시 정기상여금 포함 여부 선택할 수 있게 해둠 <br/>
           ·통상임금 반영 수당은 지역 및 시기 등에 따라 변동될 수 있음에 유의하십시오. <br/>
         </div>
       </div>
@@ -110,15 +108,15 @@
       <h2>1. 인사기록 조회내역 업로드</h2>
       <p class="muted">
         ·나이스 교육공무직등인사-인사기록(교육공무직)-인사기록관리-인사기록(인사권한 조회)에서 엑셀 파일 다운로드 가능<br/>
+        ·인사기록 파일 여러 개 업로드 가능 <br/>
         ※ 1행(헤더)에 적힌 항목 열 삭제 없이 다운받은 파일 그대로 올려주십시오. <br/>
-        ·<b>여러 개 업로드 가능</b> (파일이 여러 장으로 나뉜 경우 합산/병합 처리)
       </p>
 
       <div class="card">
         <div class="grid two">
           <div>
             <div class="dropzone" id="hrDrop">
-              <p class="dz-title">인사기록 조회내역 엑셀 파일 업로드 (여러 개 가능)</p>
+              <p class="dz-title">엑셀 파일 업로드</p>
               <p class="dz-desc">파일 드래그 가능</p>
             </div>
             <input type="file" id="hrFile" accept=".xlsx,.xls" class="hidden" multiple />
@@ -133,9 +131,8 @@
           <div class="msg">
             <div><b>입력 필요</b></div>
             <ul>
-              <li>개별 근로자에게 <b>2025회계에 부여된 연차 유급휴가 일수</b>를 직접 입력해주십시오.</li>
-              <li>통상임금 자동 계산이 애매한 경우에는 <b>시간당 통상임금</b>을 직접 수기로 입력하여 주십시오.</li>
-              <li class="muted">※ ‘통상임금 반영 기타수당’은 월액 기준으로 입력(예: 직무수당 등).</li>
+              <li>개별 근로자에게 2025회계에 부여된 연차 유급휴가 일수를 직접 입력해주십시오.</li>
+              <li>통상임금 자동 계산이 애매한 경우에는 시간당 단가를 직접 입력하여 주십시오.</li>
             </ul>
           </div>
         </div>
@@ -154,7 +151,7 @@
                 <th class="nowrap right">2025회계 부여 연차일수</th>
                 <th class="nowrap right">통상임금 반영 기타수당(월)</th>
                 <th class="nowrap right">시간당 통상임금 수기 입력</th>
-                <th class="nowrap center">삭제</th>
+                <th class="nowrap center">삭제하기</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -162,8 +159,8 @@
         </div>
 
         <div class="msg" style="margin-top:10px;">
-          <div>연차 미사용 수당 <b>산정 기준일자</b>는 2026.2.28.로 고정됩니다.</div>
-          <div class="muted">※ 2025회계에 부여받은 연차의 미사용분은 “사용기간이 종료되는 달”인 2026.2월의 통상임금을 기준으로 산정합니다.</div>
+          <div>연차 미사용수당 산정 기준일자는 2026.2.28.로 고정해둠</div>
+          <div class="muted">※ 2025회계에 부여받은 연차의 미사용분은 "사용기간이 종료되는 달"인 2026.2월의 통상임금을 기준으로 산정함.</div>
         </div>
       </div>
     </section>
@@ -172,7 +169,7 @@
       <h2>2. 근무상황 조회내역 업로드</h2>
       <p class="muted">
         ·나이스에서 개인별 근무상황(복무사용) 조회내역 엑셀 파일 원자료 그대로 업로드하십시오. <br/>
-        ·여러 개 업로드 가능<br/>
+        ·엑셀 파일 여러 개 업로드 가능<br/>
       </p>
 
       <div class="card">
@@ -194,7 +191,7 @@
           <div class="msg warn">
             <div><b>집계 규칙</b></div>
             <ul>
-              <li>집계 대상: <b>지각, 조퇴, 외출, 반일연차, 연차</b></li>
+              <li>집계 대상: 지각, 조퇴, 외출, 반일연차, 연차</li>
               <li>연차 사용내역만 집계하고 애매한 건 따로 검토 및 수정 필요</li>
             </ul>
           </div>
@@ -203,7 +200,7 @@
         <details id="reviewBox" class="card hidden" style="margin-top:12px;">
           <summary>검토 필요 목록</summary>
           <div class="muted" style="margin-top:8px;">
-            ·지각/조퇴/외출인데 시간 정보가 없어 자동 집계 못 한 항목입니다. 필요시 수기로 분(分鐘) 단위 입력 후 반영하십시오.
+            ·확인 후에 수기로 분류하십시오오.
           </div>
           <div class="table-wrap">
             <table class="sheetlike table-compact" id="reviewTable">
