@@ -78,62 +78,27 @@
   <main class="container">
 
     <section class="section">
-      <h2>※ 계산 기준 요약 정리</h2>
-      <div class="grid two">
-        <div class="msg">
-          <div><b>연차 사용 내역 집계 (2025회계)</b></div>
-          <ul>
-            <li>집계 대상 유형: 지각·조퇴·외출·반일연차·연차</li>
-            <li>연차 외 다른 복무는 집계 안 함.</li>
-          </ul>
-        </div>
-        <div class="msg">
-          <div><b>미사용 수당 산정 기준</b></div>
-          <ul>
-            <li>연차 미사용 일수 = (2025회계 부여 연차 일수) - (2025회계 사용 연차 일수)</li>
-            <li>연차 미사용 수당 = (미사용 연차)*(통상임금/60)</li>
-          </ul>
-        </div>
-      </div>
-      <div class="msg warn" style="margin-top:10px;">
-        <div><b>주의 사항</b></div>
-        <div class="help">
-          ·통상임금 산정 시 정기상여금 포함 여부 선택할 수 있게 해둠 <br/>
-          ·통상임금 반영 수당은 지역 및 시기 등에 따라 변동될 수 있음에 유의하십시오. <br/>
-        </div>
-      </div>
-    </section>
-
-    <section class="section">
-      <h2>1. 인사기록 조회내역 업로드</h2>
+      <h2>1. 인사 정보 입력</h2>
       <p class="muted">
-        ·나이스 교육공무직등인사-인사기록(교육공무직)-인사기록관리-인사기록(인사권한 조회)에서 엑셀 파일 다운로드 가능<br/>
+        ·나이스 "교육공무직등인사 -인사기록(교육공무직) -인사기록관리 -인사기록(인사권한-조회)"에서 엑셀 파일 다운로드 가능<br/>
         ·인사기록 파일 여러 개 업로드 가능 <br/>
-        ※ 1행(헤더)에 적힌 항목 열 삭제 없이 다운받은 파일 그대로 올려주십시오. <br/>
+        ※ 1행에 적힌 항목 열 삭제 없이 다운받은 파일 그대로 올려주십시오. <br/>
       </p>
 
       <div class="card">
         <div class="grid two">
           <div>
             <div class="dropzone" id="hrDrop">
-              <p class="dz-title">엑셀 파일 업로드</p>
-              <p class="dz-desc">파일 드래그 가능</p>
+              <p class="dz-title">엑셀 파일 업로드하기</p>
+              <p class="dz-desc">(파일 드래그 가능)</p>
             </div>
             <input type="file" id="hrFile" accept=".xlsx,.xls" class="hidden" multiple />
 
             <div class="row gap" style="margin-top:10px;">
               <button class="btn primary" id="btnLoadHr">인사정보 내역추출</button>
-              <button class="btn" id="btnClearAll">전체 초기화</button>
+              <button class="btn" id="btnClearAll">초기화하기</button>
             </div>
             <div id="hrMsg" class="msg" style="margin-top:12px;"></div>
-          </div>
-
-          <div class="msg">
-            <div><b>입력 필요</b></div>
-            <ul>
-              <li>개별 근로자에게 2025회계에 부여된 연차 유급휴가 일수를 직접 입력해주십시오.</li>
-              <li>통상임금 자동 계산이 애매한 경우에는 시간당 단가를 직접 입력하여 주십시오.</li>
-            </ul>
           </div>
         </div>
 
