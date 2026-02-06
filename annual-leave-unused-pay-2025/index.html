@@ -68,7 +68,7 @@
     <div class="shell">
       <h1>2025회계 교육공무직 연차 미사용 수당 계산기</h1>
       <p class="subtitle">
-        ·2024회계 근무 실적을 바탕으로 2025회계에 부여된 연차 일수 중에서 미사용분에 대해 수당 산정<br/>
+        ·2025회계에 부여된 연차 일수 중에서 미사용분에 대해 2026.2.28.일자 기준 통상임금으로 연차미사용 수당을 산정해드림<br/>
         ·연차 사용 집계 기간: 2025.3.1.~2026.2.28.<br/>
         ※ 업로드한 파일은 저장되지 않습니다. 서버랑 DB 없음<br/>
       </p>
@@ -109,7 +109,7 @@
       <h2>1. 인사기록 조회내역 업로드</h2>
       <p class="muted">
         ·나이스 교육공무직등인사-인사기록(교육공무직)-인사기록관리-인사기록(인사권한 조회)에서 엑셀 파일 다운로드 가능<br/>
-        ·1행에 적힌 항목 열 삭제 없이 다운받은 파일 그대로 올려주십시오.
+        ※1행에 적힌 항목 열 삭제 없이 다운받은 파일 그대로 올려주십시오.
       </p>
 
       <div class="card">
@@ -123,7 +123,7 @@
 
             <div class="row gap" style="margin-top:10px;">
               <button class="btn primary" id="btnLoadHr">인사정보 내역추출</button>
-              <button class="btn" id="btnClearAll">초기화</button>
+              <button class="btn" id="btnClearAll">전체 초기화</button>
             </div>
             <div id="hrMsg" class="msg" style="margin-top:12px;"></div>
           </div>
@@ -131,8 +131,8 @@
           <div class="msg">
             <div><b>입력 필요</b></div>
             <ul>
-              <li>각 근로자별 <b>2025회계 부여 연차일수</b>를 표에서 직접 입력하세요.</li>
-              <li>통상임금 자동 계산이 애매한 직종/케이스는 <b>시간당 통상임금(수기)</b> 칸에 직접 입력하면 그 값을 우선 사용합니다.</li>
+              <li>개별 근로자에게 2025회계에 부여된 연차 유급휴가 일수를 직접 입력해주십시오.</li>
+              <li>통상임금 자동 계산이 애매한 경우에는 시간당 통상임금을 직접 수기로 입력하여 주십시오.</li>
             </ul>
           </div>
         </div>
@@ -145,12 +145,12 @@
                 <th class="nowrap">성명</th>
                 <th class="nowrap">직종</th>
                 <th class="nowrap">최초임용일</th>
-                <th class="nowrap right">1일시간</th>
-                <th class="nowrap right">주시간</th>
-                <th class="nowrap right">근속(지급기준일)</th>
-                <th class="nowrap right">부여연차(일)</th>
-                <th class="nowrap right">기타수당(월)</th>
-                <th class="nowrap right">시간당통상임금(수기)</th>
+                <th class="nowrap right">1일 소정근무시간</th>
+                <th class="nowrap right">주당 소정근무시간</th>
+                <th class="nowrap right">근속년수(2026.3.1.일자 기준)</th>
+                <th class="nowrap right">2025회계 부여 연차일수</th>
+                <th class="nowrap right">통상임금 반영 기타수당</th>
+                <th class="nowrap right">통상임금 수기 입력하기</th>
                 <th class="nowrap center">삭제</th>
               </tr>
             </thead>
@@ -159,28 +159,31 @@
         </div>
 
         <div class="msg" style="margin-top:10px;">
-          <div><b>지급 기준일자</b>: 2026-03-01 (고정)</div>
-          <div class="muted">※ 근속연수/근속수당 등 통상임금 계산에 사용됩니다.</div>
+          <div>연차미사용 수당 지급 기준일자는 2026.2.28.일자로 고정됨.</div>
+          <div class="muted">※2025회계에 부여받은 연차의 미사용분은 "사용기간이 종료되는 달"인 2026.2월의 통상임금을 기준으로 산정함.</div>
         </div>
       </div>
     </section>
 
     <section class="section">
-      <h2>2. 근무사항(나이스 근무상황) 업로드</h2>
-      <p class="muted">·나이스에서 개인별 근무상황(복무) 조회내역 엑셀/CSV 원본을 그대로 업로드하세요. (여러 개 가능, 드래그&드롭 지원)</p>
+      <h2>2. 근무상황 조회내역 업로드</h2>
+      <p class="muted">
+        ·나이스에서 개인별 근무상황(복무사용) 조회내역 엑셀 파일 원자료 그대로 업로드하십시오. <br/>
+        ·여러 개 업로드 가능<br/>
+      </p>
 
       <div class="card">
         <div class="grid two">
           <div>
             <div class="dropzone" id="workDrop">
-              <p class="dz-title">근무상황 엑셀/CSV 드롭</p>
-              <p class="dz-desc">여러 파일을 한 번에 끌어다 놓을 수 있습니다.</p>
+              <p class="dz-title">근무상황 엑셀/CSV 업로드</p>
+              <p class="dz-desc">여러 파일을 한 번에 드래그하여 업로드 가능</p>
             </div>
             <input type="file" id="workFiles" accept=".xlsx,.xls,.csv" multiple class="hidden" />
 
             <div class="row gap" style="margin-top:10px;">
-              <button class="btn primary" id="btnLoadWork">연차 사용 집계</button>
-              <button class="btn" id="btnClearWork">근무사항만 초기화</button>
+              <button class="btn primary" id="btnLoadWork">연차 사용내역 집계</button>
+              <button class="btn" id="btnClearWork">근무상황 초기화</button>
             </div>
             <div id="workMsg" class="msg" style="margin-top:12px;"></div>
           </div>
@@ -189,26 +192,26 @@
             <div><b>집계 규칙</b></div>
             <ul>
               <li>집계 대상: <b>지각, 조퇴, 외출, 반일연차, 연차</b></li>
-              <li><b>병</b>이 붙은 근태(병가/병지각/병조퇴/병외출 등)는 제외</li>
-              <li>시간 정보가 비어있는 항목은 <b>검토 필요</b>로 따로 표시합니다.</li>
+              <li>연차 사용내역만 집계하고 애매한 건 따로 검토 및 수정 필요</li>
             </ul>
           </div>
         </div>
 
         <details id="reviewBox" class="card hidden" style="margin-top:12px;">
-          <summary>검토 필요(시간/분 판독 실패) 목록</summary>
-          <div class="muted" style="margin-top:8px;">·아래 항목은 시간(분)을 자동으로 해석하지 못했습니다. 필요한 경우 수기로 분(또는 시간/일)을 입력하고 <b>반영</b>을 눌러주세요.</div>
+          <summary>검토 필요 목록</summary>
+          <div class="muted" style="margin-top:8px;">
+            ·데이터 추출 못 함. 필요시 수기로 입력하고 반영하십시오. </div>
           <div class="table-wrap">
             <table class="sheetlike table-compact" id="reviewTable">
               <thead>
                 <tr>
-                  <th class="nowrap">성명</th>
-                  <th class="nowrap">개인번호</th>
-                  <th class="nowrap">유형</th>
-                  <th class="nowrap">기간</th>
-                  <th class="nowrap">원본값(시간/일수)</th>
-                  <th class="nowrap right">수기입력(분)</th>
-                  <th class="nowrap center">반영</th>
+                  <th class="nowrap">근로자 성명</th>
+                  <th class="nowrap">나이스 개인번호</th>
+                  <th class="nowrap">복무 유형</th>
+                  <th class="nowrap">복무 사용 기간</th>
+                  <th class="nowrap">시간 및 일수</th>
+                  <th class="nowrap right">수기 입력 내역 (분단위)</th>
+                  <th class="nowrap center">반영하기</th>
                   <th class="nowrap">파일</th>
                 </tr>
               </thead>
@@ -220,62 +223,45 @@
     </section>
 
     <section class="section">
-      <h2>3. 통상임금 옵션</h2>
+      <h2>3. 통상임금 산정하기기</h2>
 
       <div class="card">
         <div class="row gap">
-          <label class="row"><input type="checkbox" id="optIncludeBonus" /> 정기상여금(월 환산 1/12) 통상임금에 포함</label>
+          <label class="row"><input type="checkbox" id="optIncludeBonus" /> 정기상여금을 통상임금에 포함합니다. </label>
         </div>
 
         <div class="row gap" style="margin-top:8px;">
-          <label class="row"><input type="checkbox" id="optIncludeHoliday" /> 명절휴가비(월 환산 1/12) 통상임금에 포함 <span class="muted">(선택)</span></label>
+          <label class="row"><input type="checkbox" id="optIncludeHoliday" /> 명절휴가비를 통상임금에 포함합니다. </label>
         </div>
 
         <div class="msg" style="margin-top:10px;">
-          <div><b>기본값(2025 보수표 기반)</b></div>
+          <div><b>기본 설정값 (2025회계 보수표 반영) </b></div>
           <ul>
-            <li>기본급(40h): 1유형 2,266,000원 / 2유형 2,066,000원</li>
+            <li>기본급(주40시간): 1유형 2,266,000원/ 2유형 2,066,000원</li>
             <li>정액급식비: 150,000원</li>
             <li>근속수당: 1년당 40,000원 (상한 23년)</li>
-            <li>정기상여금(연): 기본 1,000,000원 / 특수운영1유형 500,000원</li>
-            <li>명절휴가비(연): 1,850,000원</li>
+            <li>정기상여금(연간): 기본 1,000,000원/ 특수운영직군 500,000원</li>
+            <li>명절휴가비(연간): 1,850,000원</li>
           </ul>
-          <div class="muted">※ 보수표가 바뀌면 아래 고급설정에서 숫자만 바꿔주면 됩니다.</div>
+          <div class="muted">※ 금액 변동사항 발생 시 아래의 "수기 입력하기"를 펼쳐서 입력하십시오. </div>
         </div>
 
         <details style="margin-top:10px;">
-          <summary>고급설정(보수표/수당 상수 수정)</summary>
+          <summary>변동내역 수기 입력</summary>
           <div class="grid three" style="margin-top:10px;">
             <label class="stack">
-              <span class="mini">1유형 기본급(40h)</span>
+              <span class="mini">1유형 기본급(주40시간)</span>
               <input type="number" id="cType1" class="numeric" />
             </label>
             <label class="stack">
-              <span class="mini">2유형 기본급(40h)</span>
+              <span class="mini">2유형 기본급(주40시간)</span>
               <input type="number" id="cType2" class="numeric" />
             </label>
             <label class="stack">
-              <span class="mini">1유형 미만 기본급(40h)</span>
+              <span class="mini">1유형 미만 기본급(주40시간)</span>
               <input type="number" id="cType1Under" class="numeric" />
             </label>
 
-            <label class="stack">
-              <span class="mini">교육복지사(기관) 기본급</span>
-              <input type="number" id="cWelfareInst" class="numeric" />
-            </label>
-            <label class="stack">
-              <span class="mini">임상심리사/대안교육전문가 기본급</span>
-              <input type="number" id="cClinical" class="numeric" />
-            </label>
-            <label class="stack">
-              <span class="mini">학습클리닉/학부모지원 기본급</span>
-              <input type="number" id="cClinic" class="numeric" />
-            </label>
-
-            <label class="stack">
-              <span class="mini">진학전문지원관 기본급</span>
-              <input type="number" id="cJinhak" class="numeric" />
-            </label>
             <label class="stack">
               <span class="mini">학교운동부지도자 기본급</span>
               <input type="number" id="cSports" class="numeric" />
@@ -286,35 +272,35 @@
             </label>
 
             <label class="stack">
-              <span class="mini">근속수당(1년당)</span>
+              <span class="mini">근속수당 (1년당 단가)</span>
               <input type="number" id="cServiceStep" class="numeric" />
             </label>
             <label class="stack">
-              <span class="mini">근속수당 상한(년)</span>
+              <span class="mini">근속수당 상한년도</span>
               <input type="number" id="cServiceCap" class="numeric" />
             </label>
             <label class="stack">
-              <span class="mini">정기상여금(연, 기본)</span>
+              <span class="mini">정기상여금(일반 교육공무직, 연간)</span>
               <input type="number" id="cBonusDefault" class="numeric" />
             </label>
 
             <label class="stack">
-              <span class="mini">정기상여금(연, 특수운영 1유형)</span>
+              <span class="mini">정기상여금(특수운영직군, 연간)</span>
               <input type="number" id="cBonusSpecial1" class="numeric" />
             </label>
             <label class="stack">
-              <span class="mini">명절휴가비(연)</span>
+              <span class="mini">명절휴가비(연간)</span>
               <input type="number" id="cHoliday" class="numeric" />
             </label>
             <label class="stack">
-              <span class="mini">특수운영 시급(주15시간 미만용)</span>
+              <span class="mini">초단시간 근로자 시급 (주15시간 미만)</span>
               <input type="number" id="cSpecialHourly" class="numeric" />
             </label>
           </div>
 
           <div class="row gap" style="margin-top:10px;">
             <button class="btn" id="btnResetConstants">기본값으로 되돌리기</button>
-            <button class="btn primary" id="btnApplyConstants">고급설정 반영</button>
+            <button class="btn primary" id="btnApplyConstants">수기 입력한 설정 반영하기</button>
           </div>
 
           <div id="constMsg" class="msg" style="margin-top:10px;"></div>
@@ -323,17 +309,17 @@
     </section>
 
     <section class="section">
-      <h2>4. 계산 실행 & 결과</h2>
+      <h2>4. 계산 결과</h2>
 
       <div class="card">
         <div class="row gap">
-          <button class="btn primary" id="btnRun">미사용 수당 계산</button>
-          <button class="btn" id="btnDownload">결과 엑셀 다운로드</button>
+          <button class="btn primary" id="btnRun">2025회계 연차 미사용수당 계산하기</button>
+          <button class="btn" id="btnDownload">산출 결과 엑셀로 다운로드하기기</button>
         </div>
         <div id="runMsg" class="msg" style="margin-top:12px;"></div>
       </div>
 
-      <div id="resultSummary" class="msg">아직 계산하지 않았습니다.</div>
+      <div id="resultSummary" class="msg">아직 계산 내역 없음</div>
 
       <div class="table-wrap">
         <table class="sheetlike table-compact" id="resultTable">
@@ -342,11 +328,11 @@
               <th class="nowrap">나이스 개인번호</th>
               <th class="nowrap">성명</th>
               <th class="nowrap">직종</th>
-              <th class="nowrap right">부여(일)</th>
-              <th class="nowrap right">사용(일/시/분)</th>
-              <th class="nowrap right">미사용(일/시/분)</th>
-              <th class="nowrap right">시간당 통상임금</th>
-              <th class="nowrap right">미사용 수당(절삭)</th>
+              <th class="nowrap right">연차유급휴가 부여일수</th>
+              <th class="nowrap right">연차 사용일수 (단위: 일/시/분)</th>
+              <th class="nowrap right">연차 미사용일수 (단위: 일/시/분)</th>
+              <th class="nowrap right">통상임금 (기준일자: 2026.2.28.)</th>
+              <th class="nowrap right">2025회계 연차 미사용수당</th>
               <th class="nowrap">비고</th>
             </tr>
           </thead>
@@ -355,7 +341,7 @@
       </div>
 
       <details class="card" style="margin-top:12px;">
-        <summary>개인별 상세(연차 사용 내역 합계)</summary>
+        <summary>연차 사용내역 개인별 상세 보기기</summary>
         <div id="detailBox" class="stack" style="margin-top:10px;"></div>
       </details>
     </section>
@@ -370,19 +356,18 @@
 (() => {
   "use strict";
 
-  // =============================
+
   // 기간(고정): 2025회계(학년도 기준)
-  // =============================
+
   const PERIOD_START = ymdToUTC("2025-03-01");
   const PERIOD_END   = ymdToUTC("2026-02-28"); // inclusive
   const GRANT_DATE   = ymdToUTC("2025-03-01");
-  const PAY_DATE     = ymdToUTC("2026-03-01");
+  const PAY_DATE     = ymdToUTC("2026-02-28");
 
   const DEFAULT_DAILY_HOURS = 8;
 
-  // =============================
   // 통상임금 계산용 기본 상수(2025 보수표 기반)
-  // =============================
+
   const DEFAULT_CONST = {
     basePay40: {
       type1: 2266000,
@@ -713,7 +698,7 @@
     const rows = sheetToJson(wb);
 
     const headerIdx = findHeaderRow(rows, ["성명", "직종", "최초임용일", "개인번호"]);
-    if (headerIdx < 0) throw new Error("인사기록 파일에서 헤더 행을 찾지 못했습니다. (양식 확인 필요)");
+    if (headerIdx < 0) throw new Error("인사기록 파일에서 헤더 행을 찾지 못했습니다. (다운받은 원자료 그대로 올린 건지 파일 서식 확인 필요)");
 
     const headers = rows[headerIdx].map(x => String(x || "").trim());
     const dataRows = rows.slice(headerIdx + 1).filter(r => Array.isArray(r) && r.some(x => String(x||"").trim() !== ""));
@@ -922,7 +907,7 @@
         <li>검토 필요: ${reviewRows.toLocaleString("ko-KR")}건</li>
         <li>인사정보에 없어서 임시 생성: ${createdWorkers.toLocaleString("ko-KR")}명</li>
       </ul>
-      <div class="muted">※ 임시 생성자는 직종/최초임용일이 비어있을 수 있으니 인사파일로 다시 불러오거나 수기로 채워주세요.</div>
+      <div class="muted">※ 직종, 최초임용일이 비어있는 경우 수기 입력 바람람.</div>
     `);
 
     // 자동 재계산
@@ -1264,10 +1249,10 @@
 
     // 특수운영직군
     if (JOB_KEYWORDS.special1.some(k => jn.includes(normalizeText(k)))) {
-      return { cat: "special1", base40: state.constants.basePay40.type2, note: "특수운영1유형" };
+      return { cat: "special1", base40: state.constants.basePay40.type2, note: "특수운영직군1유형" };
     }
     if (JOB_KEYWORDS.special2.some(k => jn.includes(normalizeText(k)))) {
-      return { cat: "special2", base40: state.constants.basePay40.type2, note: "특수운영2유형" };
+      return { cat: "special2", base40: state.constants.basePay40.type2, note: "특수운영직군군2유형" };
     }
 
     // 1유형 초과(직종별)
@@ -1854,34 +1839,7 @@
   function bindEvents() {
     // Drop zones
     bindDropZone($("#hrDrop"), $("#hrFile"), (files) => {
-      const f = files[0];
-      $("#hrFile").value = ""; // reset file input
-      handleLoadHr(f);
-    });
-
-    bindDropZone($("#workDrop"), $("#workFiles"), (files) => {
-      $("#workFiles").value = "";
-      handleLoadWork(files);
-    });
-
-    // Buttons
-    $("#btnLoadHr").addEventListener("click", async () => {
-      const f = $("#hrFile").files?.[0];
-      if (!f) { setMsg($("#hrMsg"), "err", "인사기록 파일을 선택하거나 드롭하세요."); return; }
-      handleLoadHr(f);
-    });
-
-    $("#btnLoadWork").addEventListener("click", async () => {
-      const files = Array.from($("#workFiles").files || []);
-      if (!files.length) { setMsg($("#workMsg"), "err", "근무상황 파일을 선택하거나 드롭하세요."); return; }
-      handleLoadWork(files);
-    });
-
-    $("#btnClearWork").addEventListener("click", () => {
-      state.leaveRecords = [];
-      state.reviewRecords = [];
-      renderReviewRecords();
-      setMsg($("#workMsg"), "warn", "근무사항(연차 사용 집계)을 초기화했습니다.");
+      const f =역을 초기화했습니다.");
       if (state.lastRunAt) runCalculation(false);
     });
 
@@ -1893,7 +1851,7 @@
       renderWorkersTable();
       renderReviewRecords();
       renderResults([]);
-      setMsg($("#hrMsg"), "warn", "전체 초기화했습니다.");
+      setMsg($("#hrMsg"), "warn", "전체 초기화 완료");
       setMsg($("#workMsg"), "", "근무상황을 업로드해주세요.");
       setMsg($("#runMsg"), "", "계산 실행 버튼을 눌러주세요.");
     });
@@ -1922,12 +1880,12 @@
     try {
       const out = await loadHrFile(file);
       setMsg($("#hrMsg"), "ok", `
-        <div><b>인사정보 추출 완료</b></div>
+        <div><b>인사정보 추출 완료. 고주무관 천재</b></div>
         <ul>
           <li>로드: ${out.loaded}명</li>
           <li>스킵: ${out.skipped}명</li>
         </ul>
-        <div class="muted">※ 표에서 <b>부여연차(일)</b>는 반드시 입력하세요.</div>
+        <div class="muted">※ 표에서 연차 부여일수 확인 필수.</div>
       `);
     } catch (e) {
       setMsg($("#hrMsg"), "err", `<b>오류</b>: $
