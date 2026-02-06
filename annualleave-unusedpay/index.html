@@ -131,18 +131,18 @@
     </section>
 
     <section class="section">
-      <h2>2. 근무상황 조회내역 업로드</h2>
+      <h2>2. 근무상황 업로드</h2>
       <p class="muted">
-        ·나이스에서 개인별 근무상황(복무사용) 조회내역 엑셀 파일 원자료 그대로 업로드하십시오. <br/>
-        ·엑셀 파일 여러 개 업로드 가능<br/>
+        ·개별 근로자 조회하지 않고 교내 교육공무직 전체 복무 섞인 파일 올려도 됨니다. 알아서 추출함. <br/>
+        ·나이스 복무에서 근무상황 조회내역 엑셀 파일 원자료 그대로 업로드. <br/>
       </p>
 
       <div class="card">
         <div class="grid two">
           <div>
             <div class="dropzone" id="workDrop">
-              <p class="dz-title">근무상황 엑셀/CSV 업로드</p>
-              <p class="dz-desc">여러 파일을 한 번에 드래그하여 업로드 가능</p>
+              <p class="dz-title">엑셀 파일 업로드 (CSV가능)</p>
+              <p class="dz-desc">(파일 드래그 가능)</p>
             </div>
             <input type="file" id="workFiles" accept=".xlsx,.xls,.csv" multiple class="hidden" />
 
@@ -152,20 +152,12 @@
             </div>
             <div id="workMsg" class="msg" style="margin-top:12px;"></div>
           </div>
-
-          <div class="msg warn">
-            <div><b>집계 규칙</b></div>
-            <ul>
-              <li>집계 대상: 지각, 조퇴, 외출, 반일연차, 연차</li>
-              <li>연차 사용내역만 집계하고 애매한 건 따로 검토 및 수정 필요</li>
-            </ul>
-          </div>
         </div>
 
         <details id="reviewBox" class="card hidden" style="margin-top:12px;">
           <summary>검토 필요 목록</summary>
           <div class="muted" style="margin-top:8px;">
-            ·확인 후에 수기로 분류하십시오오.
+            ·확인 후에 수동으로 분류하십시오.
           </div>
           <div class="table-wrap">
             <table class="sheetlike table-compact" id="reviewTable">
@@ -175,9 +167,9 @@
                   <th class="nowrap">나이스 개인번호</th>
                   <th class="nowrap">복무 유형</th>
                   <th class="nowrap">복무 사용 기간</th>
-                  <th class="nowrap">시간 및 일수(원자료)</th>
-                  <th class="nowrap right">수기 입력 (분)</th>
-                  <th class="nowrap center">반영</th>
+                  <th class="nowrap">시간 및 일수</th>
+                  <th class="nowrap right">수기 입력(분단위)</th>
+                  <th class="nowrap center">반영하기</th>
                   <th class="nowrap">파일</th>
                 </tr>
               </thead>
@@ -189,7 +181,7 @@
     </section>
 
     <section class="section">
-      <h2>3. 통상임금 산정하기</h2>
+      <h2>3. 통상임금 설정</h2>
 
       <div class="card">
         <div class="row gap">
@@ -201,15 +193,15 @@
         </div>
 
         <div class="msg" style="margin-top:10px;">
-          <div><b>기본 설정값 (2025회계 보수표 반영) </b></div>
+          <div><b>주40시간 근무 기준 기본 설정값 (2025회계 보수표 반영) </b></div>
           <ul>
-            <li>기본급(주40시간): 1유형 2,266,000원 / 2유형 2,066,000원</li>
+            <li>기본급: 1유형 2,266,000원 / 2유형 2,066,000원</li>
             <li>정액급식비: 150,000원</li>
             <li>근속수당: 1년당 40,000원 (상한 23년)</li>
             <li>정기상여금(연간): 기본 1,000,000원 / 특수운영직군(일부) 500,000원</li>
             <li>명절휴가비(연간): 1,850,000원</li>
           </ul>
-          <div class="muted">※ 금액 변동사항 발생 시 아래의 “변동내역 수기 입력”을 펼쳐서 입력하십시오. </div>
+          <div class="muted">※ 금액 변동사항 발생 시 아래의 "▶변동내역 수기 입력"을 펼쳐서 입력하십시오. </div>
         </div>
 
         <details style="margin-top:10px;">
@@ -284,7 +276,7 @@
 
           <div class="row gap" style="margin-top:10px;">
             <button class="btn" id="btnResetConstants">기본값으로 되돌리기</button>
-            <button class="btn primary" id="btnApplyConstants">수기 입력한 설정 반영하기</button>
+            <button class="btn primary" id="btnApplyConstants">변경 설정 반영하기</button>
           </div>
 
           <div id="constMsg" class="msg" style="margin-top:10px;"></div>
@@ -293,12 +285,12 @@
     </section>
 
     <section class="section">
-      <h2>4. 계산 결과</h2>
+      <h2>4. 2025회계 연차 미사용수당 계산 결과</h2>
 
       <div class="card">
         <div class="row gap">
-          <button class="btn primary" id="btnRun">2025회계 연차 미사용수당 계산하기</button>
-          <button class="btn" id="btnDownload">산출 결과 엑셀로 다운로드하기</button>
+          <button class="btn primary" id="btnRun">연차 미사용수당 계산하기</button>
+          <button class="btn" id="btnDownload">산출 결과 엑셀로 저장하기</button>
         </div>
         <div id="runMsg" class="msg" style="margin-top:12px;"></div>
       </div>
@@ -315,7 +307,7 @@
               <th class="nowrap right">연차유급휴가 부여일수</th>
               <th class="nowrap right">연차 사용일수 (일/시/분)</th>
               <th class="nowrap right">연차 미사용일수 (일/시/분)</th>
-              <th class="nowrap right">통상임금 (시간당, 2026.2.28. 기준)</th>
+              <th class="nowrap right">통상임금 (2026.2.28. 기준)</th>
               <th class="nowrap right">2025회계 연차 미사용수당</th>
               <th class="nowrap">비고</th>
             </tr>
@@ -325,7 +317,7 @@
       </div>
 
       <details class="card" style="margin-top:12px;">
-        <summary>연차 사용내역 개인별 상세 보기</summary>
+        <summary>개인별 연차 사용내역 상세보기</summary>
         <div id="detailBox" class="stack" style="margin-top:10px;"></div>
       </details>
     </section>
