@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HWPX 꼬릿말 제거 기능</title>
+
+  <!--  공통 스타일: 프로젝트의 style.css를 그대로 사용 -->
+  <link rel="stylesheet" href="static/style.css" />
+
+  <!-- 보조 스타일(드롭존/로그 등)만 최소로 추가 -->
+  <style>
+    .dropzone {
+      border: 2px dashed #d1d5db;
+      border-radius: 12px;
+      padding: 18px;
+      text-align: center;
+      background: #fafafa;
+      transition: 0.15s ease;
+      user-select: none;
+    }
+    .dropzone.dragover {
+      background: #eef2ff;
+      border-color: #6366f1;
+      transform: translateY(-1px);
+    }
+    .file-meta { margin-top: 10px; font-size: 0.95rem; color: #555; }
+    .pill {
+      display: inline-block;
+      padding: 4px 10px;
+      border: 1px solid #e5e7eb;
+      border-radius: 999px;
+      background: #fff;
+      font-size: 0.9rem;
+      color: #444;
+      white-space: nowrap;
+    }
+    .pill.ok { color: #065f46; border-color: rgba(6,95,70,.25); background: rgba(6,95,70,.06); }
+    .pill.warn { color: #92400e; border-color: rgba(146,64,14,.25); background: rgba(146,64,14,.06); }
+    .pill.bad { color: #991b1b; border-color: rgba(153,27,27,.25); background: rgba(153,27,27,.06); }
+
+    .log {
+      white-space: pre-wrap;
+      background: #0b1020;
+      color: #e5e7eb;
+      border-radius: 12px;
+      padding: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.9rem;
+      overflow: auto;
+      max-height: 260px;
+      border: 1px solid rgba(229,231,235,.15);
+    }
+
+    .k-inline {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      font-size: 0.9rem;
+      color: #555;
+    }
+
+    .fieldset {
+      border: 1px solid #e5e5e5;
+      border-radius: 12px;
+      padding: 12px;
+      background: #fff;
+    }
+
+    .small-help { margin: 8px 0 0; color: #666; font-size: 0.95rem; }
+    .muted-tight { margin: 6px 0 0; color: #666; font-size: 0.95rem; }
+    .btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+  </style>
+
+  <!-- ✅ ZIP(HWPX) 처리를 위한 JSZip (CDN) -->
+  <!-- 오프라인/내부망이면 jszip.min.js를 내려받아 같은 폴더에 두고 src를 로컬로 바꾸세요 -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="shell">
+      <h1>HWPX 꼬릿말 제거</h1>
+      <p class="sub">
+        .hwpx 안의 꼬릿말(footer)에서 <span class="k-inline">출력자/출력일시</span> 및 <span class="k-inline">소속기관(교육청·학교)</span> 문구를 제거한 뒤,
+        수정된 .hwpx를 다시 내려받습니다. (브라우저 로컬 처리)
+      </p>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="section">
+      <h2>1) 파일 넣기</h2>
+      <div class="card">
+        <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="HWPX 파일 드롭 영역">
+          <p style="margin:0;">
+            여기에 <b>.hwpx</b> 파일을 드래그&드롭
+          </p>
+          <p class="muted" style="margin:6px 0 0;">또는</p>
+          <label class="btn btn-lightgrey" for="fileInput">파일 선택</label>
+          <input id="fileInput" type="file" accept=".hwpx" style="display:none" />
+          <div id="fileMeta" class="file-meta muted"></div>
+        </div>
+        <p class="small-help">
+          참고: HWPX는 ZIP 내부에 XML들이 들어있는 형식입니다. 이 도구는 <span class="k-inline">Contents/section*.xml</span>에서 <span class="k-inline">hp:footer</span>를 찾아 수정합니다.
+        </p>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>2) 제거 옵션</h2>
+      <div class="card">
+        <div class="grid two">
+          <div class="fieldset">
+            <label class="row" style="gap:10px;">
+              <input type="radio" name="mode" value="keepPage" checked />
+              <span><b>출력정보만 삭제</b> (페이지 번호 유지)</span>
+            </label>
+            <p class="muted-tight">
+              꼬릿말 안에서 날짜/시간 패턴 및 “교육청/학교” 키워드가 들어간 텍스트 박스를 제거합니다.
+              가운데 페이지 번호(숫자)는 남깁니다.
+            </p>
+          </div>
+
+          <div class="fieldset">
+            <label class="row" style="gap:10px;">
+              <input type="radio" name="mode" value="removeAll" />
+              <span><b>꼬릿말 전체 삭제</b> (페이지 번호도 삭제)</span>
+            </label>
+            <p class="muted-tight">
+              footer 자체를 통째로 제거합니다(가운데 페이지 번호 포함).
+            </p>
+          </div>
+        </div>
+
+        <div class="row between" style="margin-top:12px;">
+          <div class="row">
+            <button id="btnProcess" class="btn primary" disabled>꼬릿말 제거 실행</button>
+            <button id="btnReset" class="btn ghost" disabled>초기화</button>
+          </div>
+          <div class="row">
+            <span id="statusPill" class="pill">대기중</span>
+          </div>
+        </div>
+
+        <p class="note">
+          파일은 서버로 업로드되지 않고, 이 페이지 안에서만 처리됩니다.
+        </p>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>3) 결과</h2>
+      <div class="card">
+        <div id="resultArea">
+          <p class="muted">아직 처리된 파일이 없습니다.</p>
+        </div>
+        <div id="log" class="log" aria-live="polite"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell">
+      <p>업무보조 - 문서편집기: HWPX footer 제거 유틸리티</p>
+    </div>
+  </footer>
+
+  <script>
+    (() => {
+      // ====== HWPX(Hancom) 네임스페이스(꼬릿말은 paragraph 네임스페이스 hp에 있음) ======
+      const HP_NS = "http://www.hancom.co.kr/hwpml/2011/paragraph";
+
+      // ====== 휴리스틱(패턴) ======
+      // 출력일시 예: "2026년 01월 29일 09시 52분 13초"
+      const RE_DATE = /\d{4}\s*년\s*\d{1,2}\s*월\s*\d{1,2}\s*일/;
+
+      // 기관 키워드(필요시 추가 가능)
+      const INSTITUTION_KEYWORDS = [
+        "교육청",
+        "교육지원청",
+        "지원청",
+        "교육부",
+        "유치원",
+        "초등학교",
+        "중학교",
+        "고등학교",
+        "학교"
+      ];
+
+      // ====== DOM ======
+      const $dropzone   = document.getElementById("dropzone");
+      const $fileInput  = document.getElementById("fileInput");
+      const $fileMeta   = document.getElementById("fileMeta");
+      const $btnProcess = document.getElementById("btnProcess");
+      const $btnReset   = document.getElementById("btnReset");
+      const $statusPill = document.getElementById("statusPill");
+      const $resultArea = document.getElementById("resultArea");
+      const $log        = document.getElementById("log");
+
+      // ====== State ======
+      let currentFile = null;
+      let lastObjectUrl = null;
+
+      // ====== UI helpers ======
+      function setStatus(text, kind = "") {
+        $statusPill.textContent = text;
+        $statusPill.className = "pill" + (kind ? " " + kind : "");
+      }
+
+      function logLine(msg) {
+        const now = new Date();
+        const ts = now.toLocaleTimeString();
+        $log.textContent += `[${ts}] ${msg}\n`;
+        $log.scrollTop = $log.scrollHeight;
+      }
+
+      function clearLog() {
+        $log.textContent = "";
+      }
+
+      function formatBytes(bytes) {
+        const units = ["B","KB","MB","GB"];
+        let b = bytes;
+        let i = 0;
+        while (b >= 1024 && i < units.length - 1) {
+          b /= 1024;
+          i++;
+        }
+        return `${b.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+      }
+
+      function safeFilenameBase(name) {
+        // 확장자 제거
+        return name.replace(/\.[^.]+$/, "");
+      }
+
+      function getMode() {
+        const checked = document.querySelector('input[name="mode"]:checked');
+        return checked ? checked.value : "keepPage";
+      }
+
+      function revokeLastUrl() {
+        if (lastObjectUrl) {
+          URL.revokeObjectURL(lastObjectUrl);
+          lastObjectUrl = null;
+        }
+      }
+
+      function setFile(file) {
+        currentFile = file;
+        revokeLastUrl();
+        $resultArea.innerHTML = `<p class="muted">아직 처리된 파일이 없습니다.</p>`;
+        clearLog();
+
+        if (!file) {
+          $fileMeta.textContent = "";
+          $btnProcess.disabled = true;
+          $btnReset.disabled = true;
+          setStatus("대기중");
+          return;
+        }
+
+        const meta = [
+          `파일명: ${file.name}`,
+          `크기: ${formatBytes(file.size)}`,
+          `수정일: ${file.lastModified ? new Date(file.lastModified).toLocaleString() : "-"}`
+        ].join(" · ");
+
+        $fileMeta.textContent = meta;
+        $btnProcess.disabled = false;
+        $btnReset.disabled = false;
+        setStatus("파일 준비됨", "ok");
+
+        logLine(`파일 선택됨: ${file.name} (${formatBytes(file.size)})`);
+      }
+
+      function showError(err) {
+        console.error(err);
+        setStatus("오류", "bad");
+        logLine(`❌ 오류: ${err?.message || String(err)}`);
+        $resultArea.innerHTML = `
+          <p class="muted"><b style="color:#991b1b;">처리 중 오류가 발생했습니다.</b></p>
+          <p class="muted">${escapeHtml(err?.message || String(err))}</p>
+        `;
+      }
+
+      function escapeHtml(s) {
+        return String(s)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function withUiBusy(isBusy) {
+        $btnProcess.disabled = isBusy || !currentFile;
+        $btnReset.disabled = isBusy || !currentFile;
+        $fileInput.disabled = isBusy;
+        document.querySelectorAll('input[name="mode"]').forEach(r => r.disabled = isBusy);
+      }
+
+      // ====== Drag & Drop ======
+      function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+
+      ["dragenter", "dragover", "dragleave", "drop"].forEach(evt =>
+        $dropzone.addEventListener(evt, preventDefaults)
+      );
+
+      $dropzone.addEventListener("dragenter", () => $dropzone.classList.add("dragover"));
+      $dropzone.addEventListener("dragover",  () => $dropzone.classList.add("dragover"));
+      $dropzone.addEventListener("dragleave", () => $dropzone.classList.remove("dragover"));
+      $dropzone.addEventListener("drop", (e) => {
+        $dropzone.classList.remove("dragover");
+        const files = e.dataTransfer?.files;
+        if (!files || files.length === 0) return;
+
+        const file = files[0];
+        if (!isHwpx(file)) {
+          setStatus("HWPX 아님", "warn");
+          logLine(`⚠️ .hwpx 파일만 지원합니다: ${file.name}`);
+          return;
+        }
+        setFile(file);
+      });
+
+      // 키보드로도 파일 선택 가능하게
+      $dropzone.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          $fileInput.click();
+        }
+      });
+
+      $fileInput.addEventListener("change", () => {
+        const file = $fileInput.files && $fileInput.files[0];
+        if (!file) return;
+        if (!isHwpx(file)) {
+          setStatus("HWPX 아님", "warn");
+          logLine(`⚠️ .hwpx 파일만 지원합니다: ${file.name}`);
+          return;
+        }
+        setFile(file);
+      });
+
+      $btnReset.addEventListener("click", () => {
+        $fileInput.value = "";
+        setFile(null);
+      });
+
+      // ====== Main action ======
+      $btnProcess.addEventListener("click", async () => {
+        try {
+          if (!currentFile) return;
+          if (!window.JSZip) {
+            throw new Error("JSZip 로딩에 실패했습니다. (CDN 차단/오프라인 환경이면 jszip 파일을 로컬로 두고 src를 바꿔주세요)");
+          }
+
+          const mode = getMode();
+          clearLog();
+          setStatus("처리 중…", "warn");
+          withUiBusy(true);
+
+          logLine(`모드: ${mode === "keepPage" ? "출력정보만 삭제(페이지 유지)" : "꼬릿말 전체 삭제"}`);
+          logLine("ZIP(HWPX) 열기…");
+
+          const arrayBuffer = await currentFile.arrayBuffer();
+          const inZip = await JSZip.loadAsync(arrayBuffer);
+
+          // mimetype은 ODF 계열처럼 "압축하지 않고 + 첫 엔트리"가 안전합니다.
+          const mimetypeObj = inZip.file("mimetype");
+          if (!mimetypeObj) {
+            throw new Error("유효한 HWPX가 아닙니다: mimetype 파일을 찾을 수 없습니다.");
+          }
+          const mimetypeText = await mimetypeObj.async("string");
+          logLine(`mimetype: ${mimetypeText}`);
+
+          // 새 ZIP 생성(순서: mimetype 먼저)
+          const outZip = new JSZip();
+          outZip.file("mimetype", mimetypeText, { compression: "STORE" });
+
+          const allNames = Object.keys(inZip.files).filter(n => n !== "mimetype");
+          const sectionNames = allNames.filter(n => /^Contents\/section\d+\.xml$/i.test(n));
+
+          logLine(`섹션 XML 개수: ${sectionNames.length} (Contents/section*.xml)`);
+
+          let totalStats = {
+            sectionsProcessed: 0,
+            footersFound: 0,
+            footersRemoved: 0,
+            rectsRemoved: 0,
+            mode
+          };
+
+          // 처리: 섹션은 수정, 나머지는 그대로 복사
+          for (const name of allNames) {
+            const fileObj = inZip.file(name);
+            if (!fileObj) continue;
+
+            const isSection = /^Contents\/section\d+\.xml$/i.test(name);
+
+            // 텍스트 계열은 string, 바이너리는 uint8array로 복사
+            const isText =
+              isSection ||
+              /\.(xml|txt|hpf|rdf)$/i.test(name) ||
+              name === "settings.xml" ||
+              name === "version.xml";
+
+            if (isSection) {
+              const xmlText = await fileObj.async("string");
+              const { newXml, stats } = stripFooterFromSectionXml(xmlText, mode);
+
+              totalStats.sectionsProcessed++;
+              totalStats.footersFound += stats.footersFound;
+              totalStats.footersRemoved += stats.footersRemoved;
+              totalStats.rectsRemoved += stats.rectsRemoved;
+
+              outZip.file(name, newXml, { compression: "DEFLATE" });
+            } else {
+              const data = await fileObj.async(isText ? "string" : "uint8array");
+              outZip.file(name, data, { compression: "DEFLATE" });
+            }
+          }
+
+          logLine(`완료: 섹션 ${totalStats.sectionsProcessed}개 처리`);
+          logLine(`footer 발견: ${totalStats.footersFound}개`);
+          logLine(`footer 제거: ${totalStats.footersRemoved}개`);
+          logLine(`rect(텍스트박스) 제거: ${totalStats.rectsRemoved}개`);
+
+          setStatus("패키징…", "warn");
+          const outBlob = await outZip.generateAsync({
+            type: "blob",
+            compression: "DEFLATE"
+          });
+
+          const newName = `${safeFilenameBase(currentFile.name)}_꼬릿말삭제.hwpx`;
+          const url = URL.createObjectURL(outBlob);
+          lastObjectUrl = url;
+
+          setStatus("완료", "ok");
+          $resultArea.innerHTML = `
+            <p class="muted"><b style="color:#065f46;">처리가 완료되었습니다.</b></p>
+            <div class="row" style="flex-wrap:wrap; gap:10px; margin: 10px 0 6px;">
+              <a class="btn primary" href="${url}" download="${escapeHtml(newName)}">수정된 HWPX 다운로드</a>
+              <span class="pill ok">footer 발견 ${totalStats.footersFound}</span>
+              <span class="pill ok">footer 제거 ${totalStats.footersRemoved}</span>
+              <span class="pill ok">출력정보/기관 박스 제거 ${totalStats.rectsRemoved}</span>
+            </div>
+            <p class="muted">
+              모드: ${mode === "keepPage" ? "출력정보만 삭제(페이지 번호 유지)" : "꼬릿말 전체 삭제"}<br>
+              원본 파일은 변경되지 않습니다.
+            </p>
+          `;
+        } catch (err) {
+          showError(err);
+        } finally {
+          withUiBusy(false);
+        }
+      });
+
+      function isHwpx(file) {
+        const name = (file?.name || "").toLowerCase();
+        return name.endsWith(".hwpx");
+      }
+
+      // ====== 핵심 로직: section XML에서 footer 제거/정리 ======
+      function stripFooterFromSectionXml(xmlText, mode) {
+        // 원본 XML 선언 보존(가능하면 그대로 유지)
+        const prologMatch = xmlText.match(/^\s*<\?xml[^>]*\?>\s*/);
+        const prolog = prologMatch ? prologMatch[0] : "";
+
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(xmlText, "application/xml");
+
+        // 파서 에러 체크
+        const perr = doc.getElementsByTagName("parsererror");
+        if (perr && perr.length) {
+          throw new Error("section XML 파싱 실패: parsererror가 발생했습니다.");
+        }
+
+        const footers = Array.from(doc.getElementsByTagNameNS(HP_NS, "footer"));
+        const stats = {
+          footersFound: footers.length,
+          footersRemoved: 0,
+          rectsRemoved: 0
+        };
+
+        if (mode === "removeAll") {
+          // footer 통째로 제거
+          for (const footer of footers) {
+            removeNodeAndCleanup(footer);
+            stats.footersRemoved++;
+          }
+        } else {
+          // 출력정보/기관 박스만 제거(페이지 번호는 남김)
+          for (const footer of footers) {
+            // footer 안의 텍스트 박스는 대부분 hp:rect에 들어있음
+            const rects = Array.from(footer.getElementsByTagNameNS(HP_NS, "rect"));
+
+            for (const rect of rects) {
+              const text = collectText(rect).trim();
+              if (!text) continue;
+
+              if (isPageNumberText(text)) continue;
+              if (shouldRemoveByText(text)) {
+                rect.parentNode?.removeChild(rect);
+                stats.rectsRemoved++;
+              }
+            }
+
+            // 만약 footer 안에 남은 텍스트가 하나도 없다면 footer 자체를 제거(빈 꼬릿말 정리)
+            if (!footerHasAnyText(footer)) {
+              removeNodeAndCleanup(footer);
+              stats.footersRemoved++;
+            }
+          }
+        }
+
+        let out = new XMLSerializer().serializeToString(doc);
+
+        // 선언이 사라지는 브라우저 대비: 원본 선언이 있으면 붙여줌
+        if (prolog && !out.startsWith("<?xml")) {
+          out = prolog.trim() + " " + out;
+        } else if (!out.startsWith("<?xml")) {
+          // 원본에 선언이 없었던 극단 케이스 대비
+          out = `<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>` + out;
+        }
+
+        return { newXml: out, stats };
+      }
+
+      function footerHasAnyText(footerEl) {
+        const ts = footerEl.getElementsByTagNameNS(HP_NS, "t");
+        for (const t of ts) {
+          const v = (t.textContent || "").trim();
+          if (v) return true;
+        }
+        return false;
+      }
+
+      function collectText(el) {
+        const ts = el.getElementsByTagNameNS(HP_NS, "t");
+        let out = "";
+        for (const t of ts) out += (t.textContent || "");
+        return out;
+      }
+
+      function isPageNumberText(text) {
+        const t = text.replace(/\s+/g, "").trim();
+
+        // 숫자 / "3/10" 형태 / 로마숫자
+        if (/^\d+$/.test(t)) return true;
+        if (/^\d+\/\d+$/.test(t)) return true;
+        if (/^[IVXLCDM]+$/i.test(t)) return true;
+
+        return false;
+      }
+
+      function shouldRemoveByText(text) {
+        const t = text.replace(/\s+/g, " ").trim();
+
+        // 1) 출력일시 패턴(연월일이 있으면 거의 확정)
+        if (RE_DATE.test(t)) return true;
+
+        // 2) 기관 키워드(교육청/학교 등)
+        for (const kw of INSTITUTION_KEYWORDS) {
+          if (t.includes(kw)) return true;
+        }
+
+        return false;
+      }
+
+      // footer 제거 후 비어버린 ctrl/run을 정리(문서 파손 가능성 줄이기)
+      function removeNodeAndCleanup(node) {
+        const parent = node.parentNode;
+        if (!parent) return;
+
+        parent.removeChild(node);
+
+        // 위로 올라가며 빈 ctrl/run 정리
+        let cur = parent;
+        while (cur && cur.nodeType === 1) {
+          const ln = (cur.localName || "").toLowerCase();
+
+          // hp:ctrl / hp:run이 완전히 비었으면 제거
+          if (ln === "ctrl" || ln === "run") {
+            const hasElement = !!cur.firstElementChild;
+            const hasText = hasNonWhitespaceText(cur);
+            if (!hasElement && !hasText) {
+              const up = cur.parentNode;
+              if (up) up.removeChild(cur);
+              cur = up;
+              continue;
+            }
+          }
+          break;
+        }
+      }
+
+      function hasNonWhitespaceText(el) {
+        for (const n of el.childNodes) {
+          if (n.nodeType === 3 && (n.textContent || "").trim()) return true;
+        }
+        return false;
+      }
+
+      // ====== 초기 상태 ======
+      setStatus("대기중");
+      clearLog();
+      logLine("준비됨. HWPX 파일을 드롭하거나 선택하세요.");
+    })();
+  </script>
+</body>
+</html>
