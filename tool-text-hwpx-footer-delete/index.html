@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HWPX 꼬릿말(footer) 제거기</title>
+
+  <!-- ✅ 기존 공통 스타일 -->
+  <link rel="stylesheet" href="style.css" />
+
+  <style>
+    /* 공통 style.css를 존중하면서, 이 페이지에만 필요한 최소 보강 */
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border: 1px solid #d4d4d8;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      color: #444;
+      background: #fafafa;
+    }
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.95rem;
+    }
+    textarea#log {
+      width: 100%;
+      min-height: 260px;
+      resize: vertical;
+    }
+    .warn {
+      color: #8a3b12;
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin-top: 10px;
+      font-size: 1rem;
+    }
+    .ok {
+      color: #14532d;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin-top: 10px;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="shell">
+      <div class="row between">
+        <div>
+          <div class="row gap">
+            <strong>업무보조</strong>
+            <span class="badge">브라우저 로컬 처리</span>
+          </div>
+          <div class="muted">HWPX 꼬릿말(footer) 제거기 — 업로드 없이 PC 안에서만 처리</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="shell">
+    <h1>HWPX 꼬릿말 완전 제거</h1>
+    <p class="muted">
+      이 도구는 HWPX(.hwpx) 파일을 브라우저에서 직접 풀어서(XML) 꼬릿말 관련 태그를 정리한 뒤 다시 묶어줍니다.
+      (서버 전송 없음)
+    </p>
+
+    <section class="section">
+      <h2 class="local-h2">1) 파일 선택</h2>
+
+      <div class="grid two">
+        <div class="card">
+          <div class="row between">
+            <label for="fileInput"><strong>대상 .hwpx 파일</strong></label>
+            <span id="fileMeta" class="muted">선택된 파일 없음</span>
+          </div>
+          <input id="fileInput" type="file" accept=".hwpx,application/zip" />
+          <p class="muted local-small">
+            ※ 암호/암호화 문서는 내부 XML이 암호화되어 있을 수 있어(= 파싱 불가) 일부 케이스는 처리 실패할 수 있습니다.
+          </p>
+        </div>
+
+        <div class="card">
+          <strong>옵션</strong>
+          <p class="muted local-small local-tight">
+            “어떤 유형이든 꼬릿말 제거” 목적이면 기본값 그대로 권장.
+          </p>
+
+          <div class="grid">
+            <label class="row">
+              <input type="checkbox" id="optScanAllXml" checked />
+              <span>ZIP 안의 <span class="mono">모든 XML</span>에서 footer 관련 태그 탐색/정리</span>
+            </label>
+
+            <label class="row">
+              <input type="checkbox" id="optAlsoRemoveHeader" />
+              <span>(선택) 머리말(header)도 같이 제거</span>
+            </label>
+
+            <label class="row">
+              <input type="checkbox" id="optAggressiveTypeCleanup" checked />
+              <span><span class="mono">type="FOOTER"</span> 같은 “FOOTER 타입 표기”도 같이 정리(권장)</span>
+            </label>
+
+            <label class="row">
+              <input type="checkbox" id="optFilenameSuffix" checked />
+              <span>다운로드 파일명에 <span class="mono">_nofooter</span> 접미사 붙이기</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <button class="btn primary" id="btnRun" disabled>꼬릿말 제거 실행</button>
+        <button class="btn ghost" id="btnReset" disabled>초기화</button>
+      </div>
+
+      <div id="statusBox" class="muted"></div>
+      <div id="noticeBox" style="display:none;"></div>
+    </section>
+
+    <section class="section">
+      <h2 class="local-h2">2) 결과</h2>
+
+      <div class="grid two">
+        <div class="card">
+          <strong>변경 요약</strong>
+          <ul id="summaryList">
+            <li class="muted">아직 실행 전입니다.</li>
+          </ul>
+
+          <div class="row">
+            <a id="downloadLink" class="btn primary" href="#" download style="display:none;">정리된 .hwpx 다운로드</a>
+            <button class="btn" id="btnCopyLog" disabled>로그 복사</button>
+          </div>
+
+          <div class="muted local-small" style="margin-top:10px;">
+            팁: 결과가 이상하면, 한글에서 “머리말/꼬릿말” 메뉴로 들어가서 남아있는지 확인하고,
+            남아있다면 <span class="mono">optAggressiveTypeCleanup</span>를 켠 상태(기본)로 다시 돌려보세요.
+          </div>
+        </div>
+
+        <div class="card">
+          <strong>처리 로그</strong>
+          <textarea id="log" readonly placeholder="여기에 로그가 쌓입니다..."></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="local-h2">3) 실장님에게 설명할 때 쓰는 5줄 요약</h2>
+      <div class="card">
+        <ol>
+          <li>HWPX는 ZIP 안에 XML 여러 개가 들어있는 구조라서 브라우저에서 압축을 풀 수 있습니다.</li>
+          <li>꼬릿말은 XML에서 <span class="mono">footerApply</span>(적용)와 <span class="mono">footer</span>(내용/정의)로 연결되는 경우가 많습니다.</li>
+          <li>그래서 모든 XML을 스캔해서 <span class="mono">footerApply</span>는 삭제하고, <span class="mono">footer</span>는 내부 내용을 비웁니다.</li>
+          <li>추가로 <span class="mono">type="FOOTER"</span> 같은 표기도 정리해서 “바탕쪽/섹션별 꼬릿말” 변형까지 잡습니다.</li>
+          <li>수정된 XML을 다시 ZIP으로 묶어 새 HWPX로 내려주면, 한글에서 꼬릿말이 표시되지 않습니다.</li>
+        </ol>
+      </div>
+    </section>
+  </div>
+
+  <footer class="site-footer">
+    <div class="shell">
+      <p class="muted">내부 처리 도구 — 파일 업로드 없음</p>
+    </div>
+  </footer>
+
+  <!-- JSZip (브라우저에서 zip 읽고/쓰기) -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
+  <script>
+    'use strict';
+
+    // =========================
+    // DOM Helpers
+    // =========================
+    const $ = (sel) => document.querySelector(sel);
+
+    const el = {
+      fileInput: $('#fileInput'),
+      fileMeta: $('#fileMeta'),
+
+      optScanAllXml: $('#optScanAllXml'),
+      optAlsoRemoveHeader: $('#optAlsoRemoveHeader'),
+      optAggressiveTypeCleanup: $('#optAggressiveTypeCleanup'),
+      optFilenameSuffix: $('#optFilenameSuffix'),
+
+      btnRun: $('#btnRun'),
+      btnReset: $('#btnReset'),
+      btnCopyLog: $('#btnCopyLog'),
+
+      statusBox: $('#statusBox'),
+      noticeBox: $('#noticeBox'),
+
+      summaryList: $('#summaryList'),
+      downloadLink: $('#downloadLink'),
+      log: $('#log'),
+    };
+
+    const state = {
+      file: null,
+      busy: false,
+      lastObjectUrl: null,
+      lastLogText: '',
+    };
+
+    function formatBytes(bytes) {
+      if (!Number.isFinite(bytes)) return '-';
+      const units = ['B', 'KB', 'MB', 'GB'];
+      let v = bytes;
+      let i = 0;
+      while (v >= 1024 && i < units.length - 1) {
+        v = v / 1024;
+        i++;
+      }
+      return `${v.toFixed(i === 0 ? 0 : 2)} ${units[i]}`;
+    }
+
+    function setBusy(busy) {
+      state.busy = busy;
+      el.fileInput.disabled = busy;
+      el.optScanAllXml.disabled = busy;
+      el.optAlsoRemoveHeader.disabled = busy;
+      el.optAggressiveTypeCleanup.disabled = busy;
+      el.optFilenameSuffix.disabled = busy;
+
+      el.btnRun.disabled = busy || !state.file;
+      el.btnReset.disabled = busy || !state.file;
+      el.btnCopyLog.disabled = busy || !state.lastLogText;
+    }
+
+    function setStatus(msg) {
+      el.statusBox.textContent = msg || '';
+    }
+
+    function showNotice(kind, htmlText) {
+      if (!htmlText) {
+        el.noticeBox.style.display = 'none';
+        el.noticeBox.className = '';
+        el.noticeBox.innerHTML = '';
+        return;
+      }
+      el.noticeBox.style.display = 'block';
+      el.noticeBox.className = kind === 'ok' ? 'ok' : 'warn';
+      el.noticeBox.innerHTML = htmlText;
+    }
+
+    function clearLog() {
+      el.log.value = '';
+      state.lastLogText = '';
+      el.btnCopyLog.disabled = true;
+    }
+
+    function appendLog(line) {
+      const ts = new Date().toISOString().slice(11, 19); // HH:MM:SS
+      const msg = `[${ts}] ${line}`;
+      el.log.value += (el.log.value ? '\n' : '') + msg;
+      el.log.scrollTop = el.log.scrollHeight;
+      state.lastLogText = el.log.value;
+      el.btnCopyLog.disabled = !state.lastLogText || state.busy;
+    }
+
+    function resetUI() {
+      state.file = null;
+      setBusy(false);
+      setStatus('');
+      showNotice(null, null);
+      el.fileMeta.textContent = '선택된 파일 없음';
+
+      el.summaryList.innerHTML = '<li class="muted">아직 실행 전입니다.</li>';
+
+      clearLog();
+
+      if (state.lastObjectUrl) {
+        URL.revokeObjectURL(state.lastObjectUrl);
+        state.lastObjectUrl = null;
+      }
+      el.downloadLink.style.display = 'none';
+      el.downloadLink.href = '#';
+      el.downloadLink.download = '';
+    }
+
+    function safeOutputName(inputName, opts) {
+      const base = inputName.toLowerCase().endsWith('.hwpx')
+        ? inputName.slice(0, -5)
+        : inputName;
+
+      const suffix = [];
+      if (opts.optFilenameSuffix) suffix.push('nofooter');
+      if (opts.alsoRemoveHeader) suffix.push('noheader');
+
+      const add = suffix.length ? ('_' + suffix.join('_')) : '_out';
+      return base + add + '.hwpx';
+    }
+
+    // =========================
+    // XML Utilities (namespace 안전 처리)
+    // =========================
+    function parseXml(xmlText) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(xmlText, 'application/xml');
+      const err = doc.getElementsByTagName('parsererror');
+      if (err && err.length) {
+        return { doc: null, error: (err[0].textContent || 'XML parse error') };
+      }
+      return { doc, error: null };
+    }
+
+    function serializeXml(doc, originalXmlText) {
+      let xml = new XMLSerializer().serializeToString(doc);
+
+      // 원본에 XML 선언이 있으면 최대한 유지
+      const decl = originalXmlText.match(/^\s*<\?xml[^>]*\?>\s*/);
+      if (decl && !xml.startsWith('<?xml')) {
+        xml = decl[0].trimEnd() + '\n' + xml;
+      }
+      return xml;
+    }
+
+    function collectByLocalName(doc, localName) {
+      // getElementsByTagNameNS('*', localName)가 가장 깔끔하지만,
+      // 브라우저/문서 상태에 따라 예외가 날 수 있어 방어적으로 구성
+      let nodes = [];
+      try {
+        if (doc.getElementsByTagNameNS) {
+          nodes = Array.from(doc.getElementsByTagNameNS('*', localName));
+        }
+      } catch (_) {
+        nodes = [];
+      }
+      if (nodes.length) return nodes;
+
+      // fallback: 모든 요소를 훑어서 localName으로 매칭
+      const all = Array.from(doc.getElementsByTagName('*'));
+      return all.filter((el) => (el.localName || el.tagName) === localName);
+    }
+
+    function removeElements(nodes) {
+      let count = 0;
+      for (const node of nodes) {
+        if (node && node.parentNode) {
+          node.parentNode.removeChild(node);
+          count++;
+        }
+      }
+      return count;
+    }
+
+    function clearElementContentSmart(elm) {
+      if (!elm) return;
+
+      // 1) footer 내부에 자주 등장하는 컨테이너 후보를 우선 정리
+      const preferredChildLocalNames = ['subList', 'paraList', 'paralist', 'ParaList', 'PARALIST'];
+      const children = Array.from(elm.children || []);
+      const preferred = children.find((c) => preferredChildLocalNames.includes(c.localName || c.tagName));
+      if (preferred) {
+        while (preferred.firstChild) preferred.removeChild(preferred.firstChild);
+        return;
+      }
+
+      // 2) 그래도 없으면: “구조는 남기고 내용만” 느낌으로
+      //    - 자식 요소가 있으면 자식 요소들의 내부만 비움(껍데기 유지)
+      if (children.length) {
+        for (const c of children) {
+          while (c.firstChild) c.removeChild(c.firstChild);
+        }
+        return;
+      }
+
+      // 3) 마지막 fallback: 통째로 비움
+      while (elm.firstChild) elm.removeChild(elm.firstChild);
+    }
+
+    function clearElements(nodes) {
+      let count = 0;
+      for (const node of nodes) {
+        clearElementContentSmart(node);
+        count++;
+      }
+      return count;
+    }
+
+    function clearElementsByAttrValue(doc, valueRegex, opts) {
+      // "type='FOOTER'" 같은 케이스를 잡기 위한 보조 정리
+      // 너무 공격적으로 하면 엉뚱한 걸 지울 수 있어:
+      // - 속성명이 type/role/kind/apply 관련일 때만
+      // - 요소 localName에 list가 들어가거나, header/footer 관련일 때만
+      const attrNameOk = /^(type|role|kind|apply|pageType|pos|position)$/i;
+      const localOk = /(list|header|footer)/i;
+
+      let count = 0;
+      const all = Array.from(doc.getElementsByTagName('*'));
+      for (const e of all) {
+        const ln = (e.localName || e.tagName || '');
+        if (!localOk.test(ln)) continue;
+
+        const attrs = Array.from(e.attributes || []);
+        for (const a of attrs) {
+          if (!attrNameOk.test(a.name)) continue;
+          if (!valueRegex.test(a.value || '')) continue;
+
+          clearElementContentSmart(e);
+          count++;
+          break;
+        }
+      }
+      return count;
+    }
+
+    function stripFooterFromXml(xmlText, opts) {
+      const stats = {
+        parseError: false,
+        footerApplyRemoved: 0,
+        footerCleared: 0,
+        footerTypeCleared: 0,
+        headerApplyRemoved: 0,
+        headerCleared: 0,
+        headerTypeCleared: 0,
+        modified: false,
+      };
+
+      const parsed = parseXml(xmlText);
+      if (!parsed.doc) {
+        stats.parseError = true;
+        return { xml: xmlText, stats };
+      }
+
+      const doc = parsed.doc;
+
+      // footerApply 제거
+      stats.footerApplyRemoved += removeElements(collectByLocalName(doc, 'footerApply'));
+
+      // footer 내용 비우기(정의/내용을 싹 비우는 방식)
+      stats.footerCleared += clearElements(collectByLocalName(doc, 'footer'));
+
+      // 보조: type="FOOTER" 류도 정리(옵션)
+      if (opts.aggressiveTypeCleanup) {
+        stats.footerTypeCleared += clearElementsByAttrValue(doc, /footer/i, opts);
+      }
+
+      // 선택: header도 같이 제거
+      if (opts.alsoRemoveHeader) {
+        stats.headerApplyRemoved += removeElements(collectByLocalName(doc, 'headerApply'));
+        stats.headerCleared += clearElements(collectByLocalName(doc, 'header'));
+        if (opts.aggressiveTypeCleanup) {
+          stats.headerTypeCleared += clearElementsByAttrValue(doc, /header/i, opts);
+        }
+      }
+
+      const totalChanges =
+        stats.footerApplyRemoved +
+        stats.footerCleared +
+        stats.footerTypeCleared +
+        stats.headerApplyRemoved +
+        stats.headerCleared +
+        stats.headerTypeCleared;
+
+      stats.modified = totalChanges > 0;
+
+      if (!stats.modified) {
+        return { xml: xmlText, stats };
+      }
+
+      const outXml = serializeXml(doc, xmlText);
+      return { xml: outXml, stats };
+    }
+
+    // =========================
+    // HWPX Processing (ZIP)
+    // =========================
+    function orderZipFileNames(names) {
+      const mimetype = names.filter((n) => n === 'mimetype');
+      const others = names.filter((n) => n !== 'mimetype').sort((a, b) => a.localeCompare(b));
+      return mimetype.concat(others);
+    }
+
+    async function processHwpx(file, opts) {
+      appendLog(`입력 파일: ${file.name} (${formatBytes(file.size)})`);
+      setStatus('ZIP 로딩 중...');
+
+      const buf = await file.arrayBuffer();
+      const inZip = await JSZip.loadAsync(buf);
+
+      const allNames = Object.keys(inZip.files).filter((n) => !inZip.files[n].dir);
+      const orderedNames = orderZipFileNames(allNames);
+
+      const outZip = new JSZip();
+
+      const report = {
+        filesTotal: orderedNames.length,
+        xmlScanned: 0,
+        xmlModified: 0,
+        parseErrors: 0,
+
+        footerApplyRemoved: 0,
+        footerCleared: 0,
+        footerTypeCleared: 0,
+
+        headerApplyRemoved: 0,
+        headerCleared: 0,
+        headerTypeCleared: 0,
+
+        touchedFiles: [],
+        skippedXmlFiles: [],
+      };
+
+      for (let i = 0; i < orderedNames.length; i++) {
+        const name = orderedNames[i];
+        const entry = inZip.file(name);
+
+        if (!entry) continue;
+
+        const lower = name.toLowerCase();
+        const isXml = lower.endsWith('.xml');
+
+        if (isXml) {
+          // 옵션에 따라: 모든 XML을 스캔하거나, section/masterpage만 스캔하는 모드 제공 가능
+          // 이 도구는 "어떤 유형이든 제거"가 목적이므로 기본은 전체 스캔
+          const shouldScan = opts.scanAllXml
+            ? true
+            : (/^contents\/section\d+\.xml$/i.test(name) || /masterpage/i.test(name));
+
+          const xmlText = await entry.async('string');
+          report.xmlScanned += shouldScan ? 1 : 0;
+
+          if (!shouldScan) {
+            report.skippedXmlFiles.push(name);
+            outZip.file(name, xmlText);
+            continue;
+          }
+
+          const res = stripFooterFromXml(xmlText, opts);
+
+          if (res.stats.parseError) {
+            report.parseErrors++;
+            appendLog(`⚠️ XML 파싱 실패(원본 유지): ${name}`);
+            outZip.file(name, xmlText);
+            continue;
+          }
+
+          if (res.stats.modified) {
+            report.xmlModified++;
+            report.footerApplyRemoved += res.stats.footerApplyRemoved;
+            report.footerCleared += res.stats.footerCleared;
+            report.footerTypeCleared += res.stats.footerTypeCleared;
+
+            report.headerApplyRemoved += res.stats.headerApplyRemoved;
+            report.headerCleared += res.stats.headerCleared;
+            report.headerTypeCleared += res.stats.headerTypeCleared;
+
+            report.touchedFiles.push(name);
+
+            appendLog(
+              `수정: ${name} | footerApply-${res.stats.footerApplyRemoved}, footerClear-${res.stats.footerCleared}, footerType-${res.stats.footerTypeCleared}` +
+              (opts.alsoRemoveHeader
+                ? ` | headerApply-${res.stats.headerApplyRemoved}, headerClear-${res.stats.headerCleared}, headerType-${res.stats.headerTypeCleared}`
+                : '')
+            );
+
+            outZip.file(name, res.xml);
+          } else {
+            outZip.file(name, xmlText);
+          }
+        } else {
+          // 바이너리/텍스트 파일은 원본 그대로 복사
+          const u8 = await entry.async('uint8array');
+
+          if (name === 'mimetype') {
+            // ODF 계열처럼 mimetype을 STORE로 유지하면 호환성에 도움 되는 경우가 많음
+            outZip.file(name, u8, { compression: 'STORE' });
+          } else {
+            outZip.file(name, u8);
+          }
+        }
+
+        if (i % 15 === 0) {
+          setStatus(`처리 중... (${i + 1}/${orderedNames.length})`);
+        }
+      }
+
+      setStatus('ZIP 재패키징 중...');
+      const blob = await outZip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+
+      return { blob, report };
+    }
+
+    function renderSummary(report) {
+      const items = [];
+
+      items.push(`총 파일: ${report.filesTotal}개`);
+      items.push(`스캔한 XML: ${report.xmlScanned}개`);
+      items.push(`수정된 XML: ${report.xmlModified}개`);
+
+      items.push(`footerApply 삭제: ${report.footerApplyRemoved}개`);
+      items.push(`footer 내용 비움: ${report.footerCleared}개`);
+      items.push(`FOOTER 타입 정리: ${report.footerTypeCleared}개`);
+
+      if (el.optAlsoRemoveHeader.checked) {
+        items.push(`headerApply 삭제: ${report.headerApplyRemoved}개`);
+        items.push(`header 내용 비움: ${report.headerCleared}개`);
+        items.push(`HEADER 타입 정리: ${report.headerTypeCleared}개`);
+      }
+
+      if (report.parseErrors) {
+        items.push(`⚠️ XML 파싱 실패: ${report.parseErrors}개(해당 파일은 원본 유지)`);
+      }
+
+      if (report.touchedFiles.length) {
+        items.push(`수정 파일 예: ${report.touchedFiles.slice(0, 5).join(', ')}${report.touchedFiles.length > 5 ? ' ...' : ''}`);
+      } else {
+        items.push('수정된 파일이 없습니다(이미 꼬릿말이 없었거나, 구조가 특이할 수 있음).');
+      }
+
+      el.summaryList.innerHTML = items.map((t) => `<li>${t}</li>`).join('');
+    }
+
+    function prepareDownload(blob, filename) {
+      if (state.lastObjectUrl) {
+        URL.revokeObjectURL(state.lastObjectUrl);
+        state.lastObjectUrl = null;
+      }
+      const url = URL.createObjectURL(blob);
+      state.lastObjectUrl = url;
+
+      el.downloadLink.href = url;
+      el.downloadLink.download = filename;
+      el.downloadLink.style.display = 'inline-block';
+    }
+
+    // =========================
+    // UI Events
+    // =========================
+    el.fileInput.addEventListener('change', () => {
+      const f = el.fileInput.files && el.fileInput.files[0];
+      state.file = f || null;
+
+      if (state.file) {
+        el.fileMeta.textContent = `${state.file.name} (${formatBytes(state.file.size)})`;
+        appendLog(`파일 선택됨: ${state.file.name}`);
+        showNotice('ok', '준비 완료. <b>꼬릿말 제거 실행</b>을 누르면 브라우저에서만 처리합니다.');
+      } else {
+        el.fileMeta.textContent = '선택된 파일 없음';
+        showNotice(null, null);
+      }
+
+      setBusy(false);
+      el.btnRun.disabled = !state.file;
+      el.btnReset.disabled = !state.file;
+    });
+
+    el.btnReset.addEventListener('click', () => {
+      resetUI();
+      el.fileInput.value = '';
+    });
+
+    el.btnCopyLog.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(state.lastLogText || '');
+        showNotice('ok', '로그를 클립보드에 복사했습니다.');
+      } catch (e) {
+        showNotice('warn', '클립보드 복사에 실패했습니다. (브라우저 권한/보안 설정 확인)');
+      }
+    });
+
+    el.btnRun.addEventListener('click', async () => {
+      if (!state.file || state.busy) return;
+
+      clearLog();
+      showNotice(null, null);
+      setBusy(true);
+
+      const opts = {
+        scanAllXml: !!el.optScanAllXml.checked,
+        alsoRemoveHeader: !!el.optAlsoRemoveHeader.checked,
+        aggressiveTypeCleanup: !!el.optAggressiveTypeCleanup.checked,
+        optFilenameSuffix: !!el.optFilenameSuffix.checked,
+      };
+
+      try {
+        setStatus('시작...');
+        const { blob, report } = await processHwpx(state.file, opts);
+
+        const outputName = safeOutputName(state.file.name, opts);
+        prepareDownload(blob, outputName);
+        renderSummary(report);
+
+        appendLog(`완료: ${outputName} 생성`);
+        showNotice('ok', `완료! <b>정리된 .hwpx 다운로드</b> 버튼으로 저장하세요.<br><span class="muted">원본 파일은 변경하지 않았습니다.</span>`);
+        setStatus('완료');
+      } catch (err) {
+        console.error(err);
+        appendLog(`ERROR: ${err && err.message ? err.message : String(err)}`);
+        showNotice('warn', '처리 중 오류가 발생했습니다. 로그를 확인하세요.');
+        setStatus('에러');
+      } finally {
+        setBusy(false);
+      }
+    });
+
+    // 초기 상태
+    resetUI();
+  </script>
+</body>
+</html>
