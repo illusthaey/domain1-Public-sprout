@@ -3,13 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HWPX 꼬릿말(footer) 제거기</title>
+  <title>HWPX 꼬리말 제거기</title>
 
-  <!-- ✅ 기존 공통 스타일 -->
   <link rel="stylesheet" href="static/style.css" />
 
   <style>
-    /* 공통 style.css를 존중하면서, 이 페이지에만 필요한 최소 보강 */
+
     .badge {
       display: inline-block;
       padding: 2px 10px;
@@ -58,49 +57,50 @@
             <strong>업무보조</strong>
             <span class="badge">브라우저 로컬 처리</span>
           </div>
-          <div class="muted">HWPX 꼬릿말(footer) 제거기 — 업로드 없이 PC 안에서만 처리</div>
+          <div class="muted">HwPX 꼬리말 제거기</div>
         </div>
       </div>
     </div>
   </header>
 
   <div class="shell">
-    <h1>HWPX 꼬릿말 완전 제거</h1>
+    <h1>HWPX 꼬리말 제거기</h1>
     <p class="muted">
-      이 도구는 HWPX(.hwpx) 파일을 브라우저에서 직접 풀어서(XML) 꼬릿말 관련 태그를 정리한 뒤 다시 묶어줍니다.
-      (서버 전송 없음)
+      ·학교운영위원회 자료 작성 시 활용
     </p>
 
     <section class="section">
-      <h2 class="local-h2">1) 파일 선택</h2>
+      <h2 class="local-h2">1. 파일 선택 (hwpx만 가능) </h2>
 
       <div class="grid two">
         <div class="card">
           <div class="row between">
-            <label for="fileInput"><strong>대상 .hwpx 파일</strong></label>
+            <label for="fileInput"> 파일 업로드 하시오 (.hwpx만 가능) </strong></label>
             <span id="fileMeta" class="muted">선택된 파일 없음</span>
           </div>
           <input id="fileInput" type="file" accept=".hwpx,application/zip" />
           <p class="muted local-small">
-            ※ 암호/암호화 문서는 내부 XML이 암호화되어 있을 수 있어(= 파싱 불가) 일부 케이스는 처리 실패할 수 있습니다.
+            ·암호화된 건 못 함
           </p>
         </div>
 
         <div class="card">
           <strong>옵션</strong>
           <p class="muted local-small local-tight">
-            “어떤 유형이든 꼬릿말 제거” 목적이면 기본값 그대로 권장.
+            ·기본값 그대로 두기를 권장
           </p>
 
           <div class="grid">
             <label class="row">
               <input type="checkbox" id="optScanAllXml" checked />
-              <span>ZIP 안의 <span class="mono">모든 XML</span>에서 footer 관련 태그 탐색/정리</span>
+              <span>
+                ·HWPX의 ZIP 안에 있는 모든 XML에서 꼬리말 관련 태그 탐색 및 정리</span>
             </label>
 
             <label class="row">
               <input type="checkbox" id="optAlsoRemoveHeader" />
-              <span>(선택) 머리말(header)도 같이 제거</span>
+              <span>
+                머리말도 같이 제거하기 (선택사항) </span>
             </label>
 
             <label class="row">
@@ -110,14 +110,16 @@
 
             <label class="row">
               <input type="checkbox" id="optFilenameSuffix" checked />
-              <span>다운로드 파일명에 <span class="mono">_nofooter</span> 접미사 붙이기</span>
+              <span>
+                ·새 파일에 nofooter라고 이름 넣어드릴?
+              </span>
             </label>
           </div>
         </div>
       </div>
 
       <div class="row">
-        <button class="btn primary" id="btnRun" disabled>꼬릿말 제거 실행</button>
+        <button class="btn primary" id="btnRun" disabled>꼬릿말 제거하기</button>
         <button class="btn ghost" id="btnReset" disabled>초기화</button>
       </div>
 
@@ -126,23 +128,22 @@
     </section>
 
     <section class="section">
-      <h2 class="local-h2">2) 결과</h2>
+      <h2 class="local-h2">2. 처리 결과</h2>
 
       <div class="grid two">
         <div class="card">
-          <strong>변경 요약</strong>
+          ·변경사항 요약
           <ul id="summaryList">
-            <li class="muted">아직 실행 전입니다.</li>
+            <li class="muted">아직 실행 전임.</li>
           </ul>
 
           <div class="row">
-            <a id="downloadLink" class="btn primary" href="#" download style="display:none;">정리된 .hwpx 다운로드</a>
-            <button class="btn" id="btnCopyLog" disabled>로그 복사</button>
+            <a id="downloadLink" class="btn primary" href="#" download style="display:none;"꼬리말 제거 버전 hwpx 다운로드</a>
+            <button class="btn" id="btnCopyLog" disabled>처리 내역 복사</button>
           </div>
 
           <div class="muted local-small" style="margin-top:10px;">
-            팁: 결과가 이상하면, 한글에서 “머리말/꼬릿말” 메뉴로 들어가서 남아있는지 확인하고,
-            남아있다면 <span class="mono">optAggressiveTypeCleanup</span>를 켠 상태(기본)로 다시 돌려보세요.
+            ·처리 결과가 이상하면 hwpx 서식 내 꼬리말 확인해보쇼
           </div>
         </div>
 
@@ -152,26 +153,8 @@
         </div>
       </div>
     </section>
-
-    <section class="section">
-      <h2 class="local-h2">3) 실장님에게 설명할 때 쓰는 5줄 요약</h2>
-      <div class="card">
-        <ol>
-          <li>HWPX는 ZIP 안에 XML 여러 개가 들어있는 구조라서 브라우저에서 압축을 풀 수 있습니다.</li>
-          <li>꼬릿말은 XML에서 <span class="mono">footerApply</span>(적용)와 <span class="mono">footer</span>(내용/정의)로 연결되는 경우가 많습니다.</li>
-          <li>그래서 모든 XML을 스캔해서 <span class="mono">footerApply</span>는 삭제하고, <span class="mono">footer</span>는 내부 내용을 비웁니다.</li>
-          <li>추가로 <span class="mono">type="FOOTER"</span> 같은 표기도 정리해서 “바탕쪽/섹션별 꼬릿말” 변형까지 잡습니다.</li>
-          <li>수정된 XML을 다시 ZIP으로 묶어 새 HWPX로 내려주면, 한글에서 꼬릿말이 표시되지 않습니다.</li>
-        </ol>
-      </div>
-    </section>
   </div>
 
-  <footer class="site-footer">
-    <div class="shell">
-      <p class="muted">내부 처리 도구 — 파일 업로드 없음</p>
-    </div>
-  </footer>
 
   <!-- JSZip (브라우저에서 zip 읽고/쓰기) -->
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -708,5 +691,10 @@
     // 초기 상태
     resetUI();
   </script>
+
+<script src="/static/disable-copy.js"></script>
+<script src="/static/footer.js"></script>
+<script src="/static/global-loader.js?v=1"></script>
+  
 </body>
 </html>
