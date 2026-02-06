@@ -5,10 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HWPX 꼬릿말 제거 기능</title>
 
-  <!--  공통 스타일: 프로젝트의 style.css를 그대로 사용 -->
   <link rel="stylesheet" href="static/style.css" />
 
-  <!-- 보조 스타일(드롭존/로그 등)만 최소로 추가 -->
   <style>
     .dropzone {
       border: 2px dashed #d1d5db;
@@ -74,8 +72,7 @@
     .btn[disabled] { opacity: 0.5; cursor: not-allowed; }
   </style>
 
-  <!-- ✅ ZIP(HWPX) 처리를 위한 JSZip (CDN) -->
-  <!-- 오프라인/내부망이면 jszip.min.js를 내려받아 같은 폴더에 두고 src를 로컬로 바꾸세요 -->
+  <!-- ZIP(HWPX) 처리를 위한 JSZip (CDN) -->
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 </head>
 
