@@ -232,6 +232,7 @@
           엑셀 파일 불러오기
           <input id="uploadXlsx" type="file" accept=".xlsx,.xls" style="display:none;" />
         </label>
+      <p class="muted" id="uploadStatus"></p>
       </div>
       
       <div class="row between" style="margin-top:14px;">
@@ -394,38 +395,31 @@
           </div>
         </div>
       </div>
-    </section>
 
-    <!-- ===================== 엑셀/파일 ===================== -->
-    <section class="section">
-      <h2 class="local-h2">5. 결과 산출 및 파일 저장</h2>
-      <hr/>
-
-      <div class="row gap" style="flex-wrap:wrap;">
-        <button type="button" class="btn primary" id="downloadTemplateBtn">업로드용 엑셀 서식 다운로드</button>
-        <label class="btn" style="cursor:pointer;">
-          엑셀 업로드
-          <input id="uploadXlsx" type="file" accept=".xlsx,.xls" style="display:none;" />
-        </label>
-        <button type="button" class="btn primary" id="exportXlsxBtn">결과 엑셀 저장(3시트)</button>
-        <button type="button" class="btn" id="exportPdfBtn">임금명세서 PDF 저장</button>
+      
+      <div class="card">
+        <div class="row between">
+          <div>당월 근무일수: <strong id="workDaysText">0</strong>일</div>
+          <div>당월 유급근로시간: <strong id="workHoursText">0</strong>시간</div>
+        </div>
+        <div class="row between" style="margin-top:8px;">
+          <div>지급총액: <strong id="grossPayText">0</strong>원</div>
+          <div>공제액계: <strong id="deductTotalText">0</strong>원</div>
+          <div>실수령액: <strong id="netPayText">0</strong>원</div>
+        </div>
       </div>
-
-      <p class="muted" id="uploadStatus"></p>
     </section>
 
     <!-- ===================== 임금명세서 미리보기 ===================== -->
     <section class="section">
-      <h2 class="local-h2">6) 임금명세서 미리보기</h2>
+      <h2 class="local-h2">6. 산출 내역</h2>
+    <p class="muted">
+      ·임금명세서 미리보기 기능
+    </p>
       <hr/>
-
       <div class="payslip-wrap" id="payslipPreview"></div>
     </section>
 
-    <p class="muted">
-      ·본 도구는 편의 기능이며, 최종 산정·지급 책임은 사용자에게 있습니다.<br/>
-      ·라이브러리(CDN) 로드 실패 시 엑셀/PDF 기능이 제한될 수 있습니다.
-    </p>
   </main>
 
   <!-- ===== 외부 라이브러리(클라이언트만) ===== -->
@@ -435,5 +429,9 @@
 
   <!-- ===== 앱 로직 ===== -->
   <script src="./app.js" defer></script>
+
+  <script src="/static/global-loader.js?v=1"></script>
+<script src="/static/footer.js"></script>
+<script src="/static/disable-copy.js"></script>
 </body>
 </html>
