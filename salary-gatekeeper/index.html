@@ -6,13 +6,10 @@
   <meta name="color-scheme" content="light" />
   <title>출입문개폐전담원 월별 인건비 지출서식</title>
 
-  <!-- 기존 공통 UI -->
   <link rel="icon" href="/static/favicon.ico" />
   <link rel="stylesheet" href="/static/style.css" />
 
-  <!-- 이 페이지 전용(미리보기 폭/달력 클릭 등) -->
   <style>
-    /* ===== 페이지 전용 보강 스타일 ===== */
 
     .field label{ display:block; font-weight:700; margin:0 0 6px; }
     .field .help{ margin-top:6px; font-size:0.92rem; color:#666; }
@@ -164,19 +161,19 @@
 </head>
 
 <body>
-  <div class="home-link-wrap">
-    <a class="btn-home" href="/">← 메인으로</a>
-  </div>
 
   <main class="container">
-    <h1>출입문개폐전담원 월별 인건비 지출서식</h1>
-    <p class="subtitle">브라우저에서만 동작 · 입력값 자동저장(localStorage) · 엑셀/PDF 저장 지원</p>
+    <h1>출입문개폐전담원 월별 인건비 (사용 가능)</h1>
+    <p class="subtitle">
+      ·출근 내역 및 인건비 산출내역 엑셀 파일 및 pdf로 저장 가능 <br/>
+      ·주15시간 미만 초단시간 근로자로 가정함. 
+    </p>
 
     <p class="muted" id="libWarn"></p>
 
     <!-- ===================== 기본정보 ===================== -->
     <section class="section">
-      <h2 class="local-h2">1) 기본정보</h2>
+      <h2 class="local-h2">1. 임금명세 기본정보</h2>
       <hr/>
 
       <div class="grid two">
@@ -186,18 +183,18 @@
         </div>
 
         <div class="field">
-          <label for="payDate">지급일</label>
+          <label for="payDate">지급일자</label>
           <input id="payDate" type="date" />
         </div>
 
         <div class="field">
           <label for="schoolName">학교명</label>
-          <input id="schoolName" type="text" placeholder="예) ○○초등학교" />
+          <input id="schoolName" type="text" placeholder="예) 행정초등학교" />
         </div>
 
         <div class="field">
           <label for="workerName">근로자 성명</label>
-          <input id="workerName" type="text" placeholder="예) 홍길동" />
+          <input id="workerName" type="text" placeholder="예) 김교행" />
         </div>
 
         <div class="field">
@@ -216,34 +213,36 @@
         </div>
 
         <div class="field">
-          <label for="hourlyRate">시급(원)</label>
+          <label for="hourlyRate">시급</label>
           <div class="row gap">
             <input id="hourlyRate" type="number" class="numeric" min="0" step="10" />
-            <button type="button" class="btn-lightgrey" id="preset2025Btn">2025(11,200)</button>
-            <button type="button" class="btn-lightgrey" id="preset2026Btn">2026(11,500)</button>
+            <button type="button" class="btn-lightgrey" id="preset2025Btn">2025회계 (11,200원)</button>
+            <button type="button" class="btn-lightgrey" id="preset2026Btn">2026회계 (11,500원)</button>
           </div>
-          <div class="help">기본 11,500원(2026 지침) · 필요 시 수기로 수정</div>
+          <div class="help">
+            ·관련: 2026년도 학교회계 예산편성 지침 (p.74, 비정규직 처우개선에 포함되지 않는 기타 일용직 단가)
+            ·필요시 수기 입력 수정 가능
+          </div>
         </div>
       </div>
 
       <div class="row between" style="margin-top:14px;">
-        <div class="muted">저장 시각: <span id="saveStateText">-</span></div>
-        <div class="row gap">
-          <button type="button" class="btn" id="saveNowBtn">지금 저장</button>
-          <button type="button" class="btn ghost" id="resetAllBtn">전체 초기화</button>
-        </div>
+          <button type="button" class="btn" id="resetAllBtn">초기화</button>
       </div>
     </section>
 
     <!-- ===================== 계약조건(요일별 근무시간) ===================== -->
     <section class="section">
-      <h2 class="local-h2">2) 계약조건(요일별 근무시간대)</h2>
+      <h2 class="local-h2">2. 요일별 근무시간대</h2>
+      <p class="muted">
+        ·요일별 출퇴근 시각 입력하면 1일 소정근로시간 자동 계산됨. <br/>
+      </p>
       <hr/>
 
       <div class="row between">
         <div id="contractWeeklyHoursPill" class="pill">주간 계약시간: 0시간</div>
         <div class="row gap">
-          <button type="button" class="btn-lightgrey" id="loadExampleScheduleBtn">예시 불러오기</button>
+          <button type="button" class="btn-lightgrey" id="loadExampleScheduleBtn">예시 적용</button>
         </div>
       </div>
 
@@ -252,11 +251,11 @@
           <thead>
             <tr>
               <th>요일</th>
-              <th>시간대1 시작</th>
-              <th>시간대1 종료</th>
-              <th>시간대2 시작</th>
-              <th>시간대2 종료</th>
-              <th>일 근로시간</th>
+              <th>오전근무 시작시간</th>
+              <th>오전근무 종료시간</th>
+              <th>오후근무 시작시간</th>
+              <th>오후근무 종료시간</th>
+              <th>1일 소근로시간</th>
               <th>비고</th>
             </tr>
           </thead>
@@ -264,26 +263,22 @@
         </table>
       </div>
 
-      <p class="muted">
-        ·시간대 입력 시 일 근로시간과 주간 계약시간이 자동 계산됩니다. (자정 넘어가도 계산)<br/>
-        ·아래 달력에서 근무일은 <strong>셀을 클릭</strong>하면 출근/미출근이 토글됩니다.
-      </p>
     </section>
 
     <!-- ===================== 출근내역(달력) ===================== -->
     <section class="section">
-      <h2 class="local-h2">3) 출근내역(달력)</h2>
+      <h2 class="local-h2">3. 출근 내역 입력</h2>
       <hr/>
 
       <div class="row between">
         <label class="row gap">
           <input id="showManualDailyHours" type="checkbox" />
-          <span>수동 근로시간(일별) 입력칸 표시</span>
+          <span>일별 근로시간 개별 입력하기</span>
         </label>
 
         <div class="row gap">
-          <button type="button" class="btn-lightgrey" id="fillByScheduleBtn">근무시간 있는 요일 자동 체크</button>
-          <button type="button" class="btn-lightgrey" id="clearCalendarBtn">전체 해제</button>
+          <button type="button" class="btn" id="fillByScheduleBtn">근무시간 자동 적용하기</button>
+          <button type="button" class="btn" id="clearCalendarBtn">초기화 하기</button>
         </div>
       </div>
 
@@ -291,7 +286,13 @@
         <table class="calendar">
           <thead>
             <tr>
-              <th>일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th>
+              <th>일요일</th>
+              <th>월요일</th>
+              <th>화요일</th>
+              <th>수요일</th>
+              <th>목요일</th>
+              <th>금요일</th>
+              <th>토요일</th>
             </tr>
           </thead>
           <tbody id="calendarTbody"></tbody>
