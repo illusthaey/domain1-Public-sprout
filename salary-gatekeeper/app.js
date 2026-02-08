@@ -2,11 +2,71 @@
  * - Excel 업/다운로드: SheetJS(XLSX)
  * - PDF: html2canvas + jsPDF
  * - 입력값 localStorage 저장
+ *
+ * [수정 포인트]
+ * - index.html에서 삭제/이동된 버튼(id 없는 요소) 때문에 앱이 죽지 않도록 null-guard 적용
+ * - 건강보험/장기요양 체크박스가 index에서 id가 중복(deductLtCareOn)이라도 동작하도록
+ *   "카드(card) 내부에서 체크박스 찾기" 방식으로 바인딩
  */
 (() => {
   "use strict";
 
   const $ = (id) => document.getElementById(id);
+
+  // 안전한 DOM 유틸 (요소 없으면 조용히 무시)
+  const onEl = (el, evt, fn) => { if (el) el.addEventListener(evt, fn); };
+  const onId = (id, evt, fn) => onEl($(id), evt, fn);
+  const setText = (id, text) => { const el = $(id); if (el) el.textContent = text; };
+  const setVal = (id, value) => { const el = $(id); if (el) el.value = value; };
+
+  // index.html에서 건강/장기요양 체크박스 id가 중복일 수 있어,
+  // "해당 카드 내부의 checkbox"를 anchor input을 기준으로 찾는다.
+  function getCheckboxInCardByAnchorId(anchorId) {
+    const anchor = $(anchorId);
+    if (!anchor) return null;
+    const card = anchor.closest(".card");
+    if (!card) return null;
+    return card.querySelector('input[type="checkbox"]');
+  }
+
+  // 건강보험 토글: healthRate가 있는 카드의 checkbox를 우선 사용
+  function getHealthToggleEl() {
+    const byCard = getCheckboxInCardByAnchorId("healthRate");
+    if (byCard) return byCard;
+
+    // 혹시 HTML을 나중에 정상 id로 고치면 여기로도 잡힘
+    const byId = $("deductHealthOn");
+    if (byId) return byId;
+
+    // 현재 index처럼 id가 잘못되어 첫 번째 deductLtCareOn이 건강보험일 가능성이 높음
+    const all = document.querySelectorAll("#deductLtCareOn");
+    return all && all.length ? all[0] : null;
+  }
+
+  // 장기요양 토글: ltCareRate가 있는 카드의 checkbox를 우선 사용
+  function getLtCareToggleEl() {
+    const byCard = getCheckboxInCardByAnchorId("ltCareRate");
+    if (byCard) return byCard;
+
+    // 정상 id가 있으면 사용
+    const byId = $("deductLtCareOn");
+    // (주의) getElementById는 중복 id에서 첫 번째만 반환 → fallback으로만 사용
+    if (byId) {
+      // 그래도 중복이라면 두 번째를 더 우선
+      const all = document.querySelectorAll("#deductLtCareOn");
+      if (all && all.length >= 2) return all[1];
+      return byId;
+    }
+
+    return null;
+  }
+
+  // 고용보험 토글: id가 정상인 경우가 많지만, 카드 기준도 지원
+  function getEmpToggleEl() {
+    const byCard = getCheckboxInCardByAnchorId("empRate");
+    if (byCard) return byCard;
+    return $("deductEmpOn");
+  }
 
   const STORAGE_KEY = "doorGatekeeperWage_v1";
 
@@ -115,6 +175,8 @@
   // ---------- schedule rendering ----------
   function renderSchedule() {
     const tbody = $("scheduleTbody");
+    if (!tbody) return;
+
     tbody.innerHTML = "";
 
     weekdayOrder.forEach((dow, rIdx) => {
@@ -189,7 +251,6 @@
   }
 
   function calcWeeklyContractHours() {
-    // 1주에 실제 근로하는 시간(모든 요일 합)
     let total = 0;
     for (let dow = 0; dow < 7; dow++) total += calcScheduleHours(dow);
     return Math.round(total * 100) / 100;
@@ -236,6 +297,8 @@
 
   function renderCalendar() {
     const tbody = $("calendarTbody");
+    if (!tbody) return;
+
     tbody.innerHTML = "";
 
     const ym = state.payMonth || defaultPayMonth();
@@ -393,13 +456,11 @@
       hours += parseNumber(used, 0);
     });
 
-    // 소수점 오차 보정
     hours = Math.round(hours * 100) / 100;
     return { days, hours };
   }
 
   function autoInsuranceAmounts(gross) {
-    // gross: 원(정수/실수 가능)
     const trunc = !!state.truncate10won;
 
     const calcHealth = () => {
@@ -424,36 +485,37 @@
   }
 
   function computeAndRender() {
-    // schedule 재계산은 renderSchedule에서 readonly로 표시되지만, KPI에 반영
     const weeklyHours = calcWeeklyContractHours();
-    $("contractWeeklyHoursPill").textContent = `주간 계약시간: ${weeklyHours}시간`;
-    $("contractWeeklyHoursPill").className = "pill" + (weeklyHours > 0 ? " ok" : "");
+    if ($("contractWeeklyHoursPill")) {
+      $("contractWeeklyHoursPill").textContent = `주간 계약시간: ${weeklyHours}시간`;
+      $("contractWeeklyHoursPill").className = "pill" + (weeklyHours > 0 ? " ok" : "");
+    }
 
     const ym = state.payMonth || defaultPayMonth();
     const { days, hours } = sumWorkHoursForMonth(ym);
 
-    $("workDaysText").textContent = String(days);
-    $("workHoursText").textContent = String(hours);
+    setText("workDaysText", String(days));
+    setText("workHoursText", String(hours));
 
     // Gross
     const hourly = parseNumber(state.hourlyRate, 0);
     const gross = Math.round(hourly * hours); // 원 단위
-    $("grossPayText").textContent = fmtWon(gross);
+    setText("grossPayText", fmtWon(gross));
 
     // Auto insurance calc (only if toggle ON and not manual)
     const auto = autoInsuranceAmounts(gross);
 
     if (state.deductHealthOn && !state.manual.healthAmt) {
       state.healthAmt = auto.health;
-      $("healthAmt").value = String(state.healthAmt);
+      setVal("healthAmt", String(state.healthAmt));
     }
     if (state.deductLtCareOn && !state.manual.ltCareAmt) {
       state.ltCareAmt = auto.lt;
-      $("ltCareAmt").value = String(state.ltCareAmt);
+      setVal("ltCareAmt", String(state.ltCareAmt));
     }
     if (state.deductEmpOn && !state.manual.empAmt) {
       state.empAmt = auto.emp;
-      $("empAmt").value = String(state.empAmt);
+      setVal("empAmt", String(state.empAmt));
     }
 
     // Deductions total
@@ -467,10 +529,10 @@
     const otherDeduct = parseNumber(state.otherDeduct, 0);
 
     const deductTotal = Math.max(0, Math.round(healthAmt + ltAmt + empAmt + incomeTax + localTax + pension + otherDeduct));
-    $("deductTotalText").textContent = fmtWon(deductTotal);
+    setText("deductTotalText", fmtWon(deductTotal));
 
     const net = gross - deductTotal;
-    $("netPayText").textContent = fmtWon(net);
+    setText("netPayText", fmtWon(net));
 
     // Update per-day hour hint on calendar
     updateCalendarHints(ym);
@@ -490,7 +552,6 @@
 
   function updateCalendarHints(ym) {
     const showManual = !!state.ui.showManualDailyHours;
-    // DOM 전체를 순회하며 date를 가진 요소를 찾는 방식(간단/안전)
     document.querySelectorAll('[data-grid="calendar"][data-date]').forEach((cb) => {
       const dateISO = cb.dataset.date;
       const d = new Date(dateISO + "T00:00:00");
@@ -517,6 +578,9 @@
   }
 
   function renderPayslipPreview(calc) {
+    const el = $("payslipPreview");
+    if (!el) return;
+
     const { ym, gross, deductTotal, net, hours, insurance, taxes } = calc;
 
     const title = ymToTitle(ym) + " 임금명세서";
@@ -551,9 +615,6 @@
       { item: "기타", amount: taxes.otherDeduct || 0 },
     ];
 
-    const el = $("payslipPreview");
-
-    // HTML table (7 columns)
     const html = `
       <table class="payslip">
         <colgroup>
@@ -655,10 +716,8 @@
       if (!raw) return;
       const parsed = JSON.parse(raw);
 
-      // shallow merge
       Object.assign(state, parsed);
 
-      // schedule/attendance 구조 보정
       if (!state.schedule) state.schedule = defaultSchedule();
       for (let i = 0; i < 7; i++) {
         if (!state.schedule[i]) state.schedule[i] = { s1: "", e1: "", s2: "", e2: "", memo: "" };
@@ -667,7 +726,8 @@
       if (!state.manual) state.manual = { healthAmt: false, ltCareAmt: false, empAmt: false };
       if (!state.ui) state.ui = { showManualDailyHours: false };
 
-      $("saveStateText").textContent = "불러옴";
+      // index에 saveStateText가 없을 수 있으니 안전 처리
+      setText("saveStateText", "불러옴");
     } catch (e) {
       console.warn("Failed to load state:", e);
     }
@@ -676,10 +736,10 @@
   function saveState() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      $("saveStateText").textContent = new Date().toLocaleString("ko-KR");
+      setText("saveStateText", new Date().toLocaleString("ko-KR"));
     } catch (e) {
       console.warn("Failed to save state:", e);
-      $("saveStateText").textContent = "저장 실패";
+      setText("saveStateText", "저장 실패");
     }
   }
 
@@ -691,47 +751,47 @@
 
   // ---------- wire inputs ----------
   function bindInputs() {
-    $("payMonth").addEventListener("change", () => {
+    onId("payMonth", "change", () => {
       state.payMonth = $("payMonth").value;
       if (!state.payDate) state.payDate = defaultPayDateForMonth(state.payMonth);
-      $("payDate").value = state.payDate;
+      setVal("payDate", state.payDate);
       renderCalendar();
       computeAndRender();
       scheduleSaveDebounced();
     });
 
-    $("payDate").addEventListener("change", () => {
+    onId("payDate", "change", () => {
       state.payDate = $("payDate").value;
       computeAndRender();
       scheduleSaveDebounced();
     });
 
-    $("schoolName").addEventListener("input", () => { state.schoolName = $("schoolName").value; computeAndRender(); scheduleSaveDebounced(); });
-    $("workerName").addEventListener("input", () => { state.workerName = $("workerName").value; computeAndRender(); scheduleSaveDebounced(); });
-    $("jobTitle").addEventListener("input", () => { state.jobTitle = $("jobTitle").value; computeAndRender(); scheduleSaveDebounced(); });
-    $("birthDate").addEventListener("change", () => { state.birthDate = $("birthDate").value; computeAndRender(); scheduleSaveDebounced(); });
-    $("hireDate").addEventListener("change", () => { state.hireDate = $("hireDate").value; computeAndRender(); scheduleSaveDebounced(); });
+    onId("schoolName", "input", () => { state.schoolName = $("schoolName").value; computeAndRender(); scheduleSaveDebounced(); });
+    onId("workerName", "input", () => { state.workerName = $("workerName").value; computeAndRender(); scheduleSaveDebounced(); });
+    onId("jobTitle", "input", () => { state.jobTitle = $("jobTitle").value; computeAndRender(); scheduleSaveDebounced(); });
+    onId("birthDate", "change", () => { state.birthDate = $("birthDate").value; computeAndRender(); scheduleSaveDebounced(); });
+    onId("hireDate", "change", () => { state.hireDate = $("hireDate").value; computeAndRender(); scheduleSaveDebounced(); });
 
-    $("hourlyRate").addEventListener("input", () => {
+    onId("hourlyRate", "input", () => {
       state.hourlyRate = parseNumber($("hourlyRate").value, 0);
       computeAndRender();
       scheduleSaveDebounced();
     });
 
-    $("preset2025Btn").addEventListener("click", () => {
+    onId("preset2025Btn", "click", () => {
       state.hourlyRate = 11200;
-      $("hourlyRate").value = "11200";
+      setVal("hourlyRate", "11200");
       computeAndRender();
       scheduleSaveDebounced();
     });
-    $("preset2026Btn").addEventListener("click", () => {
+    onId("preset2026Btn", "click", () => {
       state.hourlyRate = 11500;
-      $("hourlyRate").value = "11500";
+      setVal("hourlyRate", "11500");
       computeAndRender();
       scheduleSaveDebounced();
     });
 
-    $("loadExampleScheduleBtn").addEventListener("click", () => {
+    onId("loadExampleScheduleBtn", "click", () => {
       loadExampleSchedule();
       renderSchedule();
       renderCalendar();
@@ -739,100 +799,136 @@
       scheduleSaveDebounced();
     });
 
-    $("showManualDailyHours").addEventListener("change", () => {
+    onId("showManualDailyHours", "change", () => {
       state.ui.showManualDailyHours = $("showManualDailyHours").checked;
       renderCalendar();
       computeAndRender();
       scheduleSaveDebounced();
     });
 
-    $("fillByScheduleBtn").addEventListener("click", () => {
+    onId("fillByScheduleBtn", "click", () => {
       fillCalendarBySchedule();
       computeAndRender();
       scheduleSaveDebounced();
     });
 
-    $("clearCalendarBtn").addEventListener("click", () => {
+    onId("clearCalendarBtn", "click", () => {
       clearCalendar();
       computeAndRender();
       scheduleSaveDebounced();
     });
 
-    $("saveNowBtn").addEventListener("click", () => saveState());
+    // index에서 saveNowBtn이 없을 수 있음 → 있으면만 바인딩
+    onId("saveNowBtn", "click", () => saveState());
 
-    $("resetAllBtn").addEventListener("click", () => {
+    onId("resetAllBtn", "click", () => {
       if (!confirm("전체 입력값을 초기화할까요? (브라우저 저장값 포함)")) return;
       localStorage.removeItem(STORAGE_KEY);
       location.reload();
     });
 
-    // deductions toggles
-    $("truncate10won").addEventListener("change", () => { state.truncate10won = $("truncate10won").checked; computeAndRender(); scheduleSaveDebounced(); });
+    // truncate10won 토글이 index에서 제거된 상태일 수 있음 → 있으면만 바인딩
+    onId("truncate10won", "change", () => {
+      state.truncate10won = $("truncate10won").checked;
+      computeAndRender();
+      scheduleSaveDebounced();
+    });
 
-    $("deductHealthOn").addEventListener("change", () => { state.deductHealthOn = $("deductHealthOn").checked; computeAndRender(); scheduleSaveDebounced(); });
-    $("healthRate").addEventListener("input", () => { state.healthRate = parseNumber($("healthRate").value, 0); state.manual.healthAmt = false; computeAndRender(); scheduleSaveDebounced(); });
-    $("healthAmt").addEventListener("input", () => { state.healthAmt = parseNumber($("healthAmt").value, 0); state.manual.healthAmt = true; computeAndRender(); scheduleSaveDebounced(); });
-    $("healthAutoBtn").addEventListener("click", () => { state.manual.healthAmt = false; computeAndRender(); scheduleSaveDebounced(); });
+    // ===== 사회보험 토글(중요: 카드 기반으로 찾음) =====
+    const healthToggle = getHealthToggleEl();
+    onEl(healthToggle, "change", () => {
+      state.deductHealthOn = !!healthToggle.checked;
+      computeAndRender();
+      scheduleSaveDebounced();
+    });
 
-    $("deductLtCareOn").addEventListener("change", () => { state.deductLtCareOn = $("deductLtCareOn").checked; computeAndRender(); scheduleSaveDebounced(); });
-    $("ltCareRate").addEventListener("input", () => { state.ltCareRate = parseNumber($("ltCareRate").value, 0); state.manual.ltCareAmt = false; computeAndRender(); scheduleSaveDebounced(); });
-    $("ltCareAmt").addEventListener("input", () => { state.ltCareAmt = parseNumber($("ltCareAmt").value, 0); state.manual.ltCareAmt = true; computeAndRender(); scheduleSaveDebounced(); });
-    $("ltCareAutoBtn").addEventListener("click", () => { state.manual.ltCareAmt = false; computeAndRender(); scheduleSaveDebounced(); });
+    const ltToggle = getLtCareToggleEl();
+    onEl(ltToggle, "change", () => {
+      state.deductLtCareOn = !!ltToggle.checked;
+      computeAndRender();
+      scheduleSaveDebounced();
+    });
 
-    $("deductEmpOn").addEventListener("change", () => { state.deductEmpOn = $("deductEmpOn").checked; computeAndRender(); scheduleSaveDebounced(); });
-    $("empRate").addEventListener("input", () => { state.empRate = parseNumber($("empRate").value, 0); state.manual.empAmt = false; computeAndRender(); scheduleSaveDebounced(); });
-    $("empAmt").addEventListener("input", () => { state.empAmt = parseNumber($("empAmt").value, 0); state.manual.empAmt = true; computeAndRender(); scheduleSaveDebounced(); });
-    $("empAutoBtn").addEventListener("click", () => { state.manual.empAmt = false; computeAndRender(); scheduleSaveDebounced(); });
+    const empToggle = getEmpToggleEl();
+    onEl(empToggle, "change", () => {
+      state.deductEmpOn = !!empToggle.checked;
+      computeAndRender();
+      scheduleSaveDebounced();
+    });
 
-    $("incomeTax").addEventListener("input", () => { state.incomeTax = parseNumber($("incomeTax").value, 0); computeAndRender(); scheduleSaveDebounced(); });
-    $("localTax").addEventListener("input", () => { state.localTax = parseNumber($("localTax").value, 0); computeAndRender(); scheduleSaveDebounced(); });
-    $("pension").addEventListener("input", () => { state.pension = parseNumber($("pension").value, 0); computeAndRender(); scheduleSaveDebounced(); });
-    $("otherDeduct").addEventListener("input", () => { state.otherDeduct = parseNumber($("otherDeduct").value, 0); computeAndRender(); scheduleSaveDebounced(); });
+    // rates & amounts
+    onId("healthRate", "input", () => { state.healthRate = parseNumber($("healthRate").value, 0); state.manual.healthAmt = false; computeAndRender(); scheduleSaveDebounced(); });
+    onId("healthAmt", "input", () => { state.healthAmt = parseNumber($("healthAmt").value, 0); state.manual.healthAmt = true; computeAndRender(); scheduleSaveDebounced(); });
+    onId("healthAutoBtn", "click", () => { state.manual.healthAmt = false; computeAndRender(); scheduleSaveDebounced(); });
+
+    onId("ltCareRate", "input", () => { state.ltCareRate = parseNumber($("ltCareRate").value, 0); state.manual.ltCareAmt = false; computeAndRender(); scheduleSaveDebounced(); });
+    onId("ltCareAmt", "input", () => { state.ltCareAmt = parseNumber($("ltCareAmt").value, 0); state.manual.ltCareAmt = true; computeAndRender(); scheduleSaveDebounced(); });
+    onId("ltCareAutoBtn", "click", () => { state.manual.ltCareAmt = false; computeAndRender(); scheduleSaveDebounced(); });
+
+    onId("empRate", "input", () => { state.empRate = parseNumber($("empRate").value, 0); state.manual.empAmt = false; computeAndRender(); scheduleSaveDebounced(); });
+    onId("empAmt", "input", () => { state.empAmt = parseNumber($("empAmt").value, 0); state.manual.empAmt = true; computeAndRender(); scheduleSaveDebounced(); });
+    onId("empAutoBtn", "click", () => { state.manual.empAmt = false; computeAndRender(); scheduleSaveDebounced(); });
+
+    onId("incomeTax", "input", () => { state.incomeTax = parseNumber($("incomeTax").value, 0); computeAndRender(); scheduleSaveDebounced(); });
+    onId("localTax", "input", () => { state.localTax = parseNumber($("localTax").value, 0); computeAndRender(); scheduleSaveDebounced(); });
+    onId("pension", "input", () => { state.pension = parseNumber($("pension").value, 0); computeAndRender(); scheduleSaveDebounced(); });
+    onId("otherDeduct", "input", () => { state.otherDeduct = parseNumber($("otherDeduct").value, 0); computeAndRender(); scheduleSaveDebounced(); });
 
     // file actions
-    $("downloadTemplateBtn").addEventListener("click", () => downloadTemplateXlsx());
-    $("uploadXlsx").addEventListener("change", (e) => uploadTemplateXlsx(e.target.files?.[0]));
-    $("exportXlsxBtn").addEventListener("click", () => exportResultXlsx());
-    $("exportPdfBtn").addEventListener("click", () => exportPayslipPdf());
+    onId("downloadTemplateBtn", "click", () => downloadTemplateXlsx());
+    onId("uploadXlsx", "change", (e) => uploadTemplateXlsx(e.target.files?.[0]));
+
+    // index에서 export 버튼이 삭제됐을 수 있음 → 있으면만 바인딩
+    onId("exportXlsxBtn", "click", () => exportResultXlsx());
+    onId("exportPdfBtn", "click", () => exportPayslipPdf());
   }
 
   function syncUIFromState() {
-    $("payMonth").value = state.payMonth || defaultPayMonth();
-    $("payDate").value = state.payDate || defaultPayDateForMonth($("payMonth").value);
+    const ym = state.payMonth || defaultPayMonth();
+    setVal("payMonth", ym);
+    setVal("payDate", state.payDate || defaultPayDateForMonth(ym));
 
-    $("schoolName").value = state.schoolName || "";
-    $("workerName").value = state.workerName || "";
-    $("jobTitle").value = state.jobTitle || "출입문개폐전담원";
-    $("birthDate").value = state.birthDate || "";
-    $("hireDate").value = state.hireDate || "";
+    setVal("schoolName", state.schoolName || "");
+    setVal("workerName", state.workerName || "");
+    setVal("jobTitle", state.jobTitle || "출입문개폐전담원");
+    setVal("birthDate", state.birthDate || "");
+    setVal("hireDate", state.hireDate || "");
 
-    $("hourlyRate").value = String(parseNumber(state.hourlyRate, 0));
+    setVal("hourlyRate", String(parseNumber(state.hourlyRate, 0)));
 
-    $("showManualDailyHours").checked = !!state.ui.showManualDailyHours;
+    const manualDaily = $("showManualDailyHours");
+    if (manualDaily) manualDaily.checked = !!state.ui.showManualDailyHours;
 
-    $("truncate10won").checked = !!state.truncate10won;
+    // truncate10won 토글은 없을 수 있음
+    const trunc = $("truncate10won");
+    if (trunc) trunc.checked = !!state.truncate10won;
 
-    $("deductHealthOn").checked = !!state.deductHealthOn;
-    $("healthRate").value = String(parseNumber(state.healthRate, 0));
-    $("healthAmt").value = String(parseNumber(state.healthAmt, 0));
+    // 보험 토글(카드 기준)
+    const healthToggle = getHealthToggleEl();
+    if (healthToggle) healthToggle.checked = !!state.deductHealthOn;
 
-    $("deductLtCareOn").checked = !!state.deductLtCareOn;
-    $("ltCareRate").value = String(parseNumber(state.ltCareRate, 0));
-    $("ltCareAmt").value = String(parseNumber(state.ltCareAmt, 0));
+    const ltToggle = getLtCareToggleEl();
+    if (ltToggle) ltToggle.checked = !!state.deductLtCareOn;
 
-    $("deductEmpOn").checked = !!state.deductEmpOn;
-    $("empRate").value = String(parseNumber(state.empRate, 0));
-    $("empAmt").value = String(parseNumber(state.empAmt, 0));
+    const empToggle = getEmpToggleEl();
+    if (empToggle) empToggle.checked = !!state.deductEmpOn;
 
-    $("incomeTax").value = String(parseNumber(state.incomeTax, 0));
-    $("localTax").value = String(parseNumber(state.localTax, 0));
-    $("pension").value = String(parseNumber(state.pension, 0));
-    $("otherDeduct").value = String(parseNumber(state.otherDeduct, 0));
+    setVal("healthRate", String(parseNumber(state.healthRate, 0)));
+    setVal("healthAmt", String(parseNumber(state.healthAmt, 0)));
+
+    setVal("ltCareRate", String(parseNumber(state.ltCareRate, 0)));
+    setVal("ltCareAmt", String(parseNumber(state.ltCareAmt, 0)));
+
+    setVal("empRate", String(parseNumber(state.empRate, 0)));
+    setVal("empAmt", String(parseNumber(state.empAmt, 0)));
+
+    setVal("incomeTax", String(parseNumber(state.incomeTax, 0)));
+    setVal("localTax", String(parseNumber(state.localTax, 0)));
+    setVal("pension", String(parseNumber(state.pension, 0)));
+    setVal("otherDeduct", String(parseNumber(state.otherDeduct, 0)));
   }
 
   function loadExampleSchedule() {
-    // 월~목: 07:10~08:40, 16:40~18:10 (총 3시간)
-    // 금: 07:40~08:40, 16:40~17:40 (총 2시간)
     const s = defaultSchedule();
     [1,2,3,4].forEach((dow) => {
       s[dow] = { s1: "07:10", e1: "08:40", s2: "16:40", e2: "18:10", memo: "월~목" };
@@ -854,10 +950,9 @@
       const h = calcScheduleHours(dow);
       const a = ensureAttendanceKey(iso);
       a.on = h > 0;
-      // 수동시간은 유지(원하면 직접 지우기)
+      // 수동시간은 유지
     });
 
-    // UI 반영: 체크만 갱신(전체 rerender로 간단 처리)
     renderCalendar();
   }
 
@@ -901,7 +996,6 @@
     let nr = r + dr;
     let nc = c + dc;
 
-    // 스캔하면서 존재하는 셀 찾기
     for (let i = 0; i < 100; i++) {
       const key = `${nr},${nc}`;
       const el = map.cells.get(key);
@@ -919,22 +1013,18 @@
       const gridName = t.dataset && t.dataset.grid;
       if (!gridName) return;
 
-      // 입력 중 단축키는 제외
       if (e.altKey || e.metaKey || e.ctrlKey) return;
 
       const r = parseInt(t.dataset.r || "0", 10);
       const c = parseInt(t.dataset.c || "0", 10);
 
-      // Space: checkbox / 출근 토글버튼
       if (e.key === " ") {
-        // checkbox
         if ((t instanceof HTMLInputElement) && t.type === "checkbox") {
           e.preventDefault();
           t.checked = !t.checked;
           t.dispatchEvent(new Event("change", { bubbles: true }));
           return;
         }
-        // calendar toggle button
         if ((t instanceof HTMLButtonElement) && t.classList.contains("att-toggle")) {
           e.preventDefault();
           t.click();
@@ -960,7 +1050,6 @@
       }
     });
 
-    // focus style
     document.addEventListener("focusin", (e) => {
       const el = e.target;
       if (!(el instanceof HTMLElement)) return;
@@ -1034,7 +1123,7 @@
     wsSched["!cols"] = [{ wch: 6 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 20 }];
     XLSX.utils.book_append_sheet(wb, wsSched, "근무시간");
 
-    // 3) 출근내역(선택) sheet - 날짜별 O 및 수동시간
+    // 3) 출근내역(선택) sheet
     const weeks = makeMonthWeeks(ym);
     const att = [["date", "weekday", "on(O)", "manualHours(선택)"]];
     weeks.flat().forEach((d) => {
@@ -1059,7 +1148,7 @@
     }
     if (!file) return;
 
-    $("uploadStatus").textContent = "읽는 중...";
+    setText("uploadStatus", "읽는 중...");
     try {
       const buf = await file.arrayBuffer();
       const wb = XLSX.read(buf, { type: "array" });
@@ -1079,17 +1168,16 @@
         tryParseLegacyWorkbook(wb);
       }
 
-      // UI 반영
       syncUIFromState();
       renderSchedule();
       renderCalendar();
       computeAndRender();
       scheduleSaveDebounced();
 
-      $("uploadStatus").textContent = `업로드 완료: ${file.name}`;
+      setText("uploadStatus", `업로드 완료: ${file.name}`);
     } catch (err) {
       console.error(err);
-      $("uploadStatus").textContent = "업로드 실패: 파일 형식/내용을 확인하세요.";
+      setText("uploadStatus", "업로드 실패: 파일 형식/내용을 확인하세요.");
     }
   }
 
@@ -1116,12 +1204,15 @@
     if (kv.has("hourlyRate")) state.hourlyRate = parseNumber(kv.get("hourlyRate"), 0);
 
     if (kv.has("truncate10won")) state.truncate10won = b(kv.get("truncate10won"));
+
     if (kv.has("deductHealthOn")) state.deductHealthOn = b(kv.get("deductHealthOn"));
     if (kv.has("healthRate")) state.healthRate = parseNumber(kv.get("healthRate"), state.healthRate);
     if (kv.has("healthAmt")) state.healthAmt = parseNumber(kv.get("healthAmt"), 0);
+
     if (kv.has("deductLtCareOn")) state.deductLtCareOn = b(kv.get("deductLtCareOn"));
     if (kv.has("ltCareRate")) state.ltCareRate = parseNumber(kv.get("ltCareRate"), state.ltCareRate);
     if (kv.has("ltCareAmt")) state.ltCareAmt = parseNumber(kv.get("ltCareAmt"), 0);
+
     if (kv.has("deductEmpOn")) state.deductEmpOn = b(kv.get("deductEmpOn"));
     if (kv.has("empRate")) state.empRate = parseNumber(kv.get("empRate"), state.empRate);
     if (kv.has("empAmt")) state.empAmt = parseNumber(kv.get("empAmt"), 0);
@@ -1139,7 +1230,6 @@
 
   function applyScheduleSheet(ws) {
     const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true }) || [];
-    // header: 요일, s1,e1,s2,e2,hours,memo
     const mapDow = { "일":0, "월":1, "화":2, "수":3, "목":4, "금":5, "토":6 };
 
     rows.slice(1).forEach((r) => {
@@ -1171,7 +1261,6 @@
   }
 
   function tryParseLegacyWorkbook(wb) {
-    // 기존 월별 양식(예: '2025.3월 임금명세서' + '2025.3월 출근내역')을 최소한으로 파싱
     const names = wb.SheetNames || [];
     const paySheetName = names.find((n) => n.includes("임금명세서"));
     if (!paySheetName) return;
@@ -1179,7 +1268,6 @@
     const payWs = wb.Sheets[paySheetName];
     const get = (addr) => payWs[addr] ? payWs[addr].v : "";
 
-    // 기본 정보
     state.schoolName = String(get("D3") || "");
     const payDate = get("G3");
     state.payDate = excelDateToISO(payDate) || "";
@@ -1188,34 +1276,28 @@
     state.birthDate = excelDateToISO(get("D5")) || "";
     state.hireDate = excelDateToISO(get("G5")) || "";
 
-    // 시급 추출: D9 문자열에서 '시급 11,200원' 형태
     const d9 = String(get("D9") || "");
     const m = /시급\s*([0-9,]+)원/.exec(d9.replace(/\s+/g, " "));
     if (m) state.hourlyRate = parseNumber(m[1].replace(/,/g, ""), state.hourlyRate);
 
-    // 지급월 추정: 시트명 '2025.3월 ...'
     const ymMatch = /(\d{4})\.(\d{1,2})월/.exec(paySheetName);
     if (ymMatch) {
       state.payMonth = `${ymMatch[1]}-${pad2(parseInt(ymMatch[2], 10))}`;
     }
 
-    // 출근내역 파싱
     const attSheetName = names.find((n) => n.includes("출근내역") && (ymMatch ? n.includes(`${ymMatch[1]}.${ymMatch[2]}월`) : true));
     if (!attSheetName) return;
     const attWs = wb.Sheets[attSheetName];
 
-    // 달력 영역: 날짜는 B5:H? / 출근표시는 B6:H? (우리는 6주*2행 구조)
-    // 기존 양식은 다를 수 있으므로 "날짜 셀 아래 한 줄에 O가 있는" 패턴을 찾아 추출한다.
     const cells = Object.keys(attWs).filter((k) => !k.startsWith("!"));
 
-    // 날짜 셀로 보이는 값(Excel date number)들을 찾고, 바로 아래행 같은 열의 값이 "O"면 출근으로 판단
     const dateCandidates = cells.filter((addr) => {
       const v = attWs[addr]?.v;
-      return typeof v === "number" && v > 40000 && v < 60000; // 2009~2064 정도 범위
+      return typeof v === "number" && v > 40000 && v < 60000;
     });
 
     dateCandidates.forEach((addr) => {
-      const { c, r } = XLSX.utils.decode_cell(addr); // 0-index
+      const { c, r } = XLSX.utils.decode_cell(addr);
       const below = XLSX.utils.encode_cell({ c, r: r + 1 });
       const mark = attWs[below]?.v;
       const dateISO = excelDateToISO(attWs[addr]?.v);
@@ -1227,17 +1309,16 @@
   function excelDateToISO(v) {
     if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
     if (typeof v === "number") {
-      // Excel serial date -> JS date (SheetJS: 1900-based)
       const d = XLSX.SSF.parse_date_code(v);
       if (!d) return "";
       const js = new Date(d.y, d.m - 1, d.d);
       return toISODate(js);
     }
-    // Date object in some cases
     if (v instanceof Date && !Number.isNaN(v.getTime())) return toISODate(v);
     return "";
   }
 
+  // ===== 결과 export 함수들은 유지(버튼이 있으면만 실행됨) =====
   function exportResultXlsx() {
     const libs = isLibReady();
     if (!libs.okXlsx) {
@@ -1281,21 +1362,17 @@
     const weeklyHours = calcWeeklyContractHours();
     const payDate = state.payDate || defaultPayDateForMonth(ym);
 
-    // AoA: A~R(18 cols), rows 1~16
     const cols = 18;
     const rows = 16;
     const aoa = Array.from({ length: rows }, () => Array(cols).fill(""));
 
-    // Title row (row2 col C..G)
     aoa[1][2] = title;
 
-    // Weekday header row (row4, B..H)
     ["일", "월", "화", "수", "목", "금", "토"].forEach((w, i) => {
       aoa[3][1 + i] = w;
     });
     aoa[3][14] = `근로계약서 상 근로시간 (주 ${weeklyHours}시간)`;
 
-    // summary block
     aoa[4][9] = "당월 근무일수";
     aoa[4][10] = totals.days;
 
@@ -1306,7 +1383,6 @@
     aoa[7][9] = "지급일";
     aoa[7][10] = payDate;
 
-    // schedule description (N5/O5 style)
     aoa[4][13] = "요일별 시간대(요약)";
     const schedLines = [];
     [1,2,3,4,5].forEach((dow) => {
@@ -1318,36 +1394,30 @@
     });
     aoa[4][14] = schedLines.join(" / ");
 
-    // Fill calendar weeks starting row5 (index 4), with date rows 5,7,9,11,13,15 and mark rows 6,8,10,12,14,16
     const weeks = makeMonthWeeks(ym);
     for (let w = 0; w < 6; w++) {
-      const dateRow = 4 + w * 2; // 0-based row index
+      const dateRow = 4 + w * 2;
       const markRow = dateRow + 1;
       if (markRow >= rows) break;
       for (let dow = 0; dow < 7; dow++) {
-        const col = 1 + dow; // B..H
+        const col = 1 + dow;
         const d = weeks[w][dow];
         if (!d) continue;
 
         const iso = toISODate(d);
-        aoa[dateRow][col] = iso; // string date
+        aoa[dateRow][col] = iso;
         const a = state.attendance[iso] || { on: false };
         aoa[markRow][col] = a.on ? "O" : "";
       }
     }
 
-    // Put hourly rate as note (row10 in sample)
     aoa[9][10] = `시급: ${fmtWon(state.hourlyRate)}원`;
 
     const ws = XLSX.utils.aoa_to_sheet(aoa);
 
-    // merges
     ws["!merges"] = [
-      // C2:G2
       { s: { r: 1, c: 2 }, e: { r: 1, c: 6 } },
-      // O4:R4
       { s: { r: 3, c: 14 }, e: { r: 3, c: 17 } },
-      // O5:R5 (schedule summary)
       { s: { r: 4, c: 14 }, e: { r: 4, c: 17 } },
     ];
 
@@ -1356,7 +1426,6 @@
       { wch: 2 }, { wch: 18 }, { wch: 16 }, { wch: 2 }, { wch: 2 }, { wch: 18 }, { wch: 55 }, { wch: 2 }, { wch: 2 }, { wch: 2 }
     ];
 
-    // format date strings as text (simple). If you prefer real excel date, convert serial.
     return ws;
   }
 
@@ -1392,7 +1461,7 @@
     const ws = XLSX.utils.aoa_to_sheet(aoa);
     ws["!cols"] = [{ wch: 26 }, { wch: 22 }, { wch: 6 }, { wch: 14 }, { wch: 16 }];
     ws["!merges"] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }, // title merge
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } },
     ];
     return ws;
   }
@@ -1406,43 +1475,36 @@
       incomeTax, localTax, pension, otherDeduct, deductTotal, net
     } = calc;
 
-    // 21 rows, 9 cols(A..I) but we mainly use B..I.
     const rows = 21;
     const cols = 9;
     const aoa = Array.from({ length: rows }, () => Array(cols).fill(""));
 
-    aoa[0][1] = title; // B1
+    aoa[0][1] = title;
 
-    // Row3 (index2)
     aoa[2][1] = "소속";
     aoa[2][3] = state.schoolName || "";
     aoa[2][4] = "지급일";
     aoa[2][6] = payDate;
 
-    // Row4
     aoa[3][1] = "성명";
     aoa[3][3] = state.workerName || "";
     aoa[3][4] = "직종";
     aoa[3][6] = state.jobTitle || "출입문개폐전담원";
 
-    // Row5
     aoa[4][1] = "생년월일";
     aoa[4][3] = state.birthDate || "";
     aoa[4][4] = "최초임용일";
     aoa[4][6] = state.hireDate || "";
 
-    // Row7 headers
     aoa[6][1] = "급여내역";
     aoa[6][6] = "공제내역";
 
-    // Row8 columns
     aoa[7][1] = "임금항목";
     aoa[7][3] = "산출식";
     aoa[7][5] = "금액";
     aoa[7][6] = "구분";
     aoa[7][8] = "금액";
 
-    // Row9
     aoa[8][1] = "매월\n지급";
     aoa[8][2] = "기본급";
     aoa[8][3] = `시급 ${fmtWon(hourly)}원*${hours}시간=`;
@@ -1450,7 +1512,6 @@
     aoa[8][6] = "소득세";
     aoa[8][8] = incomeTax;
 
-    // Row10~16 pay items blank, deductions
     const payItems = [
       ["근속수당", "주민세", localTax],
       ["정액급식비", "건강보험", healthAmt],
@@ -1467,75 +1528,51 @@
       aoa[r][8] = payItems[i][2];
     }
 
-    // Row18 (index17) - 부정기
     aoa[17][1] = "부정기\n지급";
     aoa[17][2] = "명절휴가비";
 
-    // Row20 totals (index19)
     aoa[19][1] = "급여총액 계 (A)";
     aoa[19][5] = gross;
     aoa[19][6] = "공제액 계 (B)";
     aoa[19][8] = deductTotal;
 
-    // Row21 net (index20)
     aoa[20][1] = "실수령액 (A-B)";
     aoa[20][8] = net;
 
     const ws = XLSX.utils.aoa_to_sheet(aoa);
     ws["!cols"] = [
-      { wch: 2 },  // A
-      { wch: 10 }, // B
-      { wch: 14 }, // C
-      { wch: 28 }, // D
-      { wch: 2 },  // E
-      { wch: 14 }, // F
-      { wch: 16 }, // G
-      { wch: 2 },  // H
-      { wch: 14 }, // I
+      { wch: 2 },
+      { wch: 10 },
+      { wch: 14 },
+      { wch: 28 },
+      { wch: 2 },
+      { wch: 14 },
+      { wch: 16 },
+      { wch: 2 },
+      { wch: 14 },
     ];
 
     ws["!merges"] = [
-      // B1:I1
       { s: { r: 0, c: 1 }, e: { r: 0, c: 8 } },
-      // B3:C3
       { s: { r: 2, c: 1 }, e: { r: 2, c: 2 } },
-      // E3:F3
       { s: { r: 2, c: 4 }, e: { r: 2, c: 5 } },
-      // G3:I3
       { s: { r: 2, c: 6 }, e: { r: 2, c: 8 } },
-      // B4:C4
       { s: { r: 3, c: 1 }, e: { r: 3, c: 2 } },
-      // E4:F4
       { s: { r: 3, c: 4 }, e: { r: 3, c: 5 } },
-      // G4:I4
       { s: { r: 3, c: 6 }, e: { r: 3, c: 8 } },
-      // B5:C5
       { s: { r: 4, c: 1 }, e: { r: 4, c: 2 } },
-      // E5:F5
       { s: { r: 4, c: 4 }, e: { r: 4, c: 5 } },
-      // G5:I5
       { s: { r: 4, c: 6 }, e: { r: 4, c: 8 } },
-      // B7:F7 (급여내역)
       { s: { r: 6, c: 1 }, e: { r: 6, c: 5 } },
-      // G7:I7 (공제내역)
       { s: { r: 6, c: 6 }, e: { r: 6, c: 8 } },
-      // D8:E8 (산출식)
       { s: { r: 7, c: 3 }, e: { r: 7, c: 4 } },
-      // G8:H8 (구분)
       { s: { r: 7, c: 6 }, e: { r: 7, c: 7 } },
-      // D9:E9
       { s: { r: 8, c: 3 }, e: { r: 8, c: 4 } },
-      // G9:H9
       { s: { r: 8, c: 6 }, e: { r: 8, c: 7 } },
-      // B9:B17
       { s: { r: 8, c: 1 }, e: { r: 16, c: 1 } },
-      // B18:B19
       { s: { r: 17, c: 1 }, e: { r: 18, c: 1 } },
-      // B20:E20
       { s: { r: 19, c: 1 }, e: { r: 19, c: 4 } },
-      // G20:H20
       { s: { r: 19, c: 6 }, e: { r: 19, c: 7 } },
-      // B21:H21
       { s: { r: 20, c: 1 }, e: { r: 20, c: 7 } },
     ];
 
@@ -1549,8 +1586,12 @@
       return;
     }
 
-    // payslipPreview를 캡처
     const node = $("payslipPreview");
+    if (!node) {
+      alert("임금명세서 미리보기 영역(payslipPreview)을 찾지 못했습니다.");
+      return;
+    }
+
     const scale = 2;
 
     const canvas = await window.html2canvas(node, {
@@ -1567,33 +1608,35 @@
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
 
-    // 이미지 비율 유지해서 A4에 맞추기
     const imgProps = pdf.getImageProperties(imgData);
-    const imgW = pageWidth - 20; // 좌우 10mm 마진
+    const imgW = pageWidth - 20;
     const imgH = (imgProps.height * imgW) / imgProps.width;
 
-    let y = 10;
     if (imgH <= pageHeight - 20) {
-      pdf.addImage(imgData, "PNG", 10, y, imgW, imgH);
+      pdf.addImage(imgData, "PNG", 10, 10, imgW, imgH);
     } else {
-      // 여러 페이지로 분할 (세로 긴 경우)
       let remaining = imgH;
-      let posY = 10;
       let srcY = 0;
-      const ratio = imgProps.width / imgW; // px per mm (approx)
+      const ratio = imgProps.width / imgW;
       const pageUsableH = pageHeight - 20;
 
       while (remaining > 0) {
         const sliceH = Math.min(pageUsableH, remaining);
-        // 캔버스에서 slice를 잘라 새 이미지로
+
         const sliceCanvas = document.createElement("canvas");
         sliceCanvas.width = canvas.width;
         sliceCanvas.height = Math.floor(sliceH * ratio);
         const ctx = sliceCanvas.getContext("2d");
-        ctx.drawImage(canvas, 0, Math.floor(srcY * ratio), canvas.width, sliceCanvas.height, 0, 0, canvas.width, sliceCanvas.height);
-        const sliceData = sliceCanvas.toDataURL("image/png");
+        ctx.drawImage(
+          canvas,
+          0, Math.floor(srcY * ratio),
+          canvas.width, sliceCanvas.height,
+          0, 0,
+          canvas.width, sliceCanvas.height
+        );
 
-        pdf.addImage(sliceData, "PNG", 10, posY, imgW, sliceH);
+        const sliceData = sliceCanvas.toDataURL("image/png");
+        pdf.addImage(sliceData, "PNG", 10, 10, imgW, sliceH);
 
         remaining -= sliceH;
         srcY += sliceH;
@@ -1608,12 +1651,6 @@
   }
 
   // ---------- init ----------
-  function computeAndRenderAll() {
-    renderSchedule();
-    renderCalendar();
-    computeAndRender();
-  }
-
   function initLibraryWarning() {
     const libs = isLibReady();
     const warn = [];
@@ -1621,13 +1658,12 @@
     if (!libs.okCanvas) warn.push("html2canvas 로드 실패");
     if (!libs.okJsPdf) warn.push("jsPDF 로드 실패");
 
-    $("libWarn").textContent = warn.length ? `⚠ ${warn.join(" / ")} · 인터넷 연결 확인` : "";
+    setText("libWarn", warn.length ? `⚠ ${warn.join(" / ")} · 인터넷 연결 확인` : "");
   }
 
   function init() {
     loadState();
 
-    // 기본값 채우기(저장값이 없거나 일부 누락 시)
     if (!state.payMonth) state.payMonth = defaultPayMonth();
     if (!state.payDate) state.payDate = defaultPayDateForMonth(state.payMonth);
 
@@ -1642,13 +1678,11 @@
     initLibraryWarning();
     computeAndRender();
 
-    // grids rebuilt after initial render
     rebuildGridMap("schedule");
     rebuildGridMap("calendar");
     rebuildGridMap("calendarHours");
   }
 
-  // Actually call init
   window.addEventListener("DOMContentLoaded", init);
 
 })();
