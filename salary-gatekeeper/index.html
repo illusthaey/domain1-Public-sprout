@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light" />
-  <title>출입문개폐전담원 월별 인건비 지출서식</title>
+  <title>출입문개폐전담원 월별 인건비 산출내역역</title>
 
   <link rel="icon" href="/static/favicon.ico" />
   <link rel="stylesheet" href="/static/style.css" />
@@ -226,8 +226,16 @@
         </div>
       </div>
 
+      <div class="row gap" style="flex-wrap:wrap;">
+        <button type="button" class="btn primary" id="downloadTemplateBtn">업로드용 엑셀 서식 다운로드</button>
+        <label class="btn" style="cursor:pointer;">
+          엑셀 파일 불러오기
+          <input id="uploadXlsx" type="file" accept=".xlsx,.xls" style="display:none;" />
+        </label>
+      </div>
+      
       <div class="row between" style="margin-top:14px;">
-          <button type="button" class="btn" id="resetAllBtn">초기화</button>
+          <button type="button" class="btn" id="resetAllBtn">초기화하기</button>
       </div>
     </section>
 
@@ -390,7 +398,7 @@
 
     <!-- ===================== 엑셀/파일 ===================== -->
     <section class="section">
-      <h2 class="local-h2">5) 엑셀 업로드/다운로드 및 저장</h2>
+      <h2 class="local-h2">5. 결과 산출 및 파일 저장</h2>
       <hr/>
 
       <div class="row gap" style="flex-wrap:wrap;">
