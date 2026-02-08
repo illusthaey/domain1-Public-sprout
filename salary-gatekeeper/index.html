@@ -324,7 +324,7 @@
       <div class="card">
         <h3 class="local-h3">건강보험료</h3>
         <div class="muted">
-          ·체크 시, 지급총액*고용보험요율로 금액 자동 산출 (필요시 수기로 수정 가능)
+          ·체크 시, 지급총액*고용보험요율로 금액 자동 산출 (필요시 수정 가능)
         </div>
         <div class="row gap">
           <label class="row gap"><input id="deductHealthOn" type="checkbox" />
@@ -333,46 +333,51 @@
           
           <label>고용보험요율 <input id="healthRate" type="number" step="0.00001" class="numeric" style="width:120px;" /></label>
           <label>금액(원) <input id="healthAmt" type="number" class="numeric" style="width:140px;" /></label>
-          <button type="button" class="btn" id="healthAutoBtn">변경내역 반영하기</button>
+          <button type="button" class="btn" id="healthAutoBtn">변경요율 적용하기</button>
           
         </div>
       </div>
 
       <div class="card">
         <h3 class="local-h3">장기요양보험료</h3>
+        <div class="muted">
+          ·체크 시, 건강보험료*장기요양보험요율로 금액 자동 산출 (필요시 수정 가능)
+        </div>
         <div class="row gap">
           <label class="row gap"><input id="deductLtCareOn" type="checkbox" />
             <span>공제내역 입력하기</span></label>
           <label>장기요양보험요율 <input id="ltCareRate" type="number" step="0.00001" class="numeric" style="width:120px;" /></label>
           <label>금액(원) <input id="ltCareAmt" type="number" class="numeric" style="width:140px;" /></label>
-          <button type="button" class="btn" id="ltCareAutoBtn">변경내역 반영하기</button>
+          <button type="button" class="btn" id="ltCareAutoBtn">변경요율 적용하기</button>
         </div>
       </div>
 
       <div class="card">
-        <h3 class="local-h3">고용보험(개인부담)</h3>
+        <h3 class="local-h3">고용보험료</h3>
+        <div class="muted">
+          ·체크 시, 지급총액*고용보험요율로 금액 자동 산출 (필요시 수정 가능)
+        </div>
         <div class="row gap">
           <label class="row gap"><input id="deductEmpOn" type="checkbox" /><span>공제</span></label>
-          <label>요율 <input id="empRate" type="number" step="0.00001" class="numeric" style="width:120px;" /></label>
+          <label>고용보험요율 <input id="empRate" type="number" step="0.00001" class="numeric" style="width:120px;" /></label>
           <label>금액(원) <input id="empAmt" type="number" class="numeric" style="width:140px;" /></label>
-          <button type="button" class="btn-lightgrey" id="empAutoBtn">자동</button>
+          <button type="button" class="btn" id="empAutoBtn">변경요율 적용하기</button>
         </div>
-        <div class="muted">·공제 체크 시: 급여총액×요율로 자동 산출(수기 입력 가능)</div>
       </div>
 
       <div class="card">
-        <h3 class="local-h3">그 외 공제(수기)</h3>
+        <h3 class="local-h3">그 외 공제내역 (수기입력)</h3>
         <div class="grid two">
           <div class="field">
             <label for="incomeTax">소득세</label>
             <input id="incomeTax" type="number" class="numeric" min="0" step="10" />
           </div>
           <div class="field">
-            <label for="localTax">주민세</label>
+            <label for="localTax">지방소득세</label>
             <input id="localTax" type="number" class="numeric" min="0" step="10" />
           </div>
           <div class="field">
-            <label for="pension">국민연금</label>
+            <label for="pension">국민연금보험료</label>
             <input id="pension" type="number" class="numeric" min="0" step="10" />
           </div>
           <div class="field">
