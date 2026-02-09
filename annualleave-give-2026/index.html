@@ -39,6 +39,23 @@
     .site-header .shell,
     .site-header h1,
     .site-header .subtitle { text-align:left !important; }
+
+    /* Drag & Drop */
+    .dropzone {
+      border: 2px dashed #d4d4d8;
+      border-radius: 14px;
+      padding: 14px 16px;
+      background: #fafafa;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .dropzone:hover { background:#f3f4f6; }
+    .dropzone.dragover {
+      border-color: #111;
+      background: #eef2ff;
+    }
+    .dz-title { font-weight: 700; color:#111; margin:0 0 4px; }
+    .dz-desc { margin:0; color:#555; font-size:0.95rem; }
   </style>
 </head>
 
@@ -112,11 +129,16 @@
 
         <div id="hrFileBox" style="margin-top:12px;">
           <div class="grid two">
-            <label class="stack">
-              <span class="mini">인사기록 조회 엑셀(.xlsx)</span>
-              <input type="file" id="hrFile" accept=".xlsx,.xls" />
-            </label>
+            <div>
+              <div class="dropzone" id="hrDrop">
+                <p class="dz-title">인사기록 엑셀 파일 업로드하기</p>
+                <p class="dz-desc">(드래그 & 드롭 가능)</p>
+              </div>
+              <input type="file" id="hrFile" accept=".xlsx,.xls" class="hidden" multiple />
+              <div class="muted" style="margin-top:8px;">※ 파일 선택 후 <b>인사 정보 반영하기</b>를 눌러주세요.</div>
+            </div>
           </div>
+
           <div class="row gap" style="margin-top:10px;">
             <button class="btn primary" id="btnLoadHr">인사 정보 반영하기</button>
             <button class="btn" id="btnClearHr">내역 초기화</button>
@@ -195,9 +217,10 @@
     <section class="section">
       <h2>3. 근무상황(복무) 입력</h2>
       <p class="muted">
-        ·나이스에서 개인별 근무상황 조회내역 엑셀 파일 수정 없이 그대로 업로드해주십시오. 수기 입력도 가능합니다.<br/> 
-        ·파일 업로드 시 전체 복무 사항 자동 취합·분류함.<br/> 
-        ·특이사항 예외사항 있는 경우에는 수기 입력하쇼.
+        ·나이스에서 개인별 근무상황 조회내역 엑셀 파일 수정 없이 그대로 업로드해주십시오. 수기 입력도 가능합니다.<br/>
+        ·파일 업로드 시 전체 복무 사항 자동 취합·분류함.<br/>
+        ·특이사항 예외사항 있는 경우에는 수기 입력하쇼.<br/>
+        <span class="muted">※ <b>연차 사용일수 집계</b>는 <b>결재상태가 “완결”인 건만</b> 집계합니다.</span>
       </p>
 
       <div class="card">
@@ -208,10 +231,15 @@
 
         <div id="workFileBox" style="margin-top:12px;">
           <div class="grid two">
-            <label class="stack">
-              <span class="mini">근무상황목록 엑셀, CSV (여러개 업로드 가능)</span>
-              <input type="file" id="workFiles" accept=".xlsx,.xls,.csv" multiple />
-            </label>
+            <div>
+              <div class="dropzone" id="workDrop">
+                <p class="dz-title">근무상황목록 파일 업로드 (엑셀/CSV)</p>
+                <p class="dz-desc">(여러 개 가능 · 드래그 & 드롭 가능)</p>
+              </div>
+              <input type="file" id="workFiles" accept=".xlsx,.xls,.csv" multiple class="hidden" />
+              <div class="muted" style="margin-top:8px;">※ 파일 선택 후 <b>복무사항 불러오기</b>를 눌러주세요.</div>
+            </div>
+
             <div class="msg warn">
               <div><b>안내</b></div>
               <ul>
@@ -292,11 +320,11 @@
           <div class="msg">
             <div><b>비상시근로자의 출근율</b></div>
             <ol>
-              <li>비상시근로자 기준으로 산정</li>
-              <li>상시근로자와 동일한 기준으로 산정</li>
-              <li>제외기간 미반영한 비상시직종 기준 (비례산정 관련)</li>
+              <li>출근율(학기중): 비상시근로자 기준으로 산정</li>
+              <li>출근율(연간): 연간 기준으로 산정(상시근로자와 동일한 분모)</li>
+              <li>출근율(비례산정): <b>학기중 출근율 80% 미만인 경우에만</b> 산정(제외기간 제거)</li>
             </ol>
-            <div class="muted">※상시근로자는 상시근로자 기준으로만 1회 산정하면 됨.</div>
+            <div class="muted">※상시근로자는 연간 출근율이 80% 미만일 때만 비례산정 출근율을 산정합니다.</div>
           </div>
 
           <div class="msg">
@@ -333,9 +361,9 @@
               <th class="nowrap">직군</th>
               <th class="nowrap">근무형태</th>
               <th class="nowrap right">근속</th>
-              <th class="nowrap right">출근율(학기)</th>
+              <th class="nowrap right">출근율(학기중)</th>
               <th class="nowrap right">출근율(연간)</th>
-              <th class="nowrap right">출근율(재산정)</th>
+              <th class="nowrap right">출근율(비례산정)</th>
               <th class="nowrap right">기본+가산</th>
               <th class="nowrap right">최종부여</th>
               <th class="nowrap">판정</th>
@@ -346,13 +374,24 @@
       </div>
 
       <h3>개인별 상세(복무 취합/분류 포함)</h3>
+
+      <!-- 안내사항: 여기 한 번만 -->
+      <div id="detailNotice" class="msg warn hidden" style="margin-top:10px;">
+        <div><b>안내 사항</b></div>
+        <ul>
+          <li>“검토”로 분류된 항목은 담당자가 직접 반영 여부를 확인하세요.</li>
+          <li>비상시근로자의 방학중 근무(분자 가산)는 “방학기간과 겹치는 유급근무”에만 체크하기를 권장합니다.</li>
+          <li>연차 사용일수 집계는 결재상태가 <b>“완결”</b>인 내역만 집계합니다.</li>
+        </ul>
+      </div>
+
       <div id="detailBox" class="stack"></div>
     </section>
   </main>
 
   <div class="home-link-wrap">
-  <a class="btn" href="/">메인으로 돌아가기</a>
-</div>
+    <a class="btn" href="/">메인으로 돌아가기</a>
+  </div>
 
 <script>
 (() => {
@@ -383,7 +422,7 @@
     deemedKeywords: [
       "연가", "연차", "공가", "특별휴가", "경조", "유급병가", "병가",
       "산재", "요양", "출산", "유산", "사산", "배우자출산",
-      "예비군", "민방위", "동원", "공민권", "보상휴가", "휴일대체",
+      "예비군", "민방위", "동원", "공민권", "보상휴가", "보상휴무", "휴일대체",
       "가족돌봄휴가", "생리휴가", "난임", "임신기", "육아기"
     ],
     creditKeywords: [
@@ -407,6 +446,7 @@
     records: [],
     results: [],
     lastRunAt: null,
+    selectedFiles: { hr: [], work: [] },
   };
 
   const $ = (sel) => document.querySelector(sel);
@@ -532,7 +572,7 @@
         <li>방학일수(토요일 제외): <b>${sets.vacCount}</b>일</li>
         <li>학기 총일수(토요일 제외, 방학 제외): <b>${sets.semCount}</b>일</li>
       </ul>
-      <div class="muted">※ 방학 입력이 없으면 비상시 출근율(학기/연간) 산정 정확도가 저하됩니다.</div>
+      <div class="muted">※ 방학 입력이 없으면 비상시 출근율(학기중/연간) 산정 정확도가 저하됩니다.</div>
     `);
   }
 
@@ -675,7 +715,10 @@
       endUTC: range.end,
       type: rec.type || "",
       reason: rec.reason || "",
-      minutes: rec.minutes ?? null,
+      minutes: (rec.minutes == null ? null : Number(rec.minutes)),
+      rawDur: rec.rawDur || "",
+      approvalStatus: rec.approvalStatus || "",
+      sourceFile: rec.sourceFile || "",
       autoClass: autoClassify(rec.type, rec.reason),
       finalClass: rec.finalClass || null,
       credit: !!rec.credit
@@ -705,7 +748,8 @@
     if (r.minutes == null) return count * dailyMinutes;
 
     const cap = count * dailyMinutes;
-    return Math.max(0, Math.min(cap, Number(r.minutes) || 0));
+    const v = Number(r.minutes) || 0;
+    return Math.max(0, Math.min(cap, v));
   }
 
   function safeDiv(a, b) {
@@ -713,6 +757,84 @@
     return a / b;
   }
 
+  // ==========================
+  // 연차 사용일수(완결만) 집계
+  // ==========================
+  function normalizeText(s) {
+    return String(s || "").replace(/\s+/g, "").trim();
+  }
+
+  function isFinalApprovedStatus(statusRaw) {
+    const t = normalizeText(statusRaw);
+    if (!t) return false;
+    if (/(취소|회수|반려|철회|삭제)/.test(t)) return false;
+    return t.includes("완결");
+  }
+
+  function classifyAnnualLeaveKind(typeRaw) {
+    const t = normalizeText(typeRaw);
+    if (!t) return null;
+
+    // 병가/기타 배제(너무 넓게 잡으면 오염됨)
+    if (/(병가|병지각|병조퇴|병외출|유급병가|무급병가|질병)/.test(t) || t.startsWith("병")) return null;
+
+    if (t.includes("반일연차") || t.includes("반차") || t.includes("반일연가")) return "HALF";
+
+    const isAnnual = (t.includes("연차") || t === "연가" || t.includes("연가"));
+    if (!isAnnual) return null;
+
+    if (t.includes("지각")) return "LATE";
+    if (t.includes("조퇴")) return "EARLY";
+    if (t.includes("외출")) return "OUT";
+
+    return "FULL";
+  }
+
+  function minutesToDHM(mins, dailyMinutes) {
+    const m = Math.max(0, Math.round(mins || 0));
+    const dm = Math.max(1, Math.round(dailyMinutes || 480));
+
+    const days = Math.floor(m / dm);
+    const rem = m - days * dm;
+    const hours = Math.floor(rem / 60);
+    const minutes = rem - hours * 60;
+
+    return { days, hours, minutes };
+  }
+
+  function fmtDHM(x) {
+    if (!x) return "0일";
+    const parts = [];
+    parts.push(`${x.days}일`);
+    if (x.hours) parts.push(`${x.hours}시간`);
+    if (x.minutes) parts.push(`${x.minutes}분`);
+    return parts.join(" ");
+  }
+
+  function computeAnnualLeaveUsageSummary(workerKey, dailyMinutes) {
+    if (!state.calendar.sets) buildCalendarSets();
+    const sets = state.calendar.sets;
+
+    const byKind = { FULL:0, HALF:0, LATE:0, EARLY:0, OUT:0 };
+    let total = 0;
+
+    const recs = state.records.filter(r => r.workerKey === workerKey);
+    for (const r of recs) {
+      const kind = classifyAnnualLeaveKind(r.type);
+      if (!kind) continue;
+      if (!isFinalApprovedStatus(r.approvalStatus)) continue;
+
+      const mins = computeRecordMinutesOnSet(r, sets.fullSet, dailyMinutes);
+      total += mins;
+      byKind[kind] += mins;
+    }
+
+    return { total, byKind };
+  }
+
+  // ==========================
+  // 출근율/연차부여 계산
+  // ==========================
   function baseDaysForWorker(w, rates) {
     const rFull = rates.rateFull ?? 0;
     const isEmergency = (w.pattern === "emergency");
@@ -743,8 +865,8 @@
 
     for (const r of workerRecords) {
       const cls = recordClass(r);
-      const mFull = computeRecordMinutesOnSet(r, sets.fullSet, dailyMinutes);
 
+      const mFull = computeRecordMinutesOnSet(r, sets.fullSet, dailyMinutes);
       if (cls === "excluded") excludedFull += mFull;
       if (cls === "absence") absenceFull += mFull;
 
@@ -760,10 +882,15 @@
 
     const fullTotal = sets.fullCount * dailyMinutes;
 
+    // 상시
     if (w.pattern !== "emergency") {
       const attended = Math.max(0, fullTotal - excludedFull - absenceFull);
       const rateFull = safeDiv(attended, fullTotal);
-      const rateRecalcFull = safeDiv(attended, Math.max(1, fullTotal - excludedFull));
+
+      // 비례산정 출근율: 연간 출근율 80% 미만인 경우에만 계산
+      const rateProportional = (rateFull < 0.8)
+        ? safeDiv(attended, Math.max(1, fullTotal - excludedFull))
+        : null;
 
       return {
         dailyMinutes,
@@ -776,18 +903,22 @@
         attendedSem: null,
         rateSemester: null,
         rateFull,
-        rateRecalcSemester: null,
-        rateRecalcFull
+        rateProportional
       };
     }
 
+    // 비상시
     const semTotal = sets.semCount * dailyMinutes;
     const attendedSem = Math.max(0, semTotal - excludedSem - absenceSem);
     const attendedFull = Math.max(0, attendedSem + creditVac);
 
     const rateSemester = safeDiv(attendedSem, semTotal);
-    const rateRecalcSemester = safeDiv(attendedSem, Math.max(1, semTotal - excludedSem));
     const rateFull = safeDiv(attendedFull, fullTotal);
+
+    // 비례산정 출근율: 학기중 출근율 80% 미만인 경우에만 계산
+    const rateProportional = (rateSemester < 0.8)
+      ? safeDiv(attendedSem, Math.max(1, semTotal - excludedSem))
+      : null;
 
     return {
       dailyMinutes,
@@ -800,8 +931,7 @@
       attendedSem,
       rateSemester,
       rateFull,
-      rateRecalcSemester,
-      rateRecalcFull: null
+      rateProportional
     };
   }
 
@@ -915,43 +1045,45 @@
       };
     }
 
+    // 상시
     if (!isEmergency) {
       const rate1 = rates.rateFull ?? 0;
-      const rate2 = rates.rateRecalcFull ?? 0;
+      const rateP = rates.rateProportional ?? 0;
 
       if (rate1 >= 0.8) {
         return { workerKey: w.key, baseDays, addDays: w.addDays ?? 0, standardDays: standard, finalDays: standard, finalHours: 0, method: "정상부여(연간 출근율 80% 이상)", note: "", rates };
       }
 
-      if (rate2 >= 0.8) {
+      if (rates.rateProportional != null && rateP >= 0.8) {
         const fullDays = state.calendar.sets ? state.calendar.sets.fullCount : 0;
         const excludedDays = Math.round((rates.excludedFull ?? 0) / rates.dailyMinutes);
         const ratio = safeDiv(Math.max(0, fullDays - excludedDays), Math.max(1, fullDays));
         const raw = standard * ratio;
         const rounded = roundToOneDecimalDays(raw);
         const dh = daysToDaysHours(rounded, (w.dailyHours || DEFAULT_DAILY_HOURS));
-        return { workerKey: w.key, baseDays, addDays: w.addDays ?? 0, standardDays: standard, finalDays: dh.days, finalHours: dh.hours, method: "비례부여(제외기간 재산정 80% 충족)", note: `비례: ${standard} × (${fullDays - excludedDays}/${fullDays}) = ${rounded}일`, rates };
+        return { workerKey: w.key, baseDays, addDays: w.addDays ?? 0, standardDays: standard, finalDays: dh.days, finalHours: dh.hours, method: "비례부여(비례산정 출근율 80% 충족)", note: `비례: ${standard} × (${fullDays - excludedDays}/${fullDays}) = ${rounded}일`, rates };
       }
 
       const monthly = calcMonthlyAccrual(w);
       return { workerKey: w.key, baseDays, addDays: w.addDays ?? 0, standardDays: standard, finalDays: monthly.days, finalHours: monthly.hours, method: "80% 미달 → 개근월수(1개월 1일)", note: monthly.note, rates };
     }
 
+    // 비상시
     const rateSem = rates.rateSemester ?? 0;
-    const rateSem2 = rates.rateRecalcSemester ?? 0;
+    const rateP = rates.rateProportional ?? 0;
 
     if (rateSem >= 0.8) {
-      return { workerKey: w.key, baseDays, addDays: w.addDays ?? 0, standardDays: standard, finalDays: standard, finalHours: 0, method: "정상부여(학기 출근율 80% 이상)", note: "", rates };
+      return { workerKey: w.key, baseDays, addDays: w.addDays ?? 0, standardDays: standard, finalDays: standard, finalHours: 0, method: "정상부여(학기중 출근율 80% 이상)", note: "", rates };
     }
 
-    if (rateSem2 >= 0.8) {
+    if (rates.rateProportional != null && rateP >= 0.8) {
       const semDays = state.calendar.sets ? state.calendar.sets.semCount : 0;
       const excludedDays = Math.round((rates.excludedSem ?? 0) / rates.dailyMinutes);
       const ratio = safeDiv(Math.max(0, semDays - excludedDays), Math.max(1, semDays));
       const raw = standard * ratio;
       const rounded = roundToOneDecimalDays(raw);
       const dh = daysToDaysHours(rounded, (w.dailyHours || DEFAULT_DAILY_HOURS));
-      return { workerKey: w.key, baseDays, addDays: w.addDays ?? 0, standardDays: standard, finalDays: dh.days, finalHours: dh.hours, method: "비례부여(제외기간 제거 후 학기 80% 충족)", note: `비례: ${standard} × (${semDays - excludedDays}/${semDays}) = ${rounded}일`, rates };
+      return { workerKey: w.key, baseDays, addDays: w.addDays ?? 0, standardDays: standard, finalDays: dh.days, finalHours: dh.hours, method: "비례부여(비례산정 출근율 80% 충족)", note: `비례: ${standard} × (${semDays - excludedDays}/${semDays}) = ${rounded}일`, rates };
     }
 
     const monthly = calcMonthlyAccrual(w);
@@ -980,6 +1112,7 @@
         <td class="nowrap">${escapeHtml(range)}</td>
         <td class="nowrap">${escapeHtml(rec.type || "")}</td>
         <td class="nowrap">${escapeHtml(rec.reason || "")}</td>
+        <td class="nowrap">${escapeHtml(rec.approvalStatus || "")}</td>
         <td class="nowrap">${escapeHtml(CLASS_LABEL[auto] || auto)}</td>
         <td class="nowrap">
           <select data-rec-id="${rec.id}" data-field="finalClass">
@@ -998,6 +1131,129 @@
         </td>
       </tr>
     `;
+  }
+
+  function safeFilename(s) {
+    return String(s || "")
+      .replace(/[\\\/:*?"<>|]/g, "_")
+      .replace(/\s+/g, "_")
+      .slice(0, 60);
+  }
+
+  function ensureXLSX() {
+    if (typeof XLSX === "undefined") {
+      throw new Error("XLSX 라이브러리를 찾을 수 없습니다. (CDN 차단 여부 확인 필요)");
+    }
+  }
+
+  function downloadWorkerDetailXlsx(workerKey) {
+    ensureXLSX();
+
+    const w = state.workers.get(workerKey);
+    const rr = state.results.find(x => x.workerKey === workerKey);
+
+    if (!w || !rr) {
+      alert("개인별 상세를 저장하려면 먼저 계산을 실행해주세요.");
+      return;
+    }
+
+    if (!state.calendar.sets) buildCalendarSets();
+    const sets = state.calendar.sets;
+
+    const dailyMinutes = rr.rates.dailyMinutes || Math.round(Number(w.dailyHours || DEFAULT_DAILY_HOURS) * 60);
+    const records = state.records.filter(x => x.workerKey === workerKey).sort((a,b) => a.startUTC - b.startUTC);
+
+    // 분류 합계
+    const sum = { deemed:0, excluded:0, absence:0, review:0, creditVac:0, total: sets.fullCount * dailyMinutes };
+    for (const rec of records) {
+      const cls = recordClass(rec);
+      const mFull = computeRecordMinutesOnSet(rec, sets.fullSet, dailyMinutes);
+      sum[cls] = (sum[cls] || 0) + mFull;
+
+      if (rec.credit) {
+        sum.creditVac += computeRecordMinutesOnSet(rec, sets.vacationSet, dailyMinutes);
+      }
+    }
+
+    // 연차 사용(완결만)
+    const leaveUsage = computeAnnualLeaveUsageSummary(workerKey, dailyMinutes);
+
+    const rateSem = (rr.rates.rateSemester == null) ? "-" : pct(rr.rates.rateSemester);
+    const rateFull = pct(rr.rates.rateFull ?? 0);
+    const rateProp = (rr.rates.rateProportional == null) ? "-" : pct(rr.rates.rateProportional);
+
+    const finalText = (rr.finalHours > 0) ? `${rr.finalDays}일 ${rr.finalHours}시간` : `${rr.finalDays}일`;
+    const stdText = `${rr.baseDays}+${rr.addDays}=${rr.standardDays}`;
+
+    const ss = state.calendar.summerStart ? utcToYmd(state.calendar.summerStart) : "";
+    const se = state.calendar.summerEnd ? utcToYmd(state.calendar.summerEnd) : "";
+    const ws = state.calendar.winterStart ? utcToYmd(state.calendar.winterStart) : "";
+    const we = state.calendar.winterEnd ? utcToYmd(state.calendar.winterEnd) : "";
+
+    const wb = XLSX.utils.book_new();
+
+    const rows1 = [];
+    rows1.push(["항목","값"]);
+    rows1.push(["나이스개인번호", w.key || ""]);
+    rows1.push(["성명", w.name || ""]);
+    rows1.push(["직군", w.group==="special" ? "특수운영직군" : "교육공무직"]);
+    rows1.push(["근무형태", w.pattern==="emergency" ? "방학중비상시" : "상시"]);
+    rows1.push(["최초임용일", w.hireDateUTC ? utcToYmd(w.hireDateUTC) : ""]);
+    rows1.push(["1일 소정근로시간", String(w.dailyHours ?? DEFAULT_DAILY_HOURS)]);
+    rows1.push(["근속연수(2026-03-01)", String(w.serviceYears ?? 0) + "년"]);
+    rows1.push(["학사일정(여름)", (ss && se) ? `${ss}~${se}` : ""]);
+    rows1.push(["학사일정(겨울)", (ws && we) ? `${ws}~${we}` : ""]);
+    rows1.push(["출근율(학기중)", rateSem]);
+    rows1.push(["출근율(연간)", rateFull]);
+    rows1.push(["출근율(비례산정)", rateProp]);
+    rows1.push(["기본+가산(상한25)", stdText]);
+    rows1.push(["최종부여", finalText]);
+    rows1.push(["판정", rr.method || ""]);
+    rows1.push(["비고", rr.note || ""]);
+    rows1.push(["연차 사용(완결만 집계)", fmtDHM(minutesToDHM(leaveUsage.total, dailyMinutes))]);
+    rows1.push(["복무-산정제외(연간)", minutesToDays(sum.excluded, dailyMinutes)]);
+    rows1.push(["복무-결근성(연간)", minutesToDays(sum.absence, dailyMinutes)]);
+    rows1.push(["복무-출근간주(연간)", minutesToDays(sum.deemed, dailyMinutes)]);
+    rows1.push(["복무-검토(연간)", minutesToDays(sum.review, dailyMinutes)]);
+    if (w.pattern === "emergency") {
+      rows1.push(["비상시 방학중 근무(분자 가산)", minutesToDays(sum.creditVac, dailyMinutes)]);
+    }
+
+    const ws1 = XLSX.utils.aoa_to_sheet(rows1);
+    XLSX.utils.book_append_sheet(wb, ws1, "요약");
+
+    const rows2 = [];
+    rows2.push(["기간시작","기간종료","종별","사유","결재상태","자동분류","최종분류","방학중근무가산","분(저장값)","원본시간/일수","파일"]);
+    for (const rec of records) {
+      const auto = rec.autoClass || "review";
+      const fin = rec.finalClass || "auto";
+      rows2.push([
+        utcToYmd(rec.startUTC),
+        utcToYmd(rec.endUTC),
+        rec.type || "",
+        rec.reason || "",
+        rec.approvalStatus || "",
+        CLASS_LABEL[auto] || auto,
+        fin === "auto" ? "자동" : (CLASS_LABEL[fin] || fin),
+        rec.credit ? "Y" : "",
+        (rec.minutes == null ? "" : rec.minutes),
+        rec.rawDur || "",
+        rec.sourceFile || ""
+      ]);
+    }
+
+    const ws2 = XLSX.utils.aoa_to_sheet(rows2);
+    XLSX.utils.book_append_sheet(wb, ws2, "복무내역");
+
+    const out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `2026학년도_개인별상세_${safeFilename(w.name)}_${safeFilename(w.key)}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   }
 
   function renderDetail() {
@@ -1032,12 +1288,12 @@
 
       const rateSem = (rr.rates.rateSemester == null) ? "-" : pct(rr.rates.rateSemester);
       const rateFull = pct(rr.rates.rateFull ?? 0);
-      const rateRe = (rr.rates.rateRecalcSemester == null)
-        ? (rr.rates.rateRecalcFull == null ? "-" : pct(rr.rates.rateRecalcFull))
-        : pct(rr.rates.rateRecalcSemester);
+      const rateProp = (rr.rates.rateProportional == null) ? "-" : pct(rr.rates.rateProportional);
 
       const final = (rr.finalHours > 0) ? `${rr.finalDays}일 ${rr.finalHours}시간` : `${rr.finalDays}일`;
       const std = `${rr.baseDays}+${rr.addDays}=${rr.standardDays}`;
+
+      const leaveUsage = computeAnnualLeaveUsageSummary(rr.workerKey, dailyMinutes);
 
       const details = document.createElement("details");
       details.className = "card";
@@ -1051,11 +1307,16 @@
           · 최종 <b>${final}</b> (${escapeHtml(rr.method)})
         </summary>
 
+        <div class="row gap" style="margin-top:10px;">
+          <button class="btn" data-action="downloadDetail" data-worker="${escapeHtml(rr.workerKey)}">개인별 상세 엑셀 저장</button>
+        </div>
+
         <div style="margin-top:12px;" class="grid two">
           <div class="msg">
             <div><b>기본/가산</b>: ${std} (상한 25 적용)</div>
             <div><b>근속</b>: ${escapeHtml(String(w?.serviceYears ?? 0))}년 (기준일 2026-03-01)</div>
-            <div><b>출근율</b>: 학기 ${rateSem} · 연간 ${rateFull} · 재산정 ${rateRe}</div>
+            <div><b>출근율</b>: 학기중 ${rateSem} · 연간 ${rateFull} · 비례산정 ${rateProp}</div>
+            <div><b>연차 사용(완결만)</b>: ${fmtDHM(minutesToDHM(leaveUsage.total, dailyMinutes))}</div>
             ${rr.note ? `<div class="muted">※ ${escapeHtml(rr.note)}</div>` : ""}
           </div>
 
@@ -1074,14 +1335,6 @@
 
         <hr />
 
-        <div class="msg warn">
-          <div><b>안내 사항</b></div>
-          <ul>
-            <li>확인 또는 검토 필요로 분류된 항목은 담당자가 직접 반영 여부를 확인하세요.</li>
-            <li>비상시근로자의 방학근무로 인한 분자 가산은 “방학기간과 겹치는 유급근무”에만 체크하기를 권장드립니다.</li>
-          </ul>
-        </div>
-
         <h4>복무 전체 목록(최종분류 수정 가능)</h4>
         <div class="table-wrap">
           <table class="sheetlike table-compact">
@@ -1090,6 +1343,7 @@
                 <th class="nowrap">기간</th>
                 <th class="nowrap">종별</th>
                 <th class="nowrap">사유</th>
+                <th class="nowrap">결재상태</th>
                 <th class="nowrap">자동</th>
                 <th class="nowrap">최종</th>
                 <th class="nowrap">비상시직종방학추가근무</th>
@@ -1106,6 +1360,7 @@
       box.appendChild(details);
     }
 
+    // 이벤트 바인딩(복무 수정/삭제)
     box.querySelectorAll("[data-rec-id]").forEach(el => {
       const rid = el.getAttribute("data-rec-id");
       const field = el.getAttribute("data-field");
@@ -1136,17 +1391,33 @@
         });
       }
     });
+
+    // 개인별 상세 엑셀 저장
+    box.querySelectorAll("button[data-action='downloadDetail']").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const wk = btn.getAttribute("data-worker");
+        if (!wk) return;
+        try { downloadWorkerDetailXlsx(wk); } catch (err) { alert(err.message); }
+      });
+    });
   }
 
   function renderResults() {
     const tbody = $("#resultTable tbody");
     tbody.innerHTML = "";
 
+    const detailNotice = $("#detailNotice");
+
     if (!state.results || state.results.length === 0) {
       setMsg($("#resultSummary"), "warn", "계산 결과가 없습니다. <b>계산 실행</b>을 먼저 수행하세요.");
       $("#detailBox").innerHTML = "";
+      detailNotice.classList.add("hidden");
       return;
     }
+
+    detailNotice.classList.remove("hidden");
 
     const resArr = state.results.slice().sort((a,b) => {
       const wa = state.workers.get(a.workerKey);
@@ -1163,9 +1434,7 @@
       const w = state.workers.get(r.workerKey);
       const rateSem = (r.rates.rateSemester == null) ? "-" : pct(r.rates.rateSemester);
       const rateFull = pct(r.rates.rateFull ?? 0);
-      const rateRe = (r.rates.rateRecalcSemester == null)
-        ? (r.rates.rateRecalcFull == null ? "-" : pct(r.rates.rateRecalcFull))
-        : pct(r.rates.rateRecalcSemester);
+      const rateProp = (r.rates.rateProportional == null) ? "-" : pct(r.rates.rateProportional);
 
       const std = `${r.baseDays}+${r.addDays}=${r.standardDays}`;
       const final = (r.finalHours > 0) ? `${r.finalDays}일 ${r.finalHours}시간` : `${r.finalDays}일`;
@@ -1179,7 +1448,7 @@
         <td class="right nowrap">${escapeHtml(String(w?.serviceYears ?? 0))}년</td>
         <td class="right nowrap">${rateSem}</td>
         <td class="right nowrap">${rateFull}</td>
-        <td class="right nowrap">${rateRe}</td>
+        <td class="right nowrap">${rateProp}</td>
         <td class="right nowrap">${std}</td>
         <td class="right nowrap"><b>${final}</b></td>
         <td class="nowrap">${escapeHtml(r.method)}</td>
@@ -1188,12 +1457,6 @@
     }
 
     renderDetail();
-  }
-
-  function ensureXLSX() {
-    if (typeof XLSX === "undefined") {
-      throw new Error("XLSX 라이브러리를 찾을 수 없습니다. (CDN 차단 여부 확인 필요)");
-    }
   }
 
   function readFileAsArrayBuffer(file) {
@@ -1267,7 +1530,54 @@
     return null;
   }
 
-  async function loadHrFile(file) {
+  function safeNum(v, fallback = NaN) {
+    const n = Number(String(v ?? "").replace(/[^0-9.\-]/g, ""));
+    return Number.isFinite(n) ? n : fallback;
+  }
+
+  function parseRangeLoose(s) {
+    const str = String(s||"").trim();
+    if (!str) return null;
+    const parts = str.split(/~|〜/).map(x => x.trim()).filter(Boolean);
+    if (parts.length === 2) {
+      const a = parseDateLoose(parts[0]);
+      const b = parseDateLoose(parts[1]);
+      if (a && b) return { start: a, end: b };
+    }
+    const d = parseDateLoose(str);
+    if (d) return { start: d, end: d };
+    return null;
+  }
+
+  // "0.5일", "1일 2시간 30분", "3시간", "20분" 등을 분으로
+  function parseDurationToMinutes(cell, dailyMinutes) {
+    if (cell == null) return null;
+    const s = String(cell || "").trim();
+    if (!s) return null;
+
+    let days = null, hours = null, mins = null;
+
+    const md = s.match(/(-?\d+(?:\.\d+)?)\s*일/);
+    if (md) days = Number(md[1]);
+
+    const mh = s.match(/(-?\d+(?:\.\d+)?)\s*시간/);
+    if (mh) hours = Number(mh[1]);
+
+    const mm = s.match(/(-?\d+(?:\.\d+)?)\s*분/);
+    if (mm) mins = Number(mm[1]);
+
+    if (md || mh || mm) {
+      let total = 0;
+      if (days != null && Number.isFinite(days)) total += days * dailyMinutes;
+      if (hours != null && Number.isFinite(hours)) total += hours * 60;
+      if (mins != null && Number.isFinite(mins)) total += mins;
+      return Math.round(total);
+    }
+
+    return null;
+  }
+
+  async function loadHrFileSingle(file) {
     ensureXLSX();
     const buf = await readFileAsArrayBuffer(file);
     const wb = XLSX.read(buf, { type: "array" });
@@ -1280,7 +1590,7 @@
     const dataRows = rows.slice(headerIdx + 1).filter(r => Array.isArray(r) && r.some(x => String(x||"").trim() !== ""));
 
     const colName = findColumnIndex(headers, ["성명","이름"]);
-    const colPid  = findColumnIndex(headers, ["개인번호","사번","인적번호","개인번호(아이디)"]);
+    const colPid  = findColumnIndex(headers, ["개인번호","사번","인적번호","개인번호(아이디)","나이스개인번호"]);
     const colHire = findColumnIndex(headers, ["최초임용일","근무시작일","임용일","현소속교육청근무일","최초계약일","계약시작일"]);
     const colGroup = findColumnIndex(headers, ["직군","직군구분","직종구분","구분"]);
     const colJob = findColumnIndex(headers, ["직종","직종명"]);
@@ -1309,10 +1619,10 @@
 
       let dailyHours = DEFAULT_DAILY_HOURS;
       if (colDailyH >= 0) {
-        const v = Number(String(row[colDailyH]).replace(/[^0-9.]/g, ""));
+        const v = safeNum(row[colDailyH], NaN);
         if (Number.isFinite(v) && v > 0) dailyHours = v;
       } else if (colWeeklyH >= 0) {
-        const v = Number(String(row[colWeeklyH]).replace(/[^0-9.]/g, ""));
+        const v = safeNum(row[colWeeklyH], NaN);
         if (Number.isFinite(v) && v > 0) {
           dailyHours = Math.round((v / 5) * 10) / 10;
         }
@@ -1330,43 +1640,42 @@
       loaded++;
     }
 
-    renderWorkersTable();
-    renderWorkerSelect();
-
-    return { loaded, skipped, headers };
+    return { loaded, skipped };
   }
 
-  async function loadWorkFiles(files) {
-    ensureXLSX();
-    if (!files || files.length === 0) throw new Error("근무상황 파일이 선택되지 않았습니다.");
+  async function handleLoadHrFiles(files) {
+    if (!files || files.length === 0) throw new Error("인사기록 파일이 선택되지 않았습니다.");
+    let totalLoaded = 0;
+    let totalSkipped = 0;
+    const fail = [];
 
-    let totalRecs = 0;
-    let createdWorkers = 0;
-
-    for (const file of files) {
-      const ext = (file.name.split(".").pop() || "").toLowerCase();
-
-      if (ext === "csv") {
-        const text = await file.text();
-        const rows = csvToRows(text);
-        const { recs, newWorkers } = parseWorkRows(rows, file.name);
-        totalRecs += recs;
-        createdWorkers += newWorkers;
-        continue;
+    for (const f of files) {
+      try {
+        const out = await loadHrFileSingle(f);
+        totalLoaded += out.loaded;
+        totalSkipped += out.skipped;
+      } catch (e) {
+        fail.push(`${f.name}: ${e.message}`);
       }
-
-      const buf = await readFileAsArrayBuffer(file);
-      const wb = XLSX.read(buf, { type: "array" });
-      const rows = sheetToJson(wb);
-      const { recs, newWorkers } = parseWorkRows(rows, file.name);
-      totalRecs += recs;
-      createdWorkers += newWorkers;
     }
 
     renderWorkersTable();
     renderWorkerSelect();
 
-    return { totalRecs, createdWorkers };
+    const failHtml = fail.length
+      ? `<div class="msg err" style="margin-top:10px;"><b>실패 파일</b><ul>${fail.map(x => `<li>${escapeHtml(x)}</li>`).join("")}</ul></div>`
+      : "";
+
+    setMsg($("#hrMsg"), fail.length ? "warn" : "ok", `
+      <div><b>인사내역 파일 불러오기 성공</b></div>
+      <ul>
+        <li>처리 파일: ${files.length}개</li>
+        <li>로드(행 기준): ${totalLoaded}건</li>
+        <li>스킵(빈 성명 등): ${totalSkipped}건</li>
+      </ul>
+      <div class="muted">목록 행 자동 탐색함. 임의로 나이스 서식 변경한 경우 못 읽을 수도 있음.</div>
+      ${failHtml}
+    `);
   }
 
   function csvToRows(text) {
@@ -1393,26 +1702,41 @@
   }
 
   function parseWorkRows(rows, filename) {
-    const headerIdx = findHeaderRow(rows, ["성명", "기간", "종별", "근무", "복무"]);
+    const headerIdx = findHeaderRow(rows, ["성명", "종별", "근태", "기간", "일시", "결재상태", "복무"]);
     if (headerIdx < 0) throw new Error(`[${filename}] 헤더 행을 찾지 못했습니다.`);
 
     const headers = rows[headerIdx].map(x => String(x||"").trim());
     const dataRows = rows.slice(headerIdx + 1).filter(r => Array.isArray(r) && r.some(x => String(x||"").trim() !== ""));
 
     const colName = findColumnIndex(headers, ["성명","이름"]);
-    const colPid  = findColumnIndex(headers, ["개인번호","사번","인적번호"]);
-    const colType = findColumnIndex(headers, ["종별","복무종별","근무상황","근태종류","복무구분"]);
+    const colPid  = findColumnIndex(headers, ["개인번호","사번","인적번호","나이스개인번호"]);
+    const colType = findColumnIndex(headers, ["종별","복무종별","근무상황","근태종류","근태유형","복무구분"]);
     const colReason = findColumnIndex(headers, ["사유","상세사유","용무","비고"]);
+    const colApproval = findColumnIndex(headers, ["결재상태","결재상태명","결재상태(결재)","결재상태(상태)"]);
+
     const colStart = findColumnIndex(headers, ["시작일","시작","from","시작일자"]);
     const colEnd   = findColumnIndex(headers, ["종료일","종료","to","종료일자"]);
-    const colRange = findColumnIndex(headers, ["기간","일시","기간(일시)"]);
-    const colMinutes = findColumnIndex(headers, ["시간","분","사용시간","근무시간","일수","기간(일수)"]);
+    const colRange = findColumnIndex(headers, ["기간","일시","기간(일시)","기간(일자)","기간일시"]);
+
+    const colDays = findColumnIndex(headers, ["일수","일수/기간","기간(일수)","사용일수","일수(사용)"]);
+    const colHours = findColumnIndex(headers, ["시간","사용시간","근무시간","사용시간(시간)"]);
+    const colMins = findColumnIndex(headers, ["분","사용분","사용시간(분)"]);
+    const colTime = findColumnIndex(headers, ["시간(분)","사용시간(분)"]);
+
+    // fallback(시간/일수 혼합 문자열이 있는 경우)
+    const colDurFallback = findColumnIndex(headers, ["시간및일수","시간 및 일수","시간/일수","시간및 일수","시간및일수(사용)","시간(일수)"]);
 
     if (colName < 0) throw new Error(`[${filename}] 성명 열을 찾지 못했습니다.`);
     if (colType < 0 && colRange < 0) throw new Error(`[${filename}] 종별/기간 열을 찾지 못했습니다.`);
 
     let recs = 0;
     let newWorkers = 0;
+    let totalRows = dataRows.length;
+
+    // 연차 집계(완결만)
+    let annualCandidate = 0;
+    let annualApproved = 0;
+    let annualExcludedByStatus = 0;
 
     for (const row of dataRows) {
       const nameRaw = String(row[colName] || "").trim();
@@ -1440,6 +1764,9 @@
         newWorkers++;
       }
 
+      const w = state.workers.get(key);
+      const dailyMinutes = Math.round(Number(w?.dailyHours || DEFAULT_DAILY_HOURS) * 60);
+
       let start = null, end = null;
 
       if (colRange >= 0) {
@@ -1464,8 +1791,64 @@
       const type = (colType >= 0) ? String(row[colType] || "").trim() : "";
       const reason = (colReason >= 0) ? String(row[colReason] || "").trim() : "";
 
+      const approvalStatus = (colApproval >= 0) ? String(row[colApproval] || "").trim() : "";
+
+      // 연차 집계 후보인지 판독 + 결재상태(완결만)
+      const kind = classifyAnnualLeaveKind(type);
+      if (kind) {
+        annualCandidate++;
+        if (isFinalApprovedStatus(approvalStatus)) annualApproved++;
+        else annualExcludedByStatus++;
+      }
+
+      // minutes 파싱(가능한 만큼만)
       let minutes = null;
-      if (colMinutes >= 0) minutes = parseMinutesLoose(row[colMinutes]);
+      let rawDur = "";
+
+      // 1) 일수
+      if (colDays >= 0 && String(row[colDays]||"").trim() !== "") {
+        rawDur = String(row[colDays]||"").trim();
+        const p = parseDurationToMinutes(row[colDays], dailyMinutes);
+        if (p != null) minutes = p;
+        else {
+          const d = safeNum(row[colDays], NaN);
+          if (Number.isFinite(d)) minutes = Math.round(d * dailyMinutes);
+        }
+      }
+
+      // 2) 분(단일)
+      if (minutes == null && colTime >= 0 && String(row[colTime]||"").trim() !== "") {
+        rawDur = String(row[colTime]||"").trim();
+        const m2 = safeNum(row[colTime], NaN);
+        if (Number.isFinite(m2)) minutes = Math.round(m2);
+      }
+
+      // 3) 시/분 분리
+      if (minutes == null && (colHours >= 0 || colMins >= 0)) {
+        const hCell = (colHours >= 0) ? row[colHours] : "";
+        const mCell = (colMins >= 0) ? row[colMins] : "";
+
+        // "1일 2시간" 같은 문자열이 시간 칸에 박힌 경우도 대응
+        const p = parseDurationToMinutes(hCell, dailyMinutes);
+        if (p != null) {
+          rawDur = String(hCell||"").trim();
+          minutes = p;
+        } else {
+          const h = safeNum(hCell, NaN);
+          const m3 = safeNum(mCell, NaN);
+          if (Number.isFinite(h) || Number.isFinite(m3)) {
+            rawDur = `${Number.isFinite(h) ? h : 0}시간 ${Number.isFinite(m3) ? m3 : 0}분`;
+            minutes = Math.round((Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m3) ? m3 : 0));
+          }
+        }
+      }
+
+      // 4) fallback
+      if (minutes == null && colDurFallback >= 0 && String(row[colDurFallback]||"").trim() !== "") {
+        rawDur = String(row[colDurFallback]||"").trim();
+        const p = parseDurationToMinutes(row[colDurFallback], dailyMinutes);
+        if (p != null) minutes = p;
+      }
 
       addRecord({
         workerKey: key,
@@ -1474,47 +1857,61 @@
         type,
         reason,
         minutes,
+        rawDur,
+        approvalStatus,
+        sourceFile: filename,
         credit: false
       });
       recs++;
     }
 
-    return { recs, newWorkers };
+    return { recs, newWorkers, totalRows, annualCandidate, annualApproved, annualExcludedByStatus };
   }
 
-  function parseRangeLoose(s) {
-    const str = String(s||"").trim();
-    if (!str) return null;
-    const parts = str.split("~").map(x => x.trim());
-    if (parts.length === 2) {
-      const a = parseDateLoose(parts[0]);
-      const b = parseDateLoose(parts[1]);
-      if (a && b) return { start: a, end: b };
+  async function loadWorkFiles(files) {
+    ensureXLSX();
+    if (!files || files.length === 0) throw new Error("근무상황 파일이 선택되지 않았습니다.");
+
+    let totalRecs = 0;
+    let createdWorkers = 0;
+    let totalRows = 0;
+
+    let annualCandidate = 0;
+    let annualApproved = 0;
+    let annualExcludedByStatus = 0;
+
+    for (const file of files) {
+      const ext = (file.name.split(".").pop() || "").toLowerCase();
+
+      if (ext === "csv") {
+        const text = await file.text();
+        const rows = csvToRows(text);
+        const out = parseWorkRows(rows, file.name);
+        totalRecs += out.recs;
+        createdWorkers += out.newWorkers;
+        totalRows += out.totalRows;
+        annualCandidate += out.annualCandidate;
+        annualApproved += out.annualApproved;
+        annualExcludedByStatus += out.annualExcludedByStatus;
+        continue;
+      }
+
+      const buf = await readFileAsArrayBuffer(file);
+      const wb = XLSX.read(buf, { type: "array" });
+      const rows = sheetToJson(wb);
+      const out = parseWorkRows(rows, file.name);
+      totalRecs += out.recs;
+      createdWorkers += out.newWorkers;
+      totalRows += out.totalRows;
+      annualCandidate += out.annualCandidate;
+      annualApproved += out.annualApproved;
+      annualExcludedByStatus += out.annualExcludedByStatus;
     }
-    const d = parseDateLoose(str);
-    if (d) return { start: d, end: d };
-    return null;
-  }
 
-  function parseMinutesLoose(v) {
-    const s = String(v||"").trim();
-    if (!s) return null;
+    renderWorkersTable();
+    renderWorkerSelect();
 
-    let days = 0, hours = 0, mins = 0;
-
-    const md = s.match(/(\d+(?:\.\d+)?)\s*일/);
-    const mh = s.match(/(\d+(?:\.\d+)?)\s*시간/);
-    const mm = s.match(/(\d+(?:\.\d+)?)\s*분/);
-
-    if (md) days = Number(md[1]);
-    if (mh) hours = Number(mh[1]);
-    if (mm) mins = Number(mm[1]);
-
-    if (md || mh || mm) {
-      return Math.round(days * 24 * 60 + hours * 60 + mins);
-    }
-
-    return null;
+    return { totalRecs, createdWorkers, totalRows, annualCandidate, annualApproved, annualExcludedByStatus };
   }
 
   function pctValue(x) {
@@ -1534,7 +1931,7 @@
     const rows1 = [];
     rows1.push([
       "나이스개인번호","성명","직군","근무형태","최초임용일","근속(2026-03-01)",
-      "출근율(학기)","출근율(연간)","출근율(재산정)",
+      "출근율(학기중)","출근율(연간)","출근율(비례산정)",
       "기본","가산","표준합계(상한적용)",
       "최종부여(일)","최종부여(시간)","판정","비고"
     ]);
@@ -1550,9 +1947,7 @@
         w?.serviceYears ?? 0,
         r.rates.rateSemester==null ? "" : pctValue(r.rates.rateSemester),
         pctValue(r.rates.rateFull ?? 0),
-        r.rates.rateRecalcSemester==null
-          ? (r.rates.rateRecalcFull==null ? "" : pctValue(r.rates.rateRecalcFull))
-          : pctValue(r.rates.rateRecalcSemester),
+        r.rates.rateProportional==null ? "" : pctValue(r.rates.rateProportional),
         r.baseDays,
         r.addDays,
         r.standardDays,
@@ -1568,7 +1963,8 @@
 
     const rows2 = [];
     rows2.push([
-      "나이스개인번호","성명","기간시작","기간종료","종별","사유","자동분류","최종분류","방학중근무(비상시직종)"
+      "나이스개인번호","성명","기간시작","기간종료","종별","사유","결재상태",
+      "자동분류","최종분류","방학중근무(비상시직종)","분(저장값)","원본시간/일수","파일"
     ]);
 
     for (const rec of state.records) {
@@ -1582,14 +1978,45 @@
         utcToYmd(rec.endUTC),
         rec.type || "",
         rec.reason || "",
+        rec.approvalStatus || "",
         CLASS_LABEL[auto] || auto,
         fin === "auto" ? "자동" : (CLASS_LABEL[fin] || fin),
-        rec.credit ? "Y" : ""
+        rec.credit ? "Y" : "",
+        rec.minutes == null ? "" : rec.minutes,
+        rec.rawDur || "",
+        rec.sourceFile || ""
       ]);
     }
 
     const ws2 = XLSX.utils.aoa_to_sheet(rows2);
     XLSX.utils.book_append_sheet(wb, ws2, "복무취합(전체)");
+
+    // (추가) 연차 사용 집계(완결만)
+    const rows3 = [];
+    rows3.push(["나이스개인번호","성명","연차사용(완결만)_분","연차사용(완결만)_표시","연차","반일연차","연차(지각)","연차(조퇴)","연차(외출)"]);
+
+    const workersSorted = Array.from(state.workers.values()).sort((a,b) => (a.name||"").localeCompare(b.name||"", "ko"));
+    for (const w of workersSorted) {
+      const dailyMinutes = Math.round(Number(w.dailyHours || DEFAULT_DAILY_HOURS) * 60);
+      const usage = computeAnnualLeaveUsageSummary(w.key, dailyMinutes);
+
+      const toText = (mins) => fmtDHM(minutesToDHM(mins, dailyMinutes));
+
+      rows3.push([
+        w.key,
+        w.name || "",
+        usage.total,
+        toText(usage.total),
+        toText(usage.byKind.FULL),
+        toText(usage.byKind.HALF),
+        toText(usage.byKind.LATE),
+        toText(usage.byKind.EARLY),
+        toText(usage.byKind.OUT)
+      ]);
+    }
+
+    const ws3 = XLSX.utils.aoa_to_sheet(rows3);
+    XLSX.utils.book_append_sheet(wb, ws3, "연차사용(완결만)");
 
     const out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
     const blob = new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
@@ -1631,6 +2058,39 @@
     renderResults();
   }
 
+  // Drag & Drop 바인딩
+  function bindDropZone(zoneEl, inputEl, onFiles) {
+    zoneEl.addEventListener("click", () => inputEl.click());
+
+    ["dragenter","dragover"].forEach(evt => {
+      zoneEl.addEventListener(evt, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        zoneEl.classList.add("dragover");
+      });
+    });
+
+    ["dragleave","drop"].forEach(evt => {
+      zoneEl.addEventListener(evt, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        zoneEl.classList.remove("dragover");
+      });
+    });
+
+    zoneEl.addEventListener("drop", (e) => {
+      const files = Array.from(e.dataTransfer.files || []);
+      if (!files.length) return;
+      onFiles(files);
+    });
+
+    inputEl.addEventListener("change", () => {
+      const files = Array.from(inputEl.files || []);
+      if (!files.length) return;
+      onFiles(files);
+    });
+  }
+
   function bindEvents() {
     $("#btnApplyCalendar").addEventListener("click", () => {
       state.calendar.summerStart = $("#summerStart").value ? ymdToUTC($("#summerStart").value) : null;
@@ -1643,12 +2103,34 @@
       renderCalendarSummary();
     });
 
+    // (요청 반영) 예시 날짜 고정
     $("#btnSetExampleCalendar").addEventListener("click", () => {
       $("#summerStart").value = "2025-07-21";
-      $("#summerEnd").value = "2025-08-20";
-      $("#winterStart").value = "2025-12-26";
-      $("#winterEnd").value = "2026-02-06";
+      $("#summerEnd").value = "2025-08-11";
+      $("#winterStart").value = "2026-01-03";
+      $("#winterEnd").value = "2026-02-28";
       $("#btnApplyCalendar").click();
+    });
+
+    // HR/Work 드롭존
+    bindDropZone($("#hrDrop"), $("#hrFile"), (files) => {
+      const ok = files.filter(f => /\.(xlsx|xls)$/i.test(f.name));
+      state.selectedFiles.hr = ok;
+      if (!ok.length) {
+        setMsg($("#hrMsg"), "err", "엑셀(.xlsx/.xls) 파일만 업로드 가능합니다.");
+        return;
+      }
+      setMsg($("#hrMsg"), "warn", `인사기록 파일 ${ok.length}개 선택됨. <b>인사 정보 반영하기</b>를 눌러주세요.`);
+    });
+
+    bindDropZone($("#workDrop"), $("#workFiles"), (files) => {
+      const ok = files.filter(f => /\.(xlsx|xls|csv)$/i.test(f.name));
+      state.selectedFiles.work = ok;
+      if (!ok.length) {
+        setMsg($("#workMsg"), "err", "엑셀(.xlsx/.xls) 또는 CSV(.csv) 파일만 업로드 가능합니다.");
+        return;
+      }
+      setMsg($("#workMsg"), "warn", `근무상황 파일 ${ok.length}개 선택됨. <b>복무사항 불러오기</b>를 눌러주세요.`);
     });
 
     $$("input[name='hrMode']").forEach(r => {
@@ -1668,16 +2150,14 @@
     });
 
     $("#btnLoadHr").addEventListener("click", async () => {
-      const f = $("#hrFile").files?.[0];
-      if (!f) { setMsg($("#hrMsg"), "err", "인사내역 파일을 선택하세요."); return; }
+      const files = (state.selectedFiles.hr && state.selectedFiles.hr.length)
+        ? state.selectedFiles.hr
+        : Array.from($("#hrFile").files || []);
+
+      if (!files.length) { setMsg($("#hrMsg"), "err", "인사내역 파일을 선택하세요."); return; }
 
       try {
-        const out = await loadHrFile(f);
-        setMsg($("#hrMsg"), "ok", `
-          <div><b>인사내역 파일 불러오기 성공</b></div>
-          <ul><li>로드: ${out.loaded}명</li></ul>
-          <div class="muted">목록 행 자동 탐색함. 임의로 나이스 서식 변경한 경우 못 읽을 수도 있음.</div>
-        `);
+        await handleLoadHrFiles(files);
       } catch (e) {
         setMsg($("#hrMsg"), "err", `<b>오류</b>: ${escapeHtml(e.message)}`);
       }
@@ -1687,6 +2167,8 @@
       state.workers.clear();
       state.records = [];
       state.results = [];
+      state.selectedFiles.hr = [];
+      state.selectedFiles.work = [];
       renderWorkersTable();
       renderWorkerSelect();
       renderResults();
@@ -1729,18 +2211,26 @@
     });
 
     $("#btnLoadWork").addEventListener("click", async () => {
-      const files = $("#workFiles").files;
-      if (!files || files.length === 0) { setMsg($("#workMsg"), "err", "근무상황 파일을 선택하세요."); return; }
+      const files = (state.selectedFiles.work && state.selectedFiles.work.length)
+        ? state.selectedFiles.work
+        : Array.from($("#workFiles").files || []);
+
+      if (!files.length) { setMsg($("#workMsg"), "err", "근무상황 파일을 선택하세요."); return; }
 
       try {
-        const out = await loadWorkFiles(Array.from(files));
+        const out = await loadWorkFiles(files);
         setMsg($("#workMsg"), "ok", `
           <div><b>근무상황 파일 불러오기 완료</b></div>
           <ul>
-            <li>복무사항 추출: ${out.totalRecs}건</li>
-            <li>인사정보가 없어서 임시로 생성: ${out.createdWorkers}명</li>
+            <li>처리 파일: ${files.length}개</li>
+            <li>전체 행(대략): ${out.totalRows.toLocaleString("ko-KR")}행</li>
+            <li>복무사항 추출(전체): ${out.totalRecs.toLocaleString("ko-KR")}건</li>
+            <li>인사정보가 없어서 임시로 생성: ${out.createdWorkers.toLocaleString("ko-KR")}명</li>
+            <li><b>연차 집계 후보</b>: ${out.annualCandidate.toLocaleString("ko-KR")}건</li>
+            <li><b>연차 집계(완결만)</b>: ${out.annualApproved.toLocaleString("ko-KR")}건</li>
+            <li>연차 제외(결재상태 미완결): ${out.annualExcludedByStatus.toLocaleString("ko-KR")}건</li>
           </ul>
-          <div class="muted">※ 임시 생성자의 직군, 근무형태, 최초임용일 등의 인사 정보는 필요시 수기 입력하십시오. </div>
+          <div class="muted">※ 임시 생성자의 직군, 근무형태, 최초임용일 등의 인사 정보는 필요시 수기 입력하십시오.</div>
         `);
       } catch (e) {
         setMsg($("#workMsg"), "err", `<b>오류</b>: ${escapeHtml(e.message)}`);
@@ -1750,6 +2240,7 @@
     $("#btnClearWork").addEventListener("click", () => {
       state.records = [];
       state.results = [];
+      state.selectedFiles.work = [];
       renderResults();
       setMsg($("#workMsg"), "warn", "복무사항 초기화 완료");
     });
@@ -1775,7 +2266,10 @@
           type,
           reason,
           finalClass: clsMode === "auto" ? null : clsMode,
-          credit
+          credit,
+          approvalStatus: "", // 수기 입력은 결재상태 없음
+          rawDur: "",
+          sourceFile: "수기입력"
         });
         setMsg($("#workManualMsg"), "ok", "복무 항목을 추가했습니다.");
         $("#wType").value = "";
@@ -1795,12 +2289,6 @@
     $("#btnDownload").addEventListener("click", () => {
       try { downloadXlsx(); } catch (e) { alert(e.message); }
     });
-
-    const btnSave = $("#btnSaveLocal");
-    if (btnSave) btnSave.addEventListener("click", saveLocal);
-
-    const btnLoad = $("#btnLoadLocal");
-    if (btnLoad) btnLoad.addEventListener("click", loadLocal);
   }
 
   function init() {
