@@ -365,7 +365,7 @@
               <th class="nowrap right">출근율(학기중)</th>
               <th class="nowrap right">출근율(연간)</th>
               <th class="nowrap right">출근율(비례산정)</th>
-              <th class="nowrap right">기본+가산</th>
+              <th class="nowrap right">기본+가산(출근/근속)</th>
               <th class="nowrap right">최종부여</th>
               <th class="nowrap">판정</th>
             </tr>
@@ -601,6 +601,7 @@
     const merged = prev ? { ...prev, ...w } : w;
 
     merged.serviceYears = computeServiceYears(merged.hireDateUTC);
+    // 근속 가산 연차: 3년차부터 2년에 1일
     merged.addDays = Math.floor(Math.max(0, merged.serviceYears - 1) / 2);
 
     state.workers.set(merged.key, merged);
@@ -776,7 +777,6 @@
     const t = normalizeText(typeRaw);
     if (!t) return null;
 
-    // 병가/기타 배제(너무 넓게 잡으면 오염됨)
     if (/(병가|병지각|병조퇴|병외출|유급병가|무급병가|질병)/.test(t) || t.startsWith("병")) return null;
 
     if (t.includes("반일연차") || t.includes("반차") || t.includes("반일연가")) return "HALF";
@@ -836,19 +836,25 @@
   // ==========================
   // 출근율/연차부여 계산
   // ==========================
-  function baseDaysForWorker(w, rates) {
-    const rFull = rates.rateFull ?? 0;
+
+  // (수정) 기본연차는 직종/근무형태로만 결정(비상시 기본: 12일(일반) / 11일(특수))
+  function baseDaysForWorker(w) {
     const isEmergency = (w.pattern === "emergency");
     const isSpecial = (w.group === "special");
-
     if (!isEmergency) return 15;
-    if (!isSpecial) return (rFull >= 0.8) ? 15 : 12;
-    return (rFull >= 0.8) ? 15 : 11;
+    return isSpecial ? 11 : 12;
   }
 
-  function totalStandardDays(w, baseDays) {
-    const add = w.addDays ?? 0;
-    return Math.min(25, baseDays + add);
+  // (수정) 비상시직종: 학기중 출근율 80% 이상이면 기본연차에 +3일(별개 가산)
+  function bonusDaysForWorker(w, rates) {
+    if (w.pattern !== "emergency") return 0;
+    const rSem = rates.rateSemester ?? 0;
+    return (rSem >= 0.8) ? 3 : 0;
+  }
+
+  function totalStandardDays(w, baseDays, bonusDays) {
+    const add = w.addDays ?? 0; // 근속가산(3년차부터 2년에 1일)
+    return Math.min(25, baseDays + (bonusDays || 0) + add);
   }
 
   function calcRatesForWorker(w) {
@@ -888,7 +894,6 @@
       const attended = Math.max(0, fullTotal - excludedFull - absenceFull);
       const rateFull = safeDiv(attended, fullTotal);
 
-      // 비례산정 출근율: 연간 출근율 80% 미만인 경우에만 계산
       const rateProportional = (rateFull < 0.8)
         ? safeDiv(attended, Math.max(1, fullTotal - excludedFull))
         : null;
@@ -916,7 +921,6 @@
     const rateSemester = safeDiv(attendedSem, semTotal);
     const rateFull = safeDiv(attendedFull, fullTotal);
 
-    // 비례산정 출근율: 학기중 출근율 80% 미만인 경우에만 계산
     const rateProportional = (rateSemester < 0.8)
       ? safeDiv(attendedSem, Math.max(1, semTotal - excludedSem))
       : null;
@@ -947,6 +951,31 @@
     let dd = d;
     if (h >= dailyHours) { dd += 1; h = 0; }
     return { days: dd, hours: h };
+  }
+
+  // (추가) YYYY-MM 형태
+  function toYm(dateUTC) {
+    const y = dateUTC.getUTCFullYear();
+    const m = String(dateUTC.getUTCMonth() + 1).padStart(2, "0");
+    return `${y}-${m}`;
+  }
+
+  function startOfMonthUTC(dateUTC) {
+    return new Date(Date.UTC(dateUTC.getUTCFullYear(), dateUTC.getUTCMonth(), 1));
+  }
+
+  function startOfNextMonthUTC(dateUTC) {
+    return new Date(Date.UTC(dateUTC.getUTCFullYear(), dateUTC.getUTCMonth() + 1, 1));
+  }
+
+  // 1개월 "개근"을 달력월 기준으로 보기 위해:
+  // - 입사일이 1일이면 그 달부터,
+  // - 1일이 아니면 다음 달 1일부터를 첫 "완전한 개근월" 시작으로 봄.
+  function firstFullMonthStartUTC(hireUTC) {
+    if (!hireUTC) return PERIOD_START;
+    const ms = startOfMonthUTC(hireUTC);
+    if (hireUTC.getUTCDate() === 1) return ms;
+    return startOfNextMonthUTC(hireUTC);
   }
 
   function enumerateMonths(startUTC, endUTC) {
@@ -980,6 +1009,19 @@
     return false;
   }
 
+  // (추가) 특정 기간(방학 등) 내 결근성 여부 확인
+  function anyAbsenceInRange(absenceDates, startUTC, endUTC) {
+    if (!startUTC || !endUTC) return false;
+    const r = normalizeRange(startUTC, endUTC);
+    if (!r) return false;
+    for (let d = r.start; d <= r.end; d = addDaysUTC(d, 1)) {
+      if (isSaturdayUTC(d)) continue;
+      const ymd = utcToYmd(d);
+      if (absenceDates.has(ymd)) return true;
+    }
+    return false;
+  }
+
   function calcMonthlyAccrual(w) {
     const dailyHours = Number(w.dailyHours || DEFAULT_DAILY_HOURS);
     const dailyMinutes = dailyHours * 60;
@@ -997,36 +1039,75 @@
       }
     }
 
+    // (수정) 근속 0년(1년 미만)인데 입사 전 달까지 개근월로 카운트되던 문제 방지
+    let accrualStart = PERIOD_START;
+    if (w.hireDateUTC) {
+      const hire = w.hireDateUTC;
+      if (hire > PERIOD_START) {
+        accrualStart = firstFullMonthStartUTC(hire);
+      }
+    }
+    if (accrualStart < PERIOD_START) accrualStart = PERIOD_START;
+
     if (w.pattern !== "emergency") {
-      const months = enumerateMonths(PERIOD_START, PERIOD_END);
+      const months = enumerateMonths(accrualStart, PERIOD_END);
       let okCount = 0;
       for (const ym of months) {
         const hasAbs = anyAbsenceInMonth(absenceDates, ym);
         if (!hasAbs) okCount += 1;
       }
       const capped = Math.min(11, okCount);
-      return { days: capped, hours: 0, note: `개근월수(상시): ${okCount}개월 중 ${capped}일(최대11) 부여` };
+      const spanText = months.length ? `${months[0]}~${months[months.length - 1]}` : "해당없음";
+      return { days: capped, hours: 0, note: `개근월수(상시): ${okCount}개월 중 ${capped}일(최대11) 부여 · 산정월(${spanText})` };
     }
 
     const bucketMonths = ["2025-03","2025-04","2025-05","2025-06","2025-09","2025-10","2025-11"];
+    const startYM = toYm(accrualStart);
+
     let ok = 0;
+    let vacBucketsAdded = 0;
 
     for (const ym of bucketMonths) {
+      if (ym < startYM) continue; // 입사 전(또는 완전 개근월 시작 전) 달은 제외
       const hasAbs = anyAbsenceInMonth(absenceDates, ym);
       if (!hasAbs) ok += 1;
     }
 
-    const hasVacAbs = anyAbsenceInVacation(absenceDates);
-    if (!hasVacAbs) ok += 2;
+    // (수정) 방학버킷을 무조건 +2 하던 로직 제거
+    // → 실제 입력된 여름/겨울방학 각각을 "버킷 1개"로 보고, 입사 이후 방학만 반영
+    if (state.calendar.applied && sets && sets.vacCount > 0) {
+      const vacs = [];
+      if (state.calendar.summerStart && state.calendar.summerEnd) {
+        const r = normalizeRange(state.calendar.summerStart, state.calendar.summerEnd);
+        if (r) vacs.push({ name: "여름방학", start: r.start, end: r.end });
+      }
+      if (state.calendar.winterStart && state.calendar.winterEnd) {
+        const r = normalizeRange(state.calendar.winterStart, state.calendar.winterEnd);
+        if (r) vacs.push({ name: "겨울방학", start: r.start, end: r.end });
+      }
+
+      for (const v of vacs) {
+        if (v.start < accrualStart) continue; // 입사 이전 방학은 제외
+        const hasAbs = anyAbsenceInRange(absenceDates, v.start, v.end);
+        if (!hasAbs) { ok += 1; vacBucketsAdded += 1; }
+      }
+    }
 
     const capped = Math.min(9, ok);
-    return { days: capped, hours: 0, note: `개근월수(비상시): 버킷 ${ok}개 중 ${capped}일(최대9) 부여` };
+    const noteParts = [];
+    noteParts.push(`개근월수(비상시): 버킷 ${ok}개 중 ${capped}일(최대9) 부여`);
+    noteParts.push(`산정 시작월: ${startYM}`);
+    if (!state.calendar.applied || !sets || sets.vacCount === 0) noteParts.push("방학 미입력: 방학버킷(최대2) 미반영");
+    else noteParts.push(`방학버킷 반영: ${vacBucketsAdded}개`);
+    return { days: capped, hours: 0, note: noteParts.join(" · ") };
   }
 
   function calcGrantForWorker(w) {
     const rates = calcRatesForWorker(w);
-    const baseDays = baseDaysForWorker(w, rates);
-    const standard = totalStandardDays(w, baseDays);
+
+    const baseDays = baseDaysForWorker(w);
+    const bonusDays = bonusDaysForWorker(w, rates); // 비상시 학기중 80% 가산 3일(별개)
+    const standard = totalStandardDays(w, baseDays, bonusDays);
 
     const serviceYears = w.serviceYears ?? 0;
     const isEmergency = (w.pattern === "emergency");
@@ -1036,8 +1117,9 @@
       return {
         workerKey: w.key,
         baseDays,
+        bonusDays: 0, // 신규 월차에는 3일 가산 개념 적용 안 함
         addDays: w.addDays ?? 0,
-        standardDays: standard,
+        standardDays: totalStandardDays(w, baseDays, 0),
         finalDays: monthly.days,
         finalHours: monthly.hours,
         method: "신규(1년 미만) 1개월 개근 1일",
@@ -1052,7 +1134,7 @@
       const rateP = rates.rateProportional ?? 0;
 
       if (rate1 >= 0.8) {
-        return { workerKey: w.key, baseDays, addDays: w.addDays ?? 0, standardDays: standard, finalDays: standard, finalHours: 0, method: "정상부여(연간 출근율 80% 이상)", note: "", rates };
+        return { workerKey: w.key, baseDays, bonusDays: 0, addDays: w.addDays ?? 0, standardDays: standard, finalDays: standard, finalHours: 0, method: "정상부여(연간 출근율 80% 이상)", note: "", rates };
       }
 
       if (rates.rateProportional != null && rateP >= 0.8) {
@@ -1062,11 +1144,11 @@
         const raw = standard * ratio;
         const rounded = roundToOneDecimalDays(raw);
         const dh = daysToDaysHours(rounded, (w.dailyHours || DEFAULT_DAILY_HOURS));
-        return { workerKey: w.key, baseDays, addDays: w.addDays ?? 0, standardDays: standard, finalDays: dh.days, finalHours: dh.hours, method: "비례부여(비례산정 출근율 80% 충족)", note: `비례: ${standard} × (${fullDays - excludedDays}/${fullDays}) = ${rounded}일`, rates };
+        return { workerKey: w.key, baseDays, bonusDays: 0, addDays: w.addDays ?? 0, standardDays: standard, finalDays: dh.days, finalHours: dh.hours, method: "비례부여(비례산정 출근율 80% 충족)", note: `비례: ${standard} × (${fullDays - excludedDays}/${fullDays}) = ${rounded}일`, rates };
       }
 
       const monthly = calcMonthlyAccrual(w);
-      return { workerKey: w.key, baseDays, addDays: w.addDays ?? 0, standardDays: standard, finalDays: monthly.days, finalHours: monthly.hours, method: "80% 미달 → 개근월수(1개월 1일)", note: monthly.note, rates };
+      return { workerKey: w.key, baseDays, bonusDays: 0, addDays: w.addDays ?? 0, standardDays: standard, finalDays: monthly.days, finalHours: monthly.hours, method: "80% 미달 → 개근월수(1개월 1일)", note: monthly.note, rates };
     }
 
     // 비상시
@@ -1074,21 +1156,22 @@
     const rateP = rates.rateProportional ?? 0;
 
     if (rateSem >= 0.8) {
-      return { workerKey: w.key, baseDays, addDays: w.addDays ?? 0, standardDays: standard, finalDays: standard, finalHours: 0, method: "정상부여(학기중 출근율 80% 이상)", note: "", rates };
+      // (수정) 비상시: 학기중 80% 이상이면 (기본 12/11) + 3일(출근가산) + 근속가산
+      return { workerKey: w.key, baseDays, bonusDays, addDays: w.addDays ?? 0, standardDays: standard, finalDays: standard, finalHours: 0, method: "정상부여(학기중 출근율 80% 이상)", note: "", rates };
     }
 
     if (rates.rateProportional != null && rateP >= 0.8) {
       const semDays = state.calendar.sets ? state.calendar.sets.semCount : 0;
       const excludedDays = Math.round((rates.excludedSem ?? 0) / rates.dailyMinutes);
       const ratio = safeDiv(Math.max(0, semDays - excludedDays), Math.max(1, semDays));
-      const raw = standard * ratio;
+      const raw = standard * ratio; // 여기서 standard는 bonusDays=0 상태(학기중 80% 미만이므로)
       const rounded = roundToOneDecimalDays(raw);
       const dh = daysToDaysHours(rounded, (w.dailyHours || DEFAULT_DAILY_HOURS));
-      return { workerKey: w.key, baseDays, addDays: w.addDays ?? 0, standardDays: standard, finalDays: dh.days, finalHours: dh.hours, method: "비례부여(비례산정 출근율 80% 충족)", note: `비례: ${standard} × (${semDays - excludedDays}/${semDays}) = ${rounded}일`, rates };
+      return { workerKey: w.key, baseDays, bonusDays: 0, addDays: w.addDays ?? 0, standardDays: standard, finalDays: dh.days, finalHours: dh.hours, method: "비례부여(비례산정 출근율 80% 충족)", note: `비례: ${standard} × (${semDays - excludedDays}/${semDays}) = ${rounded}일`, rates };
     }
 
     const monthly = calcMonthlyAccrual(w);
-    return { workerKey: w.key, baseDays, addDays: w.addDays ?? 0, standardDays: standard, finalDays: monthly.days, finalHours: monthly.hours, method: "80% 미달 → 개근월수(1개월 1일)", note: monthly.note, rates };
+    return { workerKey: w.key, baseDays, bonusDays: 0, addDays: w.addDays ?? 0, standardDays: standard, finalDays: monthly.days, finalHours: monthly.hours, method: "80% 미달 → 개근월수(1개월 1일)", note: monthly.note, rates };
   }
 
   function pct(x) {
@@ -1100,6 +1183,14 @@
     const rounded = Math.round(days * 10) / 10;
     const dh = daysToDaysHours(rounded, dailyMinutes/60);
     return (dh.hours > 0) ? `${dh.days}일 ${dh.hours}시간` : `${dh.days}일`;
+  }
+
+  function formatStdCompact(r) {
+    const parts = [];
+    parts.push(String(r.baseDays ?? 0));
+    if (r.bonusDays) parts.push(String(r.bonusDays));
+    if (r.addDays) parts.push(String(r.addDays));
+    return `${parts.join("+")}=${r.standardDays ?? 0}`;
   }
 
   function renderRecordRow(rec) {
@@ -1164,7 +1255,6 @@
     const dailyMinutes = rr.rates.dailyMinutes || Math.round(Number(w.dailyHours || DEFAULT_DAILY_HOURS) * 60);
     const records = state.records.filter(x => x.workerKey === workerKey).sort((a,b) => a.startUTC - b.startUTC);
 
-    // 분류 합계
     const sum = { deemed:0, excluded:0, absence:0, review:0, creditVac:0, total: sets.fullCount * dailyMinutes };
     for (const rec of records) {
       const cls = recordClass(rec);
@@ -1176,7 +1266,6 @@
       }
     }
 
-    // 연차 사용(완결만)
     const leaveUsage = computeAnnualLeaveUsageSummary(workerKey, dailyMinutes);
 
     const rateSem = (rr.rates.rateSemester == null) ? "-" : pct(rr.rates.rateSemester);
@@ -1184,7 +1273,7 @@
     const rateProp = (rr.rates.rateProportional == null) ? "-" : pct(rr.rates.rateProportional);
 
     const finalText = (rr.finalHours > 0) ? `${rr.finalDays}일 ${rr.finalHours}시간` : `${rr.finalDays}일`;
-    const stdText = `${rr.baseDays}+${rr.addDays}=${rr.standardDays}`;
+    const stdText = formatStdCompact(rr);
 
     const ss = state.calendar.summerStart ? utcToYmd(state.calendar.summerStart) : "";
     const se = state.calendar.summerEnd ? utcToYmd(state.calendar.summerEnd) : "";
@@ -1207,6 +1296,9 @@
     rows1.push(["출근율(학기중)", rateSem]);
     rows1.push(["출근율(연간)", rateFull]);
     rows1.push(["출근율(비례산정)", rateProp]);
+    rows1.push(["기본연차(비상시 기본 12/11)", String(rr.baseDays ?? "")]);
+    rows1.push(["출근가산(비상시 학기중80% 이상)", String(rr.bonusDays ?? 0)]);
+    rows1.push(["근속가산(3년차부터 2년에 1일)", String(rr.addDays ?? 0)]);
     rows1.push(["기본+가산(상한25)", stdText]);
     rows1.push(["최종부여", finalText]);
     rows1.push(["판정", rr.method || ""]);
@@ -1292,7 +1384,13 @@
       const rateProp = (rr.rates.rateProportional == null) ? "-" : pct(rr.rates.rateProportional);
 
       const final = (rr.finalHours > 0) ? `${rr.finalDays}일 ${rr.finalHours}시간` : `${rr.finalDays}일`;
-      const std = `${rr.baseDays}+${rr.addDays}=${rr.standardDays}`;
+      const stdCompact = formatStdCompact(rr);
+
+      const stdParts = [];
+      stdParts.push(`기본 ${rr.baseDays}일`);
+      if (rr.bonusDays) stdParts.push(`출근가산 ${rr.bonusDays}일`);
+      if (rr.addDays) stdParts.push(`근속가산 ${rr.addDays}일`);
+      stdParts.push(`= ${rr.standardDays}일`);
 
       const leaveUsage = computeAnnualLeaveUsageSummary(rr.workerKey, dailyMinutes);
 
@@ -1314,7 +1412,7 @@
 
         <div style="margin-top:12px;" class="grid two">
           <div class="msg">
-            <div><b>기본/가산</b>: ${std} (상한 25 적용)</div>
+            <div><b>기본/가산</b>: ${escapeHtml(stdParts.join(" + "))} <span class="muted">(${escapeHtml(stdCompact)})</span> (상한25 적용)</div>
             <div><b>근속</b>: ${escapeHtml(String(w?.serviceYears ?? 0))}년 (기준일 2026-03-01)</div>
             <div><b>출근율</b>: 학기중 ${rateSem} · 연간 ${rateFull} · 비례산정 ${rateProp}</div>
             <div><b>연차 사용(완결만)</b>: ${fmtDHM(minutesToDHM(leaveUsage.total, dailyMinutes))}</div>
@@ -1361,7 +1459,6 @@
       box.appendChild(details);
     }
 
-    // 이벤트 바인딩(복무 수정/삭제)
     box.querySelectorAll("[data-rec-id]").forEach(el => {
       const rid = el.getAttribute("data-rec-id");
       const field = el.getAttribute("data-field");
@@ -1393,7 +1490,6 @@
       }
     });
 
-    // 개인별 상세 엑셀 저장
     box.querySelectorAll("button[data-action='downloadDetail']").forEach(btn => {
       btn.addEventListener("click", (e) => {
         e.preventDefault();
@@ -1437,7 +1533,7 @@
       const rateFull = pct(r.rates.rateFull ?? 0);
       const rateProp = (r.rates.rateProportional == null) ? "-" : pct(r.rates.rateProportional);
 
-      const std = `${r.baseDays}+${r.addDays}=${r.standardDays}`;
+      const std = formatStdCompact(r);
       const final = (r.finalHours > 0) ? `${r.finalDays}일 ${r.finalHours}시간` : `${r.finalDays}일`;
 
       const tr = document.createElement("tr");
@@ -1450,7 +1546,7 @@
         <td class="right nowrap">${rateSem}</td>
         <td class="right nowrap">${rateFull}</td>
         <td class="right nowrap">${rateProp}</td>
-        <td class="right nowrap">${std}</td>
+        <td class="right nowrap">${escapeHtml(std)}</td>
         <td class="right nowrap"><b>${final}</b></td>
         <td class="nowrap">${escapeHtml(r.method)}</td>
       `;
@@ -1550,7 +1646,6 @@
     return null;
   }
 
-  // "0.5일", "1일 2시간 30분", "3시간", "20분" 등을 분으로
   function parseDurationToMinutes(cell, dailyMinutes) {
     if (cell == null) return null;
     const s = String(cell || "").trim();
@@ -1724,7 +1819,6 @@
     const colMins = findColumnIndex(headers, ["분","사용분","사용시간(분)"]);
     const colTime = findColumnIndex(headers, ["시간(분)","사용시간(분)"]);
 
-    // fallback(시간/일수 혼합 문자열이 있는 경우)
     const colDurFallback = findColumnIndex(headers, ["시간및일수","시간 및 일수","시간/일수","시간및 일수","시간및일수(사용)","시간(일수)"]);
 
     if (colName < 0) throw new Error(`[${filename}] 성명 열을 찾지 못했습니다.`);
@@ -1734,7 +1828,6 @@
     let newWorkers = 0;
     let totalRows = dataRows.length;
 
-    // 연차 집계(완결만)
     let annualCandidate = 0;
     let annualApproved = 0;
     let annualExcludedByStatus = 0;
@@ -1794,7 +1887,6 @@
 
       const approvalStatus = (colApproval >= 0) ? String(row[colApproval] || "").trim() : "";
 
-      // 연차 집계 후보인지 판독 + 결재상태(완결만)
       const kind = classifyAnnualLeaveKind(type);
       if (kind) {
         annualCandidate++;
@@ -1802,11 +1894,9 @@
         else annualExcludedByStatus++;
       }
 
-      // minutes 파싱(가능한 만큼만)
       let minutes = null;
       let rawDur = "";
 
-      // 1) 일수
       if (colDays >= 0 && String(row[colDays]||"").trim() !== "") {
         rawDur = String(row[colDays]||"").trim();
         const p = parseDurationToMinutes(row[colDays], dailyMinutes);
@@ -1817,19 +1907,16 @@
         }
       }
 
-      // 2) 분(단일)
       if (minutes == null && colTime >= 0 && String(row[colTime]||"").trim() !== "") {
         rawDur = String(row[colTime]||"").trim();
         const m2 = safeNum(row[colTime], NaN);
         if (Number.isFinite(m2)) minutes = Math.round(m2);
       }
 
-      // 3) 시/분 분리
       if (minutes == null && (colHours >= 0 || colMins >= 0)) {
         const hCell = (colHours >= 0) ? row[colHours] : "";
         const mCell = (colMins >= 0) ? row[colMins] : "";
 
-        // "1일 2시간" 같은 문자열이 시간 칸에 박힌 경우도 대응
         const p = parseDurationToMinutes(hCell, dailyMinutes);
         if (p != null) {
           rawDur = String(hCell||"").trim();
@@ -1844,7 +1931,6 @@
         }
       }
 
-      // 4) fallback
       if (minutes == null && colDurFallback >= 0 && String(row[colDurFallback]||"").trim() !== "") {
         rawDur = String(row[colDurFallback]||"").trim();
         const p = parseDurationToMinutes(row[colDurFallback], dailyMinutes);
@@ -1933,7 +2019,7 @@
     rows1.push([
       "나이스개인번호","성명","직군","근무형태","최초임용일","근속(2026-03-01)",
       "출근율(학기중)","출근율(연간)","출근율(비례산정)",
-      "기본","가산","표준합계(상한적용)",
+      "기본","출근가산(비상시80%)","근속가산","표준합계(상한적용)",
       "최종부여(일)","최종부여(시간)","판정","비고"
     ]);
 
@@ -1950,6 +2036,7 @@
         pctValue(r.rates.rateFull ?? 0),
         r.rates.rateProportional==null ? "" : pctValue(r.rates.rateProportional),
         r.baseDays,
+        r.bonusDays ?? 0,
         r.addDays,
         r.standardDays,
         r.finalDays,
@@ -1992,7 +2079,6 @@
     const ws2 = XLSX.utils.aoa_to_sheet(rows2);
     XLSX.utils.book_append_sheet(wb, ws2, "복무취합(전체)");
 
-    // (추가) 연차 사용 집계(완결만)
     const rows3 = [];
     rows3.push(["나이스개인번호","성명","연차사용(완결만)_분","연차사용(완결만)_표시","연차","반일연차","연차(지각)","연차(조퇴)","연차(외출)"]);
 
@@ -2059,7 +2145,6 @@
     renderResults();
   }
 
-  // Drag & Drop 바인딩
   function bindDropZone(zoneEl, inputEl, onFiles) {
     zoneEl.addEventListener("click", () => inputEl.click());
 
@@ -2104,7 +2189,6 @@
       renderCalendarSummary();
     });
 
-    // (요청 반영) 예시 날짜 고정
     $("#btnSetExampleCalendar").addEventListener("click", () => {
       $("#summerStart").value = "2025-07-21";
       $("#summerEnd").value = "2025-08-11";
@@ -2113,7 +2197,6 @@
       $("#btnApplyCalendar").click();
     });
 
-    // HR/Work 드롭존
     bindDropZone($("#hrDrop"), $("#hrFile"), (files) => {
       const ok = files.filter(f => /\.(xlsx|xls)$/i.test(f.name));
       state.selectedFiles.hr = ok;
@@ -2268,7 +2351,7 @@
           reason,
           finalClass: clsMode === "auto" ? null : clsMode,
           credit,
-          approvalStatus: "", // 수기 입력은 결재상태 없음
+          approvalStatus: "",
           rawDur: "",
           sourceFile: "수기입력"
         });
