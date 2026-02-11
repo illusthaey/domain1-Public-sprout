@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>근거 기반 AI (PDF/TXT) - savinghaey</title>
+
+  <!-- 사이트 공통 CSS (사용자 파일) -->
+  <link rel="stylesheet" href="static/style.css" />
+
+  <style>
+    /* 이 페이지 전용(최소) */
+    .chat {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin: 12px 0 18px;
+    }
+
+    .msg {
+      border: 1px solid #e5e5e5;
+      border-radius: 12px;
+      padding: 12px 14px;
+      background: #fff;
+      max-width: 92%;
+      overflow-wrap: anywhere;
+    }
+
+    .msg.user {
+      align-self: flex-end;
+      background: #111;
+      color: #fff;
+      border-color: #111;
+    }
+
+    .msg.assistant {
+      align-self: flex-start;
+      background: #fafafa;
+    }
+
+    .msg .bubble {
+      white-space: pre-wrap;
+      margin: 0;
+      font: inherit;
+      line-height: 1.6;
+    }
+
+    .msg .meta {
+      margin-top: 10px;
+      font-size: 0.95rem;
+      color: #666;
+    }
+
+    .msg.user .meta { color: #ddd; }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      border: 1px solid #d4d4d8;
+      background: #f9fafb;
+      font-size: 0.9rem;
+      color: #444;
+    }
+
+    progress { height: 14px; border-radius: 999px; overflow: hidden; }
+
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .kpi { font-weight: 700; }
+  </style>
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="shell">
+      <div class="row between">
+        <div>
+          <div class="mono kpi">savinghaey.co.kr</div>
+          <div class="sub">근거자료(로컬) 기반 Q&A · 서버 없이 브라우저에서만 동작</div>
+        </div>
+        <a class="btn btn-home" href="/index.html">← 메인</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <h1>근거 기반 AI</h1>
+    <p class="subtitle">
+      PDF/TXT/MD 등을 올리면, 그 내용만 근거로 답변합니다. (인용/페이지 표시)
+    </p>
+
+    <section class="section">
+      <h2 class="local-h2">1) 근거자료 업로드</h2>
+      <div class="grid two">
+        <div class="card">
+          <div class="row gap">
+            <input id="fileInput" type="file" multiple accept=".pdf,.txt,.md,.html,.csv" />
+            <button class="btn" id="btnAdd">추가/인덱싱</button>
+          </div>
+
+          <p class="muted">
+            업로드한 파일은 서버로 전송하지 않고, 브라우저(IndexedDB)에만 저장됩니다.
+          </p>
+
+          <div class="row gap">
+            <button class="btn ghost" id="btnClear">전체 삭제</button>
+            <button class="btn ghost" id="btnExport">내보내기(JSON)</button>
+            <button class="btn ghost" id="btnImport">가져오기(JSON)</button>
+            <input id="importInput" type="file" accept="application/json" style="display:none" />
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row between">
+            <strong>인덱싱 상태</strong>
+            <span id="status" class="muted">대기</span>
+          </div>
+          <progress id="progress" max="1" value="0" style="width:100%;"></progress>
+          <div id="docsList" class="muted" style="margin-top:10px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="local-h2">2) 모델 준비</h2>
+      <div class="grid two">
+        <div class="card">
+          <p><strong>로컬 LLM(WebLLM)</strong></p>
+          <p class="muted">
+            WebGPU 지원 브라우저(대부분 최신 Chrome/Edge)에서 동작합니다.
+            최초 1회 모델 다운로드가 큽니다.
+          </p>
+
+          <div class="row gap">
+            <select id="modelSelect"></select>
+            <button class="btn primary" id="btnLoadModel">모델 로드</button>
+          </div>
+
+          <div class="row between" style="margin-top:10px;">
+            <span class="muted" id="gpuInfo">GPU: 확인중…</span>
+            <span class="muted" id="modelStatus">모델: 미로드</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <p><strong>임베딩(검색) 모델</strong></p>
+          <p class="muted">
+            문서/질문을 벡터로 바꿔 유사한 문단을 찾아옵니다(다국어).
+          </p>
+
+          <div class="row gap">
+            <button class="btn primary" id="btnLoadEmbed">임베딩 로드</button>
+            <button class="btn ghost" id="btnRebuild">전체 재인덱싱</button>
+          </div>
+
+          <p class="muted" id="embedStatus">임베딩: 미로드</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="local-h2">3) 질문하기</h2>
+
+      <div class="card">
+        <div class="row gap" style="flex-wrap:wrap;">
+          <span class="pill" id="statDocs">문서 0개</span>
+          <span class="pill" id="statChunks">청크 0개</span>
+          <span class="pill" id="statEmbed">임베딩: -</span>
+          <span class="pill" id="statLLM">LLM: -</span>
+        </div>
+      </div>
+
+      <div id="chat" class="chat"></div>
+
+      <div class="card">
+        <textarea id="question" rows="3" placeholder="질문을 입력하세요… (예: '이 문서에서 환불 조건이 뭐야?')"></textarea>
+
+        <div class="row between" style="margin-top:10px;">
+          <div class="row gap" style="flex-wrap:wrap;">
+            <label class="muted">
+              <input type="checkbox" id="strictMode" checked />
+              엄격 모드(근거 없으면 “근거 없음”)
+            </label>
+            <label class="muted">
+              <input type="checkbox" id="showContext" />
+              검색 근거 펼쳐보기
+            </label>
+          </div>
+
+          <button class="btn primary" id="btnAsk">질문</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="local-h2">주의사항</h2>
+      <ul>
+        <li>스캔본 PDF(이미지)에는 OCR이 없어서 텍스트를 못 뽑을 수 있습니다.</li>
+        <li>“근거만” 답하게 강하게 유도하지만, 모델 특성상 100% 보장은 어렵습니다. 대신 인용([C#])이 없으면 경고를 띄웁니다.</li>
+        <li>최초 실행 시 모델 다운로드가 커서 모바일에서는 부담일 수 있습니다.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell">
+      <p>© savinghaey.co.kr</p>
+    </div>
+  </footer>
+
+  <script type="module" src="/kb-ai.js"></script>
+</body>
+</html>
