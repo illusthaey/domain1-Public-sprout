@@ -6,7 +6,6 @@
   <meta name="color-scheme" content="light" />
   <title>기간제교원 호봉획정표</title>
 
-  <!-- 기존 공통 스타일 그대로 사용 -->
   <link rel="stylesheet" href="/static/style.css" />
 
   <!-- 엑셀 생성용 (SheetJS) -->
@@ -58,13 +57,26 @@
     @media (max-width: 640px) {
       .sheetlike td input, .sheetlike td select { min-width: 150px; }
     }
+
+    /* ===== 버튼 UI를 index와 완전히 맞추기 위한 보정 ===== */
+    /* style.css에 .btn + .btn { margin-left: 10px; }가 있어서,
+       .row(gap 사용) 안에서는 간격이 2중으로 벌어짐 → row 안에서는 margin-left 제거 */
+    .row .btn + .btn { margin-left: 0; }
+
+    /* 테이블 안 "삭제" 버튼은 같은 btn 컴포넌트이되 조금 작게 */
+    .btn.sm {
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+    }
   </style>
 </head>
 
 <body>
 <main class="container">
   <div class="home-link-wrap">
-    <a class="btn-home" href="/">← 메인으로</a>
+    <!-- 기존 btn-home(알약 모양) → index와 동일한 버튼 룩(.btn)로 통일 -->
+    <a class="btn ghost" href="/">← 메인으로</a>
   </div>
 
   <h1>기간제교원 호봉획정표</h1>
@@ -445,8 +457,8 @@
       <td class="out center convY">0</td>
       <td class="out center convM">0</td>
       <td class="out center convD">0</td>
-      <td><input type="text" class="note" placeholder="" value="${escapeHtml(data.note || "")}"/></td>
-      <td class="center"><button type="button" class="btn-lightgrey del">삭제</button></td>
+      <td><input type="text" class="memo" placeholder="" value="${escapeHtml(data.memo || "")}"/></td>
+      <td class="center"><button type="button" class="btn ghost sm del">삭제</button></td>
     `;
 
     tr.querySelector(".del").addEventListener("click", () => {
@@ -482,7 +494,7 @@
       to: tr.querySelector(".to").value,
       desc: tr.querySelector(".desc").value.trim(),
       rate: tr.querySelector(".rate").value.trim(),
-      note: tr.querySelector(".note").value.trim(),
+      memo: tr.querySelector(".memo").value.trim(),
     };
   }
 
@@ -564,7 +576,6 @@
     els.finalStepOut.textContent = finalStep;
 
     // 차기승급일(참고): 360일-잔여(월/일) 만큼 뒤로 (30일=1월 규칙)
-    // ※ 실제는 지침/기관별 적용이 달라질 수 있어 "참고용"으로만 표기
     const base = parseYMD(els.baseDate.value);
     if (base) {
       const remainDays = sumConv.m * 30 + sumConv.d;
@@ -583,7 +594,6 @@
   });
 
   els.loadSampleBtn.addEventListener("click", () => {
-    // 기존 입력 유지 + 경력만 샘플로 교체(원하면 여기 로직 바꿔도 됨)
     els.org.value = "문막초등학교 병설유치원";
     els.position.value = "시간제근무 기간제교사";
     els.name.value = "김라미";
@@ -594,10 +604,10 @@
 
     els.tbody.innerHTML = "";
     const sampleRows = [
-      { from: "1991-03-20", to: "1992-01-14", desc: "중앙유치원", rate: "1", note: "" },
-      { from: "2002-02-27", to: "2003-02-27", desc: "예쁜어린이집", rate: "1", note: "" },
-      { from: "2003-03-01", to: "2004-02-29", desc: "○○유치원", rate: "0.5", note: "예시(0.5 환산)" },
-      { from: "", to: "", desc: "군 복무(예시)", rate: "180일", note: "일수 입력 예시" }
+      { from: "1991-03-20", to: "1992-01-14", desc: "중앙유치원", rate: "1", memo: "" },
+      { from: "2002-02-27", to: "2003-02-27", desc: "예쁜어린이집", rate: "1", memo: "" },
+      { from: "2003-03-01", to: "2004-02-29", desc: "○○유치원", rate: "0.5", memo: "예시(0.5 환산)" },
+      { from: "", to: "", desc: "군 복무(예시)", rate: "180일", memo: "일수 입력 예시" }
     ];
     sampleRows.forEach(r => els.tbody.appendChild(makeRow(r)));
     recalcAll();
@@ -614,7 +624,6 @@
     els.nextDate.value = "";
 
     els.tbody.innerHTML = "";
-    // 기본 5행 깔아주기
     for (let i = 0; i < 5; i++) els.tbody.appendChild(makeRow({ rate: "1" }));
     recalcAll();
   });
@@ -652,7 +661,6 @@
     aoa.push([]);
     aoa.push(["부터","까지","경력 내용","환산율","기간(년)","기간(월)","기간(일)","환산(년)","환산(월)","환산(일)","비고"]);
 
-    // 각 행 계산을 다시 한번 수행(엑셀에 raw/conv를 같이 실어주기)
     rows.forEach(r => {
       const daysText = parseDaysText(r.rate);
 
@@ -681,7 +689,7 @@
         r.rate || "",
         raw.y, raw.m, raw.d,
         conv.y, conv.m, conv.d,
-        r.note || ""
+        r.memo || ""
       ]);
     });
 
@@ -706,7 +714,6 @@
     const aoa = buildExcelAOA();
     const ws = XLSX.utils.aoa_to_sheet(aoa);
 
-    // 보기 좋은 열 너비
     ws["!cols"] = [
       { wch: 12 }, { wch: 12 }, { wch: 28 }, { wch: 10 },
       { wch: 9 }, { wch: 9 }, { wch: 9 },
@@ -714,7 +721,6 @@
       { wch: 22 }
     ];
 
-    // 타이틀 병합(첫 줄 A1:K1)
     ws["!merges"] = ws["!merges"] || [];
     ws["!merges"].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 10 } });
 
@@ -730,10 +736,8 @@
   els.downloadBtn.addEventListener("click", downloadXlsx);
 
   // ========= 초기 상태 =========
-  // 기본 5행
   for (let i = 0; i < 5; i++) els.tbody.appendChild(makeRow({ rate: "1" }));
 
-  // 기본정보 변화도 재계산
   [els.license, els.edu, els.bonus, els.baseDate].forEach(el => {
     el.addEventListener("change", recalcAll);
     el.addEventListener("input", recalcAll);
