@@ -1,0 +1,1689 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>메모 상세 · 네트워크</title>
+
+  <!-- 네가 첨부한 공통 스타일 그대로 사용 -->
+  <link rel="stylesheet" href="static/style.css" />
+
+  <!-- 이 페이지 전용 최소 보조 스타일 (톤/보더/라운드값은 style.css에 맞춤) -->
+  <style>
+    .head-inner { padding: 16px 0; }
+
+    /* style.css에서 a가 underline/색이 없어서, 메모 링크만 눈에 띄게 */
+    .link-note{
+      color:#0051a8;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    .link-note:hover{ opacity:.85; }
+
+    /* 태그는 style.css의 버튼 톤을 재활용 */
+    .tag-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #f3f4f6;
+      border: 1px solid #d4d4d8;
+      font-size: 0.95rem;
+      color: #111;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    /* 그래프 영역 */
+    .graph-wrap{
+      position: relative;
+      padding: 12px;
+      border-radius: 12px;
+      background:#fff;
+      border:1px solid #e5e5e5;
+      overflow:hidden;
+    }
+    .graph-canvas{
+      width:100%;
+      height:460px;
+      display:block;
+      border-radius: 10px;
+      background:#fff;
+      border:1px solid #e5e5e5;
+      touch-action: none; /* pointer 이벤트로 팬/드래그 제어 */
+    }
+    .graph-hint{
+      position:absolute;
+      left:14px;
+      bottom:14px;
+      padding:6px 10px;
+      border-radius:999px;
+      background: rgba(255,255,255,0.92);
+      border:1px solid #e5e5e5;
+      font-size:0.95rem;
+      color:#555;
+      max-width: calc(100% - 28px);
+      overflow:hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* 코드/프리뷰 */
+    pre.codeblock{
+      margin:0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.95rem;
+      color:#222;
+    }
+
+    /* 본문 마크다운 라이트: 코드블록 */
+    .md-pre{
+      border: 1px solid #e5e5e5;
+      background:#fafafa;
+      border-radius: 10px;
+      padding: 12px 14px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin: 12px 0;
+    }
+    .md-pre code{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.95rem;
+      color:#222;
+    }
+
+    /* 모바일 */
+    @media (max-width: 640px){
+      .graph-canvas{ height:380px; }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="shell">
+      <div class="row between head-inner">
+        <div class="row gap">
+          <a class="btn-home" href="index.html">← 메인</a>
+          <span class="muted">메모 상세 / 네트워크</span>
+        </div>
+
+        <div class="row gap">
+          <input id="noteSearch" type="text" placeholder="메모 검색 (제목/ID/별칭)" list="noteList" />
+          <datalist id="noteList"></datalist>
+          <button class="btn ghost" id="randomBtn" type="button">랜덤</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <h1 id="noteTitle">로딩 중…</h1>
+    <p class="subtitle" id="noteSub"></p>
+
+    <section class="section">
+      <div class="row between">
+        <h2 class="local-h2 local-tight">내용</h2>
+        <div class="row gap">
+          <button class="btn ghost" id="copyLinkBtn" type="button">이 메모 링크 복사</button>
+        </div>
+      </div>
+      <hr />
+      <div class="card" id="noteBody"></div>
+      <div class="row gap" id="tagRow" style="flex-wrap:wrap; margin-top:10px;"></div>
+    </section>
+
+    <section class="section">
+      <h2 class="local-h2 local-tight">연결</h2>
+      <p class="muted">본문의 <strong>[[위키링크]]</strong>를 파싱해 Outgoing/Backlink를 구성합니다.</p>
+
+      <div class="grid two">
+        <div class="card">
+          <h3 class="local-h3 local-tight">내가 링크한 메모</h3>
+          <ul id="outgoingList" class="local-small"></ul>
+        </div>
+
+        <div class="card">
+          <h3 class="local-h3 local-tight">나를 링크한 메모 (백링크)</h3>
+          <ul id="backlinkList" class="local-small"></ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="row between">
+        <div>
+          <h2 class="local-h2 local-tight">네트워크</h2>
+          <p class="muted" style="margin-top:6px;">
+            드래그: 노드 이동 · 빈 공간 드래그: 이동 · 휠: 줌 · 클릭: 해당 메모로 이동
+          </p>
+        </div>
+
+        <div class="row gap" style="flex-wrap:wrap; justify-content:flex-end;">
+          <label class="row gap local-small">
+            <span class="muted">범위</span>
+            <select id="hopSelect">
+              <option value="1">1-hop</option>
+              <option value="2" selected>2-hop</option>
+              <option value="3">3-hop</option>
+            </select>
+          </label>
+
+          <label class="row gap local-small">
+            <input type="checkbox" id="toggleOut" checked />
+            <span>나가는 링크</span>
+          </label>
+
+          <label class="row gap local-small">
+            <input type="checkbox" id="toggleIn" checked />
+            <span>들어오는 링크</span>
+          </label>
+
+          <input id="tagFilter" type="text" placeholder="태그 필터 (예: 학습,인지)" />
+
+          <button class="btn ghost" id="fitBtn" type="button">맞춤</button>
+          <button class="btn ghost" id="relayoutBtn" type="button">재배치</button>
+          <button class="btn primary" id="pauseBtn" type="button">일시정지</button>
+        </div>
+      </div>
+
+      <hr />
+
+      <div class="graph-wrap">
+        <canvas id="graphCanvas" class="graph-canvas"></canvas>
+        <div id="graphHint" class="graph-hint">그래프 준비 중…</div>
+      </div>
+
+      <p class="muted" id="graphWarn" style="margin-top:10px;"></p>
+    </section>
+
+    <section class="section">
+      <h2 class="local-h2 local-tight">notes.json 로드 상태</h2>
+      <div class="card">
+        <p class="muted" id="dataStatus">로딩 중…</p>
+
+        <!-- style.css에 있는 접기/펼치기 스타일 재활용 -->
+        <details class="shot-details">
+          <summary class="shot-summary">데이터 형식 예시 보기</summary>
+          <pre class="codeblock" id="dataPreview"></pre>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell">
+      <p>savinghaey.co.kr · note network (static + browser JS)</p>
+      <p class="muted">옵시디언 스타일의 “링크→그래프” 핵심만 브라우저에서 재현한 예시입니다.</p>
+    </div>
+  </footer>
+
+  <script>
+    /**********************************************************************
+     * 설정
+     **********************************************************************/
+    const CONFIG = {
+      NOTES_URL: "notes.json",
+      DEFAULT_NOTE_FALLBACK: null, // null이면 첫 노트
+      MAX_SUBGRAPH_NODES: 180,     // 안전장치(큰 그래프는 hops/필터로 줄이기)
+      PHYSICS_TICK_LIMIT: 120      // 새 그래프 세팅 후 강제로 어느 정도만 “세게” 돌리고 안정화
+    };
+
+    /**********************************************************************
+     * 샘플/폴백 데이터 (notes.json이 없거나 fetch 실패 시 사용)
+     * - 실제 서비스에서는 notes.json을 두면 자동으로 그걸 사용함
+     **********************************************************************/
+    const FALLBACK_NOTES = [
+      {
+        id: "study-method",
+        title: "공부법",
+        updatedAt: "2026-02-01",
+        tags: ["학습", "메타"],
+        aliases: ["Study", "공부"],
+        body:
+`공부는 결국 [[기억]]과 [[행동설계]]의 합성물이다.
+
+- 요약하면: '덜 잊게' + '자주 하게'
+- 자주 등장하는 도구: [[spaced-repetition|스페이스드 리피티션]](간격 반복), [[회상연습]]
+
+실제로는 “좋은 시스템”이 “좋은 의지”를 이긴다.`
+      },
+      {
+        id: "memory",
+        title: "기억",
+        updatedAt: "2026-01-22",
+        tags: ["인지", "기초"],
+        aliases: ["Memory"],
+        body:
+`기억은 저장이라기보다 "재구성"에 가깝다.
+
+- [[forgetting-curve|망각곡선]]은 반복 타이밍이 왜 중요한지 설명한다.
+- [[회상연습]]은 '다시 읽기'보다 강력한 경우가 많다.
+
+## 자주 헷갈리는 포인트
+'이해'와 '기억'은 친구지만 동일인은 아니다.`
+      },
+      {
+        id: "forgetting-curve",
+        title: "망각곡선",
+        updatedAt: "2026-01-10",
+        tags: ["인지", "원리"],
+        aliases: ["Ebbinghaus"],
+        body:
+`망각곡선은 시간이 지나면서 회상 가능한 정보가 급격히 줄어드는 경향을 말한다.
+
+핵심:
+- 반복(특히 적절한 간격)을 주면 곡선이 완만해진다 → [[spaced-repetition|스페이스드 리피티션]]
+
+> 수식 대신 직관만 남겨두자.`
+      },
+      {
+        id: "spaced-repetition",
+        title: "스페이스드 리피티션",
+        updatedAt: "2026-01-28",
+        tags: ["학습", "기법"],
+        aliases: ["SR", "Spaced Repetition"],
+        body:
+`간격을 두고 복습하면 장기 기억이 강화된다.
+
+관련:
+- 대표 툴: [[anki|Anki]]
+- 원리: [[망각곡선]]
+- 함께 쓰면 좋은 것: [[회상연습]]
+
+\`\`\`
+팁: '조금 틀릴 정도'의 난이도가 뇌를 깨운다.
+\`\`\``
+      },
+      {
+        id: "retrieval-practice",
+        title: "회상연습",
+        updatedAt: "2026-01-20",
+        tags: ["학습", "기법"],
+        aliases: ["Retrieval Practice"],
+        body:
+`회상연습(retrieval practice)은 "기억을 꺼내는 행위 자체"가 학습이 되는 현상이다.
+
+예:
+- 퀴즈 풀기
+- 빈 종이에 써보기
+- 누군가에게 설명하기
+
+연결:
+- [[공부법]]
+- [[스페이스드 리피티션#관련|스페이스드 리피티션(관련 섹션)]]`
+      },
+      {
+        id: "behavior-design",
+        title: "행동설계",
+        updatedAt: "2026-02-03",
+        tags: ["습관", "시스템"],
+        aliases: ["Behavior Design"],
+        body:
+`행동설계는 '하고 싶은데 안 되는 일'을 다루는 기술이다.
+
+핵심 레버:
+- 환경 설계
+- 마찰 줄이기/늘리기
+- 작은 시작(진입 장벽 낮추기)
+
+학습과 연결:
+- [[공부법]]`
+      },
+      {
+        id: "anki",
+        title: "Anki",
+        updatedAt: "2026-01-18",
+        tags: ["툴", "학습"],
+        aliases: [],
+        body:
+`Anki는 간격 반복을 구현한 플래시카드 앱이다.
+
+관련 메모:
+- [[스페이스드 리피티션]]
+- [[회상연습]]
+
+주의:
+- 카드 관리가 '학습'을 잡아먹지 않게 경계.`
+      }
+    ];
+
+    /**********************************************************************
+     * 유틸
+     **********************************************************************/
+    const $ = (sel) => document.querySelector(sel);
+
+    function escapeHtml(s){
+      return String(s ?? "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    function normKey(s){
+      // 너무 공격적으로 정규화하면 한글이 망가질 수 있어서 “적당히만”
+      return String(s ?? "")
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g," ");
+    }
+
+    function slugify(s){
+      const t = normKey(s)
+        .replace(/[^0-9a-z가-힣\s-]/g,"")  // 한글/영문/숫자/공백/하이픈만
+        .replace(/\s+/g,"-")
+        .replace(/-+/g,"-")
+        .replace(/^-|-$/g,"");
+      return t || "section";
+    }
+
+    function safeParseCsvTags(s){
+      const raw = String(s ?? "").trim();
+      if (!raw) return [];
+      return raw
+        .split(",")
+        .map(x => x.trim())
+        .filter(Boolean);
+    }
+
+    function getUrlState(){
+      const params = new URLSearchParams(location.search);
+      const noteRef = params.get("note") || "";
+      const hash = (location.hash || "").replace(/^#/,"");
+      return { noteRef, hash };
+    }
+
+    function setUrlState({ noteId, hash }){
+      const params = new URLSearchParams(location.search);
+      params.set("note", noteId);
+      const h = hash ? `#${hash}` : "";
+      history.pushState({}, "", `${location.pathname}?${params.toString()}${h}`);
+    }
+
+    function tryScrollToHash(hash){
+      if (!hash) return;
+      // hash가 "h-..." 형태가 아니어도 대응
+      const candidates = [
+        hash,
+        `h-${hash}`,
+        `h-${slugify(hash)}`
+      ];
+
+      for (const id of candidates){
+        const el = document.getElementById(id);
+        if (el){
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+          return;
+        }
+      }
+    }
+
+    /**********************************************************************
+     * 위키링크 파서: [[target]], [[target|label]], [[target#heading|label]]
+     **********************************************************************/
+    function parseWikiLinks(text){
+      const out = [];
+      const re = /\[\[([^\]]+)\]\]/g;
+      let m;
+      while ((m = re.exec(String(text ?? ""))) !== null){
+        const inside = m[1].trim();
+        if (!inside) continue;
+
+        const [leftRaw, labelRaw] = inside.split("|");
+        const left = (leftRaw || "").trim();
+        const label = (labelRaw || "").trim();
+
+        const [targetRaw, fragRaw] = left.split("#");
+        const target = (targetRaw || "").trim();
+        const fragment = (fragRaw || "").trim();
+
+        if (!target) continue;
+        out.push({
+          targetText: target,
+          labelText: label,
+          fragmentText: fragment
+        });
+      }
+      return out;
+    }
+
+    /**********************************************************************
+     * notes.json 로드 + 정규화
+     **********************************************************************/
+    async function loadNotesMaybe(url){
+      const statusEl = $("#dataStatus");
+      try{
+        const res = await fetch(url, { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        if (!Array.isArray(json)) throw new Error("notes.json은 배열이어야 합니다.");
+        statusEl.textContent = `notes.json 로드 성공 · ${json.length}개 메모`;
+        return { notes: json, usedFallback: false };
+      }catch(err){
+        statusEl.textContent = `notes.json 로드 실패 → 폴백 데이터 사용 (원인: ${err.message})`;
+        return { notes: FALLBACK_NOTES, usedFallback: true, error: err };
+      }
+    }
+
+    function normalizeNotes(rawNotes){
+      const notes = [];
+      const seen = new Set();
+
+      for (const raw of rawNotes){
+        const title = String(raw?.title ?? "").trim();
+        const body  = String(raw?.body ?? "");
+        if (!title && !raw?.id) continue;
+
+        let id = String(raw?.id ?? "").trim();
+        if (!id) id = slugify(title || "note");
+
+        // id 유니크 보장
+        let finalId = id;
+        let n = 2;
+        while (seen.has(finalId)){
+          finalId = `${id}-${n++}`;
+        }
+        seen.add(finalId);
+
+        notes.push({
+          id: finalId,
+          title: title || finalId,
+          updatedAt: String(raw?.updatedAt ?? ""),
+          tags: Array.isArray(raw?.tags) ? raw.tags.map(x => String(x)) : [],
+          aliases: Array.isArray(raw?.aliases) ? raw.aliases.map(x => String(x)) : [],
+          body
+        });
+      }
+
+      return notes;
+    }
+
+    /**********************************************************************
+     * 스토어/그래프 모델 구축
+     **********************************************************************/
+    function buildStore(notes){
+      const byId = new Map();
+      const byNormId = new Map();
+      const byNormTitle = new Map();
+      const byNormAlias = new Map();
+
+      for (const n of notes){
+        byId.set(n.id, n);
+        byNormId.set(normKey(n.id), n.id);
+        byNormTitle.set(normKey(n.title), n.id);
+        for (const a of (n.aliases || [])){
+          const k = normKey(a);
+          if (!k) continue;
+          // 같은 별칭이 여러 노트를 가리키면 애매해지지만, 여기선 “먼저 등록된 것”을 우선
+          if (!byNormAlias.has(k)) byNormAlias.set(k, n.id);
+        }
+      }
+
+      function resolveRef(refText){
+        const raw = String(refText ?? "").trim();
+        if (!raw) return null;
+
+        if (byId.has(raw)) return byId.get(raw);
+
+        const k = normKey(raw);
+        if (byNormId.has(k)) return byId.get(byNormId.get(k));
+        if (byNormTitle.has(k)) return byId.get(byNormTitle.get(k));
+        if (byNormAlias.has(k)) return byId.get(byNormAlias.get(k));
+
+        // slugify로도 한번 더
+        const slug = normKey(slugify(raw));
+        if (byNormId.has(slug)) return byId.get(byNormId.get(slug));
+
+        return null;
+      }
+
+      // 그래프 구조
+      const outgoing = new Map();   // id -> link[]
+      const incoming = new Map();   // id -> Set(fromId)
+      const edges = [];             // {fromId,toId}
+      const neighbors = new Map();  // id -> Set(otherId)
+      const adjOut = new Map();     // id -> Set(toId)
+      const adjIn  = new Map();     // id -> Set(fromId)
+
+      for (const n of notes){
+        outgoing.set(n.id, []);
+        incoming.set(n.id, new Set());
+        neighbors.set(n.id, new Set());
+        adjOut.set(n.id, new Set());
+        adjIn.set(n.id, new Set());
+      }
+
+      for (const n of notes){
+        const links = parseWikiLinks(n.body);
+        const outArr = [];
+
+        for (const l of links){
+          const targetNote = resolveRef(l.targetText);
+          if (targetNote){
+            outArr.push({
+              toId: targetNote.id,
+              toTitle: targetNote.title,
+              label: l.labelText || targetNote.title,
+              fragmentText: l.fragmentText || "",
+              missing: false
+            });
+
+            edges.push({ fromId: n.id, toId: targetNote.id });
+            incoming.get(targetNote.id).add(n.id);
+
+            adjOut.get(n.id).add(targetNote.id);
+            adjIn.get(targetNote.id).add(n.id);
+
+            neighbors.get(n.id).add(targetNote.id);
+            neighbors.get(targetNote.id).add(n.id);
+          }else{
+            outArr.push({
+              toId: null,
+              toTitle: l.targetText,
+              label: l.labelText || l.targetText,
+              fragmentText: l.fragmentText || "",
+              missing: true
+            });
+          }
+        }
+
+        outgoing.set(n.id, outArr);
+      }
+
+      return {
+        notes,
+        byId,
+        resolveRef,
+        outgoing,
+        incoming,
+        edges,
+        neighbors,
+        adjOut,
+        adjIn
+      };
+    }
+
+    /**********************************************************************
+     * 마크다운 라이트 렌더링 (+ 위키링크)
+     * - 안전: HTML escape → 우리가 허용한 태그만 생성
+     **********************************************************************/
+    function makeInlineRenderer(store){
+      function renderWikiLinks(escapedText){
+        return escapedText.replace(/\[\[([^\]]+)\]\]/g, (_, insideRaw) => {
+          const inside = String(insideRaw || "").trim();
+          const [leftRaw, labelRaw] = inside.split("|");
+          const left = (leftRaw || "").trim();
+          const label = (labelRaw || "").trim();
+
+          const [targetRaw, fragRaw] = left.split("#");
+          const targetText = (targetRaw || "").trim();
+          const fragmentText = (fragRaw || "").trim();
+
+          const targetNote = store.resolveRef(targetText);
+          const display = label || targetText;
+
+          if (!targetNote){
+            return `<span class="muted" title="미등록 메모">${escapeHtml(display)}</span>`;
+          }
+
+          const fragId = fragmentText ? `h-${slugify(fragmentText)}` : "";
+          const fragAttr = fragId ? ` data-frag="${escapeHtml(fragId)}"` : "";
+
+          return `<a href="#" class="link-note" data-note-id="${escapeHtml(targetNote.id)}"${fragAttr}>${escapeHtml(display)}</a>`;
+        });
+      }
+
+      function renderMdLinks(escapedText){
+        // [label](url) 아주 간단 지원
+        return escapedText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, urlRaw) => {
+          const url = String(urlRaw || "").trim();
+          const safe = /^(https?:\/\/|mailto:)/i.test(url);
+          if (!safe) return `${escapeHtml(label)} (${escapeHtml(url)})`;
+          return `<a class="link-note" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`;
+        });
+      }
+
+      function renderInline(text){
+        let t = escapeHtml(text);
+
+        // 위키링크 → 클릭 내비게이션
+        t = renderWikiLinks(t);
+
+        // 일반 md 링크
+        t = renderMdLinks(t);
+
+        // 인라인 코드
+        t = t.replace(/`([^`]+)`/g, (_, code) => `<code>${escapeHtml(code)}</code>`);
+
+        // 굵게/기울임(간단 버전)
+        t = t.replace(/\*\*([^*]+)\*\*/g, (_, b) => `<strong>${escapeHtml(b)}</strong>`);
+        t = t.replace(/\*([^*]+)\*/g, (_, it) => `<em>${escapeHtml(it)}</em>`);
+
+        // 줄바꿈
+        t = t.replace(/\n/g, "<br>");
+
+        return t;
+      }
+
+      return renderInline;
+    }
+
+    function renderMarkdownLite(note, store){
+      const renderInline = makeInlineRenderer(store);
+      const lines = String(note.body ?? "").replace(/\r\n?/g, "\n").split("\n");
+
+      let i = 0;
+      let html = "";
+      const usedIds = new Set();
+
+      function uniqId(base){
+        let id = base;
+        let n = 2;
+        while (usedIds.has(id)){
+          id = `${base}-${n++}`;
+        }
+        usedIds.add(id);
+        return id;
+      }
+
+      function isBlockStart(line){
+        const t = line.trim();
+        return (
+          t.startsWith("```") ||
+          /^#{1,4}\s+/.test(t) ||
+          /^>\s+/.test(t) ||
+          /^\s*[-*]\s+/.test(line) ||
+          /^\s*\d+\.\s+/.test(line) ||
+          /^\s*---\s*$/.test(t)
+        );
+      }
+
+      while (i < lines.length){
+        const line = lines[i];
+        const t = line.trim();
+
+        // 코드블록 ``` ... ```
+        if (t.startsWith("```")){
+          i++;
+          const buf = [];
+          while (i < lines.length && !lines[i].trim().startsWith("```")){
+            buf.push(lines[i]);
+            i++;
+          }
+          if (i < lines.length) i++; // 닫는 ```
+          const code = escapeHtml(buf.join("\n"));
+          html += `<div class="md-pre"><code>${code}</code></div>`;
+          continue;
+        }
+
+        // HR
+        if (/^---$/.test(t)){
+          html += `<hr />`;
+          i++;
+          continue;
+        }
+
+        // 헤딩 # .. ####
+        const hm = t.match(/^(#{1,4})\s+(.+)$/);
+        if (hm){
+          const level = hm[1].length;
+          const text = hm[2].trim();
+          const baseId = `h-${slugify(text)}`;
+          const id = uniqId(baseId);
+          const tag = `h${Math.min(4, Math.max(2, level + 1))}`; // h1은 페이지 제목이 이미 있으니 h2~h4로 맞춤
+          html += `<${tag} id="${escapeHtml(id)}">${renderInline(text)}</${tag}>`;
+          i++;
+          continue;
+        }
+
+        // 블록 인용문 > ...
+        if (/^>\s+/.test(t)){
+          const buf = [];
+          while (i < lines.length && /^>\s+/.test(lines[i].trim())){
+            buf.push(lines[i].trim().replace(/^>\s+/, ""));
+            i++;
+          }
+          html += `<div class="card"><p>${renderInline(buf.join("\n"))}</p></div>`;
+          continue;
+        }
+
+        // UL - ...
+        if (/^\s*[-*]\s+/.test(line)){
+          const items = [];
+          while (i < lines.length && /^\s*[-*]\s+/.test(lines[i])){
+            const li = lines[i].replace(/^\s*[-*]\s+/, "");
+            items.push(`<li>${renderInline(li)}</li>`);
+            i++;
+          }
+          html += `<ul>${items.join("")}</ul>`;
+          continue;
+        }
+
+        // OL 1. ...
+        if (/^\s*\d+\.\s+/.test(line)){
+          const items = [];
+          while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i])){
+            const li = lines[i].replace(/^\s*\d+\.\s+/, "");
+            items.push(`<li>${renderInline(li)}</li>`);
+            i++;
+          }
+          html += `<ol>${items.join("")}</ol>`;
+          continue;
+        }
+
+        // 빈 줄
+        if (!t){
+          i++;
+          continue;
+        }
+
+        // 문단: 빈 줄 or 블록 시작 전까지 모음
+        const buf = [line];
+        i++;
+        while (i < lines.length && lines[i].trim() && !isBlockStart(lines[i])){
+          buf.push(lines[i]);
+          i++;
+        }
+        html += `<p>${renderInline(buf.join("\n"))}</p>`;
+      }
+
+      return html;
+    }
+
+    /**********************************************************************
+     * 부분 그래프 추출 (BFS, hops)
+     **********************************************************************/
+    function buildSubgraph(store, focusId, hops, includeOut, includeIn, tagFilterList){
+      const warn = { text: "" };
+
+      const tagSet = new Set((tagFilterList || []).map(t => String(t)));
+      const wantTagFilter = tagSet.size > 0;
+
+      const included = new Set([focusId]);
+      const queue = [{ id: focusId, d: 0 }];
+
+      while (queue.length){
+        const { id, d } = queue.shift();
+        if (d >= hops) continue;
+
+        const neigh = new Set();
+        if (includeOut){
+          for (const to of (store.adjOut.get(id) || [])) neigh.add(to);
+        }
+        if (includeIn){
+          for (const from of (store.adjIn.get(id) || [])) neigh.add(from);
+        }
+
+        for (const nx of neigh){
+          if (included.has(nx)) continue;
+
+          // 태그 필터가 있으면 “확장 대상”도 필터 적용(단, 포커스는 항상 포함)
+          if (wantTagFilter && nx !== focusId){
+            const note = store.byId.get(nx);
+            const has = note && (note.tags || []).some(t => tagSet.has(t));
+            if (!has) continue;
+          }
+
+          included.add(nx);
+
+          if (included.size >= CONFIG.MAX_SUBGRAPH_NODES){
+            warn.text = `그래프 노드가 ${CONFIG.MAX_SUBGRAPH_NODES}개에 도달해서 확장을 중단했어요. (hops 줄이거나 태그 필터를 더 좁혀보세요.)`;
+            queue.length = 0;
+            break;
+          }
+
+          queue.push({ id: nx, d: d + 1 });
+        }
+      }
+
+      // 노드/엣지 구성
+      const nodes = [];
+      for (const id of included){
+        const note = store.byId.get(id);
+        if (!note) continue;
+        nodes.push(note);
+      }
+
+      const edges = store.edges.filter(e => included.has(e.fromId) && included.has(e.toId));
+
+      return { nodes, edges, warn };
+    }
+
+    /**********************************************************************
+     * 캔버스 그래프 (force + zoom/pan + drag)
+     **********************************************************************/
+    class CanvasGraph{
+      constructor(canvas, hintEl){
+        this.canvas = canvas;
+        this.hintEl = hintEl;
+        this.ctx = canvas.getContext("2d", { alpha: false });
+
+        this.DPR = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+        this.size = { w: 300, h: 150 };
+
+        this.camera = { x: 0, y: 0, k: 1 }; // 화면좌표 기준 이동/스케일
+        this.nodes = [];  // {id,title,x,y,vx,vy,r,tags}
+        this.edges = [];  // {a:node,b:node}
+        this.nodeById = new Map();
+
+        this.focusId = "";
+        this.hoverId = "";
+
+        this.paused = false;
+        this._raf = 0;
+
+        // interaction
+        this._pointer = { down:false, mode:"none", sx:0, sy:0, wx:0, wy:0, moved:false, startSx:0, startSy:0 };
+        this._dragNode = null;
+
+        this._tickHot = 0;
+
+        this._bind();
+        this._resize();
+        this._loop();
+      }
+
+      destroy(){
+        cancelAnimationFrame(this._raf);
+        window.removeEventListener("resize", this._onResize);
+      }
+
+      _bind(){
+        this._onResize = () => this._resize();
+        window.addEventListener("resize", this._onResize);
+
+        this.canvas.addEventListener("pointerdown", (e) => this._onPointerDown(e));
+        this.canvas.addEventListener("pointermove", (e) => this._onPointerMove(e));
+        this.canvas.addEventListener("pointerup",   (e) => this._onPointerUp(e));
+        this.canvas.addEventListener("pointercancel",(e)=> this._onPointerUp(e));
+        this.canvas.addEventListener("wheel", (e) => this._onWheel(e), { passive:false });
+      }
+
+      _resize(){
+        const rect = this.canvas.getBoundingClientRect();
+        this.size = { w: Math.max(1, rect.width), h: Math.max(1, rect.height) };
+        this.canvas.width  = Math.round(this.size.w * this.DPR);
+        this.canvas.height = Math.round(this.size.h * this.DPR);
+
+        // 카메라 기본: 화면 중심
+        if (!this.camera || (this.camera.x === 0 && this.camera.y === 0)){
+          this.camera = { x: this.size.w / 2, y: this.size.h / 2, k: 1 };
+        }
+      }
+
+      setData({ nodes, edges, focusId }){
+        // 기존 위치 유지(같은 id는 위치 보존) → 전환이 덜 “튀는” 느낌
+        const old = this.nodeById;
+
+        this.nodes = [];
+        this.nodeById = new Map();
+
+        // 초기 배치: 원형
+        const N = nodes.length || 1;
+        const R = Math.max(90, Math.min(220, 14 * Math.sqrt(N)));
+        for (let i=0; i<nodes.length; i++){
+          const note = nodes[i];
+          const angle = (i / N) * Math.PI * 2;
+          const baseX = Math.cos(angle) * R;
+          const baseY = Math.sin(angle) * R;
+
+          const prev = old.get(note.id);
+          const node = {
+            id: note.id,
+            title: note.title,
+            tags: note.tags || [],
+            x: prev ? prev.x : baseX + (Math.random()-0.5)*20,
+            y: prev ? prev.y : baseY + (Math.random()-0.5)*20,
+            vx: 0,
+            vy: 0,
+            r: 14
+          };
+          this.nodes.push(node);
+          this.nodeById.set(node.id, node);
+        }
+
+        this.edges = edges
+          .map(e => {
+            const a = this.nodeById.get(e.fromId);
+            const b = this.nodeById.get(e.toId);
+            if (!a || !b) return null;
+            return { a, b };
+          })
+          .filter(Boolean);
+
+        this.focusId = focusId;
+        this.hoverId = "";
+
+        this._tickHot = CONFIG.PHYSICS_TICK_LIMIT;
+        this.fitToView(true);
+      }
+
+      relayout(){
+        const N = this.nodes.length || 1;
+        const R = Math.max(90, Math.min(220, 14 * Math.sqrt(N)));
+        for (let i=0; i<this.nodes.length; i++){
+          const n = this.nodes[i];
+          const angle = (i / N) * Math.PI * 2;
+          n.x = Math.cos(angle) * R + (Math.random()-0.5)*40;
+          n.y = Math.sin(angle) * R + (Math.random()-0.5)*40;
+          n.vx = 0;
+          n.vy = 0;
+        }
+        this._tickHot = CONFIG.PHYSICS_TICK_LIMIT;
+      }
+
+      fitToView(soft=false){
+        if (this.nodes.length === 0) return;
+
+        let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
+        for (const n of this.nodes){
+          minX = Math.min(minX, n.x);
+          maxX = Math.max(maxX, n.x);
+          minY = Math.min(minY, n.y);
+          maxY = Math.max(maxY, n.y);
+        }
+
+        const pad = 60;
+        const w = this.size.w - pad*2;
+        const h = this.size.h - pad*2;
+
+        const dx = Math.max(1e-6, maxX - minX);
+        const dy = Math.max(1e-6, maxY - minY);
+
+        let k = Math.min(w/dx, h/dy);
+        k = Math.max(0.35, Math.min(2.4, k));
+
+        const cx = (minX + maxX) / 2;
+        const cy = (minY + maxY) / 2;
+
+        const target = {
+          k,
+          x: this.size.w/2 - cx * k,
+          y: this.size.h/2 - cy * k
+        };
+
+        if (!soft){
+          this.camera = target;
+          return;
+        }
+
+        // soft 이동(약간 보간)
+        this.camera.k = this.camera.k + (target.k - this.camera.k) * 0.35;
+        this.camera.x = this.camera.x + (target.x - this.camera.x) * 0.35;
+        this.camera.y = this.camera.y + (target.y - this.camera.y) * 0.35;
+      }
+
+      setPaused(p){
+        this.paused = !!p;
+      }
+
+      _screenToWorld(sx, sy){
+        const { x, y, k } = this.camera;
+        return { wx: (sx - x) / k, wy: (sy - y) / k };
+      }
+
+      _worldToScreen(wx, wy){
+        const { x, y, k } = this.camera;
+        return { sx: wx * k + x, sy: wy * k + y };
+      }
+
+      _hitNode(sx, sy){
+        const { wx, wy } = this._screenToWorld(sx, sy);
+        // 위에서부터(나중에 그린 노드가 우선) hit
+        for (let i=this.nodes.length-1; i>=0; i--){
+          const n = this.nodes[i];
+          const dx = wx - n.x;
+          const dy = wy - n.y;
+          const r = n.r + 6;
+          if (dx*dx + dy*dy <= r*r) return n;
+        }
+        return null;
+      }
+
+      _onPointerDown(e){
+        const rect = this.canvas.getBoundingClientRect();
+        const sx = e.clientX - rect.left;
+        const sy = e.clientY - rect.top;
+
+        const hit = this._hitNode(sx, sy);
+
+        const { wx, wy } = this._screenToWorld(sx, sy);
+
+        this._pointer = {
+          down:true,
+          mode: hit ? "dragNode" : "pan",
+          sx, sy,
+          wx, wy,
+          moved:false,
+          startSx:sx,
+          startSy:sy
+        };
+        this._dragNode = hit;
+
+        this.canvas.setPointerCapture(e.pointerId);
+      }
+
+      _onPointerMove(e){
+        const rect = this.canvas.getBoundingClientRect();
+        const sx = e.clientX - rect.left;
+        const sy = e.clientY - rect.top;
+
+        // hover 업데이트(드래그 중이 아니면)
+        if (!this._pointer.down){
+          const hit = this._hitNode(sx, sy);
+          this.hoverId = hit ? hit.id : "";
+          this.canvas.style.cursor = hit ? "pointer" : "default";
+          return;
+        }
+
+        const dxS = sx - this._pointer.sx;
+        const dyS = sy - this._pointer.sy;
+
+        if (Math.abs(sx - this._pointer.startSx) + Math.abs(sy - this._pointer.startSy) > 4){
+          this._pointer.moved = true;
+        }
+
+        if (this._pointer.mode === "pan"){
+          this.camera.x += dxS;
+          this.camera.y += dyS;
+        }else if (this._pointer.mode === "dragNode" && this._dragNode){
+          const { wx, wy } = this._screenToWorld(sx, sy);
+          this._dragNode.x = wx;
+          this._dragNode.y = wy;
+          this._dragNode.vx = 0;
+          this._dragNode.vy = 0;
+          this._tickHot = Math.max(this._tickHot, 12); // 살짝 다시 “뜨겁게”
+        }
+
+        this._pointer.sx = sx;
+        this._pointer.sy = sy;
+      }
+
+      _onPointerUp(e){
+        if (!this._pointer.down) return;
+
+        const rect = this.canvas.getBoundingClientRect();
+        const sx = e.clientX - rect.left;
+        const sy = e.clientY - rect.top;
+
+        const hit = this._hitNode(sx, sy);
+
+        // 클릭 판정: 많이 움직이지 않았고 노드 위에서 떼면 클릭
+        const isClick = !this._pointer.moved && hit;
+
+        this._pointer.down = false;
+        this._pointer.mode = "none";
+        this._dragNode = null;
+
+        this.canvas.releasePointerCapture(e.pointerId);
+
+        if (isClick && typeof this.onNodeClick === "function"){
+          this.onNodeClick(hit.id);
+        }
+      }
+
+      _onWheel(e){
+        e.preventDefault();
+
+        const rect = this.canvas.getBoundingClientRect();
+        const sx = e.clientX - rect.left;
+        const sy = e.clientY - rect.top;
+
+        const { wx, wy } = this._screenToWorld(sx, sy);
+
+        const delta = Math.sign(e.deltaY);
+        const zoom = delta > 0 ? 0.92 : 1.08;
+
+        const nextK = Math.max(0.25, Math.min(3.2, this.camera.k * zoom));
+        this.camera.k = nextK;
+
+        // 포인터 기준 줌(그 월드포인트가 같은 화면 좌표에 유지되도록)
+        this.camera.x = sx - wx * this.camera.k;
+        this.camera.y = sy - wy * this.camera.k;
+      }
+
+      _stepPhysics(){
+        const nodes = this.nodes;
+        const edges = this.edges;
+        if (nodes.length === 0) return;
+
+        // “뜨거운” 상태가 끝났으면(안정화되면) 거의 멈추게
+        const hot = this._tickHot > 0;
+        if (this._tickHot > 0) this._tickHot--;
+
+        // 상수(노드 수에 따라 살짝 조정)
+        const N = nodes.length;
+        const repulsion = 600 / Math.max(1, Math.sqrt(N));  // 반발
+        const springLen = 90;
+        const springK = 0.012;
+        const centerK = 0.0025;
+        const damping = hot ? 0.86 : 0.78;
+
+        // 중심으로 당기기(월드 원점으로)
+        for (const n of nodes){
+          n.vx += (-n.x) * centerK;
+          n.vy += (-n.y) * centerK;
+        }
+
+        // 반발(O(n^2)) — MAX_SUBGRAPH_NODES를 낮춘 이유가 이거
+        for (let i=0; i<nodes.length; i++){
+          const a = nodes[i];
+          for (let j=i+1; j<nodes.length; j++){
+            const b = nodes[j];
+            let dx = a.x - b.x;
+            let dy = a.y - b.y;
+            const d2 = dx*dx + dy*dy + 0.01;
+            const f = repulsion / d2;
+
+            dx *= f;
+            dy *= f;
+
+            a.vx += dx;
+            a.vy += dy;
+            b.vx -= dx;
+            b.vy -= dy;
+          }
+        }
+
+        // 스프링(엣지)
+        for (const e of edges){
+          const a = e.a;
+          const b = e.b;
+
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const dist = Math.sqrt(dx*dx + dy*dy) + 1e-6;
+
+          const diff = dist - springLen;
+          const f = diff * springK;
+
+          const fx = (dx / dist) * f;
+          const fy = (dy / dist) * f;
+
+          a.vx += fx;
+          a.vy += fy;
+          b.vx -= fx;
+          b.vy -= fy;
+        }
+
+        // 포커스 노드는 살짝 안정화
+        const focus = this.nodeById.get(this.focusId);
+        if (focus){
+          focus.vx *= 0.90;
+          focus.vy *= 0.90;
+        }
+
+        // 적분
+        for (const n of nodes){
+          // 드래그 중이면 포인터가 직접 좌표를 잡고 있어서 여기서 덜 흔들리게
+          n.vx *= damping;
+          n.vy *= damping;
+          n.x += n.vx;
+          n.y += n.vy;
+        }
+      }
+
+      _draw(){
+        const ctx = this.ctx;
+        const { w, h } = this.size;
+
+        // CSS px 기준으로 그리기 위한 transform
+        ctx.setTransform(this.DPR, 0, 0, this.DPR, 0, 0);
+
+        // 배경
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, w, h);
+
+        // 카메라 적용(월드→스크린)
+        ctx.translate(this.camera.x, this.camera.y);
+        ctx.scale(this.camera.k, this.camera.k);
+
+        const focusId = this.focusId;
+        const hoverId = this.hoverId;
+        const focus = this.nodeById.get(focusId);
+
+        // 엣지
+        for (const e of this.edges){
+          const a = e.a;
+          const b = e.b;
+
+          // 포커스 관련 엣지 강조
+          const emphasize = (a.id === focusId || b.id === focusId || a.id === hoverId || b.id === hoverId);
+
+          ctx.lineWidth = emphasize ? 2 : 1;
+          ctx.strokeStyle = emphasize ? "#111" : "#d1d5db";
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.stroke();
+
+          // 방향 표시(작은 화살표) — 너무 과하면 지저분하니까 가볍게
+          const arrow = emphasize;
+          if (arrow){
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const dist = Math.sqrt(dx*dx + dy*dy) + 1e-6;
+            const ux = dx / dist, uy = dy / dist;
+
+            const ax = b.x - ux * 14;
+            const ay = b.y - uy * 14;
+
+            ctx.fillStyle = "#111";
+            ctx.beginPath();
+            ctx.moveTo(ax, ay);
+            ctx.lineTo(ax - ux*8 + uy*5, ay - uy*8 - ux*5);
+            ctx.lineTo(ax - ux*8 - uy*5, ay - uy*8 + ux*5);
+            ctx.closePath();
+            ctx.fill();
+          }
+        }
+
+        // 노드
+        for (const n of this.nodes){
+          const isFocus = n.id === focusId;
+          const isHover = n.id === hoverId;
+
+          n.r = isFocus || isHover ? 16 : 14;
+
+          let fill = "#fff";
+          let stroke = "#d1d5db";
+          let text = "#111";
+
+          if (isFocus){
+            fill = "#111";
+            stroke = "#111";
+            text = "#fff";
+          }else if (isHover){
+            fill = "#eef2ff";
+            stroke = "#0051a8";
+            text = "#111";
+          }
+
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, n.r, 0, Math.PI*2);
+          ctx.fillStyle = fill;
+          ctx.fill();
+
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = stroke;
+          ctx.stroke();
+
+          // 라벨 (짧게)
+          const label = n.title.length > 12 ? n.title.slice(0, 11) + "…" : n.title;
+
+          ctx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+          ctx.fillStyle = text;
+          const tw = ctx.measureText(label).width;
+          ctx.fillText(label, n.x - tw/2, n.y + 4);
+        }
+
+        // 힌트 텍스트(캔버스 밖 DOM)
+        const zoomPct = Math.round(this.camera.k * 100);
+        const hover = this.nodeById.get(hoverId);
+        const focusTitle = focus ? focus.title : "";
+
+        this.hintEl.textContent = hover
+          ? `호버: ${hover.title} · 클릭하면 이동 · 줌 ${zoomPct}%`
+          : `노드 ${this.nodes.length} · 링크 ${this.edges.length} · 현재: ${focusTitle} · 줌 ${zoomPct}%`;
+      }
+
+      _loop(){
+        if (!this.paused){
+          this._stepPhysics();
+        }
+        this._draw();
+        this._raf = requestAnimationFrame(() => this._loop());
+      }
+    }
+
+    /**********************************************************************
+     * UI 렌더링/내비게이션
+     **********************************************************************/
+    const els = {
+      noteTitle: $("#noteTitle"),
+      noteSub: $("#noteSub"),
+      noteBody: $("#noteBody"),
+      outgoingList: $("#outgoingList"),
+      backlinkList: $("#backlinkList"),
+      tagRow: $("#tagRow"),
+
+      noteSearch: $("#noteSearch"),
+      noteList: $("#noteList"),
+      randomBtn: $("#randomBtn"),
+      copyLinkBtn: $("#copyLinkBtn"),
+
+      hopSelect: $("#hopSelect"),
+      toggleOut: $("#toggleOut"),
+      toggleIn: $("#toggleIn"),
+      tagFilter: $("#tagFilter"),
+      fitBtn: $("#fitBtn"),
+      relayoutBtn: $("#relayoutBtn"),
+      pauseBtn: $("#pauseBtn"),
+
+      graphCanvas: $("#graphCanvas"),
+      graphHint: $("#graphHint"),
+      graphWarn: $("#graphWarn"),
+
+      dataPreview: $("#dataPreview")
+    };
+
+    let STORE = null;
+    let GRAPH = null;
+
+    function fillDatalist(store){
+      els.noteList.innerHTML = "";
+      for (const n of store.notes){
+        // datalist는 value만 보여서 "제목 (id)" 같은 건 표시가 애매함.
+        // 대신 제목을 value로, id/별칭도 같이 option으로 넣어준다.
+        const opts = [n.title, n.id, ...(n.aliases||[])];
+
+        for (const v of opts){
+          if (!v) continue;
+          const opt = document.createElement("option");
+          opt.value = v;
+          els.noteList.appendChild(opt);
+        }
+      }
+    }
+
+    function formatMeta(note, store){
+      const outCount = (store.outgoing.get(note.id) || []).filter(x => !x.missing).length;
+      const inCount  = (store.incoming.get(note.id) || new Set()).size;
+
+      const tags = (note.tags || []).map(t => `#${t}`).join(" · ");
+      const updated = note.updatedAt ? `업데이트: ${note.updatedAt}` : "업데이트: -";
+
+      return `${updated} · 링크 ${outCount}개 · 백링크 ${inCount}개${tags ? " · " + tags : ""}`;
+    }
+
+    function renderTags(note){
+      els.tagRow.innerHTML = "";
+      const tags = note.tags || [];
+      for (const t of tags){
+        const span = document.createElement("span");
+        span.className = "tag-chip";
+        span.textContent = `#${t}`;
+        els.tagRow.appendChild(span);
+      }
+    }
+
+    function renderOutgoing(noteId){
+      const links = STORE.outgoing.get(noteId) || [];
+      els.outgoingList.innerHTML = "";
+
+      if (links.length === 0){
+        const li = document.createElement("li");
+        li.className = "muted";
+        li.textContent = "아직 링크가 없어요.";
+        els.outgoingList.appendChild(li);
+        return;
+      }
+
+      for (const l of links){
+        const li = document.createElement("li");
+
+        if (!l.missing && l.toId){
+          const a = document.createElement("a");
+          a.href = "#";
+          a.className = "link-note";
+          a.dataset.noteId = l.toId;
+
+          if (l.fragmentText){
+            a.dataset.frag = `h-${slugify(l.fragmentText)}`;
+          }
+
+          a.textContent = l.label || l.toTitle || l.toId;
+          li.appendChild(a);
+
+          if (l.fragmentText){
+            const s = document.createElement("span");
+            s.className = "muted";
+            s.style.marginLeft = "6px";
+            s.textContent = `(#${l.fragmentText})`;
+            li.appendChild(s);
+          }
+        }else{
+          const span = document.createElement("span");
+          span.textContent = l.label || l.toTitle;
+          li.appendChild(span);
+
+          const muted = document.createElement("span");
+          muted.className = "muted";
+          muted.style.marginLeft = "6px";
+          muted.textContent = "(미등록 메모)";
+          li.appendChild(muted);
+        }
+
+        els.outgoingList.appendChild(li);
+      }
+    }
+
+    function renderBacklinks(noteId){
+      const set = STORE.incoming.get(noteId) || new Set();
+      const arr = Array.from(set).map(id => STORE.byId.get(id)).filter(Boolean);
+
+      els.backlinkList.innerHTML = "";
+      if (arr.length === 0){
+        const li = document.createElement("li");
+        li.className = "muted";
+        li.textContent = "백링크가 없어요.";
+        els.backlinkList.appendChild(li);
+        return;
+      }
+
+      // 제목 기준 정렬
+      arr.sort((a,b) => a.title.localeCompare(b.title, "ko"));
+
+      for (const n of arr){
+        const li = document.createElement("li");
+        const a = document.createElement("a");
+        a.href = "#";
+        a.className = "link-note";
+        a.dataset.noteId = n.id;
+        a.textContent = n.title;
+        li.appendChild(a);
+        els.backlinkList.appendChild(li);
+      }
+    }
+
+    function renderGraph(focusId){
+      const hops = parseInt(els.hopSelect.value, 10) || 2;
+      const includeOut = !!els.toggleOut.checked;
+      const includeIn  = !!els.toggleIn.checked;
+      const tags = safeParseCsvTags(els.tagFilter.value);
+
+      // 둘 다 꺼지면 그래프가 비니까 자동 보정
+      if (!includeOut && !includeIn){
+        els.graphWarn.textContent = "‘나가는 링크’와 ‘들어오는 링크’가 모두 꺼져 있어서 그래프를 만들 수 없어요.";
+        GRAPH.setData({ nodes: [STORE.byId.get(focusId)], edges: [], focusId });
+        return;
+      }
+
+      const { nodes, edges, warn } = buildSubgraph(STORE, focusId, hops, includeOut, includeIn, tags);
+      els.graphWarn.textContent = warn.text || "";
+
+      GRAPH.setData({ nodes, edges, focusId });
+    }
+
+    function renderNote(noteId, hash){
+      const note = STORE.byId.get(noteId);
+      if (!note){
+        els.noteTitle.textContent = "메모를 찾지 못했어요";
+        els.noteSub.textContent = "";
+        els.noteBody.innerHTML = `<p class="muted">URL의 note 파라미터가 올바른지 확인해 주세요.</p>`;
+        return;
+      }
+
+      document.title = `메모 상세 · ${note.title}`;
+
+      els.noteTitle.textContent = note.title;
+      els.noteSub.textContent = formatMeta(note, STORE);
+
+      els.noteBody.innerHTML = renderMarkdownLite(note, STORE);
+
+      renderTags(note);
+      renderOutgoing(note.id);
+      renderBacklinks(note.id);
+
+      els.noteSearch.value = note.title;
+
+      // 그래프 갱신
+      renderGraph(note.id);
+
+      // 해시 스크롤(렌더 후)
+      requestAnimationFrame(() => tryScrollToHash(hash));
+
+      // 데이터 형식 예시
+      els.dataPreview.textContent = JSON.stringify({
+        example: {
+          id: "study-method",
+          title: "공부법",
+          updatedAt: "2026-02-01",
+          tags: ["학습", "메타"],
+          aliases: ["Study", "공부"],
+          body: "본문에 [[위키링크]]를 쓰면 자동 연결됩니다."
+        }
+      }, null, 2);
+    }
+
+    function navigateTo(noteId, hash=""){
+      if (!STORE.byId.has(noteId)) return;
+      setUrlState({ noteId, hash });
+      renderNote(noteId, hash);
+    }
+
+    function resolveAndNavigate(ref){
+      const note = STORE.resolveRef(ref);
+      if (!note) return false;
+      navigateTo(note.id, "");
+      return true;
+    }
+
+    /**********************************************************************
+     * 이벤트
+     **********************************************************************/
+    function bindEvents(){
+      // 위키링크/리스트 클릭 이동 (이벤트 위임)
+      document.addEventListener("click", (e) => {
+        const a = e.target.closest("a[data-note-id]");
+        if (!a) return;
+
+        e.preventDefault();
+        const id = a.dataset.noteId;
+        const frag = a.dataset.frag || "";
+        navigateTo(id, frag);
+      });
+
+      // 검색 Enter / change
+      els.noteSearch.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter") return;
+        const q = els.noteSearch.value.trim();
+        if (!resolveAndNavigate(q)){
+          els.noteSearch.blur();
+        }
+      });
+
+      els.noteSearch.addEventListener("change", () => {
+        const q = els.noteSearch.value.trim();
+        resolveAndNavigate(q);
+      });
+
+      // 랜덤
+      els.randomBtn.addEventListener("click", () => {
+        const arr = STORE.notes;
+        if (!arr.length) return;
+        const pick = arr[Math.floor(Math.random() * arr.length)];
+        navigateTo(pick.id, "");
+      });
+
+      // 링크 복사
+      els.copyLinkBtn.addEventListener("click", async () => {
+        const { noteRef } = getUrlState();
+        const note = STORE.resolveRef(noteRef) || STORE.notes[0];
+        if (!note) return;
+
+        const url = `${location.origin}${location.pathname}?note=${encodeURIComponent(note.id)}`;
+
+        try{
+          await navigator.clipboard.writeText(url);
+          els.copyLinkBtn.textContent = "복사됨!";
+          setTimeout(() => (els.copyLinkBtn.textContent = "이 메모 링크 복사"), 1200);
+        }catch{
+          prompt("복사할 링크입니다:", url);
+        }
+      });
+
+      // 그래프 컨트롤
+      const rerender = () => {
+        const { noteRef } = getUrlState();
+        const note = STORE.resolveRef(noteRef) || STORE.notes[0];
+        if (!note) return;
+        renderGraph(note.id);
+      };
+
+      els.hopSelect.addEventListener("change", rerender);
+      els.toggleOut.addEventListener("change", rerender);
+      els.toggleIn.addEventListener("change", rerender);
+      els.tagFilter.addEventListener("change", rerender);
+      els.tagFilter.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") rerender();
+      });
+
+      els.fitBtn.addEventListener("click", () => GRAPH.fitToView(false));
+      els.relayoutBtn.addEventListener("click", () => GRAPH.relayout());
+
+      els.pauseBtn.addEventListener("click", () => {
+        GRAPH.setPaused(!GRAPH.paused);
+        els.pauseBtn.textContent = GRAPH.paused ? "재생" : "일시정지";
+        els.pauseBtn.classList.toggle("primary", !GRAPH.paused);
+      });
+
+      // 뒤로/앞으로 대응
+      window.addEventListener("popstate", () => {
+        const { noteRef, hash } = getUrlState();
+        const note = STORE.resolveRef(noteRef) || STORE.notes[0];
+        if (!note) return;
+        renderNote(note.id, hash);
+      });
+    }
+
+    /**********************************************************************
+     * 부트스트랩
+     **********************************************************************/
+    (async function bootstrap(){
+      const { notes: raw } = await loadNotesMaybe(CONFIG.NOTES_URL);
+      const notes = normalizeNotes(raw);
+
+      STORE = buildStore(notes);
+      fillDatalist(STORE);
+
+      GRAPH = new CanvasGraph(els.graphCanvas, els.graphHint);
+      GRAPH.onNodeClick = (id) => navigateTo(id, "");
+
+      bindEvents();
+
+      // 초기 노트 결정
+      const { noteRef, hash } = getUrlState();
+      const start = STORE.resolveRef(noteRef) || (CONFIG.DEFAULT_NOTE_FALLBACK ? STORE.resolveRef(CONFIG.DEFAULT_NOTE_FALLBACK) : null) || STORE.notes[0];
+
+      if (!start){
+        els.noteTitle.textContent = "메모가 없습니다";
+        els.noteSub.textContent = "";
+        els.noteBody.innerHTML = `<p class="muted">notes.json에 메모를 추가해 주세요.</p>`;
+        return;
+      }
+
+      // URL을 id 기준으로 정리(별칭/제목으로 들어왔어도 id로 맞춤)
+      setUrlState({ noteId: start.id, hash });
+      renderNote(start.id, hash);
+    })();
+  </script>
+  <script src="/static/disable-copy.js"></script>
+<script src="/static/footer.js"></script>
+<script src="/static/global-loader.js?v=1"></script>
+</body>
+</html>
