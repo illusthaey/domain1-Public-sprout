@@ -1,0 +1,948 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>메모 상세 · 네트워크</title>
+
+  <!-- ✅ 사용자가 준 공통 스타일 -->
+  <link rel="stylesheet" href="static/style.css" />
+
+  <!-- ✅ 이 페이지에만 필요한 최소 보조 스타일(톤은 style.css에 맞춤) -->
+  <style>
+    .head-inner { padding: 16px 0; }
+
+    .link-note {
+      color: #0051a8;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    .link-note:hover { opacity: 0.85; }
+
+    /* 태그 칩: style.css의 btn-lightgrey를 활용 */
+    .tag-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #f3f4f6;
+      border: 1px solid #d4d4d8;
+      font-size: 0.95rem;
+      color: #111;
+      user-select: none;
+    }
+
+    /* 그래프 영역 */
+    .graph-wrap {
+      position: relative;
+      padding: 12px;
+      border-radius: 12px;
+      background: #fff;
+      border: 1px solid #e5e5e5;
+      overflow: hidden;
+    }
+    .graph-canvas {
+      width: 100%;
+      height: 460px;
+      display: block;
+      border-radius: 10px;
+      background: #fff;
+      border: 1px solid #e5e5e5;
+      touch-action: none; /* 드래그를 JS에서 처리 */
+    }
+    .graph-hint {
+      position: absolute;
+      left: 14px;
+      bottom: 14px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.92);
+      border: 1px solid #e5e5e5;
+      font-size: 0.95rem;
+      color: #555;
+      max-width: calc(100% - 28px);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* 코드 미리보기 */
+    pre.codeblock {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.95rem;
+      color: #222;
+    }
+
+    @media (max-width: 640px) {
+      .graph-canvas { height: 380px; }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="shell">
+      <div class="row between head-inner">
+        <div class="row gap">
+          <a class="btn-home" href="index.html">← 메인</a>
+          <span class="muted">메모 상세 / 네트워크</span>
+        </div>
+
+        <div class="row gap">
+          <input id="noteSearch" type="text" placeholder="메모 검색…" list="noteList" />
+          <datalist id="noteList"></datalist>
+          <button class="btn ghost" id="randomBtn" type="button">랜덤</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <h1 id="noteTitle">로딩 중…</h1>
+    <p class="subtitle" id="noteSub"></p>
+
+    <section class="section">
+      <div class="row between">
+        <h2 class="local-h2 local-tight">내용</h2>
+        <div class="row gap">
+          <button class="btn ghost" id="copyLinkBtn" type="button">이 메모 링크 복사</button>
+          <button class="btn primary" id="centerGraphBtn" type="button">그래프 중앙</button>
+        </div>
+      </div>
+      <hr />
+      <div class="card" id="noteBody"></div>
+
+      <div class="row gap" id="tagRow" style="flex-wrap: wrap; margin-top: 10px;"></div>
+    </section>
+
+    <section class="section">
+      <h2 class="local-h2 local-tight">연결</h2>
+      <p class="muted">본문의 <strong>[[위키링크]]</strong>를 파싱해서 자동으로 연결합니다.</p>
+
+      <div class="grid two">
+        <div class="card">
+          <h3 class="local-h3 local-tight">내가 링크한 메모</h3>
+          <ul id="outgoingList" class="local-small"></ul>
+        </div>
+
+        <div class="card">
+          <h3 class="local-h3 local-tight">나를 링크한 메모 (백링크)</h3>
+          <ul id="backlinkList" class="local-small"></ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="local-h2 local-tight">네트워크</h2>
+      <p class="muted">노드 드래그/클릭 가능 · 현재 메모는 진하게 표시됩니다.</p>
+
+      <div class="graph-wrap">
+        <canvas id="graphCanvas" class="graph-canvas"></canvas>
+        <div id="graphHint" class="graph-hint">그래프 준비 중…</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="local-h2 local-tight">데이터 구조 예시</h2>
+      <p class="muted">
+        실제 서비스에서는 이 배열을 <code>fetch("notes.json")</code>로 교체하면 됩니다.
+      </p>
+
+      <div class="card">
+        <pre class="codeblock" id="dataPreview"></pre>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell">
+      <p>savinghaey.co.kr · note network demo (static + browser JS)</p>
+      <p class="muted">옵시디언의 “그래프 뷰” 핵심 아이디어(링크→그래프)를 브라우저에서 재현한 예시입니다.</p>
+    </div>
+  </footer>
+
+  <script>
+    /**********************************************************************
+     * 1) 샘플 메모 데이터 (실서비스에서는 notes.json 등으로 교체)
+     **********************************************************************/
+    const NOTES = [
+      {
+        title: "공부법",
+        updatedAt: "2026-02-01",
+        tags: ["학습", "메타"],
+        body:
+`공부는 결국 [[기억]]과 [[행동설계]]의 합성물이다.
+
+- 요약하면: '덜 잊게' + '자주 하게'
+- 자주 등장하는 도구: [[스페이스드 리피티션]](간격 반복), [[회상연습]](retrieval)
+
+실제로는 “좋은 시스템”이 “좋은 의지”를 이긴다.`
+      },
+      {
+        title: "기억",
+        updatedAt: "2026-01-22",
+        tags: ["인지", "기초"],
+        body:
+`기억은 저장이 아니라 "재구성"에 가깝다.
+
+- [[망각곡선]]은 반복의 타이밍이 왜 중요한지 설명한다.
+- [[회상연습]]은 '다시 읽기'보다 강력한 경우가 많다.
+
+참고로, '이해'와 '기억'은 친구지만 동일인은 아니다.`
+      },
+      {
+        title: "망각곡선",
+        updatedAt: "2026-01-10",
+        tags: ["인지", "원리"],
+        body:
+`망각곡선은 시간이 지나면서 회상 가능한 정보가 급격히 줄어드는 경향을 말한다.
+
+핵심은 이거:
+- 반복(특히 적절한 간격)을 주면 곡선이 완만해진다 → [[스페이스드 리피티션]]
+
+(여기서는 수식 대신 직관만!)`
+      },
+      {
+        title: "스페이스드 리피티션",
+        updatedAt: "2026-01-28",
+        tags: ["학습", "기법"],
+        body:
+`간격을 두고 복습하면 장기 기억이 강화된다.
+
+관련:
+- 대표 툴: [[Anki]]
+- 원리: [[망각곡선]]
+- 함께 쓰면 좋은 것: [[회상연습]]
+
+팁: '조금 틀릴 정도'의 난이도가 뇌를 깨운다.`
+      },
+      {
+        title: "회상연습",
+        updatedAt: "2026-01-20",
+        tags: ["학습", "기법"],
+        body:
+`회상연습(retrieval practice)은 "기억을 꺼내는 행위 자체"가 학습이 되는 현상이다.
+
+예:
+- 퀴즈 풀기
+- 빈 종이에 써보기
+- 누군가에게 설명하기
+
+연결:
+- [[공부법]]
+- [[스페이스드 리피티션]]`
+      },
+      {
+        title: "행동설계",
+        updatedAt: "2026-02-03",
+        tags: ["습관", "시스템"],
+        body:
+`행동설계는 '하고 싶은데 안 되는 일'을 다루는 기술이다.
+
+핵심 레버:
+- 환경 설계
+- 마찰 줄이기/늘리기
+- 작은 시작(진입 장벽 낮추기)
+
+학습과 연결:
+- [[공부법]]`
+      },
+      {
+        title: "Anki",
+        updatedAt: "2026-01-18",
+        tags: ["툴", "학습"],
+        body:
+`Anki는 간격 반복을 구현한 플래시카드 앱이다.
+
+관련 메모:
+- [[스페이스드 리피티션]]
+- [[회상연습]]
+
+주의:
+- 카드가 커지면 관리가 '학습'을 잡아먹는다.`
+      }
+    ];
+
+    /**********************************************************************
+     * 2) 위키링크 파서 + 그래프 구축
+     **********************************************************************/
+    function parseWikiLinks(text) {
+      // [[타겟]] 또는 [[타겟|표시]] 또는 [[타겟#헤딩]] 정도만 간단 지원
+      const links = [];
+      const re = /\[\[([^\]]+)\]\]/g;
+      let m;
+      while ((m = re.exec(text)) !== null) {
+        const inside = m[1].trim();
+        const [left, alias] = inside.split("|").map(s => (s ?? "").trim());
+        const target = left.split("#")[0].trim(); // #헤딩 제거
+        if (!target) continue;
+        links.push({ target, alias: alias || "" });
+      }
+      return links;
+    }
+
+    function buildIndex(notes) {
+      const byTitle = new Map();
+      for (const n of notes) byTitle.set(n.title, n);
+      return byTitle;
+    }
+
+    function buildGraph(notes) {
+      const byTitle = buildIndex(notes);
+
+      // edges: {fromTitle, toTitle}
+      const edges = [];
+      const outgoing = new Map(); // title -> [{target, alias}]
+      const incoming = new Map(); // title -> [fromTitle...]
+
+      for (const n of notes) {
+        const links = parseWikiLinks(n.body);
+        outgoing.set(n.title, links);
+
+        for (const l of links) {
+          edges.push({ from: n.title, to: l.target });
+
+          if (byTitle.has(l.target)) {
+            if (!incoming.has(l.target)) incoming.set(l.target, []);
+            incoming.get(l.target).push(n.title);
+          }
+        }
+      }
+
+      // 이웃(네이버?) 목록: 그래프 하이라이트에 쓰기 좋음
+      const neighbors = new Map();
+      for (const n of notes) neighbors.set(n.title, new Set());
+      for (const e of edges) {
+        if (!neighbors.has(e.from)) neighbors.set(e.from, new Set());
+        neighbors.get(e.from).add(e.to);
+        if (!neighbors.has(e.to)) neighbors.set(e.to, new Set());
+        neighbors.get(e.to).add(e.from);
+      }
+
+      return { byTitle, edges, outgoing, incoming, neighbors };
+    }
+
+    /**********************************************************************
+     * 3) 렌더링 유틸
+     **********************************************************************/
+    function escapeHtml(s) {
+      return s
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function renderBodyToHtml(noteText) {
+      // (1) HTML 이스케이프
+      let safe = escapeHtml(noteText);
+
+      // (2) [[링크]]를 a 태그로 변환
+      safe = safe.replace(/\[\[([^\]]+)\]\]/g, (_, insideRaw) => {
+        const inside = insideRaw.trim();
+        const parts = inside.split("|");
+        const left = (parts[0] || "").trim();
+        const alias = (parts[1] || "").trim();
+        const target = left.split("#")[0].trim();
+        const label = alias || target || left;
+
+        // label은 화면에만 보이고, target은 data-note로 이동에 사용
+        return `<a href="#" class="link-note" data-note="${escapeHtml(target)}">${escapeHtml(label)}</a>`;
+      });
+
+      // (3) 단락/줄바꿈 처리
+      const paragraphs = safe.split(/\n{2,}/).map(block => {
+        const html = block.replaceAll("\n", "<br>");
+        return `<p>${html}</p>`;
+      });
+
+      return paragraphs.join("");
+    }
+
+    function setInnerHTMLSafe(el, html) {
+      // 여기서는 우리가 생성한 제한적 HTML만 넣기 때문에 innerHTML 사용
+      el.innerHTML = html;
+    }
+
+    function formatMeta(note, graph) {
+      const outCount = (graph.outgoing.get(note.title) || []).length;
+      const inCount = (graph.incoming.get(note.title) || []).length;
+      const tags = (note.tags || []).map(t => "#" + t).join(" · ");
+      return `업데이트: ${note.updatedAt} · 링크: ${outCount}개 · 백링크: ${inCount}개${tags ? " · " + tags : ""}`;
+    }
+
+    /**********************************************************************
+     * 4) 네트워크(캔버스) 렌더러: 초간단 force layout (노드 수가 작을 때 적합)
+     **********************************************************************/
+    function createCanvasGraph(canvas, hintEl, graph) {
+      const ctx = canvas.getContext("2d", { alpha: false });
+      const DPR = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+
+      let size = { w: 300, h: 150 };
+      let rafId = 0;
+
+      // 노드 만들기
+      const nodes = [];
+      const nodeByTitle = new Map();
+      const titles = Array.from(graph.byTitle.keys());
+
+      function initNodes() {
+        nodes.length = 0;
+        nodeByTitle.clear();
+
+        for (const t of titles) {
+          const n = {
+            title: t,
+            x: Math.random() * size.w,
+            y: Math.random() * size.h,
+            vx: 0,
+            vy: 0,
+            r: 16
+          };
+          nodes.push(n);
+          nodeByTitle.set(t, n);
+        }
+      }
+
+      // 유효한 엣지만 (존재하는 노트끼리)
+      const edges = graph.edges
+        .filter(e => graph.byTitle.has(e.from) && graph.byTitle.has(e.to))
+        .map(e => ({
+          from: nodeByTitle.get(e.from) || null,
+          to: nodeByTitle.get(e.to) || null
+        }));
+
+      // 상호작용 상태
+      let focusTitle = titles[0] || "";
+      let hoverTitle = "";
+      let dragging = null; // node
+      let pointer = { x: 0, y: 0, down: false };
+
+      function resize() {
+        const rect = canvas.getBoundingClientRect();
+        size = { w: Math.max(1, rect.width), h: Math.max(1, rect.height) };
+        canvas.width = Math.round(size.w * DPR);
+        canvas.height = Math.round(size.h * DPR);
+
+        // 좌표계를 CSS px로 맞춤
+        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+        initNodes();
+        // 시작할 때 포커스 노드를 가운데로
+        centerOn(focusTitle, true);
+      }
+
+      function centerOn(title, reheat=false) {
+        const node = nodeByTitle.get(title);
+        if (!node) return;
+
+        const cx = size.w / 2;
+        const cy = size.h / 2;
+        const dx = cx - node.x;
+        const dy = cy - node.y;
+
+        for (const n of nodes) {
+          n.x += dx;
+          n.y += dy;
+          if (reheat) {
+            n.vx += (Math.random() - 0.5) * 2;
+            n.vy += (Math.random() - 0.5) * 2;
+          }
+        }
+      }
+
+      function findNodeAt(x, y) {
+        // 큰 노드 우선 선택(대체로 포커스/호버가 눈에 띄게)
+        for (let i = nodes.length - 1; i >= 0; i--) {
+          const n = nodes[i];
+          const dx = x - n.x;
+          const dy = y - n.y;
+          if (dx*dx + dy*dy <= (n.r + 6) * (n.r + 6)) return n;
+        }
+        return null;
+      }
+
+      function stepPhysics() {
+        const centerStrength = 0.0022;
+        const repulsionStrength = 850;
+        const springLength = 90;
+        const springStrength = 0.0028;
+        const damping = 0.88;
+
+        // (1) 중심으로 끌기
+        const cx = size.w / 2;
+        const cy = size.h / 2;
+        for (const n of nodes) {
+          const dx = cx - n.x;
+          const dy = cy - n.y;
+          n.vx += dx * centerStrength;
+          n.vy += dy * centerStrength;
+        }
+
+        // (2) 노드-노드 반발 (O(n^2), 노드 많으면 최적화 필요)
+        for (let i = 0; i < nodes.length; i++) {
+          const a = nodes[i];
+          for (let j = i + 1; j < nodes.length; j++) {
+            const b = nodes[j];
+            let dx = a.x - b.x;
+            let dy = a.y - b.y;
+            const d2 = dx*dx + dy*dy + 0.01;
+            const f = repulsionStrength / d2;
+            dx *= f;
+            dy *= f;
+            a.vx += dx;
+            a.vy += dy;
+            b.vx -= dx;
+            b.vy -= dy;
+          }
+        }
+
+        // (3) 스프링(엣지)
+        for (const e of graph.edges) {
+          if (!nodeByTitle.has(e.from) || !nodeByTitle.has(e.to)) continue;
+          const a = nodeByTitle.get(e.from);
+          const b = nodeByTitle.get(e.to);
+
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const dist = Math.sqrt(dx*dx + dy*dy) + 0.001;
+          const diff = dist - springLength;
+          const f = diff * springStrength;
+
+          const fx = (dx / dist) * f;
+          const fy = (dy / dist) * f;
+
+          a.vx += fx;
+          a.vy += fy;
+          b.vx -= fx;
+          b.vy -= fy;
+        }
+
+        // (4) 포커스 노드는 살짝 더 무겁게(덜 흔들리게)
+        const focus = nodeByTitle.get(focusTitle);
+        if (focus) {
+          focus.vx *= 0.92;
+          focus.vy *= 0.92;
+        }
+
+        // (5) 적분 + 경계
+        const pad = 24;
+        for (const n of nodes) {
+          if (dragging === n && pointer.down) {
+            n.vx = 0; n.vy = 0;
+            n.x = pointer.x;
+            n.y = pointer.y;
+            continue;
+          }
+
+          n.vx *= damping;
+          n.vy *= damping;
+          n.x += n.vx;
+          n.y += n.vy;
+
+          // 경계: 너무 바깥으로 튀면 살짝 튕기기
+          if (n.x < pad) { n.x = pad; n.vx *= -0.5; }
+          if (n.x > size.w - pad) { n.x = size.w - pad; n.vx *= -0.5; }
+          if (n.y < pad) { n.y = pad; n.vy *= -0.5; }
+          if (n.y > size.h - pad) { n.y = size.h - pad; n.vy *= -0.5; }
+        }
+      }
+
+      function draw() {
+        // 배경
+        ctx.clearRect(0, 0, size.w, size.h);
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, size.w, size.h);
+
+        const activeTitle = hoverTitle || focusTitle;
+        const neighborSet = graph.neighbors.get(activeTitle) || new Set();
+
+        // 엣지
+        for (const e of graph.edges) {
+          const a = nodeByTitle.get(e.from);
+          const b = nodeByTitle.get(e.to);
+          if (!a || !b) continue;
+
+          const isActive = (e.from === activeTitle || e.to === activeTitle
+            || neighborSet.has(e.from) || neighborSet.has(e.to));
+
+          ctx.lineWidth = isActive ? 2 : 1;
+          ctx.strokeStyle = isActive ? "#111" : "#d1d5db";
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.stroke();
+        }
+
+        // 노드
+        for (const n of nodes) {
+          const isFocus = n.title === focusTitle;
+          const isHover = n.title === hoverTitle;
+          const isNeighbor = neighborSet.has(n.title);
+
+          // 반경 조절
+          n.r = isFocus ? 18 : isHover ? 18 : isNeighbor ? 17 : 15;
+
+          // 스타일
+          let fill = "#fff";
+          let stroke = "#d1d5db";
+          let text = "#111";
+
+          if (isFocus) {
+            fill = "#111";
+            stroke = "#111";
+            text = "#fff";
+          } else if (isHover) {
+            fill = "#eef2ff";
+            stroke = "#0051a8";
+            text = "#111";
+          } else if (isNeighbor) {
+            fill = "#f9fafb";
+            stroke = "#111";
+            text = "#111";
+          }
+
+          // 원
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+          ctx.fillStyle = fill;
+          ctx.fill();
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = stroke;
+          ctx.stroke();
+
+          // 라벨(짧게)
+          ctx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+          ctx.fillStyle = text;
+
+          const label = n.title.length > 10 ? (n.title.slice(0, 9) + "…") : n.title;
+          const tw = ctx.measureText(label).width;
+          ctx.fillText(label, n.x - tw / 2, n.y + 4);
+        }
+
+        // 힌트
+        const msg = hoverTitle
+          ? `호버: ${hoverTitle} (클릭 이동)`
+          : `노드 ${nodes.length}개 · 링크 ${graph.edges.length}개 · 현재: ${focusTitle}`;
+        hintEl.textContent = msg;
+      }
+
+      function loop() {
+        stepPhysics();
+        draw();
+        rafId = requestAnimationFrame(loop);
+      }
+
+      function setFocus(title) {
+        if (!nodeByTitle.has(title)) return;
+        focusTitle = title;
+        // 포커스 근처가 화면에 오도록 한 번 센터링
+        centerOn(title, true);
+      }
+
+      function pointerPosFromEvent(evt) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+          x: (evt.clientX - rect.left),
+          y: (evt.clientY - rect.top)
+        };
+      }
+
+      // 이벤트
+      canvas.addEventListener("pointermove", (e) => {
+        pointer = { ...pointer, ...pointerPosFromEvent(e) };
+        const hit = findNodeAt(pointer.x, pointer.y);
+        hoverTitle = hit ? hit.title : "";
+        canvas.style.cursor = hit ? "pointer" : "default";
+      });
+
+      canvas.addEventListener("pointerdown", (e) => {
+        const p = pointerPosFromEvent(e);
+        pointer = { x: p.x, y: p.y, down: true };
+        const hit = findNodeAt(p.x, p.y);
+        if (hit) {
+          dragging = hit;
+          canvas.setPointerCapture(e.pointerId);
+        }
+      });
+
+      canvas.addEventListener("pointerup", (e) => {
+        const p = pointerPosFromEvent(e);
+        const hit = findNodeAt(p.x, p.y);
+
+        // 드래그 해제
+        pointer.down = false;
+        if (dragging) {
+          dragging = null;
+          canvas.releasePointerCapture(e.pointerId);
+        } else {
+          // (일반 클릭) 노드 클릭 시 이동
+          if (hit) onNodeClick(hit.title);
+        }
+
+        // 클릭 판정 보조: 포인터업에서 한번 더
+        if (hit && !dragging) {
+          // no-op (위에서 처리)
+        }
+      });
+
+      // 터치에서 드래그 후에도 click 발생하는 경우가 있어 click은 사용 안 함
+
+      let onNodeClick = () => {};
+
+      window.addEventListener("resize", resize);
+
+      // 시작
+      resize();
+      loop();
+
+      return {
+        setFocus,
+        centerOn: (title) => centerOn(title, true),
+        onNodeClick: (fn) => { onNodeClick = fn; },
+        destroy: () => cancelAnimationFrame(rafId)
+      };
+    }
+
+    /**********************************************************************
+     * 5) 상세 페이지 UI 로직
+     **********************************************************************/
+    const $ = (sel) => document.querySelector(sel);
+    const els = {
+      title: $("#noteTitle"),
+      sub: $("#noteSub"),
+      body: $("#noteBody"),
+      outgoing: $("#outgoingList"),
+      backlinks: $("#backlinkList"),
+      tagRow: $("#tagRow"),
+      search: $("#noteSearch"),
+      datalist: $("#noteList"),
+      randomBtn: $("#randomBtn"),
+      copyLinkBtn: $("#copyLinkBtn"),
+      centerGraphBtn: $("#centerGraphBtn"),
+      dataPreview: $("#dataPreview"),
+      canvas: $("#graphCanvas"),
+      graphHint: $("#graphHint")
+    };
+
+    const graph = buildGraph(NOTES);
+
+    // datalist 채우기
+    function fillDatalist() {
+      els.datalist.innerHTML = "";
+      for (const n of NOTES) {
+        const opt = document.createElement("option");
+        opt.value = n.title;
+        els.datalist.appendChild(opt);
+      }
+    }
+
+    function makeLinkItem(title, extraMuted="") {
+      const li = document.createElement("li");
+      const a = document.createElement("a");
+      a.href = "#";
+      a.className = "link-note";
+      a.dataset.note = title;
+      a.textContent = title;
+      li.appendChild(a);
+
+      if (extraMuted) {
+        const span = document.createElement("span");
+        span.className = "muted";
+        span.style.marginLeft = "6px";
+        span.textContent = extraMuted;
+        li.appendChild(span);
+      }
+      return li;
+    }
+
+    function renderList(ul, titles, emptyText) {
+      ul.innerHTML = "";
+      if (!titles || titles.length === 0) {
+        const li = document.createElement("li");
+        li.className = "muted";
+        li.textContent = emptyText;
+        ul.appendChild(li);
+        return;
+      }
+      for (const t of titles) ul.appendChild(makeLinkItem(t));
+    }
+
+    function renderOutgoing(noteTitle) {
+      const links = graph.outgoing.get(noteTitle) || [];
+      els.outgoing.innerHTML = "";
+
+      if (links.length === 0) {
+        const li = document.createElement("li");
+        li.className = "muted";
+        li.textContent = "아직 링크가 없어요.";
+        els.outgoing.appendChild(li);
+        return;
+      }
+
+      for (const l of links) {
+        const li = document.createElement("li");
+
+        if (graph.byTitle.has(l.target)) {
+          const a = document.createElement("a");
+          a.href = "#";
+          a.className = "link-note";
+          a.dataset.note = l.target;
+          a.textContent = l.alias || l.target;
+          li.appendChild(a);
+        } else {
+          const span = document.createElement("span");
+          span.textContent = l.alias || l.target;
+          li.appendChild(span);
+
+          const muted = document.createElement("span");
+          muted.className = "muted";
+          muted.style.marginLeft = "6px";
+          muted.textContent = "(미등록 메모)";
+          li.appendChild(muted);
+        }
+
+        els.outgoing.appendChild(li);
+      }
+    }
+
+    function renderBacklinks(noteTitle) {
+      const inArr = graph.incoming.get(noteTitle) || [];
+      renderList(els.backlinks, inArr, "백링크가 없어요.");
+    }
+
+    function renderTags(note) {
+      els.tagRow.innerHTML = "";
+      const tags = note.tags || [];
+      if (tags.length === 0) return;
+
+      for (const t of tags) {
+        const chip = document.createElement("span");
+        chip.className = "tag-chip";
+        chip.textContent = "#" + t;
+        els.tagRow.appendChild(chip);
+      }
+    }
+
+    function getCurrentTitleFromUrl() {
+      const params = new URLSearchParams(location.search);
+      const t = params.get("note");
+      return t && graph.byTitle.has(t) ? t : (NOTES[0]?.title || "");
+    }
+
+    function navigateTo(title) {
+      if (!graph.byTitle.has(title)) return;
+      const params = new URLSearchParams(location.search);
+      params.set("note", title);
+      history.pushState({}, "", `${location.pathname}?${params.toString()}`);
+      render(title);
+    }
+
+    function render(title) {
+      const note = graph.byTitle.get(title);
+      if (!note) return;
+
+      document.title = `메모 상세 · ${note.title}`;
+      els.title.textContent = note.title;
+      els.sub.textContent = formatMeta(note, graph);
+
+      setInnerHTMLSafe(els.body, renderBodyToHtml(note.body));
+
+      renderOutgoing(note.title);
+      renderBacklinks(note.title);
+      renderTags(note);
+
+      // 검색창 값 동기화
+      els.search.value = note.title;
+
+      // 그래프 포커스
+      canvasGraph.setFocus(note.title);
+
+      // 데이터 미리보기
+      els.dataPreview.textContent =
+JSON.stringify(
+  {
+    note: {
+      title: note.title,
+      updatedAt: note.updatedAt,
+      tags: note.tags,
+      body: note.body
+    },
+    parsedLinks: (graph.outgoing.get(note.title) || []).map(l => l.target)
+  },
+  null,
+  2
+);
+    }
+
+    // body/outgoing/backlinks에서 링크 클릭하면 이동 (이벤트 위임)
+    document.addEventListener("click", (e) => {
+      const a = e.target.closest("a[data-note]");
+      if (!a) return;
+      e.preventDefault();
+      const t = a.dataset.note;
+      if (t) navigateTo(t);
+    });
+
+    // 검색창: Enter 또는 change로 이동
+    els.search.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      const t = els.search.value.trim();
+      if (graph.byTitle.has(t)) navigateTo(t);
+    });
+    els.search.addEventListener("change", () => {
+      const t = els.search.value.trim();
+      if (graph.byTitle.has(t)) navigateTo(t);
+    });
+
+    // 랜덤 버튼
+    els.randomBtn.addEventListener("click", () => {
+      const t = NOTES[Math.floor(Math.random() * NOTES.length)]?.title;
+      if (t) navigateTo(t);
+    });
+
+    // 링크 복사 버튼
+    els.copyLinkBtn.addEventListener("click", async () => {
+      const t = getCurrentTitleFromUrl();
+      const url = `${location.origin}${location.pathname}?note=${encodeURIComponent(t)}`;
+      try {
+        await navigator.clipboard.writeText(url);
+        els.copyLinkBtn.textContent = "복사됨!";
+        setTimeout(() => (els.copyLinkBtn.textContent = "이 메모 링크 복사"), 1200);
+      } catch {
+        // clipboard 미지원 fallback
+        prompt("복사할 링크입니다:", url);
+      }
+    });
+
+    // 그래프 중앙 버튼
+    els.centerGraphBtn.addEventListener("click", () => {
+      const t = getCurrentTitleFromUrl();
+      canvasGraph.centerOn(t);
+    });
+
+    // popstate(뒤로/앞으로) 대응
+    window.addEventListener("popstate", () => {
+      render(getCurrentTitleFromUrl());
+    });
+
+    // 캔버스 그래프 시작
+    const canvasGraph = createCanvasGraph(els.canvas, els.graphHint, graph);
+    canvasGraph.onNodeClick((title) => navigateTo(title));
+
+    // 초기 실행
+    fillDatalist();
+    render(getCurrentTitleFromUrl());
+  </script>
+
+  <script src="/static/disable-copy.js"></script>
+<script src="/static/footer.js"></script>
+<script src="/static/global-loader.js?v=1"></script>
+
+</body>
+</html>
