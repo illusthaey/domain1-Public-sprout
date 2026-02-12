@@ -5,28 +5,20 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>미수납 → 미납안내문/문자 생성기</title>
 
-  <!-- ✅ 기존 사이트 CSS 그대로 사용 -->
-  <link rel="stylesheet" href="static/style.css" />
+  <!-- ✅ 사이트 공통 CSS 그대로 -->
+  <link rel="stylesheet" href="/static/style.css" />
 
-  <!-- XLSX 파싱 / ZIP / PDF -->
+  <!-- 라이브러리(CDN) -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
   <style>
-    /* ===== 이 페이지 전용(기존 style.css 보완/오버라이드 최소) ===== */
+    /* ===========================================
+       페이지 전용: 공통 style.css를 해치지 않는 선에서만 최소 보강
+       =========================================== */
 
-    /* 버튼 primary를 파스텔톤 푸른색으로(요청 반영) */
-    .btn.primary{
-      background: #2D8CFF;
-      border-color: #2D8CFF;
-      color: #fff;
-    }
-    .btn.primary:hover{
-      background: #1f6fe0;
-      border-color: #1f6fe0;
-    }
-
+    /* 파일 입력도 공통 인풋 톤에 맞추기 */
     input[type="file"]{
       width: 100%;
       padding: 10px 12px;
@@ -34,17 +26,19 @@
       border-radius: 12px;
       background: #f9fafb;
       outline: none;
+      min-width: 0;
       box-shadow: 0 0 0 1px rgba(0,0,0,0.02);
     }
     input[type="file"]:focus{
       border-color: #b4b4d0;
-      box-shadow: 0 0 0 2px rgba(180,180,208,0.25);
+      box-shadow: 0 0 0 2px rgba(180, 180, 208, 0.25);
       background: #fff;
     }
 
+    /* 상태 박스: 공통 card 느낌으로 */
     .status-box{
       white-space: pre-line;
-      font-size: 0.98rem;
+      font-size: 1rem;
       color: #333;
     }
     .status-ok{
@@ -56,26 +50,7 @@
       background: #fff1f2 !important;
     }
 
-    .pill{
-      display:inline-block;
-      padding: 2px 10px;
-      border-radius: 999px;
-      border: 1px solid #d4d4d8;
-      background: #f3f4f6;
-      font-size: 0.9rem;
-      color: #333;
-      margin-left: 6px;
-      white-space: nowrap;
-    }
-
-    .btnbar{
-      display:flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: center;
-      margin-top: 10px;
-    }
-
+    /* 미리보기 캔버스 박스 */
     .canvasbox{
       border: 1px solid #e5e5e5;
       border-radius: 12px;
@@ -91,30 +66,7 @@
       border: 1px solid #e5e5e5;
     }
 
-    details.advanced{
-      margin-top: 12px;
-      border: 1px solid #e5e5e5;
-      border-radius: 12px;
-      background: #fafafa;
-      padding: 10px 12px;
-    }
-    details.advanced summary{
-      cursor: pointer;
-      font-weight: 700;
-      color: #111;
-      list-style: none;
-    }
-    details.advanced summary::-webkit-details-marker{ display:none; }
-    details.advanced summary::before{ content:"▸ "; }
-    details.advanced[open] summary::before{ content:"▾ "; }
-
-    .mini-grid{
-      display:grid;
-      gap: 12px;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      margin-top: 10px;
-    }
-
+    /* 미리보기 2열(넓을 때만) */
     .preview-grid{
       display:grid;
       gap: 12px;
@@ -126,318 +78,334 @@
         align-items: start;
       }
     }
+
+    /* 버튼 간격: 공통 .row gap 사용 권장(추가 보정 최소) */
+    .row.gap{ gap: 10px; }
+
+    /* 고급설정 input 폭 */
+    .mini-grid{
+      display:grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      margin-top: 10px;
+    }
+
+    /* details UI: style.css의 shot-details/shot-summary 톤 활용 */
+    details.shot-details{
+      margin-top: 12px;
+    }
   </style>
 </head>
 
 <body>
-  <header class="site-header">
-    <div class="shell">
-      <h1>미수납대상(.xlsx) → 미납 안내 문자 + 미납안내문(PNG/PDF)</h1>
-      <p class="subtitle">
-        엑셀에서 <b>학년/반/이름/납입금명/미납액</b>만 추출합니다.
-        <span class="pill">정리: 주간 · 야간 · _ · - 제거</span>
+  <!-- (선택) 페이지 상단 홈 링크: 기존 사이트 다른 페이지들과 동일 패턴 -->
+  <div class="home-link-wrap">
+    <a class="btn-home" href="/">← 메인으로</a>
+  </div>
+
+  <main class="container">
+    <h1>미수납대상(.xlsx) → 미납 안내 문자 + 미납안내문(PNG/PDF)</h1>
+    <p class="subtitle">
+      엑셀에서 <b>학년/반/이름/납입금명/미납액</b>만 추출합니다.
+      (제외 정리: <b>주간</b>, <b>야간</b>, <b>_</b>, <b>-</b>)
+    </p>
+
+    <!-- 1) 업로드 -->
+    <section class="section">
+      <div class="row between">
+        <h2 class="local-h2 local-tight" style="margin:0;">엑셀 업로드</h2>
+        <div class="row gap">
+          <button class="btn ghost" id="btnLoadSample" type="button">샘플 데이터</button>
+          <button class="btn ghost" id="btnReset" type="button">초기화</button>
+        </div>
+      </div>
+
+      <p class="muted local-tight">
+        보호자 연락처 / 학적구분 / 수납방법 / 미납일수 / 납입기한 / 결재상태 등은 <b>무시</b>합니다.
       </p>
-    </div>
-  </header>
 
-  <main>
-    <div class="container">
-
-      <!-- 1) 업로드 -->
-      <section class="section">
-        <h2 class="local-h2">1) 엑셀 업로드</h2>
-        <p class="muted">
-          보호자연락처/학적구분/수납방법/미납일수/납입기한/결재상태/번호 등은 <b>무시</b>합니다.
-        </p>
-
-        <div class="grid two">
-          <div class="field">
-            <label>에듀파인 엑셀(.xlsx)</label>
-            <input id="excelFile" type="file" accept=".xlsx,.xls" />
-          </div>
-          <div class="field">
-            <label>빠른 시작</label>
-            <div class="btnbar">
-              <button class="btn ghost" id="btnLoadSample" type="button">샘플 데이터로 미리보기</button>
-              <button class="btn ghost" id="btnReset" type="button">초기화</button>
-            </div>
-          </div>
+      <div class="grid two">
+        <div class="field">
+          <label>에듀파인 엑셀(.xlsx)</label>
+          <input id="excelFile" type="file" accept=".xlsx,.xls" />
         </div>
 
-        <div id="statusBox" class="card status-box" style="margin-top:12px;">
-          대기중… 엑셀을 올리면 자동으로 추출합니다.
-        </div>
-      </section>
-
-      <!-- 2) 설정 -->
-      <section class="section">
-        <div class="row between">
-          <h2 class="local-h2" style="margin:0;">2) 기본 설정</h2>
-          <div class="row" style="gap:10px;">
-            <button class="btn ghost" id="btnApplySamplePreset" type="button">샘플 프리셋 적용</button>
+        <div class="field">
+          <label>상태</label>
+          <div id="statusBox" class="card status-box">
+            대기중… 엑셀을 올리면 자동으로 추출합니다.
           </div>
         </div>
+      </div>
+    </section>
 
-        <div class="grid two">
-          <div class="field">
-            <label>학교명</label>
-            <input id="schoolName" type="text" placeholder="예) 문막초등학교" />
-          </div>
-          <div class="field">
-            <label>차수(문자용 / 안내문 비고 기본값)</label>
-            <input id="roundText" type="text" placeholder="예) 2025년 2학기" />
-          </div>
+    <!-- 2) 설정 -->
+    <section class="section">
+      <div class="row between">
+        <h2 class="local-h2 local-tight" style="margin:0;">기본 설정</h2>
+        <div class="row gap">
+          <button class="btn" id="btnApplySamplePreset" type="button">샘플 프리셋 적용</button>
         </div>
+      </div>
 
-        <div class="grid two">
-          <div class="field">
-            <label>은행명</label>
-            <input id="bankName" type="text" placeholder="예) 농협" />
-          </div>
-          <div class="field">
-            <label>계좌번호</label>
-            <input id="accountNumber" type="text" placeholder="예) 000-0000-0000-00" />
-          </div>
+      <div class="grid two">
+        <div class="field">
+          <label>학교명</label>
+          <input id="schoolName" type="text" placeholder="예) 문막초등학교" />
         </div>
-
-        <div class="grid two">
-          <div class="field">
-            <label>안내문 비고(선택)</label>
-            <input id="noticeRemark" type="text" placeholder="비어있으면 ‘차수’가 자동으로 들어갑니다" />
-            <p class="note">샘플 안내문의 비고 칸에 들어갈 값입니다.</p>
-          </div>
-          <div class="field">
-            <label>안내문 라벨 색상</label>
-            <select id="labelTheme">
-              <option value="gray" selected>샘플(회색)</option>
-              <option value="blue">파스텔 블루(테마)</option>
-            </select>
-            <p class="note">샘플 프리셋은 회색 라벨을 기본으로 고정합니다.</p>
-          </div>
+        <div class="field">
+          <label>차수(문자용 / 안내문 비고 기본값)</label>
+          <input id="roundText" type="text" placeholder="예) 2025년 2학기" />
         </div>
+      </div>
 
-        <div class="grid two">
+      <div class="grid two">
+        <div class="field">
+          <label>은행명</label>
+          <input id="bankName" type="text" placeholder="예) 농협" />
+        </div>
+        <div class="field">
+          <label>계좌번호</label>
+          <input id="accountNumber" type="text" placeholder="예) 000-0000-0000-00" />
+        </div>
+      </div>
+
+      <div class="grid two">
+        <div class="field">
+          <label>안내문 비고(선택)</label>
+          <input id="noticeRemark" type="text" placeholder="비어있으면 ‘차수’ 자동 입력" />
+          <p class="note">샘플 안내문 비고 칸 값입니다.</p>
+        </div>
+        <div class="field">
+          <label>안내문 라벨 색상</label>
+          <select id="labelTheme">
+            <option value="gray" selected>샘플(회색)</option>
+            <option value="blue">파스텔 블루</option>
+          </select>
+          <p class="note">샘플 프리셋 기본은 회색입니다.</p>
+        </div>
+      </div>
+
+      <div class="grid two">
+        <div class="field">
+          <label>납부 기한(안내문 문구)</label>
+          <input id="dueDate" type="date" />
+        </div>
+        <div class="field">
+          <label>안내문 작성일(하단 날짜)</label>
+          <input id="docDate" type="date" />
+        </div>
+      </div>
+
+      <div class="grid two">
+        <div class="field">
+          <label>내보내기 배율(선명도)</label>
+          <select id="exportScale">
+            <option value="1" selected>1x (기본)</option>
+            <option value="2">2x (더 선명)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 고급설정: 기존 페이지 접기/펼치기 UI와 통일 -->
+      <details class="shot-details">
+        <summary class="shot-summary">고급 설정(미세 조정)</summary>
+
+        <div class="mini-grid">
           <div class="field">
-            <label>납부 기한(안내문 문구)</label>
-            <input id="dueDate" type="date" />
-          </div>
-          <div class="field">
-            <label>안내문 작성일(하단 날짜)</label>
-            <input id="docDate" type="date" />
-          </div>
-        </div>
-
-        <div class="grid two">
-          <div class="field">
-            <label>내보내기 배율(선명도)</label>
-            <select id="exportScale">
-              <option value="1" selected>1x (기본)</option>
-              <option value="2">2x (더 선명)</option>
-            </select>
-          </div>
-        </div>
-
-        <details class="advanced">
-          <summary>고급 설정(필요할 때만)</summary>
-          <div class="muted" style="margin-top:8px;">
-            기본은 샘플 프리셋으로 고정되어 있고, 이 값들은 “미세 조정” 용도입니다.
-          </div>
-
-          <div class="mini-grid">
-            <div class="field">
-              <label>박스 여백(px)</label>
-              <input id="cfg_boxMargin" type="number" min="20" max="140" step="1">
-            </div>
-            <div class="field">
-              <label>박스 하단 여백(px)</label>
-              <input id="cfg_boxBottomMargin" type="number" min="20" max="160" step="1">
-            </div>
-            <div class="field">
-              <label>제목 위 여백(px)</label>
-              <input id="cfg_titleTop" type="number" min="10" max="120" step="1">
-            </div>
-            <div class="field">
-              <label>밑줄→박스 간격(px)</label>
-              <input id="cfg_boxTopGap" type="number" min="10" max="140" step="1">
-            </div>
-
-            <div class="field">
-              <label>외곽선 굵기</label>
-              <input id="cfg_outerLine" type="number" min="1" max="4" step="0.1">
-            </div>
-            <div class="field">
-              <label>내부선 굵기</label>
-              <input id="cfg_innerLine" type="number" min="0.8" max="3" step="0.1">
-            </div>
-
-            <div class="field">
-              <label>상단 2행 높이(px)</label>
-              <input id="cfg_topRowH" type="number" min="40" max="90" step="1">
-            </div>
-            <div class="field">
-              <label>일금 행 높이(px)</label>
-              <input id="cfg_moneyRowH" type="number" min="40" max="90" step="1">
-            </div>
-
-            <div class="field">
-              <label>표 헤더 높이(px)</label>
-              <input id="cfg_headH" type="number" min="40" max="90" step="1">
-            </div>
-            <div class="field">
-              <label>표 본문 행 높이(px)</label>
-              <input id="cfg_rowH" type="number" min="40" max="90" step="1">
-            </div>
-            <div class="field">
-              <label>합계 행 높이(px)</label>
-              <input id="cfg_sumH" type="number" min="40" max="90" step="1">
-            </div>
-            <div class="field">
-              <label>표 슬롯(빈줄 포함)</label>
-              <input id="cfg_slots" type="number" min="6" max="20" step="1">
-            </div>
-
-            <div class="field">
-              <label>구분 칸 비율(0~1)</label>
-              <input id="cfg_col1" type="number" min="0.30" max="0.60" step="0.01">
-            </div>
-            <div class="field">
-              <label>금액 칸 비율(0~1)</label>
-              <input id="cfg_col2" type="number" min="0.18" max="0.40" step="0.01">
-            </div>
-
-            <div class="field">
-              <label>제목 크기(px)</label>
-              <input id="cfg_titleSize" type="number" min="38" max="70" step="1">
-            </div>
-            <div class="field">
-              <label>제목 자간(px)</label>
-              <input id="cfg_titleSpacing" type="number" min="0" max="24" step="1">
-            </div>
-
-            <div class="field">
-              <label>라벨 글자 크기(px)</label>
-              <input id="cfg_labelSize" type="number" min="20" max="40" step="1">
-            </div>
-            <div class="field">
-              <label>값 글자 크기(px)</label>
-              <input id="cfg_valueSize" type="number" min="20" max="40" step="1">
-            </div>
-            <div class="field">
-              <label>표 글자 크기(px)</label>
-              <input id="cfg_tableSize" type="number" min="18" max="36" step="1">
-            </div>
-            <div class="field">
-              <label>하단 날짜 크기(px)</label>
-              <input id="cfg_dateSize" type="number" min="18" max="36" step="1">
-            </div>
-          </div>
-        </details>
-      </section>
-
-      <!-- 3) 문자 템플릿 -->
-      <section class="section">
-        <h2 class="local-h2">3) 문자 템플릿</h2>
-        <p class="muted">
-          치환: [학교명] [학년] [반] [이름] [차수] [납입금명] [은행명] [계좌번호] [미납액]
-          / [번호]는 <b>엑셀에서 추출하지 않으므로 빈칸</b> 처리됩니다.
-        </p>
-        <textarea id="smsTemplate"></textarea>
-
-        <div class="btnbar">
-          <button class="btn primary" id="btnDownloadCSV" type="button" disabled>문자/명단 CSV 다운로드</button>
-          <button class="btn primary" id="btnDownloadZip" type="button" disabled>안내문 PNG ZIP 다운로드</button>
-          <button class="btn primary" id="btnDownloadPDF" type="button" disabled>안내문 PDF 다운로드</button>
-        </div>
-      </section>
-
-      <!-- 4) 추출 결과 -->
-      <section class="section">
-        <h2 class="local-h2">4) 추출 결과</h2>
-
-        <h3 class="local-h3">행 단위(추출 5개만)</h3>
-        <div class="table-wrap">
-          <table class="sheetlike">
-            <thead>
-              <tr>
-                <th>학년</th>
-                <th>반</th>
-                <th>이름</th>
-                <th>납입금명</th>
-                <th class="numeric">미납액</th>
-              </tr>
-            </thead>
-            <tbody id="rawTbody">
-              <tr><td colspan="5" class="muted">아직 데이터가 없습니다.</td></tr>
-            </tbody>
-          </table>
-        </div>
-
-        <h3 class="local-h3" style="margin-top:18px;">학생별 통합(안내문/문자 생성 단위)</h3>
-        <div class="table-wrap">
-          <table class="sheetlike">
-            <thead>
-              <tr>
-                <th>학년</th>
-                <th>반</th>
-                <th>이름</th>
-                <th>납입금명(요약)</th>
-                <th class="numeric">총 미납액</th>
-              </tr>
-            </thead>
-            <tbody id="caseTbody">
-              <tr><td colspan="5" class="muted">아직 데이터가 없습니다.</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- 5) 미리보기 -->
-      <section class="section">
-        <h2 class="local-h2">5) 미리보기</h2>
-
-        <div class="grid two">
-          <div class="field">
-            <label>학생 선택</label>
-            <select id="caseSelect" disabled>
-              <option value="">먼저 엑셀을 업로드하세요</option>
-            </select>
+            <label>박스 여백(px)</label>
+            <input id="cfg_boxMargin" type="number" min="20" max="140" step="1">
           </div>
           <div class="field">
-            <label>선택 학생 작업</label>
-            <div class="btnbar">
-              <button class="btn ghost" id="btnOnePng" type="button" disabled>선택 학생 안내문 PNG 1장</button>
-              <button class="btn ghost" id="btnCopySms" type="button" disabled>선택 학생 문자 복사</button>
-            </div>
+            <label>박스 하단 여백(px)</label>
+            <input id="cfg_boxBottomMargin" type="number" min="20" max="160" step="1">
           </div>
-        </div>
-
-        <div class="preview-grid" style="margin-top:12px;">
-          <div class="canvasbox">
-            <canvas id="previewCanvas" width="1080" height="1350"></canvas>
-            <p class="note">안내문 미리보기(샘플 양식 구조 기반).</p>
+          <div class="field">
+            <label>제목 위 여백(px)</label>
+            <input id="cfg_titleTop" type="number" min="10" max="120" step="1">
+          </div>
+          <div class="field">
+            <label>밑줄→박스 간격(px)</label>
+            <input id="cfg_boxTopGap" type="number" min="10" max="140" step="1">
           </div>
 
-          <div class="card">
-            <h3 class="local-h3 local-tight">선택 학생 문자 문구</h3>
-            <textarea id="smsPreview" readonly style="min-height: 320px;"></textarea>
-            <p class="note">복사 버튼으로 클립보드에 저장됩니다.</p>
+          <div class="field">
+            <label>외곽선 굵기</label>
+            <input id="cfg_outerLine" type="number" min="1" max="4" step="0.1">
+          </div>
+          <div class="field">
+            <label>내부선 굵기</label>
+            <input id="cfg_innerLine" type="number" min="0.8" max="3" step="0.1">
+          </div>
+
+          <div class="field">
+            <label>상단 2행 높이(px)</label>
+            <input id="cfg_topRowH" type="number" min="40" max="90" step="1">
+          </div>
+          <div class="field">
+            <label>일금 행 높이(px)</label>
+            <input id="cfg_moneyRowH" type="number" min="40" max="90" step="1">
+          </div>
+
+          <div class="field">
+            <label>표 헤더 높이(px)</label>
+            <input id="cfg_headH" type="number" min="40" max="90" step="1">
+          </div>
+          <div class="field">
+            <label>표 본문 행 높이(px)</label>
+            <input id="cfg_rowH" type="number" min="40" max="90" step="1">
+          </div>
+          <div class="field">
+            <label>합계 행 높이(px)</label>
+            <input id="cfg_sumH" type="number" min="40" max="90" step="1">
+          </div>
+          <div class="field">
+            <label>표 슬롯(빈줄 포함)</label>
+            <input id="cfg_slots" type="number" min="6" max="20" step="1">
+          </div>
+
+          <div class="field">
+            <label>구분 칸 비율(0~1)</label>
+            <input id="cfg_col1" type="number" min="0.30" max="0.60" step="0.01">
+          </div>
+          <div class="field">
+            <label>금액 칸 비율(0~1)</label>
+            <input id="cfg_col2" type="number" min="0.18" max="0.40" step="0.01">
+          </div>
+
+          <div class="field">
+            <label>제목 크기(px)</label>
+            <input id="cfg_titleSize" type="number" min="38" max="70" step="1">
+          </div>
+          <div class="field">
+            <label>제목 자간(px)</label>
+            <input id="cfg_titleSpacing" type="number" min="0" max="24" step="1">
+          </div>
+
+          <div class="field">
+            <label>라벨 글자 크기(px)</label>
+            <input id="cfg_labelSize" type="number" min="20" max="40" step="1">
+          </div>
+          <div class="field">
+            <label>값 글자 크기(px)</label>
+            <input id="cfg_valueSize" type="number" min="20" max="40" step="1">
+          </div>
+          <div class="field">
+            <label>표 글자 크기(px)</label>
+            <input id="cfg_tableSize" type="number" min="18" max="36" step="1">
+          </div>
+          <div class="field">
+            <label>하단 날짜 크기(px)</label>
+            <input id="cfg_dateSize" type="number" min="18" max="36" step="1">
           </div>
         </div>
-      </section>
+      </details>
+    </section>
 
-      <footer class="site-footer">
-        <div class="shell">
-          <p>※ 정적 페이지: 브라우저에서만 동작합니다. 엑셀은 로컬에서만 읽습니다.</p>
+    <!-- 3) 문자 템플릿 + 다운로드 -->
+    <section class="section">
+      <h2 class="local-h2 local-tight">문자 템플릿 & 다운로드</h2>
+      <p class="muted">
+        치환: [학교명] [학년] [반] [이름] [차수] [납입금명] [은행명] [계좌번호] [미납액]<br>
+        ※ [번호]는 추출하지 않으므로 빈칸 처리
+      </p>
+
+      <textarea id="smsTemplate"></textarea>
+
+      <div class="row gap" style="margin-top:12px; flex-wrap:wrap;">
+        <button class="btn ghost" id="btnDownloadCSV" type="button" disabled>문자/명단 CSV</button>
+        <button class="btn primary" id="btnDownloadZip" type="button" disabled>안내문 PNG ZIP</button>
+        <button class="btn ghost" id="btnDownloadPDF" type="button" disabled>안내문 PDF</button>
+      </div>
+
+      <p class="note">보통은 PNG ZIP이 가장 많이 쓰입니다.</p>
+    </section>
+
+    <!-- 4) 추출 결과 -->
+    <section class="section">
+      <h2 class="local-h2 local-tight">추출 결과</h2>
+
+      <h3 class="local-h3 local-tight">행 단위(추출 5개만)</h3>
+      <div class="table-wrap">
+        <table class="sheetlike">
+          <thead>
+            <tr>
+              <th>학년</th>
+              <th>반</th>
+              <th>이름</th>
+              <th>납입금명</th>
+              <th class="numeric">미납액</th>
+            </tr>
+          </thead>
+          <tbody id="rawTbody">
+            <tr><td colspan="5" class="muted">아직 데이터가 없습니다.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="local-h3 local-tight" style="margin-top:18px;">학생별 통합(안내문/문자 생성 단위)</h3>
+      <div class="table-wrap">
+        <table class="sheetlike">
+          <thead>
+            <tr>
+              <th>학년</th>
+              <th>반</th>
+              <th>이름</th>
+              <th>납입금명(요약)</th>
+              <th class="numeric">총 미납액</th>
+            </tr>
+          </thead>
+          <tbody id="caseTbody">
+            <tr><td colspan="5" class="muted">아직 데이터가 없습니다.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 5) 미리보기 -->
+    <section class="section">
+      <h2 class="local-h2 local-tight">미리보기</h2>
+
+      <div class="grid two">
+        <div class="field">
+          <label>학생 선택</label>
+          <select id="caseSelect" disabled>
+            <option value="">먼저 엑셀을 업로드하세요</option>
+          </select>
         </div>
-      </footer>
-    </div>
+        <div class="field">
+          <label>선택 학생 작업</label>
+          <div class="row gap" style="flex-wrap:wrap;">
+            <button class="btn ghost" id="btnOnePng" type="button" disabled>안내문 PNG 1장</button>
+            <button class="btn ghost" id="btnCopySms" type="button" disabled>문자 복사</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="preview-grid" style="margin-top:12px;">
+        <div class="canvasbox">
+          <canvas id="previewCanvas" width="1080" height="1350"></canvas>
+          <p class="note">샘플 “미납안내문” 양식 구조로 렌더링됩니다. :contentReference[oaicite:1]{index=1}</p>
+        </div>
+
+        <div class="card">
+          <h3 class="local-h3 local-tight">선택 학생 문자 문구</h3>
+          <textarea id="smsPreview" readonly style="min-height: 320px;"></textarea>
+          <p class="note">‘문자 복사’ 버튼으로 클립보드에 저장됩니다.</p>
+        </div>
+      </div>
+    </section>
+
+    <p class="muted" style="margin-top:18px;">
+      ※ 정적 페이지: 브라우저에서만 동작합니다. 엑셀은 로컬에서만 읽습니다.
+    </p>
   </main>
 
   <script>
     /***********************
-     * 기본 템플릿/저장
+     * 공통
      ***********************/
-    const STORAGE_KEY = "eduFine_unpaid_notice_stylecss_v2";
+    const STORAGE_KEY = "eduFine_unpaid_notice_stylecss_final";
 
     const DEFAULT_SMS_TEMPLATE =
 `안녕하세요,
@@ -460,14 +428,12 @@
       const day = String(d.getDate()).padStart(2,"0");
       return `${y}-${m}-${day}`;
     }
-
     function parseDateInput(value){
       if(!value) return null;
       const [y,m,d] = value.split("-").map(Number);
       if(!y || !m || !d) return null;
       return new Date(y, m-1, d);
     }
-
     function fmtKoreanDate(d, pad=false){
       if(!d) return "";
       const y = d.getFullYear();
@@ -519,8 +485,8 @@
     }
 
     /***********************
-     * ✅ 샘플 프리셋(“픽셀 느낌” 고정값)
-     * - 미납안내문 PDF의 회색 라벨/선굵기/여백/행높이 느낌을 기본값으로 세팅
+     * ✅ 샘플 프리셋(기본 고정)
+     * - 미납안내문 샘플 양식에 맞춘 “기본값”
      ***********************/
     const SAMPLE_PRESET = {
       labelTheme: "gray",
@@ -532,11 +498,11 @@
       cfg_titleTop: "38",
       cfg_boxTopGap: "28",
 
-      // 선 굵기(샘플 느낌: 외곽 굵고, 내부 약간 얇게)
+      // 선 굵기(샘플처럼 외곽이 좀 더 굵음)
       cfg_outerLine: "2.2",
       cfg_innerLine: "1.1",
 
-      // 행 높이(샘플 표가 길고 균일한 느낌)
+      // 행 높이
       cfg_topRowH: "62",
       cfg_moneyRowH: "56",
       cfg_headH: "56",
@@ -565,19 +531,6 @@
       if(save) saveSettings();
     }
 
-    // 초기 로드: 저장값이 없으면 샘플 프리셋을 “기본값”으로 적용
-    const hasSaved = loadSettings();
-    if(!hasSaved){
-      // 기본 템플릿/날짜 먼저
-      if(!el("smsTemplate").value.trim()) el("smsTemplate").value = DEFAULT_SMS_TEMPLATE;
-      if(!el("docDate").value) el("docDate").value = toISODate(new Date());
-      applyPreset(SAMPLE_PRESET, false);
-      saveSettings();
-    }else{
-      if(!el("smsTemplate").value.trim()) el("smsTemplate").value = DEFAULT_SMS_TEMPLATE;
-      if(!el("docDate").value) el("docDate").value = toISODate(new Date());
-    }
-
     /***********************
      * 상태
      ***********************/
@@ -586,7 +539,7 @@
     let selectedCaseKey = "";
 
     /***********************
-     * 문자열/금액 정리
+     * 추출/정리 유틸
      ***********************/
     function toIntMoney(v){
       if(v === null || v === undefined || v === "") return 0;
@@ -597,8 +550,8 @@
       return Number.isFinite(nn) ? Math.round(nn) : 0;
     }
 
-    // ✅ 추출 제외: 주간 야간 _ -
-    // + "2번" 같은 토큰 제거
+    // ✅ 제외: 주간 야간 _ -
+    // + "2번" 같은 토큰 제거(학년/반 문자열에 섞여 들어오는 경우)
     function cleanSchoolToken(s){
       let out = String(s ?? "")
         .replace(/주간/g, "")
@@ -610,7 +563,7 @@
       return out;
     }
 
-    // 학년/반 섞임 보정
+    // 학년/반 섞임 보정: "1학년 달반" 같은 경우 분리
     function normalizeGradeClass(gradeIn, classIn){
       let g = cleanSchoolToken(gradeIn);
       let c = cleanSchoolToken(classIn);
@@ -715,6 +668,7 @@
         if(!norm.학년 && !norm.반 && !name && !item && !amt) continue;
         if(!name || !item) continue;
 
+        // ✅ 추출 5개만
         out.push({ 학년: norm.학년, 반: norm.반, 이름: name, 납입금명: item, 미납액: amt });
       }
       return out;
@@ -787,7 +741,7 @@
     }
 
     /***********************
-     * 안내문 렌더링(캔버스)
+     * 안내문 렌더링(캔버스) - 샘플 양식 기반 :contentReference[oaicite:2]{index=2}
      ***********************/
     const DIG_KOR = ["", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"];
     function fourToKor(n){
@@ -820,8 +774,8 @@
 
     function getNoticeLabelColor(){
       const theme = el("labelTheme").value;
-      if(theme === "gray") return "#C7C7C7";  // 샘플 느낌(조금 더 진한 회색)
-      return "#D9EEFF";                       // 파스텔 블루
+      if(theme === "gray") return "#BFBFBF"; // 샘플 느낌
+      return "#D9EEFF";                      // 파스텔 블루
     }
 
     function num(id, fallback){
@@ -892,7 +846,7 @@
       const dateSize = num("cfg_dateSize", 26);
 
       const labelBg = getNoticeLabelColor();
-      const stroke = "#222"; // 샘플의 “검정에 가까운 진회색” 느낌
+      const stroke = "#222";
 
       // 배경
       ctx.save();
@@ -937,12 +891,11 @@
 
       let y = boxY;
 
-      // ✅ 샘플처럼 라벨 칸이 약간 넓은 편(고정)
+      // 라벨 너비(샘플 느낌)
       const labelWRatio = 0.34;
       const labelW = Math.round(boxW * labelWRatio);
       const valW = boxW - labelW;
 
-      // 학번/이름 2행
       ctx.textBaseline = "middle";
 
       // 1행: 학번
@@ -953,7 +906,6 @@
       ctx.font = `700 ${labelSize}px ${family}`;
       ctx.fillText("학   번", boxX + labelW/2, y + topRowH/2);
 
-      // 값: 학년+반(번호 추출 금지)
       ctx.textAlign="left";
       const classLine = `${caseObj.학년} ${caseObj.반}`.trim();
       let curSize = valueSize;
@@ -989,7 +941,6 @@
       const col2 = Math.round(boxW * col2Ratio);
       const col3 = boxW - col1 - col2;
 
-      // 헤더(전체 회색)
       cell(boxX, y, col1, headH, labelBg);
       cell(boxX+col1, y, col2, headH, labelBg);
       cell(boxX+col1+col2, y, col3, headH, labelBg);
@@ -1001,7 +952,6 @@
       ctx.fillText("비   고", boxX + col1 + col2 + col3/2, y + headH/2);
       y += headH;
 
-      // 본문 rows
       for(let i=0;i<slots;i++){
         cell(boxX, y, col1, rowH, "#fff");
         cell(boxX+col1, y, col2, rowH, "#fff");
@@ -1009,7 +959,6 @@
 
         const it = caseObj.items[i];
         if(it){
-          // 구분: 가운데(길면 축소)
           let nm = String(it.납입금명||"");
           let s = tableSize;
           ctx.textAlign="center";
@@ -1020,12 +969,10 @@
           }
           ctx.fillText(nm, boxX + col1/2, y + rowH/2);
 
-          // 금액: 오른쪽
           ctx.textAlign="right";
           ctx.font = `600 ${tableSize}px ${family}`;
           ctx.fillText((it.미납액||0).toLocaleString("ko-KR"), boxX + col1 + col2 - 14, y + rowH/2);
 
-          // 비고: 가운데(비어있으면 차수)
           if(remarkText){
             ctx.textAlign="center";
             ctx.fillText(remarkText, boxX + col1 + col2 + col3/2, y + rowH/2);
@@ -1034,7 +981,7 @@
         y += rowH;
       }
 
-      // 합계(샘플은 첫 칸 중앙에 “합계”가 들어간 느낌)
+      // 합계
       cell(boxX, y, col1, sumH, "#fff");
       cell(boxX+col1, y, col2, sumH, "#fff");
       cell(boxX+col1+col2, y, col3, sumH, "#fff");
@@ -1047,7 +994,7 @@
       ctx.fillText(caseObj.total.toLocaleString("ko-KR"), boxX + col1 + col2 - 14, y + sumH/2);
       y += sumH;
 
-      // 하단 문구(샘플 문구 그대로)
+      // 하단 문구
       ctx.font = `600 23px ${family}`;
       ctx.textAlign="left";
       ctx.textBaseline="alphabetic";
@@ -1058,7 +1005,7 @@
         : "납부 기한을 입력하면 여기에 표시됩니다.";
       ctx.fillText(dueLine, boxX + 10, y + 66);
 
-      // 날짜/학교장(중앙)
+      // 날짜/학교장
       const boxBottom = boxY + boxH;
       ctx.textAlign="center";
       ctx.font = `600 ${dateSize}px ${family}`;
@@ -1072,7 +1019,7 @@
     }
 
     /***********************
-     * 테이블 렌더
+     * 테이블 렌더/선택/프리뷰
      ***********************/
     function renderRawTable(){
       const tbody = el("rawTbody");
@@ -1119,6 +1066,7 @@
       sel.innerHTML = "";
       if(!cases.length){
         sel.disabled = true;
+        selectedCaseKey = "";
         sel.innerHTML = `<option value="">먼저 엑셀을 업로드하세요</option>`;
         return;
       }
@@ -1149,13 +1097,20 @@
       const c = getSelectedCase();
       const canvas = el("previewCanvas");
       if(!c){
-        const ctx = canvas.getContext("2d");
-        ctx.clearRect(0,0,canvas.width,canvas.height);
+        canvas.getContext("2d").clearRect(0,0,canvas.width,canvas.height);
         el("smsPreview").value = "";
         return;
       }
       renderNoticeToCanvas(c, canvas, { baseW: 1080, baseH: 1350, scale: 1 });
       el("smsPreview").value = buildSmsForCase(c);
+    }
+
+    function renderAll(){
+      renderRawTable();
+      renderCaseTable();
+      populateCaseSelect();
+      enableDownloads(!!cases.length);
+      updatePreview();
     }
 
     /***********************
@@ -1186,9 +1141,7 @@
     }
 
     function canvasToBlob(canvas, type="image/png", quality){
-      return new Promise((resolve) => {
-        canvas.toBlob((b) => resolve(b), type, quality);
-      });
+      return new Promise((resolve) => canvas.toBlob(b => resolve(b), type, quality));
     }
 
     function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
@@ -1302,19 +1255,11 @@
     }
 
     /***********************
-     * 이벤트 연결
+     * 이벤트
      ***********************/
-    function renderAllAndPreview(){
-      renderRawTable();
-      renderCaseTable();
-      populateCaseSelect();
-      enableDownloads(!!cases.length);
-      updatePreview();
-    }
-
     el("btnApplySamplePreset").addEventListener("click", () => {
       applyPreset(SAMPLE_PRESET, true);
-      setStatus("샘플 프리셋 적용 완료(회색 라벨/여백/선굵기/행높이) ✅", "ok");
+      setStatus("샘플 프리셋 적용 완료 ✅", "ok");
     });
 
     el("excelFile").addEventListener("change", async (ev) => {
@@ -1323,7 +1268,6 @@
         setStatus("대기중… 엑셀을 올리면 자동으로 추출합니다.", "");
         return;
       }
-
       try{
         setStatus("엑셀 읽는 중…", "");
         const buf = await file.arrayBuffer();
@@ -1334,7 +1278,8 @@
         }
 
         cases = buildCasesFromRaw(rawRows);
-        renderAllAndPreview();
+        renderAll();
+
         setStatus(`추출 완료 ✅\n- 행 단위: ${rawRows.length}건\n- 학생별 통합: ${cases.length}건`, "ok");
         saveSettings();
       }catch(err){
@@ -1342,7 +1287,7 @@
         rawRows = [];
         cases = [];
         selectedCaseKey = "";
-        renderAllAndPreview();
+        renderAll();
         el("smsPreview").value = "";
         setStatus(String(err?.message || err), "err");
       }
@@ -1361,7 +1306,7 @@
         { 학년:"3학년", 반:"별반", 이름:"김민지", 납입금명:"우유급식비", 미납액:44170 },
       ];
       cases = buildCasesFromRaw(rawRows);
-      renderAllAndPreview();
+      renderAll();
       setStatus("샘플 데이터 로드 완료 ✅", "ok");
       saveSettings();
     });
@@ -1381,17 +1326,15 @@
       el("docDate").value = toISODate(new Date());
       el("smsTemplate").value = DEFAULT_SMS_TEMPLATE;
 
-      // 샘플 프리셋으로 다시 고정
+      // 샘플 프리셋 기본값 복귀
       applyPreset(SAMPLE_PRESET, false);
 
       localStorage.removeItem(STORAGE_KEY);
       saveSettings();
 
-      renderAllAndPreview();
-      const canvas = el("previewCanvas");
-      canvas.getContext("2d").clearRect(0,0,canvas.width,canvas.height);
+      renderAll();
+      el("previewCanvas").getContext("2d").clearRect(0,0,el("previewCanvas").width, el("previewCanvas").height);
       el("smsPreview").value = "";
-
       setStatus("초기화 완료. 엑셀을 다시 업로드하세요.", "");
     });
 
@@ -1416,9 +1359,23 @@
       el(id).addEventListener("change", () => { updatePreview(); saveSettings(); });
     }
 
-    // 최초 상태
-    renderAllAndPreview();
+    // 초기 세팅: 저장값이 없으면 샘플 프리셋을 기본 적용
+    const hasSaved = loadSettings();
+    if(!el("smsTemplate").value.trim()) el("smsTemplate").value = DEFAULT_SMS_TEMPLATE;
+    if(!el("docDate").value) el("docDate").value = toISODate(new Date());
+    if(!hasSaved){
+      applyPreset(SAMPLE_PRESET, false);
+      saveSettings();
+    }
+
+    enableDownloads(false);
+    renderAll();
     setStatus("대기중… 엑셀 업로드 또는 샘플 데이터로 시작하세요.", "");
   </script>
+
+  <!-- ✅ 요청하신 공통 JS (</body> 직전) -->
+  <script src="/static/disable-copy.js"></script>
+  <script src="/static/footer.js"></script>
+  <script src="/static/global-loader.js?v=1"></script>
 </body>
 </html>
