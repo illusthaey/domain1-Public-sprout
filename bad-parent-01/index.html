@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>미수납 → 미납안내문/문자 생성기</title>
 
+  <!-- ✅ 기존 사이트 CSS 그대로 사용 -->
   <link rel="stylesheet" href="static/style.css" />
 
   <!-- XLSX 파싱 / ZIP / PDF -->
@@ -13,12 +14,19 @@
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
   <style>
-    /* ===========================================
-       이 페이지 전용(기존 style.css 보완용)
-       - 배경은 style.css가 이미 #fff라서 추가로 안 건드림
-       =========================================== */
+    /* ===== 이 페이지 전용(기존 style.css 보완/오버라이드 최소) ===== */
 
-    /* 파일 인풋도 다른 입력과 톤 맞추기 */
+    /* 버튼 primary를 파스텔톤 푸른색으로(요청 반영) */
+    .btn.primary{
+      background: #2D8CFF;
+      border-color: #2D8CFF;
+      color: #fff;
+    }
+    .btn.primary:hover{
+      background: #1f6fe0;
+      border-color: #1f6fe0;
+    }
+
     input[type="file"]{
       width: 100%;
       padding: 10px 12px;
@@ -83,7 +91,6 @@
       border: 1px solid #e5e5e5;
     }
 
-    /* details(고급설정) 톤 맞추기 */
     details.advanced{
       margin-top: 12px;
       border: 1px solid #e5e5e5;
@@ -108,7 +115,6 @@
       margin-top: 10px;
     }
 
-    /* 미리보기 영역 2열(넓을 때만) */
     .preview-grid{
       display:grid;
       gap: 12px;
@@ -124,7 +130,6 @@
 </head>
 
 <body>
-  <!-- 상단 헤더(기존 style.css 패턴) -->
   <header class="site-header">
     <div class="shell">
       <h1>미수납대상(.xlsx) → 미납 안내 문자 + 미납안내문(PNG/PDF)</h1>
@@ -137,11 +142,12 @@
 
   <main>
     <div class="container">
+
       <!-- 1) 업로드 -->
       <section class="section">
         <h2 class="local-h2">1) 엑셀 업로드</h2>
         <p class="muted">
-          보호자연락처/학적구분/수납방법/미납일수/납입기한/결재상태 등은 <b>무시</b>합니다.
+          보호자연락처/학적구분/수납방법/미납일수/납입기한/결재상태/번호 등은 <b>무시</b>합니다.
         </p>
 
         <div class="grid two">
@@ -150,7 +156,7 @@
             <input id="excelFile" type="file" accept=".xlsx,.xls" />
           </div>
           <div class="field">
-            <label>테스트용</label>
+            <label>빠른 시작</label>
             <div class="btnbar">
               <button class="btn ghost" id="btnLoadSample" type="button">샘플 데이터로 미리보기</button>
               <button class="btn ghost" id="btnReset" type="button">초기화</button>
@@ -163,9 +169,14 @@
         </div>
       </section>
 
-      <!-- 2) 설정(본문에서 입력) -->
+      <!-- 2) 설정 -->
       <section class="section">
-        <h2 class="local-h2">2) 기본 설정</h2>
+        <div class="row between">
+          <h2 class="local-h2" style="margin:0;">2) 기본 설정</h2>
+          <div class="row" style="gap:10px;">
+            <button class="btn ghost" id="btnApplySamplePreset" type="button">샘플 프리셋 적용</button>
+          </div>
+        </div>
 
         <div class="grid two">
           <div class="field">
@@ -201,7 +212,7 @@
               <option value="gray" selected>샘플(회색)</option>
               <option value="blue">파스텔 블루(테마)</option>
             </select>
-            <p class="note">기본은 샘플처럼 회색. 테마를 원하면 파스텔 블루.</p>
+            <p class="note">샘플 프리셋은 회색 라벨을 기본으로 고정합니다.</p>
           </div>
         </div>
 
@@ -227,93 +238,97 @@
         </div>
 
         <details class="advanced">
-          <summary>고급 설정(안내문 미세조정)</summary>
+          <summary>고급 설정(필요할 때만)</summary>
+          <div class="muted" style="margin-top:8px;">
+            기본은 샘플 프리셋으로 고정되어 있고, 이 값들은 “미세 조정” 용도입니다.
+          </div>
+
           <div class="mini-grid">
             <div class="field">
               <label>박스 여백(px)</label>
-              <input id="cfg_boxMargin" type="number" min="20" max="140" step="1" value="60">
+              <input id="cfg_boxMargin" type="number" min="20" max="140" step="1">
             </div>
             <div class="field">
               <label>박스 하단 여백(px)</label>
-              <input id="cfg_boxBottomMargin" type="number" min="20" max="160" step="1" value="70">
+              <input id="cfg_boxBottomMargin" type="number" min="20" max="160" step="1">
             </div>
             <div class="field">
               <label>제목 위 여백(px)</label>
-              <input id="cfg_titleTop" type="number" min="10" max="120" step="1" value="44">
+              <input id="cfg_titleTop" type="number" min="10" max="120" step="1">
             </div>
             <div class="field">
               <label>밑줄→박스 간격(px)</label>
-              <input id="cfg_boxTopGap" type="number" min="10" max="140" step="1" value="34">
+              <input id="cfg_boxTopGap" type="number" min="10" max="140" step="1">
             </div>
 
             <div class="field">
               <label>외곽선 굵기</label>
-              <input id="cfg_outerLine" type="number" min="1" max="4" step="0.1" value="2.0">
+              <input id="cfg_outerLine" type="number" min="1" max="4" step="0.1">
             </div>
             <div class="field">
               <label>내부선 굵기</label>
-              <input id="cfg_innerLine" type="number" min="0.8" max="3" step="0.1" value="1.2">
+              <input id="cfg_innerLine" type="number" min="0.8" max="3" step="0.1">
             </div>
 
             <div class="field">
               <label>상단 2행 높이(px)</label>
-              <input id="cfg_topRowH" type="number" min="40" max="90" step="1" value="62">
+              <input id="cfg_topRowH" type="number" min="40" max="90" step="1">
             </div>
             <div class="field">
               <label>일금 행 높이(px)</label>
-              <input id="cfg_moneyRowH" type="number" min="40" max="90" step="1" value="56">
+              <input id="cfg_moneyRowH" type="number" min="40" max="90" step="1">
             </div>
 
             <div class="field">
               <label>표 헤더 높이(px)</label>
-              <input id="cfg_headH" type="number" min="40" max="90" step="1" value="56">
+              <input id="cfg_headH" type="number" min="40" max="90" step="1">
             </div>
             <div class="field">
               <label>표 본문 행 높이(px)</label>
-              <input id="cfg_rowH" type="number" min="40" max="90" step="1" value="56">
+              <input id="cfg_rowH" type="number" min="40" max="90" step="1">
             </div>
             <div class="field">
               <label>합계 행 높이(px)</label>
-              <input id="cfg_sumH" type="number" min="40" max="90" step="1" value="56">
+              <input id="cfg_sumH" type="number" min="40" max="90" step="1">
             </div>
             <div class="field">
               <label>표 슬롯(빈줄 포함)</label>
-              <input id="cfg_slots" type="number" min="6" max="20" step="1" value="10">
+              <input id="cfg_slots" type="number" min="6" max="20" step="1">
             </div>
 
             <div class="field">
               <label>구분 칸 비율(0~1)</label>
-              <input id="cfg_col1" type="number" min="0.30" max="0.60" step="0.01" value="0.44">
+              <input id="cfg_col1" type="number" min="0.30" max="0.60" step="0.01">
             </div>
             <div class="field">
               <label>금액 칸 비율(0~1)</label>
-              <input id="cfg_col2" type="number" min="0.18" max="0.40" step="0.01" value="0.28">
+              <input id="cfg_col2" type="number" min="0.18" max="0.40" step="0.01">
             </div>
 
             <div class="field">
               <label>제목 크기(px)</label>
-              <input id="cfg_titleSize" type="number" min="38" max="70" step="1" value="52">
+              <input id="cfg_titleSize" type="number" min="38" max="70" step="1">
             </div>
             <div class="field">
               <label>제목 자간(px)</label>
-              <input id="cfg_titleSpacing" type="number" min="0" max="24" step="1" value="14">
+              <input id="cfg_titleSpacing" type="number" min="0" max="24" step="1">
             </div>
 
             <div class="field">
               <label>라벨 글자 크기(px)</label>
-              <input id="cfg_labelSize" type="number" min="20" max="40" step="1" value="28">
+              <input id="cfg_labelSize" type="number" min="20" max="40" step="1">
             </div>
             <div class="field">
               <label>값 글자 크기(px)</label>
-              <input id="cfg_valueSize" type="number" min="20" max="40" step="1" value="28">
+              <input id="cfg_valueSize" type="number" min="20" max="40" step="1">
             </div>
             <div class="field">
               <label>표 글자 크기(px)</label>
-              <input id="cfg_tableSize" type="number" min="18" max="36" step="1" value="26">
+              <input id="cfg_tableSize" type="number" min="18" max="36" step="1">
             </div>
             <div class="field">
               <label>하단 날짜 크기(px)</label>
-              <input id="cfg_dateSize" type="number" min="18" max="36" step="1" value="26">
+              <input id="cfg_dateSize" type="number" min="18" max="36" step="1">
             </div>
           </div>
         </details>
@@ -422,7 +437,8 @@
     /***********************
      * 기본 템플릿/저장
      ***********************/
-    const STORAGE_KEY = "eduFine_unpaid_notice_stylecss";
+    const STORAGE_KEY = "eduFine_unpaid_notice_stylecss_v2";
+
     const DEFAULT_SMS_TEMPLATE =
 `안녕하세요,
 [학교명] 행정실입니다.
@@ -491,17 +507,76 @@
     function loadSettings(){
       try{
         const raw = localStorage.getItem(STORAGE_KEY);
-        if(!raw) return;
+        if(!raw) return false;
         const obj = JSON.parse(raw);
         for(const [k,v] of Object.entries(obj)){
           if(el(k) && v !== null && v !== undefined) el(k).value = v;
         }
-      }catch(_){}
+        return true;
+      }catch(_){
+        return false;
+      }
     }
 
-    loadSettings();
-    if(!el("smsTemplate").value.trim()) el("smsTemplate").value = DEFAULT_SMS_TEMPLATE;
-    if(!el("docDate").value) el("docDate").value = toISODate(new Date());
+    /***********************
+     * ✅ 샘플 프리셋(“픽셀 느낌” 고정값)
+     * - 미납안내문 PDF의 회색 라벨/선굵기/여백/행높이 느낌을 기본값으로 세팅
+     ***********************/
+    const SAMPLE_PRESET = {
+      labelTheme: "gray",
+      exportScale: "1",
+
+      // 박스/제목 배치
+      cfg_boxMargin: "86",
+      cfg_boxBottomMargin: "78",
+      cfg_titleTop: "38",
+      cfg_boxTopGap: "28",
+
+      // 선 굵기(샘플 느낌: 외곽 굵고, 내부 약간 얇게)
+      cfg_outerLine: "2.2",
+      cfg_innerLine: "1.1",
+
+      // 행 높이(샘플 표가 길고 균일한 느낌)
+      cfg_topRowH: "62",
+      cfg_moneyRowH: "56",
+      cfg_headH: "56",
+      cfg_rowH: "56",
+      cfg_sumH: "56",
+      cfg_slots: "10",
+
+      // 표 칸 비율(샘플 감각)
+      cfg_col1: "0.44",
+      cfg_col2: "0.28",
+
+      // 타이포
+      cfg_titleSize: "52",
+      cfg_titleSpacing: "12",
+      cfg_labelSize: "28",
+      cfg_valueSize: "28",
+      cfg_tableSize: "26",
+      cfg_dateSize: "26",
+    };
+
+    function applyPreset(preset, save=true){
+      for(const [k,v] of Object.entries(preset)){
+        if(el(k)) el(k).value = v;
+      }
+      updatePreview();
+      if(save) saveSettings();
+    }
+
+    // 초기 로드: 저장값이 없으면 샘플 프리셋을 “기본값”으로 적용
+    const hasSaved = loadSettings();
+    if(!hasSaved){
+      // 기본 템플릿/날짜 먼저
+      if(!el("smsTemplate").value.trim()) el("smsTemplate").value = DEFAULT_SMS_TEMPLATE;
+      if(!el("docDate").value) el("docDate").value = toISODate(new Date());
+      applyPreset(SAMPLE_PRESET, false);
+      saveSettings();
+    }else{
+      if(!el("smsTemplate").value.trim()) el("smsTemplate").value = DEFAULT_SMS_TEMPLATE;
+      if(!el("docDate").value) el("docDate").value = toISODate(new Date());
+    }
 
     /***********************
      * 상태
@@ -522,8 +597,8 @@
       return Number.isFinite(nn) ? Math.round(nn) : 0;
     }
 
-    // ✅ 추출 제외: 주간 야간 _ -  (요청사항)
-    // + 숫자번(예: 2번) 섞여 있으면 제거
+    // ✅ 추출 제외: 주간 야간 _ -
+    // + "2번" 같은 토큰 제거
     function cleanSchoolToken(s){
       let out = String(s ?? "")
         .replace(/주간/g, "")
@@ -640,7 +715,6 @@
         if(!norm.학년 && !norm.반 && !name && !item && !amt) continue;
         if(!name || !item) continue;
 
-        // ✅ 추출 5개만
         out.push({ 학년: norm.학년, 반: norm.반, 이름: name, 납입금명: item, 미납액: amt });
       }
       return out;
@@ -746,10 +820,8 @@
 
     function getNoticeLabelColor(){
       const theme = el("labelTheme").value;
-      // 샘플은 회색 느낌
-      if(theme === "gray") return "#D0D0D0";
-      // 파스텔 블루
-      return "#D9EEFF";
+      if(theme === "gray") return "#C7C7C7";  // 샘플 느낌(조금 더 진한 회색)
+      return "#D9EEFF";                       // 파스텔 블루
     }
 
     function num(id, fallback){
@@ -792,13 +864,13 @@
 
       const principalTitle = schoolName ? (schoolName + "장") : "학교장";
 
-      const boxMargin = num("cfg_boxMargin", 60);
-      const boxBottomMargin = num("cfg_boxBottomMargin", 70);
-      const titleTop = num("cfg_titleTop", 44);
-      const boxTopGap = num("cfg_boxTopGap", 34);
+      const boxMargin = num("cfg_boxMargin", 86);
+      const boxBottomMargin = num("cfg_boxBottomMargin", 78);
+      const titleTop = num("cfg_titleTop", 38);
+      const boxTopGap = num("cfg_boxTopGap", 28);
 
-      const outerLine = num("cfg_outerLine", 2.0);
-      const innerLine = num("cfg_innerLine", 1.2);
+      const outerLine = num("cfg_outerLine", 2.2);
+      const innerLine = num("cfg_innerLine", 1.1);
 
       const topRowH = num("cfg_topRowH", 62);
       const moneyRowH = num("cfg_moneyRowH", 56);
@@ -812,7 +884,7 @@
       const col2Ratio = Math.max(0.18, Math.min(0.40, num("cfg_col2", 0.28)));
 
       const titleSize = num("cfg_titleSize", 52);
-      const titleSpacing = num("cfg_titleSpacing", 14);
+      const titleSpacing = num("cfg_titleSpacing", 12);
 
       const labelSize = num("cfg_labelSize", 28);
       const valueSize = num("cfg_valueSize", 28);
@@ -820,7 +892,7 @@
       const dateSize = num("cfg_dateSize", 26);
 
       const labelBg = getNoticeLabelColor();
-      const stroke = "#111";
+      const stroke = "#222"; // 샘플의 “검정에 가까운 진회색” 느낌
 
       // 배경
       ctx.save();
@@ -850,6 +922,7 @@
       const boxH = baseH - boxY - boxBottomMargin;
 
       ctx.lineWidth = outerLine;
+      ctx.strokeStyle = stroke;
       ctx.strokeRect(boxX, boxY, boxW, boxH);
 
       function cell(x, y, w, h, fill){
@@ -863,10 +936,13 @@
       }
 
       let y = boxY;
-      const labelW = Math.round(boxW * 0.30);
+
+      // ✅ 샘플처럼 라벨 칸이 약간 넓은 편(고정)
+      const labelWRatio = 0.34;
+      const labelW = Math.round(boxW * labelWRatio);
       const valW = boxW - labelW;
 
-      // 학번 / 이름 2행
+      // 학번/이름 2행
       ctx.textBaseline = "middle";
 
       // 1행: 학번
@@ -877,8 +953,8 @@
       ctx.font = `700 ${labelSize}px ${family}`;
       ctx.fillText("학   번", boxX + labelW/2, y + topRowH/2);
 
+      // 값: 학년+반(번호 추출 금지)
       ctx.textAlign="left";
-      // 번호 추출 금지 → 학년+반만
       const classLine = `${caseObj.학년} ${caseObj.반}`.trim();
       let curSize = valueSize;
       ctx.font = `600 ${curSize}px ${family}`;
@@ -887,7 +963,6 @@
         ctx.font = `600 ${curSize}px ${family}`;
       }
       ctx.fillText(classLine, boxX + labelW + 18, y + topRowH/2);
-
       y += topRowH;
 
       // 2행: 이름
@@ -900,7 +975,6 @@
       ctx.textAlign="left";
       ctx.font = `600 ${valueSize}px ${family}`;
       ctx.fillText(String(caseObj.이름||""), boxX + labelW + 18, y + topRowH/2);
-
       y += topRowH;
 
       // 일금
@@ -915,7 +989,7 @@
       const col2 = Math.round(boxW * col2Ratio);
       const col3 = boxW - col1 - col2;
 
-      // 헤더
+      // 헤더(전체 회색)
       cell(boxX, y, col1, headH, labelBg);
       cell(boxX+col1, y, col2, headH, labelBg);
       cell(boxX+col1+col2, y, col3, headH, labelBg);
@@ -925,11 +999,9 @@
       ctx.fillText("구   분", boxX + col1/2, y + headH/2);
       ctx.fillText("금   액", boxX + col1 + col2/2, y + headH/2);
       ctx.fillText("비   고", boxX + col1 + col2 + col3/2, y + headH/2);
-
       y += headH;
 
       // 본문 rows
-      ctx.font = `600 ${tableSize}px ${family}`;
       for(let i=0;i<slots;i++){
         cell(boxX, y, col1, rowH, "#fff");
         cell(boxX+col1, y, col2, rowH, "#fff");
@@ -953,7 +1025,7 @@
           ctx.font = `600 ${tableSize}px ${family}`;
           ctx.fillText((it.미납액||0).toLocaleString("ko-KR"), boxX + col1 + col2 - 14, y + rowH/2);
 
-          // 비고: 가운데
+          // 비고: 가운데(비어있으면 차수)
           if(remarkText){
             ctx.textAlign="center";
             ctx.fillText(remarkText, boxX + col1 + col2 + col3/2, y + rowH/2);
@@ -962,19 +1034,20 @@
         y += rowH;
       }
 
-      // 합계
+      // 합계(샘플은 첫 칸 중앙에 “합계”가 들어간 느낌)
       cell(boxX, y, col1, sumH, "#fff");
       cell(boxX+col1, y, col2, sumH, "#fff");
       cell(boxX+col1+col2, y, col3, sumH, "#fff");
 
       ctx.font = `700 ${tableSize}px ${family}`;
-      ctx.textAlign="left";
-      ctx.fillText("합   계", boxX + 18, y + sumH/2);
+      ctx.textAlign="center";
+      ctx.fillText("합   계", boxX + col1/2, y + sumH/2);
+
       ctx.textAlign="right";
       ctx.fillText(caseObj.total.toLocaleString("ko-KR"), boxX + col1 + col2 - 14, y + sumH/2);
       y += sumH;
 
-      // 하단 문구
+      // 하단 문구(샘플 문구 그대로)
       ctx.font = `600 23px ${family}`;
       ctx.textAlign="left";
       ctx.textBaseline="alphabetic";
@@ -985,11 +1058,12 @@
         : "납부 기한을 입력하면 여기에 표시됩니다.";
       ctx.fillText(dueLine, boxX + 10, y + 66);
 
-      // 날짜/학교장
+      // 날짜/학교장(중앙)
       const boxBottom = boxY + boxH;
       ctx.textAlign="center";
       ctx.font = `600 ${dateSize}px ${family}`;
       ctx.fillText(fmtKoreanDate(docDate, true), boxX + boxW/2, boxBottom - 150);
+
       ctx.font = `800 34px ${family}`;
       ctx.fillText(principalTitle, boxX + boxW/2, boxBottom - 92);
 
@@ -1142,7 +1216,6 @@
       setStatus(`안내문 PNG 생성중… (0/${cases.length})`, "");
       for(let i=0;i<cases.length;i++){
         const c = cases[i];
-        // 슬롯 초과는 1장에 넣기 위해 자름(원하면 페이지 분할 확장 가능)
         const slots = Math.max(6, Math.min(20, Math.floor(num("cfg_slots", 10))));
         const clipped = { ...c, items: c.items.slice(0, slots) };
 
@@ -1231,6 +1304,19 @@
     /***********************
      * 이벤트 연결
      ***********************/
+    function renderAllAndPreview(){
+      renderRawTable();
+      renderCaseTable();
+      populateCaseSelect();
+      enableDownloads(!!cases.length);
+      updatePreview();
+    }
+
+    el("btnApplySamplePreset").addEventListener("click", () => {
+      applyPreset(SAMPLE_PRESET, true);
+      setStatus("샘플 프리셋 적용 완료(회색 라벨/여백/선굵기/행높이) ✅", "ok");
+    });
+
     el("excelFile").addEventListener("change", async (ev) => {
       const file = ev.target.files?.[0];
       if(!file){
@@ -1248,23 +1334,15 @@
         }
 
         cases = buildCasesFromRaw(rawRows);
-
-        renderRawTable();
-        renderCaseTable();
-        populateCaseSelect();
-        enableDownloads(true);
-        updatePreview();
-
+        renderAllAndPreview();
         setStatus(`추출 완료 ✅\n- 행 단위: ${rawRows.length}건\n- 학생별 통합: ${cases.length}건`, "ok");
+        saveSettings();
       }catch(err){
         console.error(err);
         rawRows = [];
         cases = [];
         selectedCaseKey = "";
-        renderRawTable();
-        renderCaseTable();
-        populateCaseSelect();
-        enableDownloads(false);
+        renderAllAndPreview();
         el("smsPreview").value = "";
         setStatus(String(err?.message || err), "err");
       }
@@ -1283,12 +1361,9 @@
         { 학년:"3학년", 반:"별반", 이름:"김민지", 납입금명:"우유급식비", 미납액:44170 },
       ];
       cases = buildCasesFromRaw(rawRows);
-      renderRawTable();
-      renderCaseTable();
-      populateCaseSelect();
-      enableDownloads(true);
-      updatePreview();
+      renderAllAndPreview();
       setStatus("샘플 데이터 로드 완료 ✅", "ok");
+      saveSettings();
     });
 
     el("btnReset").addEventListener("click", () => {
@@ -1304,39 +1379,15 @@
       el("noticeRemark").value = "";
       el("dueDate").value = "";
       el("docDate").value = toISODate(new Date());
-      el("labelTheme").value = "gray";
-      el("exportScale").value = "1";
       el("smsTemplate").value = DEFAULT_SMS_TEMPLATE;
 
-      // 고급 설정 기본값
-      el("cfg_boxMargin").value = 60;
-      el("cfg_boxBottomMargin").value = 70;
-      el("cfg_titleTop").value = 44;
-      el("cfg_boxTopGap").value = 34;
-      el("cfg_outerLine").value = 2.0;
-      el("cfg_innerLine").value = 1.2;
-      el("cfg_topRowH").value = 62;
-      el("cfg_moneyRowH").value = 56;
-      el("cfg_headH").value = 56;
-      el("cfg_rowH").value = 56;
-      el("cfg_sumH").value = 56;
-      el("cfg_slots").value = 10;
-      el("cfg_col1").value = 0.44;
-      el("cfg_col2").value = 0.28;
-      el("cfg_titleSize").value = 52;
-      el("cfg_titleSpacing").value = 14;
-      el("cfg_labelSize").value = 28;
-      el("cfg_valueSize").value = 28;
-      el("cfg_tableSize").value = 26;
-      el("cfg_dateSize").value = 26;
+      // 샘플 프리셋으로 다시 고정
+      applyPreset(SAMPLE_PRESET, false);
 
       localStorage.removeItem(STORAGE_KEY);
+      saveSettings();
 
-      renderRawTable();
-      renderCaseTable();
-      populateCaseSelect();
-      enableDownloads(false);
-
+      renderAllAndPreview();
       const canvas = el("previewCanvas");
       canvas.getContext("2d").clearRect(0,0,canvas.width,canvas.height);
       el("smsPreview").value = "";
@@ -1350,7 +1401,7 @@
     el("btnOnePng").addEventListener("click", async () => downloadOnePng());
     el("btnCopySms").addEventListener("click", async () => copySelectedSms());
 
-    // 변경 감지 → 미리보기 업데이트 + 설정 저장
+    // 변경 감지 → 미리보기 업데이트 + 저장
     const watchIds = [
       "schoolName","bankName","accountNumber","roundText","noticeRemark",
       "dueDate","docDate","labelTheme","exportScale","smsTemplate",
@@ -1366,7 +1417,7 @@
     }
 
     // 최초 상태
-    enableDownloads(false);
+    renderAllAndPreview();
     setStatus("대기중… 엑셀 업로드 또는 샘플 데이터로 시작하세요.", "");
   </script>
 
@@ -1374,6 +1425,5 @@
 <script src="/static/footer.js"></script>
 <script src="/static/global-loader.js?v=1"></script>
 
-  
 </body>
 </html>
