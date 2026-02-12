@@ -8,7 +8,7 @@
   <!-- (선택) 한글 폰트 로드: 막히면 시스템 폰트로 자동 대체 -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;800&display=swap" rel="stylesheet">
 
   <!-- SheetJS (XLSX 파싱) -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -27,10 +27,10 @@
       --muted: #475569;
       --accent: #4AA3FF;
       --accent-2: #2D8CFF;
-      --soft: #D9EEFF;       /* 라벨/헤더 셀 배경(안내문) */
-      --soft-2: #F2FAFF;     /* 입력 배경 */
-      --danger: #EF4444;
-      --ok: #10B981;
+
+      /* 안내문 라벨 기본(파스텔 블루) */
+      --notice-label: #D9EEFF;
+      --notice-label-gray: #D0D0D0; /* 샘플 회색 느낌 */
     }
 
     * { box-sizing: border-box; }
@@ -43,10 +43,8 @@
       word-break: keep-all;
     }
 
-    a{ color: inherit; text-decoration: none; }
-
     .shell{
-      max-width: 1100px;
+      max-width: 1120px;
       margin: 0 auto;
       padding: 18px 14px 40px;
     }
@@ -69,6 +67,19 @@
       margin: 0;
       color: var(--muted);
       font-size: 0.98rem;
+    }
+
+    details{
+      border: 1px dashed var(--border);
+      border-radius: 14px;
+      padding: 10px 12px;
+      background: #fff;
+      margin-top: 10px;
+    }
+    summary{
+      cursor: pointer;
+      font-weight: 800;
+      color: #0b3a68;
     }
 
     .grid{
@@ -96,20 +107,6 @@
       font-weight: 800;
     }
 
-    details{
-      border: 1px dashed var(--border);
-      border-radius: 14px;
-      padding: 10px 12px;
-      background: #fff;
-      margin-top: 10px;
-    }
-    summary{
-      cursor: pointer;
-      font-weight: 800;
-      color: #0b3a68;
-    }
-    .muted{ color: var(--muted); }
-
     label{
       display:block;
       font-weight: 700;
@@ -120,7 +117,7 @@
     input[type="text"], input[type="date"], textarea, select{
       width: 100%;
       border: 1px solid #cfe6f8;
-      background: var(--soft-2);
+      background: #F2FAFF;
       border-radius: 14px;
       padding: 10px 12px;
       outline: none;
@@ -169,12 +166,6 @@
       border-color: #cfe6f8;
       background: #f7fbff;
       color: #0b3a68;
-    }
-    button.danger{
-      background: #fff5f5;
-      border-color: #fecaca;
-      color: #991b1b;
-      font-weight: 900;
     }
 
     .status{
@@ -274,8 +265,14 @@
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
       font-size: 0.92em;
     }
+    hr.sep{
+      border:none;
+      border-top:1px solid #e6f2fb;
+      margin:14px 0;
+    }
   </style>
 </head>
+
 <body>
   <div class="shell">
     <header>
@@ -289,9 +286,10 @@
         <summary>안내(접기/펼치기)</summary>
         <div class="small" style="margin-top:8px">
           <ul style="margin:8px 0 0; padding-left: 18px;">
-            <li>업로드 즉시 분석합니다. 헤더는 샘플 기준 <code class="k">주야_계열_학년</code>, <code class="k">학과_반</code>, <code class="k">이름</code>, <code class="k">납입금명</code>, <code class="k">미납액</code>을 우선 탐색합니다.</li>
-            <li>보호자연락처/학적구분/수납방법/미납일수/납입기한/결재상태 등은 <b>무시</b>합니다(표시/다운로드/문구 생성에 사용하지 않음).</li>
-            <li>‘미납안내문’은 캔버스로 그려서 PNG로 만들고, 원하면 여러 장을 PDF로도 묶습니다.</li>
+            <li>엑셀 업로드 즉시 파싱합니다.</li>
+            <li><b>추출 필드 5개만 사용</b>: 학년/반/이름/납입금명/미납액</li>
+            <li>보호자연락처/학적구분/수납방법/미납일수/납입기한/결재상태/번호 등은 <b>무시</b>합니다.</li>
+            <li>안내문은 업로드하신 샘플 “미납 안내문” 형식(제목은 밖, 표는 박스 안)으로 캔버스 생성합니다. :contentReference[oaicite:1]{index=1}</li>
           </ul>
         </div>
       </details>
@@ -306,13 +304,13 @@
 
         <div class="status" id="statusBox">대기중… 엑셀을 올리면 자동으로 추출합니다.</div>
 
-        <hr style="border:none;border-top:1px solid #e6f2fb;margin:14px 0;">
+        <hr class="sep">
 
         <h2>2) 추출 결과 (행 단위)</h2>
         <p class="small" style="margin:0 0 10px;">
           아래 표는 <b>학년/반/이름/납입금명/미납액</b>만 보여줍니다.
         </p>
-        <div class="tablewrap" id="rawTableWrap">
+        <div class="tablewrap">
           <table>
             <thead>
               <tr>
@@ -324,15 +322,15 @@
               </tr>
             </thead>
             <tbody id="rawTbody">
-              <tr><td colspan="5" class="muted">아직 데이터가 없습니다.</td></tr>
+              <tr><td colspan="5" class="small">아직 데이터가 없습니다.</td></tr>
             </tbody>
           </table>
         </div>
 
-        <hr style="border:none;border-top:1px solid #e6f2fb;margin:14px 0;">
+        <hr class="sep">
 
         <h2>3) 학생별 통합(문자/안내문 생성 단위)</h2>
-        <div class="tablewrap" id="caseTableWrap">
+        <div class="tablewrap">
           <table>
             <thead>
               <tr>
@@ -344,7 +342,7 @@
               </tr>
             </thead>
             <tbody id="caseTbody">
-              <tr><td colspan="5" class="muted">아직 데이터가 없습니다.</td></tr>
+              <tr><td colspan="5" class="small">아직 데이터가 없습니다.</td></tr>
             </tbody>
           </table>
         </div>
@@ -357,30 +355,30 @@
         <div class="row">
           <div>
             <label>학교명</label>
-            <input id="schoolName" type="text" placeholder="예) 문막초등학교" value="" />
+            <input id="schoolName" type="text" placeholder="예) 문막초등학교" />
           </div>
           <div>
             <label>은행명</label>
-            <input id="bankName" type="text" placeholder="예) 농협" value="" />
+            <input id="bankName" type="text" placeholder="예) 농협" />
           </div>
         </div>
 
         <div class="row">
           <div>
             <label>계좌번호</label>
-            <input id="accountNumber" type="text" placeholder="예) 000-0000-0000-00" value="" />
+            <input id="accountNumber" type="text" placeholder="예) 000-0000-0000-00" />
           </div>
           <div>
-            <label>차수(문자용) — 엑셀에서 추출하지 않음</label>
-            <input id="roundText" type="text" placeholder="예) 2025년 2학기" value="" />
+            <label>차수(문자용/안내문 비고 기본값)</label>
+            <input id="roundText" type="text" placeholder="예) 2025년 2학기" />
           </div>
         </div>
 
         <div class="row">
           <div>
-            <label>안내문 비고(표시용, 선택)</label>
-            <input id="noticeRemark" type="text" placeholder="예) 2025년 2학기" value="" />
-            <div class="hint">안내문 표의 ‘비고’ 칸에 표시됩니다. (엑셀에서 추출하지 않음)</div>
+            <label>안내문 비고(선택) — 비어있으면 차수를 사용</label>
+            <input id="noticeRemark" type="text" placeholder="예) 2025년 2학기" />
+            <div class="hint">샘플 안내문 비고 칸에 들어가는 값입니다. 비워두면 위 “차수” 값이 자동으로 들어갑니다.</div>
           </div>
         </div>
 
@@ -395,13 +393,24 @@
           </div>
         </div>
 
+        <div class="row">
+          <div>
+            <label>안내문 라벨 색상</label>
+            <select id="labelTheme">
+              <option value="blue" selected>파스텔 블루(테마)</option>
+              <option value="gray">샘플(회색)</option>
+            </select>
+            <div class="hint">샘플은 회색 라벨 셀입니다. 테마 느낌을 주려면 파스텔 블루 추천.</div>
+          </div>
+        </div>
+
         <label>문자 템플릿 (대괄호 치환)</label>
         <textarea id="smsTemplate"></textarea>
         <div class="hint">
           치환: <code class="k">[학교명]</code> <code class="k">[학년]</code> <code class="k">[반]</code>
           <code class="k">[이름]</code> <code class="k">[차수]</code> <code class="k">[납입금명]</code>
           <code class="k">[은행명]</code> <code class="k">[계좌번호]</code> <code class="k">[미납액]</code><br/>
-          ※ 요청대로 <b>번호는 엑셀에서 추출/사용하지 않습니다.</b> 템플릿에 <code class="k">[번호]</code>가 있으면 빈칸 처리됩니다.
+          ※ 요청대로 <b>번호는 엑셀에서 추출하지 않습니다.</b> 템플릿에 <code class="k">[번호]</code>가 있으면 빈칸 처리됩니다.
         </div>
 
         <div class="btnbar">
@@ -411,7 +420,7 @@
           <button class="primary" id="btnDownloadPDF" disabled>안내문 PDF 다운로드</button>
         </div>
 
-        <hr style="border:none;border-top:1px solid #e6f2fb;margin:14px 0;">
+        <hr class="sep">
 
         <h2>미리보기</h2>
         <label>학생 선택</label>
@@ -423,7 +432,7 @@
           <div>
             <div class="canvasbox">
               <canvas id="previewCanvas" width="1080" height="1350"></canvas>
-              <div class="hint">안내문 미리보기(파스텔 블루 라벨). 다운로드 시 같은 내용으로 생성됩니다.</div>
+              <div class="hint">미납안내문 미리보기(샘플 배치: 제목은 바깥, 테두리 박스는 아래).</div>
               <div class="btnbar">
                 <button class="ghost" id="btnOnePng" disabled>선택 학생 안내문 PNG 1장 다운로드</button>
                 <button class="ghost" id="btnCopySms" disabled>선택 학생 문자 문구 복사</button>
@@ -441,13 +450,13 @@
     </div>
 
     <div class="footer">
-      ※ 브라우저에서만 동작하는 정적 페이지입니다(서버 업로드 불필요). 엑셀은 로컬에서만 읽습니다.
+      ※ 브라우저에서만 동작하는 정적 페이지입니다. 엑셀은 로컬에서만 읽습니다.
     </div>
   </div>
 
   <script>
     /***********************
-     * 0) 기본 템플릿 세팅
+     * 0) 기본 템플릿
      ***********************/
     const DEFAULT_SMS_TEMPLATE =
 `안녕하세요,
@@ -463,14 +472,12 @@
 감사합니다.`;
 
     const el = (id) => document.getElementById(id);
-
     el("smsTemplate").value = DEFAULT_SMS_TEMPLATE;
 
     // 날짜 기본값: 작성일=오늘
     (function initDates(){
       const now = new Date();
-      const iso = toISODate(now);
-      el("docDate").value = iso;
+      el("docDate").value = toISODate(now);
     })();
 
     /***********************
@@ -514,12 +521,10 @@
       return `${y}년 ${m}월 ${day}일`;
     }
 
-    // 파일명 안전화
     function safeFilename(s){
       return String(s || "").replace(/[\/\\?%*:|"<>]/g, "_").replace(/\s+/g, " ").trim();
     }
 
-    // CSV 셀 이스케이프
     function csvEscape(value){
       const s = String(value ?? "");
       if(/[",\n]/.test(s)){
@@ -528,7 +533,7 @@
       return s;
     }
 
-    // 학년/반 문자열 정리: "주간", "야간", "_", "-" 제거
+    // 추출 제외 문구 및 문자: 주간 야간 _ -
     function cleanSchoolToken(s){
       return String(s ?? "")
         .replace(/주간/g, "")
@@ -542,13 +547,12 @@
       if(v === null || v === undefined || v === "") return 0;
       const n = Number(v);
       if(Number.isFinite(n)) return Math.round(n);
-      // 문자열 금액(콤마)
       const s = String(v).replace(/,/g,"").trim();
       const nn = Number(s);
       return Number.isFinite(nn) ? Math.round(nn) : 0;
     }
 
-    // 한글 숫자(“일만오천칠백일십”) 생성 — 샘플 양식처럼 1도 “일십/일백/일천” 형태로 표시
+    // 한글 숫자(“일만오천칠백일십”) 생성 — 샘플처럼 1도 “일십/일백/일천” 유지
     const DIG_KOR = ["", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"];
     function fourToKor(n){
       const s = String(n).padStart(4,"0");
@@ -586,6 +590,15 @@
         .trim();
     }
 
+    function escapeHtml(s){
+      return String(s ?? "")
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#39;");
+    }
+
     /***********************
      * 3) XLSX 파싱 (필요 5개만)
      ***********************/
@@ -593,11 +606,10 @@
       return String(h ?? "")
         .trim()
         .replace(/\s+/g,"")
-        .replace(/[_-]/g,"_"); // 비교 편의
+        .replace(/[_-]/g,"_");
     }
 
     function findHeaderRow(rows){
-      // 상단 20행 내에서 "이름"+"납입금명"+"미납액"이 함께 있는 행을 헤더로 판단
       const limit = Math.min(rows.length, 20);
       for(let i=0;i<limit;i++){
         const row = (rows[i] || []).map(normalizeHeader);
@@ -610,7 +622,6 @@
     }
 
     function pickIndex(headers, patterns){
-      // patterns: 정규식 배열. 먼저 매칭되는 인덱스를 반환
       for(const re of patterns){
         const idx = headers.findIndex(h => re.test(h));
         if(idx !== -1) return idx;
@@ -631,23 +642,11 @@
       const headerRowIdx = findHeaderRow(rows);
       const header = (rows[headerRowIdx] || []).map(normalizeHeader);
 
-      // 샘플 기준 우선 탐색:
-      // 주야_계열_학년, 학과_반, 이름, 납입금명, 미납액
-      const idxGrade = pickIndex(header, [
-        /주야.*학년/i, /계열.*학년/i, /^주야_계열_학년$/i, /학년/
-      ]);
-      const idxClass = pickIndex(header, [
-        /^학과_반$/i, /학과.*반/i, /^반$/i, /반/
-      ]);
-      const idxName  = pickIndex(header, [
-        /^이름$/i, /성명/i
-      ]);
-      const idxItem  = pickIndex(header, [
-        /^납입금명$/i, /납입.*명/i
-      ]);
-      const idxAmt   = pickIndex(header, [
-        /^미납액$/i, /미납.*금/i
-      ]);
+      const idxGrade = pickIndex(header, [/주야.*학년/i, /계열.*학년/i, /^주야_계열_학년$/i, /학년/]);
+      const idxClass = pickIndex(header, [/^학과_반$/i, /학과.*반/i, /^반$/i, /반/]);
+      const idxName  = pickIndex(header, [/^이름$/i, /성명/i]);
+      const idxItem  = pickIndex(header, [/^납입금명$/i, /납입.*명/i]);
+      const idxAmt   = pickIndex(header, [/^미납액$/i, /미납.*금/i]);
 
       if([idxGrade, idxClass, idxName, idxItem, idxAmt].some(x => x === -1)){
         throw new Error(
@@ -671,40 +670,24 @@
         const item  = String(itemRaw ?? "").trim();
         const amt   = toIntMoney(amtRaw);
 
-        // 완전 빈행 스킵
         if(!grade && !cls && !name && !item && !amt) continue;
-
-        // 최소 요건(이름/납입금명/미납액) 없으면 스킵
         if(!name || !item) continue;
 
-        out.push({
-          학년: grade,
-          반: cls,
-          이름: name,
-          납입금명: item,
-          미납액: amt
-        });
+        out.push({ 학년: grade, 반: cls, 이름: name, 납입금명: item, 미납액: amt });
       }
 
       return out;
     }
 
     /***********************
-     * 4) 학생별 통합(문자/안내문 단위)
+     * 4) 학생별 통합
      ***********************/
     function buildCasesFromRaw(rows){
       const map = new Map();
       for(const rr of rows){
         const key = `${rr.학년}||${rr.반}||${rr.이름}`;
         if(!map.has(key)){
-          map.set(key, {
-            key,
-            학년: rr.학년,
-            반: rr.반,
-            이름: rr.이름,
-            items: [],
-            total: 0
-          });
+          map.set(key, { key, 학년: rr.학년, 반: rr.반, 이름: rr.이름, items: [], total: 0 });
         }
         const c = map.get(key);
         c.items.push({ 납입금명: rr.납입금명, 미납액: rr.미납액 });
@@ -713,7 +696,6 @@
 
       const list = Array.from(map.values());
 
-      // 납입금명 요약(중복 제거)
       for(const c of list){
         const uniq = [];
         const seen = new Set();
@@ -727,7 +709,6 @@
         c.납입금명요약 = uniq.join(", ");
       }
 
-      // 정렬: 학년/반/이름
       list.sort((a,b) => {
         const ag = a.학년 || "";
         const bg = b.학년 || "";
@@ -748,7 +729,7 @@
       const schoolName = el("schoolName").value.trim();
       const bankName   = el("bankName").value.trim();
       const accountNum = el("accountNumber").value.trim();
-      const roundText  = el("roundText").value.trim(); // [차수]
+      const roundText  = el("roundText").value.trim();
       const template   = el("smsTemplate").value;
 
       const repl = {
@@ -761,273 +742,251 @@
         "[은행명]": bankName,
         "[계좌번호]": accountNum,
         "[미납액]": c.total.toLocaleString("ko-KR"),
-        // 요청: 번호는 추출하지 않음 → 빈칸 처리
-        "[번호]": ""
+        "[번호]": "" // 요청대로 추출하지 않음
       };
 
       let msg = String(template ?? "");
       for(const k of Object.keys(repl)){
         msg = msg.split(k).join(repl[k] ?? "");
       }
-
-      // 남은 [무언가] 토큰은 그대로 두되, 줄/공백 정리
-      msg = normalizeSpacesPerLine(msg);
-
-      return msg;
+      return normalizeSpacesPerLine(msg);
     }
 
     /***********************
-     * 6) 안내문 렌더링(캔버스 → PNG/PDF)
-     *    - 업로드된 샘플 ‘미납안내문’ 구조를 캔버스로 재현
+     * 6) 안내문 렌더링(샘플 배치에 더 맞춤)
      ***********************/
+    function getNoticeLabelColor(){
+      const theme = el("labelTheme").value;
+      const css = getComputedStyle(document.documentElement);
+      if(theme === "gray") return css.getPropertyValue("--notice-label-gray").trim() || "#D0D0D0";
+      return css.getPropertyValue("--notice-label").trim() || "#D9EEFF";
+    }
+
+    function drawSpacedText(ctx, text, centerX, y, spacingPx){
+      const chars = Array.from(String(text || ""));
+      const widths = chars.map(ch => ctx.measureText(ch).width);
+      const total = widths.reduce((a,b)=>a+b,0) + spacingPx * Math.max(0, chars.length-1);
+      let x = centerX - total/2;
+      for(let i=0;i<chars.length;i++){
+        ctx.fillText(chars[i], x, y);
+        x += widths[i] + spacingPx;
+      }
+    }
+
     function renderNoticeToCanvas(c, canvas, opts={}){
       const W = opts.width || canvas.width || 1080;
       const H = opts.height || canvas.height || 1350;
-
       canvas.width = W;
       canvas.height = H;
 
       const ctx = canvas.getContext("2d");
       const fontFamily = `"Noto Sans KR","맑은 고딕",system-ui,-apple-system,"Segoe UI",Roboto,"Apple SD Gothic Neo",sans-serif`;
 
-      // 설정
       const schoolName = el("schoolName").value.trim();
-      const remarkText = el("noticeRemark").value.trim();
+      const roundText = el("roundText").value.trim();
+      const remarkRaw = el("noticeRemark").value.trim();
+      const remarkText = remarkRaw || roundText; // ★ 비어있으면 차수 사용
+
       const dueDate = parseDateInput(el("dueDate").value);
       const docDate = parseDateInput(el("docDate").value) || new Date();
 
       const principalTitle = schoolName ? (schoolName + "장") : "학교장";
 
-      // 색상(파스텔 블루)
-      const labelBg = getComputedStyle(document.documentElement).getPropertyValue("--soft").trim() || "#D9EEFF";
+      const labelBg = getNoticeLabelColor();
       const stroke = "#111";
 
-      // 기본 배경
+      // 흰 배경
       ctx.save();
       ctx.fillStyle = "#fff";
       ctx.fillRect(0,0,W,H);
 
-      const m = Math.round(W * 0.055); // 1080 기준 60
-      const x0 = m, y0 = m;
-      const bw = W - 2*m;
-      const bh = H - 2*m;
-
-      // 외곽 테두리
-      ctx.strokeStyle = stroke;
-      ctx.lineWidth = 2;
-      ctx.strokeRect(x0, y0, bw, bh);
-
-      let y = y0 + Math.round(H * 0.06);
-
-      // 제목
+      // ====== 1) 제목(박스 밖) ======
+      const topMargin = 56;
       ctx.fillStyle = "#111";
       ctx.textAlign = "center";
       ctx.textBaseline = "alphabetic";
-      ctx.font = `700 ${Math.round(W*0.05)}px ${fontFamily}`; // 1080 기준 54
-      ctx.fillText("미 납 안 내 문", W/2, y);
+      ctx.font = `800 54px ${fontFamily}`;
+      // 샘플처럼 자간 있는 느낌
+      drawSpacedText(ctx, "미납안내문", W/2, topMargin + 52, 14);
 
-      // 제목 밑줄
-      y += Math.round(H*0.018);
+      // 밑줄(짧게)
+      const ulY = topMargin + 66;
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = 2.2;
       ctx.beginPath();
-      ctx.lineWidth = 2;
-      const ulw = Math.round(bw * 0.36);
-      ctx.moveTo(W/2 - ulw/2, y);
-      ctx.lineTo(W/2 + ulw/2, y);
+      ctx.moveTo(W/2 - 110, ulY);
+      ctx.lineTo(W/2 + 110, ulY);
       ctx.stroke();
 
-      y += Math.round(H*0.03);
+      // ====== 2) 테두리 박스(제목 아래) ======
+      const boxX = 90;
+      const boxY = topMargin + 98;       // 제목 아래 시작(샘플처럼)
+      const boxW = W - boxX*2;
+      const boxH = H - boxY - 80;        // 하단 여백
 
-      // 상단 2행 테이블(학번/이름)
-      const rowH = Math.round(H * 0.06);   // 1080x1350 기준 ~81
-      const labelW = Math.round(bw * 0.28);
+      ctx.lineWidth = 2.2;
+      ctx.strokeRect(boxX, boxY, boxW, boxH);
 
+      // 셀 그리기 도우미
       function cell(x, y, w, h, fill){
         if(fill){
           ctx.fillStyle = fill;
           ctx.fillRect(x,y,w,h);
         }
         ctx.strokeStyle = stroke;
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 1.6;
         ctx.strokeRect(x,y,w,h);
       }
 
-      // "학   번" / "이   름"
+      let y = boxY;
+
+      // ====== 상단 2행(학번/이름) ======
+      const topRowH = 70;
+      const labelW = Math.round(boxW * 0.26); // 샘플 비율에 맞게 약간 확대
+
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillStyle = "#111";
-      ctx.font = `700 ${Math.round(W*0.028)}px ${fontFamily}`; // ~30
+      ctx.font = `700 30px ${fontFamily}`;
 
-      // 1행
-      cell(x0, y, labelW, rowH, labelBg);
-      cell(x0+labelW, y, bw-labelW, rowH, "#fff");
+      // 학번
+      cell(boxX, y, labelW, topRowH, labelBg);
+      cell(boxX + labelW, y, boxW - labelW, topRowH, "#fff");
       ctx.fillStyle="#111";
-      ctx.fillText("학   번", x0 + labelW/2, y + rowH/2);
+      ctx.fillText("학   번", boxX + labelW/2, y + topRowH/2);
 
-      // 값(학년 반) — 번호는 추출하지 않음
+      // 값: 학년+반만 (번호는 추출 금지)
       ctx.textAlign = "left";
-      ctx.font = `600 ${Math.round(W*0.027)}px ${fontFamily}`;
-      ctx.fillText(`${c.학년} ${c.반}`.trim(), x0 + labelW + 16, y + rowH/2);
+      ctx.font = `600 30px ${fontFamily}`;
+      const classLine = `${c.학년} ${c.반}`.trim();
+      ctx.fillText(classLine, boxX + labelW + 18, y + topRowH/2);
 
-      // 2행
-      y += rowH;
-      ctx.textAlign = "center";
-      ctx.font = `700 ${Math.round(W*0.028)}px ${fontFamily}`;
-      cell(x0, y, labelW, rowH, labelBg);
-      cell(x0+labelW, y, bw-labelW, rowH, "#fff");
+      y += topRowH;
+
+      // 이름
+      ctx.textAlign="center";
+      ctx.font = `700 30px ${fontFamily}`;
+      cell(boxX, y, labelW, topRowH, labelBg);
+      cell(boxX + labelW, y, boxW - labelW, topRowH, "#fff");
       ctx.fillStyle="#111";
-      ctx.fillText("이   름", x0 + labelW/2, y + rowH/2);
+      ctx.fillText("이   름", boxX + labelW/2, y + topRowH/2);
 
       ctx.textAlign="left";
-      ctx.font = `600 ${Math.round(W*0.027)}px ${fontFamily}`;
-      ctx.fillText(String(c.이름 || ""), x0 + labelW + 16, y + rowH/2);
+      ctx.font = `600 30px ${fontFamily}`;
+      ctx.fillText(String(c.이름 || ""), boxX + labelW + 18, y + topRowH/2);
 
-      y += rowH;
+      y += topRowH;
 
-      // "일금 ... 원정" 행
-      const moneyRowH = Math.round(H*0.055);
-      cell(x0, y, bw, moneyRowH, "#fff");
+      // ====== 일금 1행 ======
+      const moneyRowH = 64;
+      cell(boxX, y, boxW, moneyRowH, "#fff");
       ctx.textAlign="center";
       ctx.textBaseline="middle";
-      ctx.font = `600 ${Math.round(W*0.026)}px ${fontFamily}`;
+      ctx.font = `600 28px ${fontFamily}`;
       const korMoney = numberToKor(c.total);
       ctx.fillStyle="#111";
-      ctx.fillText(`일금 ${korMoney} 원정`, x0 + bw/2, y + moneyRowH/2);
+      ctx.fillText(`일금 ${korMoney} 원정`, boxX + boxW/2, y + moneyRowH/2);
 
       y += moneyRowH;
 
-      // 큰 표(구분/금액/비고)
-      const headH = Math.round(H*0.055);
-      const itemH = Math.round(H*0.047);
-      const blankRows = 10;
-      const sumH = Math.round(H*0.055);
+      // ====== 큰 표(3열) ======
+      const headH = 58;
+      const rowH = 58;
+      const sumH = 58;
+      const slots = 10; // 샘플: 항목 줄 슬롯 10개로 고정
 
-      const col1 = Math.round(bw*0.42);
-      const col2 = Math.round(bw*0.28);
-      const col3 = bw - col1 - col2;
+      const col1 = Math.round(boxW * 0.44); // 구분
+      const col2 = Math.round(boxW * 0.28); // 금액
+      const col3 = boxW - col1 - col2;      // 비고
 
-      // 헤더행
-      cell(x0, y, col1, headH, labelBg);
-      cell(x0+col1, y, col2, headH, labelBg);
-      cell(x0+col1+col2, y, col3, headH, labelBg);
+      // 헤더
+      cell(boxX, y, col1, headH, labelBg);
+      cell(boxX + col1, y, col2, headH, labelBg);
+      cell(boxX + col1 + col2, y, col3, headH, labelBg);
 
       ctx.fillStyle="#111";
       ctx.textAlign="center";
       ctx.textBaseline="middle";
-      ctx.font = `700 ${Math.round(W*0.026)}px ${fontFamily}`;
-      ctx.fillText("구   분", x0 + col1/2, y + headH/2);
-      ctx.fillText("금   액", x0 + col1 + col2/2, y + headH/2);
-      ctx.fillText("비   고", x0 + col1 + col2 + col3/2, y + headH/2);
+      ctx.font = `700 28px ${fontFamily}`;
+      ctx.fillText("구   분", boxX + col1/2, y + headH/2);
+      ctx.fillText("금   액", boxX + col1 + col2/2, y + headH/2);
+      ctx.fillText("비   고", boxX + col1 + col2 + col3/2, y + headH/2);
 
       y += headH;
 
-      // 항목 행(고정 10행)
-      ctx.font = `600 ${Math.round(W*0.024)}px ${fontFamily}`;
-      for(let i=0;i<blankRows;i++){
-        cell(x0, y, col1, itemH, "#fff");
-        cell(x0+col1, y, col2, itemH, "#fff");
-        cell(x0+col1+col2, y, col3, itemH, "#fff");
+      // 항목/빈줄
+      ctx.font = `600 26px ${fontFamily}`;
+      for(let i=0;i<slots;i++){
+        cell(boxX, y, col1, rowH, "#fff");
+        cell(boxX + col1, y, col2, rowH, "#fff");
+        cell(boxX + col1 + col2, y, col3, rowH, "#fff");
 
         const it = c.items[i];
         if(it){
-          // 구분
+          // 구분: 가운데
           ctx.fillStyle="#111";
-          ctx.textAlign="left";
+          ctx.textAlign="center";
           ctx.textBaseline="middle";
-          wrapText(ctx, String(it.납입금명 || ""), x0 + 12, y + itemH/2, col1 - 24, Math.round(itemH*0.72));
+          ctx.fillText(String(it.납입금명 || ""), boxX + col1/2, y + rowH/2);
 
-          // 금액
+          // 금액: 오른쪽
           ctx.textAlign="right";
-          ctx.fillText((it.미납액 || 0).toLocaleString("ko-KR"), x0 + col1 + col2 - 12, y + itemH/2);
+          ctx.fillText((it.미납액 || 0).toLocaleString("ko-KR"), boxX + col1 + col2 - 14, y + rowH/2);
 
-          // 비고(선택)
-          ctx.textAlign="left";
+          // 비고: 가운데(있으면)
           if(remarkText){
-            wrapText(ctx, remarkText, x0 + col1 + col2 + 12, y + itemH/2, col3 - 24, Math.round(itemH*0.72));
+            ctx.textAlign="center";
+            ctx.fillText(remarkText, boxX + col1 + col2 + col3/2, y + rowH/2);
           }
         }
-        y += itemH;
+        y += rowH;
       }
 
-      // 합계행
-      cell(x0, y, col1, sumH, "#fff");
-      cell(x0+col1, y, col2, sumH, "#fff");
-      cell(x0+col1+col2, y, col3, sumH, "#fff");
+      // 합계 줄
+      cell(boxX, y, col1, sumH, "#fff");
+      cell(boxX + col1, y, col2, sumH, "#fff");
+      cell(boxX + col1 + col2, y, col3, sumH, "#fff");
 
       ctx.fillStyle="#111";
       ctx.textBaseline="middle";
-      ctx.font = `700 ${Math.round(W*0.026)}px ${fontFamily}`;
-      ctx.textAlign="left";
-      ctx.fillText("합   계", x0 + 12, y + sumH/2);
+      ctx.font = `700 28px ${fontFamily}`;
+
+      ctx.textAlign="center";
+      ctx.fillText("합   계", boxX + col1/2, y + sumH/2);
 
       ctx.textAlign="right";
-      ctx.fillText(c.total.toLocaleString("ko-KR"), x0 + col1 + col2 - 12, y + sumH/2);
+      ctx.fillText(c.total.toLocaleString("ko-KR"), boxX + col1 + col2 - 14, y + sumH/2);
 
       y += sumH;
 
-      // 안내문 하단 문구
-      const noteY = y + Math.round(H*0.02);
-      ctx.font = `600 ${Math.round(W*0.022)}px ${fontFamily}`;
+      // ====== 하단 문구(박스 안) ======
+      const noteStartY = y + 28;
+      ctx.font = `600 23px ${fontFamily}`;
       ctx.textAlign="left";
       ctx.textBaseline="alphabetic";
 
-      ctx.fillText("※ 위의 금액이 미납되어 있습니다.", x0 + 10, noteY);
+      ctx.fillText("※ 위의 금액이 미납되어 있습니다.", boxX + 10, noteStartY);
 
       const dueLine = dueDate
         ? `${fmtKoreanDate(dueDate, false)} 까지 금액을 납부하여 주십시오.`
         : "납부 기한을 입력하면 여기에 표시됩니다.";
 
-      ctx.fillText(dueLine, x0 + 10, noteY + Math.round(H*0.03));
+      ctx.fillText(dueLine, boxX + 10, noteStartY + 32);
 
-      // 최하단 날짜/학교장
-      const bottomDate = fmtKoreanDate(docDate, true);
+      // ====== 하단 날짜/학교장(박스 안, 중앙) ======
+      const boxBottom = boxY + boxH;
+      const dateY = boxBottom - 150;
+      const principalY = boxBottom - 92;
+
       ctx.textAlign="center";
-      ctx.font = `600 ${Math.round(W*0.024)}px ${fontFamily}`;
-      ctx.fillText(bottomDate, x0 + bw/2, y0 + bh - Math.round(H*0.11));
+      ctx.font = `600 26px ${fontFamily}`;
+      ctx.fillText(fmtKoreanDate(docDate, true), boxX + boxW/2, dateY);
 
-      ctx.font = `700 ${Math.round(W*0.03)}px ${fontFamily}`;
-      ctx.fillText(principalTitle, x0 + bw/2, y0 + bh - Math.round(H*0.07));
+      ctx.font = `800 34px ${fontFamily}`;
+      ctx.fillText(principalTitle, boxX + boxW/2, principalY);
 
       ctx.restore();
       return canvas;
-    }
-
-    // 간단한 줄바꿈(캔버스)
-    function wrapText(ctx, text, x, yMid, maxWidth, lineHeight){
-      const t = String(text ?? "").trim();
-      if(!t) return;
-
-      // 1줄로 되면 그냥 출력
-      if(ctx.measureText(t).width <= maxWidth){
-        ctx.fillText(t, x, yMid);
-        return;
-      }
-
-      // 단어 단위 분리(한글은 공백이 없을 수 있으니 문자 단위 fallback)
-      const tokens = t.includes(" ") ? t.split(" ") : Array.from(t);
-      const lines = [];
-      let cur = "";
-
-      for(const tok of tokens){
-        const probe = cur ? (cur + (t.includes(" ") ? " " : "") + tok) : tok;
-        if(ctx.measureText(probe).width <= maxWidth){
-          cur = probe;
-        }else{
-          if(cur) lines.push(cur);
-          cur = tok;
-        }
-      }
-      if(cur) lines.push(cur);
-
-      // 최대 2줄까지만(표 셀 높이 한계)
-      const maxLines = 2;
-      const outLines = lines.slice(0, maxLines);
-
-      const totalH = outLines.length * lineHeight;
-      let y = yMid - totalH/2 + lineHeight/2;
-      for(const ln of outLines){
-        ctx.fillText(ln, x, y);
-        y += lineHeight;
-      }
     }
 
     function canvasToBlob(canvas, type="image/png", quality){
@@ -1055,17 +1014,15 @@
     function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
     /***********************
-     * 7) UI 렌더(표/셀렉트/미리보기)
+     * 7) UI 렌더
      ***********************/
     function renderRawTable(){
       const tbody = el("rawTbody");
       tbody.innerHTML = "";
-
       if(!rawRows.length){
-        tbody.innerHTML = `<tr><td colspan="5" class="muted">아직 데이터가 없습니다.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="small">아직 데이터가 없습니다.</td></tr>`;
         return;
       }
-
       for(const r of rawRows){
         const tr = document.createElement("tr");
         tr.innerHTML = `
@@ -1082,12 +1039,10 @@
     function renderCaseTable(){
       const tbody = el("caseTbody");
       tbody.innerHTML = "";
-
       if(!cases.length){
-        tbody.innerHTML = `<tr><td colspan="5" class="muted">아직 데이터가 없습니다.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="small">아직 데이터가 없습니다.</td></tr>`;
         return;
       }
-
       for(const c of cases){
         const tr = document.createElement("tr");
         tr.innerHTML = `
@@ -1130,6 +1085,14 @@
       return cases.find(x => x.key === selectedCaseKey) || null;
     }
 
+    function enableDownloads(enable){
+      el("btnDownloadCSV").disabled = !enable;
+      el("btnDownloadZip").disabled = !enable;
+      el("btnDownloadPDF").disabled = !enable;
+      el("btnOnePng").disabled = !enable;
+      el("btnCopySms").disabled = !enable;
+    }
+
     function updatePreview(){
       const c = getSelectedCase();
       const canvas = el("previewCanvas");
@@ -1138,38 +1101,17 @@
         const ctx = canvas.getContext("2d");
         ctx.clearRect(0,0,canvas.width,canvas.height);
         el("smsPreview").value = "";
-        el("btnOnePng").disabled = true;
-        el("btnCopySms").disabled = true;
         return;
       }
 
       renderNoticeToCanvas(c, canvas, { width: 1080, height: 1350 });
       el("smsPreview").value = buildSmsForCase(c);
-      el("btnOnePng").disabled = false;
-      el("btnCopySms").disabled = false;
-    }
-
-    function escapeHtml(s){
-      return String(s ?? "")
-        .replace(/&/g,"&amp;")
-        .replace(/</g,"&lt;")
-        .replace(/>/g,"&gt;")
-        .replace(/"/g,"&quot;")
-        .replace(/'/g,"&#39;");
-    }
-
-    function enableDownloads(enable){
-      el("btnDownloadCSV").disabled = !enable;
-      el("btnDownloadZip").disabled = !enable;
-      el("btnDownloadPDF").disabled = !enable;
     }
 
     /***********************
-     * 8) 다운로드 기능
+     * 8) 다운로드
      ***********************/
     function downloadCSV(){
-      // BOM 포함(엑셀 호환)
-      // ※ 요청한 “추출 5개” + 생성된 문자 문구까지 포함한 CSV 제공
       const lines = [];
       lines.push(["학년","반","이름","납입금명(요약)","총미납액","문자문구"].map(csvEscape).join(","));
       for(const c of cases){
@@ -1231,7 +1173,7 @@
         const c = cases[i];
         renderNoticeToCanvas(c, tempCanvas, { width: 1080, height: 1350 });
 
-        // 용량 고려: JPEG로 넣기(가독성 유지)
+        // 용량 고려: JPEG
         const imgData = tempCanvas.toDataURL("image/jpeg", 0.92);
 
         if(i > 0) doc.addPage([W, H], "portrait");
@@ -1267,7 +1209,7 @@
         await navigator.clipboard.writeText(msg);
         setStatus("선택 학생 문자 문구를 클립보드에 복사했습니다 ✅", "ok");
       }catch(e){
-        // clipboard 권한이 막히는 환경 대비: 프롬프트
+        // 보안정책으로 clipboard 막힐 때 대비
         el("smsPreview").focus();
         el("smsPreview").select();
         document.execCommand("copy");
@@ -1299,11 +1241,9 @@
         renderRawTable();
         renderCaseTable();
         populateCaseSelect();
-        updatePreview();
 
         enableDownloads(true);
-        el("btnOnePng").disabled = false;
-        el("btnCopySms").disabled = false;
+        updatePreview();
 
         setStatus(
           `추출 완료 ✅\n- 행 단위: ${rawRows.length}건\n- 학생별 통합: ${cases.length}건`,
@@ -1317,11 +1257,8 @@
         renderRawTable();
         renderCaseTable();
         populateCaseSelect();
-        updatePreview();
         enableDownloads(false);
-        el("btnOnePng").disabled = true;
-        el("btnCopySms").disabled = true;
-
+        el("smsPreview").value = "";
         setStatus(String(err?.message || err), "err");
       }
     });
@@ -1331,8 +1268,7 @@
       updatePreview();
     });
 
-    // 설정값 바뀌면 미리보기 갱신
-    ["schoolName","bankName","accountNumber","roundText","noticeRemark","dueDate","docDate","smsTemplate"].forEach(id => {
+    ["schoolName","bankName","accountNumber","roundText","noticeRemark","dueDate","docDate","smsTemplate","labelTheme"].forEach(id => {
       el(id).addEventListener("input", () => updatePreview());
       el(id).addEventListener("change", () => updatePreview());
     });
@@ -1342,6 +1278,7 @@
       rawRows = [];
       cases = [];
       selectedCaseKey = "";
+
       el("schoolName").value = "";
       el("bankName").value = "";
       el("accountNumber").value = "";
@@ -1350,15 +1287,16 @@
       el("dueDate").value = "";
       el("docDate").value = toISODate(new Date());
       el("smsTemplate").value = DEFAULT_SMS_TEMPLATE;
+      el("labelTheme").value = "blue";
 
       renderRawTable();
       renderCaseTable();
       populateCaseSelect();
-      updatePreview();
       enableDownloads(false);
 
-      el("btnOnePng").disabled = true;
-      el("btnCopySms").disabled = true;
+      el("smsPreview").value = "";
+      const ctx = el("previewCanvas").getContext("2d");
+      ctx.clearRect(0,0,el("previewCanvas").width, el("previewCanvas").height);
 
       setStatus("초기화 완료. 엑셀을 다시 업로드하세요.", "");
     });
@@ -1370,39 +1308,34 @@
 
     el("btnDownloadZip").addEventListener("click", async () => {
       if(!cases.length) return;
-      try{
-        await downloadZipPng();
-      }catch(e){
-        console.error(e);
-        setStatus("PNG ZIP 생성 중 오류: " + (e?.message || e), "err");
-      }
+      try{ await downloadZipPng(); }
+      catch(e){ console.error(e); setStatus("PNG ZIP 생성 오류: " + (e?.message || e), "err"); }
     });
 
     el("btnDownloadPDF").addEventListener("click", async () => {
       if(!cases.length) return;
-      try{
-        await downloadPDF();
-      }catch(e){
-        console.error(e);
-        setStatus("PDF 생성 중 오류: " + (e?.message || e), "err");
-      }
+      try{ await downloadPDF(); }
+      catch(e){ console.error(e); setStatus("PDF 생성 오류: " + (e?.message || e), "err"); }
     });
 
     el("btnOnePng").addEventListener("click", async () => {
-      try{
-        await downloadOnePng();
-      }catch(e){
-        console.error(e);
-        setStatus("단일 PNG 생성 중 오류: " + (e?.message || e), "err");
-      }
+      try{ await downloadOnePng(); }
+      catch(e){ console.error(e); setStatus("단일 PNG 생성 오류: " + (e?.message || e), "err"); }
     });
 
     el("btnCopySms").addEventListener("click", async () => {
       await copySelectedSms();
     });
 
-    // 최초 미리보기(빈 화면)
-    updatePreview();
+    // 폰트 로드 후 한번 더 렌더(자간/폭 측정 안정화)
+    try{
+      if(document.fonts && document.fonts.ready){
+        document.fonts.ready.then(() => updatePreview());
+      }
+    }catch(_){}
+
+    // 초기 미리보기(빈 상태)
+    enableDownloads(false);
   </script>
 </body>
 </html>
