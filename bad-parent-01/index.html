@@ -15,27 +15,44 @@
 
   <style>
     /* ===========================================
-       페이지 전용: 공통 style.css를 해치지 않는 선에서만 최소 보강
+       페이지 전용: 공통 style.css를 해치지 않는 선에서 최소 보강
        =========================================== */
 
-    /* 파일 입력도 공통 인풋 톤에 맞추기 */
-    input[type="file"]{
-      width: 100%;
-      padding: 10px 12px;
-      border: 1px solid #d9d9e3;
+    /* 드롭존 */
+    .dropzone{
+      border: 2px dashed #d4d4d8;
+      background: #fafafa;
       border-radius: 12px;
-      background: #f9fafb;
-      outline: none;
-      min-width: 0;
-      box-shadow: 0 0 0 1px rgba(0,0,0,0.02);
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: background .12s ease, border-color .12s ease, transform .08s ease;
     }
-    input[type="file"]:focus{
-      border-color: #b4b4d0;
-      box-shadow: 0 0 0 2px rgba(180, 180, 208, 0.25);
-      background: #fff;
+    .dropzone:hover{ background:#f9fafb; }
+    .dropzone:active{ transform: scale(0.998); }
+    .dropzone.is-dragover{
+      border-color: #6b7280;
+      background: #eef2ff;
+    }
+    .dropzone .dz-title{
+      font-weight: 700;
+      color: #111;
+      margin: 0 0 6px;
+      font-size: 1.02rem;
+    }
+    .dropzone .dz-sub{
+      margin: 0;
+      color: #555;
+      font-size: 0.95rem;
+    }
+    .dropzone .dz-sub code{
+      background:#fff;
+      border:1px solid #e5e7eb;
+      padding: 2px 6px;
+      border-radius: 8px;
+      font-size: 0.92rem;
     }
 
-    /* 상태 박스: 공통 card 느낌으로 */
+    /* 상태 박스 */
     .status-box{
       white-space: pre-line;
       font-size: 1rem;
@@ -79,10 +96,7 @@
       }
     }
 
-    /* 버튼 간격: 공통 .row gap 사용 권장(추가 보정 최소) */
-    .row.gap{ gap: 10px; }
-
-    /* 고급설정 input 폭 */
+    /* 고급설정 그리드 */
     .mini-grid{
       display:grid;
       gap: 12px;
@@ -90,15 +104,33 @@
       margin-top: 10px;
     }
 
-    /* details UI: style.css의 shot-details/shot-summary 톤 활용 */
-    details.shot-details{
-      margin-top: 12px;
+    /* 버튼 바(공통 row 기반, 보조로 wrap) */
+    .btnbar{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    /* 업로드 input 숨김 */
+    #excelFile{ display:none; }
+
+    /* 작은 배지 */
+    .pill{
+      display:inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      border: 1px solid #d4d4d8;
+      background: #f3f4f6;
+      font-size: 0.9rem;
+      color: #333;
+      white-space: nowrap;
     }
   </style>
 </head>
 
 <body>
-  <!-- (선택) 페이지 상단 홈 링크: 기존 사이트 다른 페이지들과 동일 패턴 -->
   <div class="home-link-wrap">
     <a class="btn-home" href="/">← 메인으로</a>
   </div>
@@ -106,14 +138,14 @@
   <main class="container">
     <h1>미수납대상(.xlsx) → 미납 안내 문자 + 미납안내문(PNG/PDF)</h1>
     <p class="subtitle">
-      엑셀에서 <b>학년/반/이름/납입금명/미납액</b>만 추출합니다.
-      (제외 정리: <b>주간</b>, <b>야간</b>, <b>_</b>, <b>-</b>)
+      엑셀에서 <b>학년/반/번호/이름/납입금명/미납액</b>만 사용합니다.
+      <span class="pill">정리: 주간 · 야간 · _ · - 제거</span>
     </p>
 
     <!-- 1) 업로드 -->
     <section class="section">
       <div class="row between">
-        <h2 class="local-h2 local-tight" style="margin:0;">엑셀 업로드</h2>
+        <h2 class="local-h2 local-tight" style="margin:0;">1) 엑셀 업로드</h2>
         <div class="row gap">
           <button class="btn ghost" id="btnLoadSample" type="button">샘플 데이터</button>
           <button class="btn ghost" id="btnReset" type="button">초기화</button>
@@ -121,30 +153,29 @@
       </div>
 
       <p class="muted local-tight">
-        보호자 연락처 / 학적구분 / 수납방법 / 미납일수 / 납입기한 / 결재상태 등은 <b>무시</b>합니다.
+        보호자연락처/학적구분/수납방법/미납일수/납입기한/결재상태 등은 <b>무시</b>합니다.
       </p>
 
-      <div class="grid two">
-        <div class="field">
-          <label>에듀파인 엑셀(.xlsx)</label>
-          <input id="excelFile" type="file" accept=".xlsx,.xls" />
-        </div>
+      <input id="excelFile" type="file" accept=".xlsx,.xls" />
 
-        <div class="field">
-          <label>상태</label>
-          <div id="statusBox" class="card status-box">
-            대기중… 엑셀을 올리면 자동으로 추출합니다.
-          </div>
-        </div>
+      <div id="dropZone" class="dropzone" role="button" tabindex="0" aria-label="엑셀 업로드 드롭존">
+        <p class="dz-title">여기로 엑셀 파일을 드래그해서 놓기</p>
+        <p class="dz-sub">
+          또는 클릭해서 선택하세요. <code>.xlsx</code>
+        </p>
+      </div>
+
+      <div id="statusBox" class="card status-box" style="margin-top:12px;">
+        대기중… 엑셀을 올리면 자동으로 추출합니다.
       </div>
     </section>
 
     <!-- 2) 설정 -->
     <section class="section">
       <div class="row between">
-        <h2 class="local-h2 local-tight" style="margin:0;">기본 설정</h2>
+        <h2 class="local-h2 local-tight" style="margin:0;">2) 기본 설정</h2>
         <div class="row gap">
-          <button class="btn" id="btnApplySamplePreset" type="button">샘플 프리셋 적용</button>
+          <button class="btn ghost" id="btnApplySamplePreset" type="button">샘플 프리셋 적용</button>
         </div>
       </div>
 
@@ -182,7 +213,7 @@
             <option value="gray" selected>샘플(회색)</option>
             <option value="blue">파스텔 블루</option>
           </select>
-          <p class="note">샘플 프리셋 기본은 회색입니다.</p>
+          <p class="note">기본은 샘플처럼 회색입니다.</p>
         </div>
       </div>
 
@@ -302,43 +333,55 @@
       </details>
     </section>
 
-    <!-- 3) 문자 템플릿 + 다운로드 -->
+    <!-- 3) 문자 템플릿 + 대표 다운로드 -->
     <section class="section">
-      <h2 class="local-h2 local-tight">문자 템플릿 & 다운로드</h2>
+      <h2 class="local-h2 local-tight">3) 문자 템플릿 & 결과 다운로드</h2>
       <p class="muted">
-        치환: [학교명] [학년] [반] [이름] [차수] [납입금명] [은행명] [계좌번호] [미납액]<br>
-        ※ [번호]는 추출하지 않으므로 빈칸 처리
+        치환: [학교명] [학년] [반] [번호] [이름] [차수] [납입금명] [은행명] [계좌번호] [미납액]
       </p>
 
       <textarea id="smsTemplate"></textarea>
 
-      <div class="row gap" style="margin-top:12px; flex-wrap:wrap;">
-        <button class="btn ghost" id="btnDownloadCSV" type="button" disabled>문자/명단 CSV</button>
-        <button class="btn primary" id="btnDownloadZip" type="button" disabled>안내문 PNG ZIP</button>
-        <button class="btn ghost" id="btnDownloadPDF" type="button" disabled>안내문 PDF</button>
+      <!-- ✅ 정돈: 대표 버튼 1개 + 보조 버튼은 접기 -->
+      <div class="btnbar">
+        <button class="btn primary" id="btnDownloadAllZip" type="button" disabled>
+          전체 결과 ZIP 다운로드 (문구 엑셀 + PNG + PDF)
+        </button>
+        <button class="btn ghost" id="btnCopyAllSms" type="button" disabled>
+          전체 문자 문구 복사(줄바꿈 포함)
+        </button>
       </div>
 
-      <p class="note">보통은 PNG ZIP이 가장 많이 쓰입니다.</p>
+      <details class="shot-details" style="margin-top:12px;">
+        <summary class="shot-summary">개별 다운로드(선택)</summary>
+        <div class="btnbar">
+          <button class="btn ghost" id="btnDownloadXlsxOnly" type="button" disabled>문구 엑셀만(.xlsx)</button>
+          <button class="btn ghost" id="btnDownloadPngZipOnly" type="button" disabled>안내문 PNG ZIP만</button>
+          <button class="btn ghost" id="btnDownloadPdfOnly" type="button" disabled>안내문 PDF만</button>
+        </div>
+        <p class="note">보통은 “전체 결과 ZIP” 하나로 끝납니다.</p>
+      </details>
     </section>
 
     <!-- 4) 추출 결과 -->
     <section class="section">
-      <h2 class="local-h2 local-tight">추출 결과</h2>
+      <h2 class="local-h2 local-tight">4) 추출 결과</h2>
 
-      <h3 class="local-h3 local-tight">행 단위(추출 5개만)</h3>
+      <h3 class="local-h3 local-tight">행 단위(추출 6개만)</h3>
       <div class="table-wrap">
         <table class="sheetlike">
           <thead>
             <tr>
               <th>학년</th>
               <th>반</th>
+              <th>번호</th>
               <th>이름</th>
               <th>납입금명</th>
               <th class="numeric">미납액</th>
             </tr>
           </thead>
           <tbody id="rawTbody">
-            <tr><td colspan="5" class="muted">아직 데이터가 없습니다.</td></tr>
+            <tr><td colspan="6" class="muted">아직 데이터가 없습니다.</td></tr>
           </tbody>
         </table>
       </div>
@@ -350,13 +393,14 @@
             <tr>
               <th>학년</th>
               <th>반</th>
+              <th>번호</th>
               <th>이름</th>
               <th>납입금명(요약)</th>
               <th class="numeric">총 미납액</th>
             </tr>
           </thead>
           <tbody id="caseTbody">
-            <tr><td colspan="5" class="muted">아직 데이터가 없습니다.</td></tr>
+            <tr><td colspan="6" class="muted">아직 데이터가 없습니다.</td></tr>
           </tbody>
         </table>
       </div>
@@ -364,7 +408,7 @@
 
     <!-- 5) 미리보기 -->
     <section class="section">
-      <h2 class="local-h2 local-tight">미리보기</h2>
+      <h2 class="local-h2 local-tight">5) 학생 개인별 미리보기</h2>
 
       <div class="grid two">
         <div class="field">
@@ -375,7 +419,7 @@
         </div>
         <div class="field">
           <label>선택 학생 작업</label>
-          <div class="row gap" style="flex-wrap:wrap;">
+          <div class="btnbar">
             <button class="btn ghost" id="btnOnePng" type="button" disabled>안내문 PNG 1장</button>
             <button class="btn ghost" id="btnCopySms" type="button" disabled>문자 복사</button>
           </div>
@@ -385,7 +429,7 @@
       <div class="preview-grid" style="margin-top:12px;">
         <div class="canvasbox">
           <canvas id="previewCanvas" width="1080" height="1350"></canvas>
-          <p class="note">샘플 “미납안내문” 양식 구조로 렌더링됩니다. :contentReference[oaicite:1]{index=1}</p>
+          <p class="note">양식 구조는 샘플 “미납안내문” 기준으로 렌더링됩니다.</p>
         </div>
 
         <div class="card">
@@ -405,7 +449,7 @@
     /***********************
      * 공통
      ***********************/
-    const STORAGE_KEY = "eduFine_unpaid_notice_stylecss_final";
+    const STORAGE_KEY = "eduFine_unpaid_notice_allinone_v1";
 
     const DEFAULT_SMS_TEMPLATE =
 `안녕하세요,
@@ -453,6 +497,19 @@
       box.textContent = msg;
     }
 
+    function disableWhile(btn, on=true){
+      if(!btn) return;
+      if(on){
+        btn.dataset._oldText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "처리중…";
+      }else{
+        btn.disabled = false;
+        if(btn.dataset._oldText) btn.textContent = btn.dataset._oldText;
+        delete btn.dataset._oldText;
+      }
+    }
+
     function saveSettings(){
       const ids = [
         "schoolName","bankName","accountNumber","roundText","noticeRemark",
@@ -485,36 +542,25 @@
     }
 
     /***********************
-     * ✅ 샘플 프리셋(기본 고정)
-     * - 미납안내문 샘플 양식에 맞춘 “기본값”
+     * ✅ 샘플 프리셋(기본)
      ***********************/
     const SAMPLE_PRESET = {
       labelTheme: "gray",
       exportScale: "1",
-
-      // 박스/제목 배치
       cfg_boxMargin: "86",
       cfg_boxBottomMargin: "78",
       cfg_titleTop: "38",
       cfg_boxTopGap: "28",
-
-      // 선 굵기(샘플처럼 외곽이 좀 더 굵음)
       cfg_outerLine: "2.2",
       cfg_innerLine: "1.1",
-
-      // 행 높이
       cfg_topRowH: "62",
       cfg_moneyRowH: "56",
       cfg_headH: "56",
       cfg_rowH: "56",
       cfg_sumH: "56",
       cfg_slots: "10",
-
-      // 표 칸 비율(샘플 감각)
       cfg_col1: "0.44",
       cfg_col2: "0.28",
-
-      // 타이포
       cfg_titleSize: "52",
       cfg_titleSpacing: "12",
       cfg_labelSize: "28",
@@ -532,14 +578,14 @@
     }
 
     /***********************
-     * 상태
+     * 상태 데이터
      ***********************/
-    let rawRows = [];
-    let cases = [];
+    let rawRows = [];   // {학년, 반, 번호, 이름, 납입금명, 미납액}
+    let cases = [];     // 학생별 통합
     let selectedCaseKey = "";
 
     /***********************
-     * 추출/정리 유틸
+     * 유틸
      ***********************/
     function toIntMoney(v){
       if(v === null || v === undefined || v === "") return 0;
@@ -551,7 +597,6 @@
     }
 
     // ✅ 제외: 주간 야간 _ -
-    // + "2번" 같은 토큰 제거(학년/반 문자열에 섞여 들어오는 경우)
     function cleanSchoolToken(s){
       let out = String(s ?? "")
         .replace(/주간/g, "")
@@ -563,7 +608,6 @@
       return out;
     }
 
-    // 학년/반 섞임 보정: "1학년 달반" 같은 경우 분리
     function normalizeGradeClass(gradeIn, classIn){
       let g = cleanSchoolToken(gradeIn);
       let c = cleanSchoolToken(classIn);
@@ -587,6 +631,12 @@
       return { 학년: g, 반: c };
     }
 
+    function parseStudentNo(v){
+      const s = String(v ?? "").trim();
+      const m = s.match(/(\d{1,3})/);
+      return m ? Number(m[1]) : null;
+    }
+
     function normalizeSpacesPerLine(text){
       return String(text ?? "")
         .split("\n")
@@ -604,15 +654,45 @@
         .replace(/'/g,"&#39;");
     }
 
+    function num(id, fallback){
+      const v = Number(el(id)?.value);
+      return Number.isFinite(v) ? v : fallback;
+    }
+
+    function getSlots(){
+      return Math.max(6, Math.min(20, Math.floor(num("cfg_slots", 10))));
+    }
+
+    function enableActions(enable){
+      el("btnDownloadAllZip").disabled = !enable;
+      el("btnCopyAllSms").disabled = !enable;
+
+      el("btnDownloadXlsxOnly").disabled = !enable;
+      el("btnDownloadPngZipOnly").disabled = !enable;
+      el("btnDownloadPdfOnly").disabled = !enable;
+
+      el("btnOnePng").disabled = !enable;
+      el("btnCopySms").disabled = !enable;
+    }
+
     /***********************
-     * XLSX 파싱(필요 5개만)
+     * XLSX 파싱(필수 6개만)
      ***********************/
     function normalizeHeader(h){
       return String(h ?? "").trim().replace(/\s+/g,"").replace(/[_-]/g,"_");
     }
 
     function findHeaderRow(rows){
-      const limit = Math.min(rows.length, 20);
+      const limit = Math.min(rows.length, 30);
+      for(let i=0;i<limit;i++){
+        const row = (rows[i] || []).map(normalizeHeader);
+        const hasName = row.some(x => x.includes("이름"));
+        const hasItem = row.some(x => x.includes("납입금명"));
+        const hasAmt  = row.some(x => x.includes("미납액"));
+        const hasNo   = row.some(x => x === "번호" || x.includes("번호"));
+        if(hasName && hasItem && hasAmt && hasNo) return i;
+      }
+      // fallback (번호가 없더라도 헤더 찾기)
       for(let i=0;i<limit;i++){
         const row = (rows[i] || []).map(normalizeHeader);
         const hasName = row.some(x => x.includes("이름"));
@@ -636,24 +716,22 @@
       const sheetName = wb.SheetNames[0];
       const sheet = wb.Sheets[sheetName];
       const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
-
-      if(!rows || rows.length === 0){
-        throw new Error("시트에 데이터가 없습니다.");
-      }
+      if(!rows || rows.length === 0) throw new Error("시트에 데이터가 없습니다.");
 
       const headerRowIdx = findHeaderRow(rows);
       const header = (rows[headerRowIdx] || []).map(normalizeHeader);
 
-      const idxGrade = pickIndex(header, [/주야.*학년/i, /계열.*학년/i, /^주야_계열_학년$/i, /학년/]);
-      const idxClass = pickIndex(header, [/^학과_반$/i, /학과.*반/i, /^반$/i, /반/]);
+      const idxGrade = pickIndex(header, [/주야_계열_학년/i, /주야.*학년/i, /계열.*학년/i, /학년/]);
+      const idxClass = pickIndex(header, [/학과_반/i, /^반$/i, /반/]);
+      const idxNo    = pickIndex(header, [/^번호$/i, /학번/i, /번호/]);
       const idxName  = pickIndex(header, [/^이름$/i, /성명/i]);
       const idxItem  = pickIndex(header, [/^납입금명$/i, /납입.*명/i]);
       const idxAmt   = pickIndex(header, [/^미납액$/i, /미납.*금/i]);
 
-      if([idxGrade, idxClass, idxName, idxItem, idxAmt].some(x => x === -1)){
+      if([idxGrade, idxClass, idxNo, idxName, idxItem, idxAmt].some(x => x === -1)){
         throw new Error(
           "필수 컬럼을 찾지 못했습니다.\n" +
-          "필요: (주야_계열_학년 또는 학년), (학과_반 또는 반), 이름, 납입금명, 미납액"
+          "필요: 주야_계열_학년(또는 학년), 학과_반(또는 반), 번호, 이름, 납입금명, 미납액"
         );
       }
 
@@ -661,15 +739,15 @@
       for(let r=headerRowIdx+1; r<rows.length; r++){
         const row = rows[r] || [];
         const norm = normalizeGradeClass(row[idxGrade], row[idxClass]);
+        const no = parseStudentNo(row[idxNo]);
         const name = String(row[idxName] ?? "").trim();
         const item = String(row[idxItem] ?? "").trim();
         const amt  = toIntMoney(row[idxAmt]);
 
-        if(!norm.학년 && !norm.반 && !name && !item && !amt) continue;
+        if(!norm.학년 && !norm.반 && (no===null) && !name && !item && !amt) continue;
         if(!name || !item) continue;
 
-        // ✅ 추출 5개만
-        out.push({ 학년: norm.학년, 반: norm.반, 이름: name, 납입금명: item, 미납액: amt });
+        out.push({ 학년: norm.학년, 반: norm.반, 번호: no, 이름: name, 납입금명: item, 미납액: amt });
       }
       return out;
     }
@@ -677,9 +755,17 @@
     function buildCasesFromRaw(rows){
       const map = new Map();
       for(const rr of rows){
-        const key = `${rr.학년}||${rr.반}||${rr.이름}`;
+        const key = `${rr.학년}||${rr.반}||${rr.번호 ?? ""}||${rr.이름}`;
         if(!map.has(key)){
-          map.set(key, { key, 학년: rr.학년, 반: rr.반, 이름: rr.이름, items: [], total: 0 });
+          map.set(key, {
+            key,
+            학년: rr.학년,
+            반: rr.반,
+            번호: rr.번호,
+            이름: rr.이름,
+            items: [],
+            total: 0
+          });
         }
         const c = map.get(key);
         c.items.push({ 납입금명: rr.납입금명, 미납액: rr.미납액 });
@@ -688,6 +774,7 @@
 
       const list = Array.from(map.values());
       for(const c of list){
+        // 항목 요약(중복 제거)
         const uniq = [];
         const seen = new Set();
         for(const it of c.items){
@@ -699,11 +786,18 @@
         c.납입금명요약 = uniq.join(", ");
       }
 
+      function gradeNum(g){
+        const m = String(g||"").match(/(\d+)/);
+        return m ? Number(m[1]) : 999;
+      }
+
       list.sort((a,b) => {
-        const ag = a.학년 || "", bg = b.학년 || "";
-        if(ag !== bg) return ag.localeCompare(bg, "ko");
-        const ac = a.반 || "", bc = b.반 || "";
-        if(ac !== bc) return ac.localeCompare(bc, "ko");
+        const ag = gradeNum(a.학년), bg = gradeNum(b.학년);
+        if(ag !== bg) return ag - bg;
+        const ac = (a.반||"").localeCompare(b.반||"", "ko");
+        if(ac !== 0) return ac;
+        const an = (a.번호 ?? 999) - (b.번호 ?? 999);
+        if(an !== 0) return an;
         return (a.이름||"").localeCompare((b.이름||""), "ko");
       });
 
@@ -722,15 +816,15 @@
 
       const repl = {
         "[학교명]": schoolName,
-        "[학년]": c.학년,
-        "[반]": c.반,
-        "[이름]": c.이름,
+        "[학년]": c.학년 ?? "",
+        "[반]": c.반 ?? "",
+        "[번호]": (c.번호 ?? "") ? `${c.번호}번` : "",
+        "[이름]": c.이름 ?? "",
         "[차수]": roundText,
-        "[납입금명]": c.납입금명요약,
+        "[납입금명]": c.납입금명요약 ?? "",
         "[은행명]": bankName,
         "[계좌번호]": accountNum,
-        "[미납액]": c.total.toLocaleString("ko-KR"),
-        "[번호]": "" // ✅ 추출하지 않음
+        "[미납액]": (c.total||0).toLocaleString("ko-KR"),
       };
 
       let msg = String(template ?? "");
@@ -740,8 +834,15 @@
       return normalizeSpacesPerLine(msg);
     }
 
+    function buildAllSmsText(){
+      return cases.map(c => {
+        const header = `${c.학년} ${c.반} ${c.번호 ?? ""}번 ${c.이름}`.replace(/\s+/g," ").trim();
+        return `▶ ${header}\n${buildSmsForCase(c)}\n`;
+      }).join("\n").trim();
+    }
+
     /***********************
-     * 안내문 렌더링(캔버스) - 샘플 양식 기반 :contentReference[oaicite:2]{index=2}
+     * 안내문 렌더링(캔버스)
      ***********************/
     const DIG_KOR = ["", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"];
     function fourToKor(n){
@@ -774,13 +875,8 @@
 
     function getNoticeLabelColor(){
       const theme = el("labelTheme").value;
-      if(theme === "gray") return "#BFBFBF"; // 샘플 느낌
-      return "#D9EEFF";                      // 파스텔 블루
-    }
-
-    function num(id, fallback){
-      const v = Number(el(id)?.value);
-      return Number.isFinite(v) ? v : fallback;
+      if(theme === "gray") return "#BFBFBF";
+      return "#D9EEFF";
     }
 
     function drawSpacedText(ctx, text, centerX, yBaseline, spacingPx){
@@ -815,7 +911,6 @@
 
       const dueDate = parseDateInput(el("dueDate").value);
       const docDate = parseDateInput(el("docDate").value) || new Date();
-
       const principalTitle = schoolName ? (schoolName + "장") : "학교장";
 
       const boxMargin = num("cfg_boxMargin", 86);
@@ -832,7 +927,7 @@
       const headH = num("cfg_headH", 56);
       const rowH = num("cfg_rowH", 56);
       const sumH = num("cfg_sumH", 56);
-      const slots = Math.max(6, Math.min(20, Math.floor(num("cfg_slots", 10))));
+      const slots = getSlots();
 
       const col1Ratio = Math.max(0.30, Math.min(0.60, num("cfg_col1", 0.44)));
       const col2Ratio = Math.max(0.18, Math.min(0.40, num("cfg_col2", 0.28)));
@@ -891,14 +986,13 @@
 
       let y = boxY;
 
-      // 라벨 너비(샘플 느낌)
       const labelWRatio = 0.34;
       const labelW = Math.round(boxW * labelWRatio);
       const valW = boxW - labelW;
 
       ctx.textBaseline = "middle";
 
-      // 1행: 학번
+      // 1행: 학번 (샘플처럼: "1학년 달반 - 2번")
       cell(boxX, y, labelW, topRowH, labelBg);
       cell(boxX+labelW, y, valW, topRowH, "#fff");
       ctx.fillStyle="#111";
@@ -907,7 +1001,8 @@
       ctx.fillText("학   번", boxX + labelW/2, y + topRowH/2);
 
       ctx.textAlign="left";
-      const classLine = `${caseObj.학년} ${caseObj.반}`.trim();
+      const noText = (caseObj.번호 ?? "") ? `${caseObj.번호}번` : "";
+      const classLine = `${caseObj.학년 ?? ""} ${caseObj.반 ?? ""} - ${noText}`.replace(/\s+/g," ").trim();
       let curSize = valueSize;
       ctx.font = `600 ${curSize}px ${family}`;
       while(curSize > 18 && ctx.measureText(classLine).width > (valW - 36)){
@@ -1018,14 +1113,28 @@
       return canvas;
     }
 
+    function chunkItemsForPages(caseObj){
+      const slots = getSlots();
+      const items = Array.isArray(caseObj.items) ? caseObj.items : [];
+      const pages = [];
+      if(items.length === 0){
+        pages.push({ ...caseObj, items: [] });
+        return pages;
+      }
+      for(let i=0; i<items.length; i+=slots){
+        pages.push({ ...caseObj, items: items.slice(i, i+slots) });
+      }
+      return pages;
+    }
+
     /***********************
-     * 테이블 렌더/선택/프리뷰
+     * 테이블/선택/프리뷰
      ***********************/
     function renderRawTable(){
       const tbody = el("rawTbody");
       tbody.innerHTML = "";
       if(!rawRows.length){
-        tbody.innerHTML = `<tr><td colspan="5" class="muted">아직 데이터가 없습니다.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="muted">아직 데이터가 없습니다.</td></tr>`;
         return;
       }
       for(const r of rawRows){
@@ -1033,6 +1142,7 @@
         tr.innerHTML = `
           <td>${escapeHtml(r.학년)}</td>
           <td>${escapeHtml(r.반)}</td>
+          <td>${r.번호 ?? ""}</td>
           <td>${escapeHtml(r.이름)}</td>
           <td>${escapeHtml(r.납입금명)}</td>
           <td class="numeric">${(r.미납액||0).toLocaleString("ko-KR")}</td>
@@ -1045,7 +1155,7 @@
       const tbody = el("caseTbody");
       tbody.innerHTML = "";
       if(!cases.length){
-        tbody.innerHTML = `<tr><td colspan="5" class="muted">아직 데이터가 없습니다.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="muted">아직 데이터가 없습니다.</td></tr>`;
         return;
       }
       for(const c of cases){
@@ -1053,6 +1163,7 @@
         tr.innerHTML = `
           <td>${escapeHtml(c.학년)}</td>
           <td>${escapeHtml(c.반)}</td>
+          <td>${c.번호 ?? ""}</td>
           <td>${escapeHtml(c.이름)}</td>
           <td>${escapeHtml(c.납입금명요약)}</td>
           <td class="numeric">${c.total.toLocaleString("ko-KR")}</td>
@@ -1074,7 +1185,8 @@
       for(const c of cases){
         const opt = document.createElement("option");
         opt.value = c.key;
-        opt.textContent = `${c.학년} ${c.반} ${c.이름} (${c.total.toLocaleString("ko-KR")}원)`;
+        const label = `${c.학년} ${c.반} ${c.번호 ?? ""}번 ${c.이름}`.replace(/\s+/g," ").trim();
+        opt.textContent = `${label} (${c.total.toLocaleString("ko-KR")}원)`;
         sel.appendChild(opt);
       }
       selectedCaseKey = cases[0].key;
@@ -1083,14 +1195,6 @@
 
     function getSelectedCase(){
       return cases.find(x => x.key === selectedCaseKey) || null;
-    }
-
-    function enableDownloads(enable){
-      el("btnDownloadCSV").disabled = !enable;
-      el("btnDownloadZip").disabled = !enable;
-      el("btnDownloadPDF").disabled = !enable;
-      el("btnOnePng").disabled = !enable;
-      el("btnCopySms").disabled = !enable;
     }
 
     function updatePreview(){
@@ -1109,21 +1213,13 @@
       renderRawTable();
       renderCaseTable();
       populateCaseSelect();
-      enableDownloads(!!cases.length);
+      enableActions(!!cases.length);
       updatePreview();
     }
 
     /***********************
-     * 다운로드
+     * 다운로드 유틸
      ***********************/
-    function csvEscape(value){
-      const s = String(value ?? "");
-      if(/[",\n]/.test(s)){
-        return `"${s.replace(/"/g,'""')}"`;
-      }
-      return s;
-    }
-
     function downloadBlob(blob, filename){
       const a = document.createElement("a");
       const url = URL.createObjectURL(blob);
@@ -1135,90 +1231,247 @@
       URL.revokeObjectURL(url);
     }
 
-    function downloadText(text, filename, mime="text/plain;charset=utf-8"){
-      const blob = new Blob([text], { type: mime });
-      downloadBlob(blob, filename);
-    }
-
     function canvasToBlob(canvas, type="image/png", quality){
-      return new Promise((resolve) => canvas.toBlob(b => resolve(b), type, quality));
+      return new Promise((resolve) => canvas.toBlob((b) => resolve(b), type, quality));
     }
 
     function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
-    function downloadCSV(){
-      const lines = [];
-      lines.push(["학년","반","이름","납입금명(요약)","총미납액","문자문구"].map(csvEscape).join(","));
-      for(const c of cases){
-        const row = [c.학년, c.반, c.이름, c.납입금명요약, c.total, buildSmsForCase(c)];
-        lines.push(row.map(csvEscape).join(","));
-      }
-      const text = "\ufeff" + lines.join("\n");
-      const d = parseDateInput(el("docDate").value) || new Date();
-      downloadText(text, `미납문자_명단_${toISODate(d)}.csv`, "text/csv;charset=utf-8");
+    /***********************
+     * ✅ 문구 엑셀 생성(.xlsx)
+     ***********************/
+    function buildMessageWorkbookArrayBuffer(){
+      const schoolName = el("schoolName").value.trim();
+      const bankName   = el("bankName").value.trim();
+      const accountNum = el("accountNumber").value.trim();
+      const roundText  = el("roundText").value.trim();
+
+      const wb = XLSX.utils.book_new();
+
+      // 시트1: 문자문구
+      const header1 = ["학년","반","번호","이름","납입금명(요약)","총 미납액","문자문구"];
+      const rows1 = cases.map(c => ([
+        c.학년 ?? "",
+        c.반 ?? "",
+        (c.번호 ?? "") ? `${c.번호}번` : "",
+        c.이름 ?? "",
+        c.납입금명요약 ?? "",
+        c.total ?? 0,
+        buildSmsForCase(c),
+      ]));
+      const ws1 = XLSX.utils.aoa_to_sheet([header1, ...rows1]);
+
+      // 보기 좋게 열 폭
+      ws1["!cols"] = [
+        { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 30 }, { wch: 12 }, { wch: 60 }
+      ];
+      XLSX.utils.book_append_sheet(wb, ws1, "문자문구");
+
+      // 시트2: 추출원본(6개만)
+      const header2 = ["학년","반","번호","이름","납입금명","미납액"];
+      const rows2 = rawRows.map(r => ([
+        r.학년 ?? "",
+        r.반 ?? "",
+        (r.번호 ?? "") ? `${r.번호}번` : "",
+        r.이름 ?? "",
+        r.납입금명 ?? "",
+        r.미납액 ?? 0,
+      ]));
+      const ws2 = XLSX.utils.aoa_to_sheet([header2, ...rows2]);
+      ws2["!cols"] = [{wch:10},{wch:10},{wch:8},{wch:10},{wch:22},{wch:12}];
+      XLSX.utils.book_append_sheet(wb, ws2, "추출원본");
+
+      // 메타를 따로 넣고 싶으면 시트 추가 가능(하지만 지금은 심플하게)
+      const out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      return out;
     }
 
-    async function downloadZipPng(){
+    function downloadXlsxOnly(){
+      const d = parseDateInput(el("docDate").value) || new Date();
+      const dateISO = toISODate(d);
+      const buf = buildMessageWorkbookArrayBuffer();
+      const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      downloadBlob(blob, `미납_문구_${dateISO}.xlsx`);
+    }
+
+    /***********************
+     * PNG ZIP만
+     ***********************/
+    async function buildPngZipBlob(progressCb){
       const zip = new JSZip();
       const d = parseDateInput(el("docDate").value) || new Date();
       const dateISO = toISODate(d);
-
-      const tempCanvas = document.createElement("canvas");
       const scale = Number(el("exportScale").value) || 1;
 
-      setStatus(`안내문 PNG 생성중… (0/${cases.length})`, "");
-      for(let i=0;i<cases.length;i++){
-        const c = cases[i];
-        const slots = Math.max(6, Math.min(20, Math.floor(num("cfg_slots", 10))));
-        const clipped = { ...c, items: c.items.slice(0, slots) };
+      const noticesFolder = zip.folder("notices");
+      const tempCanvas = document.createElement("canvas");
 
-        renderNoticeToCanvas(clipped, tempCanvas, { baseW: 1080, baseH: 1350, scale });
+      let totalPages = 0;
+      const allPages = [];
+      for(const c of cases){
+        const pages = chunkItemsForPages(c);
+        for(let i=0;i<pages.length;i++){
+          allPages.push({ base: c, page: pages[i], idx: i+1, cnt: pages.length });
+        }
+      }
+      totalPages = allPages.length;
+
+      for(let k=0;k<allPages.length;k++){
+        const { base, page, idx, cnt } = allPages[k];
+
+        renderNoticeToCanvas(page, tempCanvas, { baseW: 1080, baseH: 1350, scale });
         const blob = await canvasToBlob(tempCanvas, "image/png");
 
-        const fname = `${dateISO}_${c.학년}${c.반}_${c.이름}_미납안내문.png`
-          .replace(/[\/\\?%*:|"<>]/g, "_").replace(/\s+/g, " ").trim();
-        zip.file(fname, blob);
+        const safeName = `${dateISO}_${base.학년}${base.반}_${base.번호 ?? ""}번_${base.이름}`
+          .replace(/[\/\\?%*:|"<>]/g, "_")
+          .replace(/\s+/g, " ")
+          .trim();
 
-        setStatus(`안내문 PNG 생성중… (${i+1}/${cases.length})`, "");
+        const suffix = (cnt > 1) ? `_p${idx}` : "";
+        noticesFolder.file(`${safeName}${suffix}.png`, blob);
+
+        if(progressCb) progressCb(k+1, totalPages);
         await sleep(0);
       }
 
-      const zipBlob = await zip.generateAsync({ type: "blob" });
+      return await zip.generateAsync({ type: "blob" });
+    }
+
+    async function downloadPngZipOnly(){
+      const d = parseDateInput(el("docDate").value) || new Date();
+      const dateISO = toISODate(d);
+
+      setStatus(`PNG ZIP 생성중…`, "");
+      const zipBlob = await buildPngZipBlob((cur,total) => {
+        setStatus(`PNG ZIP 생성중… (${cur}/${total})`, "");
+      });
       downloadBlob(zipBlob, `미납안내문_PNG_${dateISO}.zip`);
       setStatus("PNG ZIP 다운로드 준비 완료 ✅", "ok");
     }
 
-    async function downloadPDF(){
+    /***********************
+     * PDF만
+     ***********************/
+    async function buildPdfBlob(progressCb){
       const { jsPDF } = window.jspdf;
-      const d = parseDateInput(el("docDate").value) || new Date();
-      const dateISO = toISODate(d);
 
       const pageW = 1080, pageH = 1350;
       const doc = new jsPDF({ orientation: "portrait", unit: "px", format: [pageW, pageH] });
 
-      const tempCanvas = document.createElement("canvas");
       const scale = Number(el("exportScale").value) || 1;
+      const tempCanvas = document.createElement("canvas");
 
-      setStatus(`안내문 PDF 생성중… (0/${cases.length})`, "");
-      for(let i=0;i<cases.length;i++){
-        const c = cases[i];
-        const slots = Math.max(6, Math.min(20, Math.floor(num("cfg_slots", 10))));
-        const clipped = { ...c, items: c.items.slice(0, slots) };
+      const allPages = [];
+      for(const c of cases){
+        const pages = chunkItemsForPages(c);
+        for(let i=0;i<pages.length;i++){
+          allPages.push({ page: pages[i] });
+        }
+      }
 
-        renderNoticeToCanvas(clipped, tempCanvas, { baseW: pageW, baseH: pageH, scale });
+      for(let i=0;i<allPages.length;i++){
+        const p = allPages[i].page;
+
+        renderNoticeToCanvas(p, tempCanvas, { baseW: pageW, baseH: pageH, scale });
         const imgData = tempCanvas.toDataURL("image/jpeg", 0.92);
 
         if(i > 0) doc.addPage([pageW, pageH], "portrait");
         doc.addImage(imgData, "JPEG", 0, 0, pageW, pageH);
 
-        setStatus(`안내문 PDF 생성중… (${i+1}/${cases.length})`, "");
+        if(progressCb) progressCb(i+1, allPages.length);
         await sleep(0);
       }
 
-      doc.save(`미납안내문_${dateISO}.pdf`);
+      const ab = doc.output("arraybuffer");
+      return new Blob([ab], { type: "application/pdf" });
+    }
+
+    async function downloadPdfOnly(){
+      const d = parseDateInput(el("docDate").value) || new Date();
+      const dateISO = toISODate(d);
+
+      setStatus("PDF 생성중…", "");
+      const pdfBlob = await buildPdfBlob((cur,total) => {
+        setStatus(`PDF 생성중… (${cur}/${total})`, "");
+      });
+      downloadBlob(pdfBlob, `미납안내문_${dateISO}.pdf`);
       setStatus("PDF 다운로드 준비 완료 ✅", "ok");
     }
 
+    /***********************
+     * ✅ 전체 결과 ZIP(엑셀 + PNG + PDF)
+     ***********************/
+    async function downloadAllInOneZip(){
+      const btn = el("btnDownloadAllZip");
+      disableWhile(btn, true);
+
+      try{
+        const d = parseDateInput(el("docDate").value) || new Date();
+        const dateISO = toISODate(d);
+
+        const zip = new JSZip();
+
+        // 1) 엑셀
+        setStatus("전체 ZIP 생성중… (1/3) 문구 엑셀 생성", "");
+        const xlsxBuf = buildMessageWorkbookArrayBuffer();
+        zip.file(`미납_문구_${dateISO}.xlsx`, xlsxBuf);
+
+        // 2) PNG들
+        setStatus("전체 ZIP 생성중… (2/3) 안내문 PNG 생성", "");
+        const noticesFolder = zip.folder("notices");
+        const scale = Number(el("exportScale").value) || 1;
+        const tempCanvas = document.createElement("canvas");
+
+        const pagesList = [];
+        for(const c of cases){
+          const pages = chunkItemsForPages(c);
+          for(let i=0;i<pages.length;i++){
+            pagesList.push({ base: c, page: pages[i], idx: i+1, cnt: pages.length });
+          }
+        }
+
+        for(let i=0;i<pagesList.length;i++){
+          const { base, page, idx, cnt } = pagesList[i];
+
+          renderNoticeToCanvas(page, tempCanvas, { baseW: 1080, baseH: 1350, scale });
+          const blob = await canvasToBlob(tempCanvas, "image/png");
+
+          const safeName = `${dateISO}_${base.학년}${base.반}_${base.번호 ?? ""}번_${base.이름}`
+            .replace(/[\/\\?%*:|"<>]/g, "_")
+            .replace(/\s+/g, " ")
+            .trim();
+
+          const suffix = (cnt > 1) ? `_p${idx}` : "";
+          noticesFolder.file(`${safeName}${suffix}.png`, blob);
+
+          setStatus(`전체 ZIP 생성중… (2/3) 안내문 PNG 생성 (${i+1}/${pagesList.length})`, "");
+          await sleep(0);
+        }
+
+        // 3) PDF
+        setStatus("전체 ZIP 생성중… (3/3) 안내문 PDF 생성", "");
+        const pdfBlob = await buildPdfBlob((cur,total) => {
+          setStatus(`전체 ZIP 생성중… (3/3) 안내문 PDF 생성 (${cur}/${total})`, "");
+        });
+        zip.file(`미납안내문_${dateISO}.pdf`, pdfBlob);
+
+        // ZIP 완성
+        setStatus("전체 ZIP 압축 중…", "");
+        const zipBlob = await zip.generateAsync({ type: "blob" });
+        downloadBlob(zipBlob, `미납_전체결과_${dateISO}.zip`);
+        setStatus("전체 결과 ZIP 다운로드 준비 완료 ✅", "ok");
+
+      }catch(err){
+        console.error(err);
+        setStatus(String(err?.message || err), "err");
+      }finally{
+        disableWhile(btn, false);
+      }
+    }
+
+    /***********************
+     * 선택 학생 1장 PNG / 복사
+     ***********************/
     async function downloadOnePng(){
       const c = getSelectedCase();
       if(!c) return;
@@ -1228,15 +1481,18 @@
       const scale = Number(el("exportScale").value) || 1;
 
       const canvas = document.createElement("canvas");
-      const slots = Math.max(6, Math.min(20, Math.floor(num("cfg_slots", 10))));
-      const clipped = { ...c, items: c.items.slice(0, slots) };
+      const pages = chunkItemsForPages(c);
+      const first = pages[0];
 
-      renderNoticeToCanvas(clipped, canvas, { baseW: 1080, baseH: 1350, scale });
+      renderNoticeToCanvas(first, canvas, { baseW: 1080, baseH: 1350, scale });
       const blob = await canvasToBlob(canvas, "image/png");
 
-      const fname = `${dateISO}_${c.학년}${c.반}_${c.이름}_미납안내문.png`
-        .replace(/[\/\\?%*:|"<>]/g, "_").replace(/\s+/g, " ").trim();
-      downloadBlob(blob, fname);
+      const safeName = `${dateISO}_${c.학년}${c.반}_${c.번호 ?? ""}번_${c.이름}`
+        .replace(/[\/\\?%*:|"<>]/g, "_")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      downloadBlob(blob, `${safeName}.png`);
     }
 
     async function copySelectedSms(){
@@ -1254,22 +1510,30 @@
       }
     }
 
-    /***********************
-     * 이벤트
-     ***********************/
-    el("btnApplySamplePreset").addEventListener("click", () => {
-      applyPreset(SAMPLE_PRESET, true);
-      setStatus("샘플 프리셋 적용 완료 ✅", "ok");
-    });
-
-    el("excelFile").addEventListener("change", async (ev) => {
-      const file = ev.target.files?.[0];
-      if(!file){
-        setStatus("대기중… 엑셀을 올리면 자동으로 추출합니다.", "");
-        return;
-      }
+    async function copyAllSms(){
+      const text = buildAllSmsText();
       try{
-        setStatus("엑셀 읽는 중…", "");
+        await navigator.clipboard.writeText(text);
+        setStatus("전체 문자 문구를 클립보드에 복사했습니다 ✅", "ok");
+      }catch(_){
+        // fallback: 임시 textarea
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        ta.remove();
+        setStatus("전체 복사 완료(대체 방식) ✅", "ok");
+      }
+    }
+
+    /***********************
+     * 업로드 처리(파일 선택/드롭 공통)
+     ***********************/
+    async function handleExcelFile(file){
+      if(!file) return;
+      try{
+        setStatus(`엑셀 읽는 중…\n- 파일: ${file.name}`, "");
         const buf = await file.arrayBuffer();
         rawRows = parseXlsx(buf);
 
@@ -1279,7 +1543,6 @@
 
         cases = buildCasesFromRaw(rawRows);
         renderAll();
-
         setStatus(`추출 완료 ✅\n- 행 단위: ${rawRows.length}건\n- 학생별 통합: ${cases.length}건`, "ok");
         saveSettings();
       }catch(err){
@@ -1291,19 +1554,77 @@
         el("smsPreview").value = "";
         setStatus(String(err?.message || err), "err");
       }
-    });
+    }
 
-    el("caseSelect").addEventListener("change", (ev) => {
-      selectedCaseKey = ev.target.value;
-      updatePreview();
-      saveSettings();
+    /***********************
+     * 드래그&드롭 UI
+     ***********************/
+    function setupDropzone(){
+      const dz = el("dropZone");
+      const input = el("excelFile");
+
+      function openPicker(){ input.click(); }
+
+      dz.addEventListener("click", openPicker);
+      dz.addEventListener("keydown", (e) => {
+        if(e.key === "Enter" || e.key === " "){
+          e.preventDefault();
+          openPicker();
+        }
+      });
+
+      input.addEventListener("change", async (e) => {
+        const file = e.target.files?.[0];
+        await handleExcelFile(file);
+        // 같은 파일 다시 선택 가능하게
+        input.value = "";
+      });
+
+      dz.addEventListener("dragenter", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dz.classList.add("is-dragover");
+      });
+      dz.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dz.classList.add("is-dragover");
+      });
+      dz.addEventListener("dragleave", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dz.classList.remove("is-dragover");
+      });
+      dz.addEventListener("drop", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dz.classList.remove("is-dragover");
+
+        const file = e.dataTransfer?.files?.[0];
+        if(!file) return;
+        if(!/\.xlsx?$/.test(file.name.toLowerCase())){
+          setStatus("엑셀(.xlsx/.xls) 파일만 업로드할 수 있습니다.", "err");
+          return;
+        }
+        await handleExcelFile(file);
+      });
+    }
+
+    /***********************
+     * 이벤트
+     ***********************/
+    el("btnApplySamplePreset").addEventListener("click", () => {
+      applyPreset(SAMPLE_PRESET, true);
+      setStatus("샘플 프리셋 적용 완료 ✅", "ok");
     });
 
     el("btnLoadSample").addEventListener("click", () => {
+      // 샘플(번호 포함)
       rawRows = [
-        { 학년:"1학년", 반:"달반", 이름:"김가온", 납입금명:"우유급식비", 미납액:15710 },
-        { 학년:"3학년", 반:"별반", 이름:"김민지", 납입금명:"우유급식비", 미납액:36290 },
-        { 학년:"3학년", 반:"별반", 이름:"김민지", 납입금명:"우유급식비", 미납액:44170 },
+        { 학년:"1학년", 반:"달반", 번호:2, 이름:"김가온", 납입금명:"우유급식비", 미납액:15710 },
+        { 학년:"3학년", 반:"달반", 번호:5, 이름:"노승민", 납입금명:"우유급식비", 미납액:44170 },
+        { 학년:"3학년", 반:"별반", 번호:4, 이름:"김민지", 납입금명:"우유급식비", 미납액:36290 },
+        { 학년:"3학년", 반:"별반", 번호:4, 이름:"김민지", 납입금명:"우유급식비", 미납액:44170 },
       ];
       cases = buildCasesFromRaw(rawRows);
       renderAll();
@@ -1312,7 +1633,6 @@
     });
 
     el("btnReset").addEventListener("click", () => {
-      el("excelFile").value = "";
       rawRows = [];
       cases = [];
       selectedCaseKey = "";
@@ -1326,7 +1646,6 @@
       el("docDate").value = toISODate(new Date());
       el("smsTemplate").value = DEFAULT_SMS_TEMPLATE;
 
-      // 샘플 프리셋 기본값 복귀
       applyPreset(SAMPLE_PRESET, false);
 
       localStorage.removeItem(STORAGE_KEY);
@@ -1338,9 +1657,19 @@
       setStatus("초기화 완료. 엑셀을 다시 업로드하세요.", "");
     });
 
-    el("btnDownloadCSV").addEventListener("click", () => cases.length && downloadCSV());
-    el("btnDownloadZip").addEventListener("click", async () => cases.length && downloadZipPng());
-    el("btnDownloadPDF").addEventListener("click", async () => cases.length && downloadPDF());
+    el("caseSelect").addEventListener("change", (ev) => {
+      selectedCaseKey = ev.target.value;
+      updatePreview();
+      saveSettings();
+    });
+
+    el("btnDownloadAllZip").addEventListener("click", () => cases.length && downloadAllInOneZip());
+    el("btnCopyAllSms").addEventListener("click", () => cases.length && copyAllSms());
+
+    el("btnDownloadXlsxOnly").addEventListener("click", () => cases.length && downloadXlsxOnly());
+    el("btnDownloadPngZipOnly").addEventListener("click", () => cases.length && downloadPngZipOnly());
+    el("btnDownloadPdfOnly").addEventListener("click", () => cases.length && downloadPdfOnly());
+
     el("btnOnePng").addEventListener("click", async () => downloadOnePng());
     el("btnCopySms").addEventListener("click", async () => copySelectedSms());
 
@@ -1359,18 +1688,25 @@
       el(id).addEventListener("change", () => { updatePreview(); saveSettings(); });
     }
 
-    // 초기 세팅: 저장값이 없으면 샘플 프리셋을 기본 적용
-    const hasSaved = loadSettings();
-    if(!el("smsTemplate").value.trim()) el("smsTemplate").value = DEFAULT_SMS_TEMPLATE;
-    if(!el("docDate").value) el("docDate").value = toISODate(new Date());
-    if(!hasSaved){
-      applyPreset(SAMPLE_PRESET, false);
-      saveSettings();
-    }
+    /***********************
+     * 초기 로드
+     ***********************/
+    (function init(){
+      setupDropzone();
 
-    enableDownloads(false);
-    renderAll();
-    setStatus("대기중… 엑셀 업로드 또는 샘플 데이터로 시작하세요.", "");
+      const hasSaved = loadSettings();
+      if(!el("smsTemplate").value.trim()) el("smsTemplate").value = DEFAULT_SMS_TEMPLATE;
+      if(!el("docDate").value) el("docDate").value = toISODate(new Date());
+
+      if(!hasSaved){
+        applyPreset(SAMPLE_PRESET, false);
+        saveSettings();
+      }
+
+      enableActions(false);
+      renderAll();
+      setStatus("대기중… 엑셀 드래그/클릭 업로드 또는 샘플 데이터로 시작하세요.", "");
+    })();
   </script>
 
   <!-- ✅ 요청하신 공통 JS (</body> 직전) -->
