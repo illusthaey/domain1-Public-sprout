@@ -3,19 +3,30 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>인사발령 결원 체크</title>
+  <title>인사발령 정원 확인 필요 체크</title>
 
-  <!-- 공통 스타일 -->
-  <link rel="stylesheet" href="static/style.css" />
+  <!-- ✅ 공통 스타일: /static 경로 우선 (서버 환경)
+       실패 시(예: 하위 경로/로컬 파일) static/style.css 로 폴백 -->
+  <link id="commonStyle" rel="stylesheet" href="/static/style.css" />
+  <script>
+    (function () {
+      const link = document.getElementById("commonStyle");
+      if (!link) return;
 
-  <!-- (선택) 엑셀 파서: 1) 로컬(static) 우선 2) CDN 대체 -->
-  <!-- 오프라인/폐쇄망이면 static/xlsx.full.min.js 를 두고 쓰세요. -->
-  <script src="static/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+      // 일부 브라우저/환경에서는 link.onerror 이벤트가 안 잡힐 수 있지만,
+      // 잡히는 환경에서는 가장 깔끔한 폴백이 됩니다.
+      link.addEventListener("error", function () {
+        const alt = document.createElement("link");
+        alt.rel = "stylesheet";
+        alt.href = "static/style.css";
+        document.head.appendChild(alt);
+        console.warn("[style] /static/style.css 로드 실패 → static/style.css 로 폴백");
+      });
+    })();
+  </script>
 
   <style>
-    /* 이 페이지 전용: 공통 스타일에 최소한으로만 덧댐 */
-
+    /* 페이지 전용 미세 스타일: 공통 style.css를 최대한 그대로 사용 */
     .pill {
       display: inline-block;
       padding: 2px 10px;
@@ -30,39 +41,9 @@
     .pill.blue { border-color: #bfdbfe; background: #eff6ff; color: #1d4ed8; }
     .pill.gray { border-color: #e5e7eb; background: #f9fafb; color: #6b7280; }
 
-    .mono {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size: 0.95rem;
-    }
-
-    .hint {
-      font-size: 0.95rem;
-      color: #555;
-      margin: 10px 0 0;
-    }
-
-    /* 클릭 가능한 행 */
-    tr.clickable:hover {
-      background: #f3f4f6;
-      cursor: pointer;
-    }
-
-    /* 차이(전출-전입) 강조 */
     .diff.pos { color: #b91c1c; font-weight: 700; }
     .diff.neg { color: #1d4ed8; font-weight: 700; }
     .diff.zero { color: #6b7280; }
-
-    .small { font-size: 0.95rem; }
-    .nowrap { white-space: nowrap; }
-
-    .clean-list {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-    }
-    .clean-list li { margin: 8px 0; }
-    .clean-list .who { font-weight: 700; color: #111; }
-    .clean-list .meta { display: block; color: #555; font-size: 0.95rem; margin-top: 2px; }
 
     .kbd {
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
@@ -74,112 +55,172 @@
     }
 
     /* 파일 input 숨김 */
-    #fileInput { display: none; }
+    #fileInput { display:none; }
 
-    /* 모바일에서 버튼 줄바꿈 깔끔 */
-    .row.wrap { flex-wrap: wrap; }
+    /* 클릭 가능한 행 */
+    tr.clickable:hover { background:#f3f4f6; cursor:pointer; }
 
-    /* 테이블 숫자 우측정렬 보강(공통에 numeric 있지만 th에도 적용) */
-    th.numeric, td.numeric { text-align: right; }
+    /* 로그 */
+    #logBox { white-space: pre-wrap; margin: 0; }
 
-    /* 로그 박스 */
-    #logBox {
-      white-space: pre-wrap;
+    /* 선택 강조 */
+    tr.is-selected { outline: 2px solid rgba(0,0,0,0.18); outline-offset: -2px; }
+
+    /* 작은 설명 */
+    .help { margin: 10px 0 0; }
+    .help ul { margin: 8px 0 0; padding-left: 18px; }
+    .help li { margin: 4px 0; }
+
+    /* 카드 헤더 정렬 */
+    .card-head {
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .card-title {
       margin: 0;
     }
+    .card-actions {
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .sticky-note {
+      background: #fff;
+      border: 1px solid #e5e5e5;
+      border-radius: 12px;
+      padding: 10px 12px;
+    }
+
+    .clean-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .clean-list li { margin: 8px 0; }
+    .clean-list .who { font-weight: 700; color: #111; }
+    .clean-list .meta { display:block; color:#555; font-size: 0.95rem; margin-top:2px; }
+
+    /* 모바일에서 테이블 보기 */
+    .table-wrap table { min-width: 760px; }
   </style>
 </head>
 
 <body>
+  <!-- (선택) 메인으로 -->
+  <div class="home-link-wrap">
+    <a class="btn-home" href="/">← 메인으로</a>
+  </div>
+
   <header class="site-header">
     <div class="shell">
-      <h1>인사발령 결원 체크</h1>
+      <h1>인사발령 정원 확인 필요 체크</h1>
       <p class="subtitle">
-        엑셀을 업로드하면 <span class="kbd">전출/퇴직(출발)</span> 대비 <span class="kbd">전입(도착)</span>이 부족한 학교(부서)를 시트별로 찾아줍니다.
+        엑셀을 업로드하면 <span class="kbd">전출/퇴직(출발)</span> 대비 <span class="kbd">전입(도착)</span>이 부족한 학교(부서)를
+        <b>“결원 의심(정원 확인 필요)”</b>로 표시합니다.
       </p>
     </div>
   </header>
 
   <main class="container">
-    <section class="section">
-      <h2 class="local-h2">1) 엑셀 업로드</h2>
+
+    <!-- 1) 업로드 -->
+    <section class="tool-card">
+      <div class="tool-head card-head">
+        <div>
+          <h2 class="card-title">엑셀 업로드</h2>
+          <p class="tool-sub">원주 관내 교육공무직 서식 기준: <span class="kbd">D열=전입</span>, <span class="kbd">F열=전출/퇴직</span></p>
+        </div>
+        <div class="card-actions">
+          <label class="btn" for="fileInput">파일 선택</label>
+          <input id="fileInput" type="file" accept=".xlsx,.xls" />
+          <button id="btnAnalyze" class="btn primary">분석 실행</button>
+          <button id="btnClear" class="btn ghost">초기화</button>
+        </div>
+      </div>
+
+      <hr/>
 
       <div class="grid two">
-        <div class="card">
-          <div class="row between wrap">
-            <label class="btn ghost" for="fileInput" title="엑셀 파일(.xlsx/.xls) 선택">
-              파일 선택
-            </label>
-            <input id="fileInput" type="file" accept=".xlsx,.xls" />
-            <div class="row gap">
-              <button id="btnAnalyze" class="btn primary">분석 실행</button>
-              <button id="btnClear" class="btn">초기화</button>
-            </div>
+        <div class="sticky-note">
+          <p id="fileMeta" class="muted" style="margin:0;">아직 파일이 없습니다.</p>
+          <p id="libWarn" class="note muted" style="display:none; margin:10px 0 0;"></p>
+
+          <div class="help muted">
+            <ul>
+              <li>이 화면의 결과는 <b>“결원 확정”</b>이 아니라 <b>“결원 의심 → 정원 확인 필요”</b>입니다.</li>
+              <li><span class="pill red">정원 확인 필요</span>는 같은 시트에서 <b>전출/퇴직 − 전입</b>이 <b>양수</b>일 때 표시됩니다.</li>
+              <li><span class="pill red">전입없음(Y)</span>는 “전출/퇴직은 있는데 전입이 0”인 경우로, 실무에서 말하는 <b>‘비는 자리 후보’</b>를 빠르게 찾을 때 유용합니다.</li>
+            </ul>
           </div>
-
-          <p id="fileMeta" class="muted" style="margin-top:10px;">아직 파일이 없습니다.</p>
-
-          <p class="hint">
-            기본 로직(원주 관내 교육공무직 서식): <span class="kbd">D열=전입(임용사항 부서)</span>,
-            <span class="kbd">F열=전출/퇴직(현직 부서)</span><br/>
-            ※ 아래에서 컬럼을 바꾸면 다른 서식에도 응용 가능합니다.
-          </p>
-
-          <p id="libWarn" class="note muted" style="display:none;"></p>
         </div>
 
-        <div class="card">
-          <h3 class="local-h3 local-tight">컬럼 매핑</h3>
-          <p class="muted" style="margin-top:0;">
-            데이터 행 판별은 기본적으로 <span class="kbd">연번(순번)</span> 컬럼이 숫자인 행을 사용합니다.
-          </p>
+        <div>
+          <details class="shot-details">
+            <summary class="shot-summary">고급 설정: 컬럼 매핑(서식이 다를 때 변경)</summary>
+            <div class="card" style="margin-top:10px;">
+              <p class="muted" style="margin-top:0;">
+                데이터 행 판별은 기본적으로 <span class="kbd">연번(순번)</span> 컬럼이 숫자인 행만 사용합니다.
+              </p>
 
-          <div class="grid three">
-            <div class="field">
-              <label class="muted">연번 컬럼</label>
-              <input id="colSeq" type="text" value="A" maxlength="3" />
-            </div>
-            <div class="field">
-              <label class="muted">성명 컬럼</label>
-              <input id="colName" type="text" value="B" maxlength="3" />
-            </div>
-            <div class="field">
-              <label class="muted">비고 컬럼</label>
-              <input id="colNote" type="text" value="H" maxlength="3" />
-            </div>
-            <div class="field">
-              <label class="muted">전입(도착) 컬럼</label>
-              <input id="colIn" type="text" value="D" maxlength="3" />
-            </div>
-            <div class="field">
-              <label class="muted">전출/퇴직(출발) 컬럼</label>
-              <input id="colOut" type="text" value="F" maxlength="3" />
-            </div>
-            <div class="field">
-              <label class="muted">옵션</label>
-              <label class="row gap" style="margin-top:6px;">
-                <input id="optNormalize" type="checkbox" checked />
-                <span class="muted">학교명 공백/개행 정리</span>
-              </label>
-            </div>
-          </div>
+              <div class="grid three">
+                <div class="field">
+                  <label class="muted">연번 컬럼</label>
+                  <input id="colSeq" type="text" value="A" maxlength="3" />
+                </div>
+                <div class="field">
+                  <label class="muted">성명 컬럼</label>
+                  <input id="colName" type="text" value="B" maxlength="3" />
+                </div>
+                <div class="field">
+                  <label class="muted">비고 컬럼</label>
+                  <input id="colNote" type="text" value="H" maxlength="3" />
+                </div>
+                <div class="field">
+                  <label class="muted">전입(도착) 컬럼</label>
+                  <input id="colIn" type="text" value="D" maxlength="3" />
+                </div>
+                <div class="field">
+                  <label class="muted">전출/퇴직(출발) 컬럼</label>
+                  <input id="colOut" type="text" value="F" maxlength="3" />
+                </div>
+                <div class="field">
+                  <label class="muted">옵션</label>
+                  <label class="row gap" style="margin-top:6px;">
+                    <input id="optNormalize" type="checkbox" checked />
+                    <span class="muted">학교명 공백/개행 정리</span>
+                  </label>
+                </div>
+              </div>
 
-          <p class="note">
-            <span class="pill gray">결원 판정</span>
-            같은 시트에서 학교별 <b>전출/퇴직 인원 − 전입 인원</b>이 <b>양수</b>이면 결원으로 표시합니다.
-          </p>
+              <p class="note">
+                ※ 학교명 표기가 조금만 달라도(공백/괄호/줄바꿈 등) 다른 학교로 인식할 수 있어요. 필요하면 정리 옵션을 켜세요.
+              </p>
+            </div>
+          </details>
         </div>
       </div>
     </section>
 
-    <section class="section" id="summarySection" style="display:none;">
-      <div class="row between wrap">
-        <h2 class="local-h2" style="margin:0;">2) 시트별 요약</h2>
-        <div class="row gap">
-          <button id="btnDownloadAllVacancy" class="btn btn-lightgrey">전체 결원 CSV</button>
+    <!-- 2) 요약 -->
+    <section class="tool-card" id="summarySection" style="display:none;">
+      <div class="tool-head card-head">
+        <div>
+          <h2 class="card-title">시트별 요약</h2>
+          <p class="tool-sub">시트를 클릭하면 아래 상세가 해당 시트로 이동합니다.</p>
+        </div>
+        <div class="card-actions">
+          <button id="btnDownloadAllSuspect" class="btn btn-lightgrey">전체 정원확인필요 CSV</button>
           <button id="btnDownloadAllNet" class="btn btn-lightgrey">전체(순증감) CSV</button>
         </div>
       </div>
+
+      <hr/>
 
       <div class="table-wrap">
         <table class="sheetlike" id="summaryTable">
@@ -188,10 +229,10 @@
               <th>시트</th>
               <th class="numeric">전입</th>
               <th class="numeric">전출/퇴직</th>
-              <th class="numeric">결원학교</th>
-              <th class="numeric">결원인원</th>
-              <th class="numeric">순증가학교</th>
-              <th class="numeric">순증가인원</th>
+              <th class="numeric">정원확인 필요 학교</th>
+              <th class="numeric">정원확인 필요 인원</th>
+              <th class="numeric">순증가 학교</th>
+              <th class="numeric">순증가 인원</th>
               <th class="numeric">총차이(전출-전입)</th>
             </tr>
           </thead>
@@ -199,36 +240,76 @@
         </table>
       </div>
 
-      <p class="muted">시트 행을 클릭하면 아래 ‘시트 상세’가 바뀝니다.</p>
+      <p class="muted">※ “정원확인 필요 인원”은 <b>전출/퇴직 − 전입</b>의 합(양수만)입니다.</p>
     </section>
 
-    <section class="section" id="detailSection" style="display:none;">
-      <h2 class="local-h2">3) 시트 상세</h2>
+    <!-- 3) 전체 정원확인 필요 목록 -->
+    <section class="tool-card" id="allSuspectSection" style="display:none;">
+      <div class="tool-head card-head">
+        <div>
+          <h2 class="card-title">전체 정원 확인 필요 목록</h2>
+          <p class="tool-sub">엑셀 전체 시트에서 “결원 의심(정원 확인 필요)”만 모아 보여줍니다.</p>
+        </div>
+        <div class="card-actions">
+          <input id="allFilter" type="text" placeholder="학교/부서 검색 (예: 반곡중)" />
+          <button id="btnDownloadAllCurrent" class="btn btn-lightgrey">현재 목록 CSV</button>
+        </div>
+      </div>
+
+      <hr/>
+
+      <p id="allStats" class="muted" style="margin-top:0;"></p>
+
+      <div class="table-wrap">
+        <table class="sheetlike" id="allTable">
+          <thead>
+            <tr>
+              <th>시트</th>
+              <th>학교(부서)</th>
+              <th class="numeric">전출</th>
+              <th class="numeric">전입</th>
+              <th class="numeric">정원확인 필요(전출-전입)</th>
+              <th class="numeric">전입없음</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <p class="muted">행을 클릭하면 아래 “학교 상세”에서 전입/전출 명단을 확인할 수 있습니다.</p>
+    </section>
+
+    <!-- 4) 시트 상세 -->
+    <section class="tool-card" id="detailSection" style="display:none;">
+      <div class="tool-head card-head">
+        <div>
+          <h2 class="card-title">시트 상세</h2>
+          <p class="tool-sub">시트/보기 모드를 바꾸고 학교를 클릭하면 명단을 확인할 수 있습니다.</p>
+        </div>
+        <div class="card-actions">
+          <span class="muted">시트</span>
+          <select id="sheetSelect"></select>
+
+          <span class="muted">보기</span>
+          <select id="modeSelect">
+            <option value="suspect">정원 확인 필요(결원 의심)</option>
+            <option value="all">전체</option>
+            <option value="surplus">순증가(전입&gt;전출)</option>
+            <option value="balanced">균형(전입=전출)</option>
+          </select>
+        </div>
+      </div>
+
+      <hr/>
 
       <div class="grid two">
-        <div class="card">
-          <div class="row between wrap">
-            <div class="row gap">
-              <span class="muted nowrap">시트</span>
-              <select id="sheetSelect"></select>
-            </div>
-            <div class="row gap">
-              <span class="muted nowrap">보기</span>
-              <select id="modeSelect">
-                <option value="vacancy">결원(전출&gt;전입)</option>
-                <option value="all">전체</option>
-                <option value="surplus">순증가(전입&gt;전출)</option>
-                <option value="balanced">균형(전입=전출)</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="row gap wrap" style="margin-top:10px;">
+        <div>
+          <div class="row gap" style="margin-bottom:10px; flex-wrap:wrap;">
             <input id="schoolFilter" type="text" placeholder="학교/부서 검색 (예: 반곡중)" />
             <button id="btnDownloadCsv" class="btn btn-lightgrey">현재 목록 CSV</button>
           </div>
 
-          <p id="sheetStats" class="muted" style="margin:10px 0 0;"></p>
+          <p id="sheetStats" class="muted" style="margin:0 0 10px;"></p>
 
           <div class="table-wrap">
             <table class="sheetlike" id="detailTable">
@@ -245,7 +326,7 @@
             </table>
           </div>
 
-          <p class="muted">행을 클릭하면 오른쪽에 해당 학교의 전입/전출 명단이 표시됩니다.</p>
+          <p class="muted">행 클릭 → 오른쪽에서 명단 확인</p>
         </div>
 
         <div class="card" id="schoolDetailCard">
@@ -255,17 +336,20 @@
       </div>
     </section>
 
-    <section class="section">
-      <h2 class="local-h2">처리 로그</h2>
-      <div class="card">
-        <pre id="logBox" class="muted"></pre>
+    <!-- 로그 -->
+    <section class="tool-card">
+      <div class="tool-head">
+        <h2 class="tool-title">처리 로그</h2>
+        <p class="tool-sub">CSS 로드/엑셀 파서 로드/분석 진행 상황을 확인할 수 있습니다.</p>
       </div>
+      <hr/>
+      <pre id="logBox" class="muted"></pre>
     </section>
   </main>
 
   <footer class="site-footer">
     <div class="shell">
-      <p>※ 주의: 학교명 표기가 서로 다르면(공백, 개행, 괄호 표기 등) 같은 학교로 합쳐지지 않을 수 있습니다. 필요하면 ‘학교명 공백/개행 정리’ 옵션을 켜세요.</p>
+      <p>※ 이 도구는 “전출/퇴직 &amp; 전입” 집계로 <b>정원 확인 필요 후보</b>를 빠르게 찾기 위한 화면입니다. 최종 결원 여부는 정원/배치 기준 확인이 필요합니다.</p>
     </div>
   </footer>
 
@@ -274,7 +358,7 @@
   "use strict";
 
   // ---------------------------
-  // DOM
+  // DOM helpers
   // ---------------------------
   const $ = (sel) => document.querySelector(sel);
 
@@ -294,8 +378,14 @@
 
     summarySection: $("#summarySection"),
     summaryTableBody: $("#summaryTable tbody"),
-    btnDownloadAllVacancy: $("#btnDownloadAllVacancy"),
+    btnDownloadAllSuspect: $("#btnDownloadAllSuspect"),
     btnDownloadAllNet: $("#btnDownloadAllNet"),
+
+    allSuspectSection: $("#allSuspectSection"),
+    allFilter: $("#allFilter"),
+    allStats: $("#allStats"),
+    allTableBody: $("#allTable tbody"),
+    btnDownloadAllCurrent: $("#btnDownloadAllCurrent"),
 
     detailSection: $("#detailSection"),
     sheetSelect: $("#sheetSelect"),
@@ -316,26 +406,29 @@
     file: null,
     workbookName: "",
     analyzed: false,
-    sheets: new Map(), // sheetName -> sheetData
+    sheets: new Map(),        // sheetName -> { moves[], schools(Map), summary }
     sheetOrder: [],
     selectedSheet: "",
     selectedSchool: "",
-    lastDetailList: [], // for CSV
+    lastDetailList: [],       // 현재 시트 상세 테이블 (CSV 용)
+    lastAllList: [],          // 전체 정원확인필요 테이블 (CSV 용)
   };
 
   // ---------------------------
-  // Helpers
+  // Logging
   // ---------------------------
   function log(line) {
     const ts = new Date().toLocaleTimeString();
     el.logBox.textContent += `[${ts}] ${line}\n`;
     el.logBox.scrollTop = el.logBox.scrollHeight;
   }
-
   function clearLog() {
     el.logBox.textContent = "";
   }
 
+  // ---------------------------
+  // Utilities
+  // ---------------------------
   function escapeHtml(s) {
     return String(s ?? "")
       .replace(/&/g, "&amp;")
@@ -356,7 +449,6 @@
   function colToIndex(col) {
     const s = String(col ?? "").trim().toUpperCase();
     if (!s) return null;
-    // "A" -> 0, "B" -> 1, ..., "Z" -> 25, "AA" -> 26
     let n = 0;
     for (let i = 0; i < s.length; i++) {
       const code = s.charCodeAt(i);
@@ -378,7 +470,6 @@
     if (!v) return "";
     const s = String(v);
     if (!enabled) return s.trim();
-    // 공백/개행/탭을 하나의 공백으로 정리
     return s.replace(/\s+/g, " ").trim();
   }
 
@@ -401,43 +492,85 @@
     setTimeout(() => URL.revokeObjectURL(url), 1200);
   }
 
-  function setLibWarningIfNeeded() {
-    if (window.XLSX) {
+  // ---------------------------
+  // XLSX loader (로컬 → CDN 폴백)
+  // ---------------------------
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = src;
+      s.onload = () => resolve(true);
+      s.onerror = () => reject(new Error("script load fail: " + src));
+      document.head.appendChild(s);
+    });
+  }
+
+  async function ensureXLSX() {
+    if (window.XLSX) return true;
+
+    // 서버 환경: /static, 파일 위치에 따라 상대경로도 시도
+    const sources = [
+      "/static/xlsx.full.min.js",
+      "static/xlsx.full.min.js",
+      "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"
+    ];
+
+    for (const src of sources) {
+      try {
+        log(`엑셀 파서 로드 시도: ${src}`);
+        await loadScript(src);
+        if (window.XLSX) {
+          log("엑셀 파서 로드 완료 ✅");
+          return true;
+        }
+      } catch (e) {
+        log(`로드 실패: ${src}`);
+      }
+    }
+    return false;
+  }
+
+  function setLibWarning(ok) {
+    if (ok) {
       el.libWarn.style.display = "none";
       el.btnAnalyze.disabled = false;
       return;
     }
-    el.libWarn.style.display = "block";
+    el.libWarn.style.display = "";
     el.libWarn.textContent =
       "⚠️ 엑셀 파서(XLSX)가 로드되지 않았습니다. " +
-      "폐쇄망이면 static/xlsx.full.min.js 를 프로젝트에 추가하거나, 인터넷이 되는 환경에서 CDN을 사용하세요.";
+      "폐쇄망이면 /static/xlsx.full.min.js 를 프로젝트에 추가하세요. (또는 인터넷 환경에서 CDN 사용)";
     el.btnAnalyze.disabled = true;
   }
 
   // ---------------------------
-  // Core analysis
+  // Analysis
   // ---------------------------
   async function analyzeCurrentFile() {
-    setLibWarningIfNeeded();
-    if (!window.XLSX) {
-      log("XLSX 라이브러리 없음 → 분석 중단");
-      return;
-    }
+    clearLog();
+
     if (!state.file) {
       log("파일이 선택되지 않았습니다.");
       return;
     }
 
-    clearLog();
+    // XLSX 보장
+    const ok = await ensureXLSX();
+    setLibWarning(ok);
+    if (!ok) {
+      log("XLSX 라이브러리 없음 → 분석 중단");
+      return;
+    }
+
     log(`분석 시작: ${state.file.name}`);
 
     // 컬럼 매핑
     const seqIdx = colToIndex(el.colSeq.value);
     const nameIdx = colToIndex(el.colName.value);
-    const inIdx = colToIndex(el.colIn.value);
-    const outIdx = colToIndex(el.colOut.value);
+    const inIdx   = colToIndex(el.colIn.value);
+    const outIdx  = colToIndex(el.colOut.value);
     const noteIdx = colToIndex(el.colNote.value);
-    const normOn = el.optNormalize.checked;
+    const normOn  = el.optNormalize.checked;
 
     const badCols = [
       ["연번", seqIdx],
@@ -465,7 +598,7 @@
       const ws = wb.Sheets[sheetName];
       const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
 
-      const schools = new Map(); // school -> {inCount, outCount, inMoves, outMoves}
+      const schools = new Map(); // school -> {inCount, outCount, inMoves[], outMoves[]}
       const moves = [];
 
       const getSchool = (school) => {
@@ -479,12 +612,12 @@
       for (let r = 0; r < rows.length; r++) {
         const row = rows[r] || [];
         const seq = toIntLike(row[seqIdx]);
-        if (seq === null) continue; // 데이터 행 아님
+        if (seq === null) continue; // 헤더/공백 행 제외
 
         recordCount++;
 
         const name = String(row[nameIdx] ?? "").trim();
-        const inSchool = normalizeSchoolName(row[inIdx], normOn);
+        const inSchool  = normalizeSchoolName(row[inIdx], normOn);
         const outSchool = normalizeSchoolName(row[outIdx], normOn);
         const note = String(row[noteIdx] ?? "").trim();
 
@@ -506,16 +639,16 @@
       // summary
       let incomingTotal = 0;
       let outgoingTotal = 0;
-      let vacancySchools = 0;
-      let vacancyPositions = 0;
+      let suspectSchools = 0;
+      let suspectPositions = 0;
       let surplusSchools = 0;
       let surplusPositions = 0;
 
       for (const [, info] of schools) {
         incomingTotal += info.inCount;
         outgoingTotal += info.outCount;
-        const diff = info.outCount - info.inCount; // +면 결원
-        if (diff > 0) { vacancySchools++; vacancyPositions += diff; }
+        const diff = info.outCount - info.inCount; // +면 정원 확인 필요(결원 의심)
+        if (diff > 0) { suspectSchools++; suspectPositions += diff; }
         if (diff < 0) { surplusSchools++; surplusPositions += (-diff); }
       }
 
@@ -524,23 +657,26 @@
         recordCount,
         incomingTotal,
         outgoingTotal,
-        vacancySchools,
-        vacancyPositions,
+        suspectSchools,
+        suspectPositions,
         surplusSchools,
         surplusPositions,
         netDiff: outgoingTotal - incomingTotal,
       };
 
       state.sheets.set(sheetName, { sheetName, moves, schools, summary });
-      log(`- ${sheetName}: 행 ${recordCount}건, 전입 ${incomingTotal}, 전출/퇴직 ${outgoingTotal}, 결원인원 ${vacancyPositions}`);
+      log(`- ${sheetName}: 행 ${recordCount}건, 전입 ${incomingTotal}, 전출/퇴직 ${outgoingTotal}, 정원확인 필요 인원 ${suspectPositions}`);
     }
 
     state.analyzed = true;
 
     renderSummary();
     initSheetSelect();
+    renderAllSuspect();
     renderDetail(state.selectedSheet || state.sheetOrder[0] || "");
+
     el.summarySection.style.display = "";
+    el.allSuspectSection.style.display = "";
     el.detailSection.style.display = "";
 
     log("분석 완료 ✅");
@@ -571,8 +707,8 @@
         <td>${escapeHtml(sheetName)}</td>
         <td class="numeric">${s.incomingTotal}</td>
         <td class="numeric">${s.outgoingTotal}</td>
-        <td class="numeric">${s.vacancySchools}</td>
-        <td class="numeric">${s.vacancyPositions}</td>
+        <td class="numeric">${s.suspectSchools}</td>
+        <td class="numeric">${s.suspectPositions}</td>
         <td class="numeric">${s.surplusSchools}</td>
         <td class="numeric">${s.surplusPositions}</td>
         <td class="numeric">${netPill}</td>
@@ -582,6 +718,8 @@
         renderDetail(sheetName);
         el.sheetSelect.value = sheetName;
         state.selectedSheet = sheetName;
+        // UX: 상세로 스크롤
+        document.getElementById("detailSection")?.scrollIntoView({ behavior: "smooth", block: "start" });
       });
 
       frag.appendChild(tr);
@@ -600,14 +738,101 @@
       opt.textContent = sheetName;
       frag.appendChild(opt);
     }
-
     el.sheetSelect.appendChild(frag);
 
-    // 선택 유지
     if (!state.selectedSheet && state.sheetOrder.length) {
       state.selectedSheet = state.sheetOrder[0];
     }
     if (state.selectedSheet) el.sheetSelect.value = state.selectedSheet;
+  }
+
+  function renderAllSuspect() {
+    // 전체 시트에서 diff>0인 항목만 모아서 테이블
+    const q = (el.allFilter.value || "").trim();
+    const rows = [];
+
+    for (const sheetName of state.sheetOrder) {
+      const sd = state.sheets.get(sheetName);
+      if (!sd) continue;
+
+      for (const [school, info] of sd.schools.entries()) {
+        const diff = info.outCount - info.inCount;
+        if (diff <= 0) continue;
+
+        if (q && !school.includes(q)) continue;
+
+        rows.push({
+          sheetName,
+          school,
+          outC: info.outCount,
+          inC: info.inCount,
+          diff,
+          noIncoming: (info.inCount === 0 && info.outCount > 0),
+          info
+        });
+      }
+    }
+
+    rows.sort((a, b) => {
+      if (b.diff !== a.diff) return b.diff - a.diff;
+      // 같은 diff면 시트 → 학교 순
+      const sn = a.sheetName.localeCompare(b.sheetName, "ko");
+      if (sn !== 0) return sn;
+      return a.school.localeCompare(b.school, "ko");
+    });
+
+    state.lastAllList = rows;
+
+    el.allStats.innerHTML =
+      `정원 확인 필요 <b>${rows.length}</b>건` +
+      (q ? ` · 필터: <span class="pill gray">${escapeHtml(q)}</span>` : "");
+
+    el.allTableBody.innerHTML = "";
+    const frag = document.createDocumentFragment();
+
+    for (const r of rows) {
+      const tr = document.createElement("tr");
+      tr.className = "clickable";
+      tr.dataset.sheet = r.sheetName;
+      tr.dataset.school = r.school;
+
+      tr.innerHTML = `
+        <td>${escapeHtml(r.sheetName)}</td>
+        <td>${escapeHtml(r.school)}</td>
+        <td class="numeric">${r.outC}</td>
+        <td class="numeric">${r.inC}</td>
+        <td class="numeric"><span class="pill red">+${r.diff}</span></td>
+        <td class="numeric">${r.noIncoming ? '<span class="pill red">Y</span>' : '<span class="pill gray">-</span>'}</td>
+      `;
+
+      tr.addEventListener("click", () => {
+        // 학교 상세 표시
+        renderSchoolDetail({ sheetName: r.sheetName, school: r.school, info: r.info });
+
+        // 시트 상세도 동일 시트로 이동 (연동 UX)
+        state.selectedSheet = r.sheetName;
+        el.sheetSelect.value = r.sheetName;
+        renderDetail(r.sheetName);
+
+        // 시트 상세 테이블에서 해당 학교 행 찾아 강조
+        setTimeout(() => {
+          highlightSchoolRow(r.school);
+        }, 0);
+
+        document.getElementById("detailSection")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+
+      frag.appendChild(tr);
+    }
+
+    el.allTableBody.appendChild(frag);
+  }
+
+  function highlightSchoolRow(school) {
+    const trs = [...el.detailTableBody.querySelectorAll("tr")];
+    trs.forEach(t => t.classList.remove("is-selected"));
+    const hit = trs.find(t => t.dataset.school === school);
+    if (hit) hit.classList.add("is-selected");
   }
 
   function renderDetail(sheetName) {
@@ -616,8 +841,10 @@
     if (!sd) return;
 
     state.selectedSheet = sheetName;
-    state.selectedSchool = ""; // 시트 바뀌면 학교 선택 초기화
-    renderSchoolDetail(null);
+    state.selectedSchool = "";
+    // 좌측에서 시트 바꾸면 학교 상세 초기화 (단, 전체 목록에서 선택한 경우 이미 상세가 떠 있을 수도 있음)
+    // 여기서는 유지하지 않고, 사용자가 다시 클릭하는 UX로 둠.
+    // renderSchoolDetail(null);
 
     const mode = el.modeSelect.value;
     const q = (el.schoolFilter.value || "").trim();
@@ -625,13 +852,14 @@
 
     for (const [school, info] of sd.schools.entries()) {
       const outC = info.outCount;
-      const inC = info.inCount;
-      const diff = outC - inC;
+      const inC  = info.inCount;
+      const diff = outC - inC; // +면 정원 확인 필요(결원 의심)
       const noIncoming = inC === 0 && outC > 0;
 
       // filter
       if (q && !school.includes(q)) continue;
-      if (mode === "vacancy" && diff <= 0) continue;
+
+      if (mode === "suspect" && diff <= 0) continue;
       if (mode === "surplus" && diff >= 0) continue;
       if (mode === "balanced" && diff !== 0) continue;
 
@@ -640,12 +868,11 @@
 
     // sort
     schools.sort((a, b) => {
-      if (mode === "vacancy") {
-        if (b.diff !== a.diff) return b.diff - a.diff; // 큰 결원 먼저
+      if (mode === "suspect") {
+        if (b.diff !== a.diff) return b.diff - a.diff; // 큰 결원 의심 먼저
       } else if (mode === "surplus") {
         if (a.diff !== b.diff) return a.diff - b.diff; // 더 음수(순증가) 먼저
       } else {
-        // 전체/균형: 절대값 큰 것 먼저, 그 다음 가나다
         const ad = Math.abs(a.diff), bd = Math.abs(b.diff);
         if (bd !== ad) return bd - ad;
       }
@@ -654,19 +881,19 @@
 
     state.lastDetailList = schools;
 
-    // stats text
+    // stats
     const s = sd.summary;
     const modeLabel =
-      mode === "vacancy" ? "결원" :
+      mode === "suspect" ? "정원 확인 필요" :
       mode === "surplus" ? "순증가" :
       mode === "balanced" ? "균형" : "전체";
 
     el.sheetStats.innerHTML =
       `<b>${escapeHtml(sheetName)}</b> · 기록 ${s.recordCount}건 · 전입 ${s.incomingTotal} / 전출·퇴직 ${s.outgoingTotal} ` +
-      `· 결원인원 ${s.vacancyPositions} · 순증가인원 ${s.surplusPositions} ` +
+      `· 정원확인 필요 인원 ${s.suspectPositions} · 순증가 인원 ${s.surplusPositions} ` +
       `· 현재보기: <span class="pill gray">${modeLabel} ${schools.length}건</span>`;
 
-    // table rows
+    // rows
     el.detailTableBody.innerHTML = "";
     const frag = document.createDocumentFragment();
 
@@ -676,7 +903,7 @@
       tr.dataset.school = row.school;
 
       const diffClass = row.diff > 0 ? "pos" : row.diff < 0 ? "neg" : "zero";
-      const diffText = row.diff > 0 ? `+${row.diff}` : String(row.diff);
+      const diffText  = row.diff > 0 ? `+${row.diff}` : String(row.diff);
 
       tr.innerHTML = `
         <td>${escapeHtml(row.school)}</td>
@@ -689,10 +916,10 @@
       tr.addEventListener("click", () => {
         state.selectedSchool = row.school;
         renderSchoolDetail({ sheetName, school: row.school, info: row.info });
-        // 선택 강조(가벼운 표시)
-        [...el.detailTableBody.querySelectorAll("tr")].forEach(x => x.style.outline = "");
-        tr.style.outline = "2px solid rgba(0,0,0,0.15)";
-        tr.style.outlineOffset = "-2px";
+
+        // highlight
+        [...el.detailTableBody.querySelectorAll("tr")].forEach(x => x.classList.remove("is-selected"));
+        tr.classList.add("is-selected");
       });
 
       frag.appendChild(tr);
@@ -714,7 +941,7 @@
     const diff = info.outCount - info.inCount;
 
     const badge =
-      diff > 0 ? `<span class="pill red">결원 +${diff}</span>` :
+      diff > 0 ? `<span class="pill red">정원 확인 필요 +${diff}</span>` :
       diff < 0 ? `<span class="pill blue">순증가 ${-diff}</span>` :
       `<span class="pill gray">균형 0</span>`;
 
@@ -739,7 +966,7 @@
       `).join("");
 
     el.schoolDetailCard.innerHTML = `
-      <div class="row between wrap" style="margin-bottom:8px;">
+      <div class="row between" style="flex-wrap:wrap; margin-bottom:8px;">
         <h3 class="local-h3 local-tight" style="margin:0;">${escapeHtml(school)}</h3>
         ${badge}
       </div>
@@ -750,19 +977,18 @@
       <div class="grid two">
         <div class="card">
           <h4 class="local-h4 local-tight" style="margin:0;">전출/퇴직 명단</h4>
-          <p class="muted small" style="margin:6px 0 0;">(이 학교를 떠나는 사람들)</p>
+          <p class="muted" style="margin:6px 0 0;">(이 학교를 떠나는 사람들)</p>
           <ul class="clean-list">${outList || `<li class="muted">없음</li>`}</ul>
         </div>
         <div class="card">
           <h4 class="local-h4 local-tight" style="margin:0;">전입 명단</h4>
-          <p class="muted small" style="margin:6px 0 0;">(이 학교로 오는 사람들)</p>
+          <p class="muted" style="margin:6px 0 0;">(이 학교로 오는 사람들)</p>
           <ul class="clean-list">${inList || `<li class="muted">없음</li>`}</ul>
         </div>
       </div>
 
       <p class="note">
-        팁: <span class="pill gray">전입없음(Y)</span> 은 “전출/퇴직은 있는데 전입이 0”인 경우라서
-        실무에서 말하는 ‘그냥 비는 자리’ 후보를 빠르게 찾을 때 유용합니다.
+        ※ <b>정원 확인 필요</b>는 “전출/퇴직 &gt; 전입” 집계 기반의 후보입니다. 직종/근무형태/정원·배치 기준에 따라 달라질 수 있으니 정원 확인이 필요합니다.
       </p>
     `;
   }
@@ -799,17 +1025,27 @@
     state.selectedSheet = "";
     state.selectedSchool = "";
     state.lastDetailList = [];
+    state.lastAllList = [];
 
     el.fileInput.value = "";
     el.fileMeta.textContent = "아직 파일이 없습니다.";
+
     el.summarySection.style.display = "none";
+    el.allSuspectSection.style.display = "none";
     el.detailSection.style.display = "none";
+
     el.summaryTableBody.innerHTML = "";
+    el.allTableBody.innerHTML = "";
     el.detailTableBody.innerHTML = "";
     el.sheetSelect.innerHTML = "";
     el.schoolFilter.value = "";
+    el.allFilter.value = "";
+    el.schoolDetailCard.innerHTML = `
+      <h3 class="local-h3 local-tight">학교 상세</h3>
+      <p class="muted" style="margin-top:0;">왼쪽에서 학교(부서)를 선택하세요.</p>
+    `;
+
     clearLog();
-    setLibWarningIfNeeded();
     log("초기화 완료");
   });
 
@@ -823,6 +1059,12 @@
     renderDetail(state.selectedSheet);
   });
 
+  el.allFilter.addEventListener("input", () => {
+    if (!state.analyzed) return;
+    renderAllSuspect();
+  });
+
+  // CSV downloads
   el.btnDownloadCsv.addEventListener("click", () => {
     if (!state.analyzed || !state.selectedSheet) {
       log("다운로드할 데이터가 없습니다.");
@@ -842,12 +1084,28 @@
     log(`CSV 다운로드: ${filename}`);
   });
 
-  el.btnDownloadAllVacancy.addEventListener("click", () => {
+  el.btnDownloadAllCurrent.addEventListener("click", () => {
     if (!state.analyzed) {
       log("다운로드할 데이터가 없습니다.");
       return;
     }
-    const rows = [["시트", "학교(부서)", "결원(전출-전입)", "전출", "전입", "전입없음"]];
+    const q = (el.allFilter.value || "").trim();
+    const filename = `${state.workbookName}_전체정원확인필요${q ? "_filter" : ""}.csv`.replace(/[\\/:*?"<>|]/g, "_");
+
+    const rows = [["시트", "학교(부서)", "정원확인 필요(전출-전입)", "전출", "전입", "전입없음"]];
+    for (const r of state.lastAllList) {
+      rows.push([r.sheetName, r.school, r.diff, r.outC, r.inC, r.noIncoming ? "Y" : ""]);
+    }
+    downloadCsv(filename, rows);
+    log(`CSV 다운로드: ${filename}`);
+  });
+
+  el.btnDownloadAllSuspect.addEventListener("click", () => {
+    if (!state.analyzed) {
+      log("다운로드할 데이터가 없습니다.");
+      return;
+    }
+    const rows = [["시트", "학교(부서)", "정원확인 필요(전출-전입)", "전출", "전입", "전입없음"]];
     for (const sheetName of state.sheetOrder) {
       const sd = state.sheets.get(sheetName);
       if (!sd) continue;
@@ -858,7 +1116,7 @@
         }
       }
     }
-    const filename = `${state.workbookName}_전체결원.csv`.replace(/[\\/:*?"<>|]/g, "_");
+    const filename = `${state.workbookName}_전체정원확인필요.csv`.replace(/[\\/:*?"<>|]/g, "_");
     downloadCsv(filename, rows);
     log(`CSV 다운로드: ${filename}`);
   });
@@ -885,13 +1143,13 @@
   // ---------------------------
   // Init
   // ---------------------------
-  function init() {
-    // XLSX 로드 여부 확인
-    setLibWarningIfNeeded();
-
-    // 첫 로그
+  async function init() {
     log("페이지 로드 완료");
     log("엑셀 업로드 후 '분석 실행'을 누르세요.");
+
+    // XLSX는 분석 시점에 로드해도 되지만, UX상 미리 체크
+    const ok = await ensureXLSX();
+    setLibWarning(ok);
   }
 
   document.addEventListener("DOMContentLoaded", init);
