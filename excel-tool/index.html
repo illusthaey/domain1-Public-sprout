@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>전화번호 하이픈 변환기 (엑셀/복붙)</title>
+
+  <!-- ✅ 기존 공통 CSS 적용 -->
+  <!-- excel-tool/index.html 기준: /static/style.css가 루트에 있으면 보통 ../static/style.css -->
+  <link rel="stylesheet" href="../static/style.css" />
+
+  <!-- (선택) 만약 위 경로가 안 맞으면 아래로 바꾸세요 -->
+  <!-- <link rel="stylesheet" href="/static/style.css" /> -->
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="shell">
+      <h1>전화번호 하이픈 변환기</h1>
+      <p class="subtitle">01012345678 → 010-1234-5678 (엑셀 업로드 / 엑셀 복사-붙여넣기 지원)</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- 1) 단일 변환 -->
+    <section class="section">
+      <h2 class="local-h2">1) 한 개만 빠르게</h2>
+
+      <div class="grid two">
+        <div class="field">
+          <div class="muted">입력</div>
+          <input type="text" id="singleInput" placeholder="01012345678" autocomplete="off" />
+        </div>
+
+        <div class="field">
+          <div class="muted">결과</div>
+          <input type="text" id="singleOutput" placeholder="010-1234-5678" readonly />
+        </div>
+      </div>
+
+      <div class="row gap" style="margin-top:12px;">
+        <button class="btn primary" id="btnSingleCopy">결과 복사</button>
+        <button class="btn ghost" id="btnSingleClear">지우기</button>
+      </div>
+
+      <p class="muted">
+        숫자/하이픈/공백이 섞여 있어도 숫자만 추출해서 변환합니다.
+      </p>
+    </section>
+
+    <!-- 2) 엑셀 복붙 변환 -->
+    <section class="section">
+      <h2 class="local-h2">2) 엑셀에서 복사해서 붙여넣기</h2>
+      <p class="muted">
+        엑셀 범위를 복사(Ctrl+C)한 다음 아래에 붙여넣으면, 행/열(탭/줄바꿈)을 유지한 채 변환합니다.
+        변환 결과(TSV)를 그대로 다시 엑셀에 붙여넣을 수 있어요.
+      </p>
+
+      <textarea id="pasteInput" rows="8"
+        placeholder="여기에 엑셀에서 복사한 값을 그대로 붙여넣으세요 (여러 행/열 가능)"></textarea>
+
+      <div class="card">
+        <div class="grid three">
+          <label class="row">
+            <input type="checkbox" id="optOnly010" checked />
+            010 시작(11자리)만 변환
+          </label>
+          <label class="row">
+            <input type="checkbox" id="optAllow10To11" checked />
+            10자리(1012345678)는 010... 으로 간주(앞에 0 추가)
+          </label>
+          <label class="row">
+            <input type="checkbox" id="optAlsoLandline" />
+            일반 전화(02/지역번호 10자리)도 변환
+          </label>
+        </div>
+      </div>
+
+      <div class="row gap" style="margin-top:12px;">
+        <button class="btn primary" id="btnConvertPaste">변환하기</button>
+        <button class="btn" id="btnCopyTsv" disabled>결과(TSV) 복사</button>
+        <button class="btn ghost" id="btnDownloadFromPaste" disabled>결과 엑셀로 다운로드</button>
+      </div>
+
+      <p class="muted" id="pasteStats" aria-live="polite"></p>
+
+      <h3 class="local-h3">미리보기</h3>
+      <div class="table-wrap">
+        <table class="sheetlike" id="previewTable"></table>
+      </div>
+
+      <h3 class="local-h3">결과(TSV)</h3>
+      <textarea id="tsvOutput" rows="6" readonly
+        placeholder="변환 후 탭(TSV) 형식으로 출력됩니다. 그대로 복사해서 엑셀에 붙여넣으면 됩니다."></textarea>
+    </section>
+
+    <!-- 3) 엑셀 업로드 변환 -->
+    <section class="section">
+      <h2 class="local-h2">3) 엑셀 파일 업로드(.xlsx)로 한 번에</h2>
+
+      <div class="row gap">
+        <input type="file" id="xlsxFile" accept=".xlsx" />
+        <button class="btn primary" id="btnConvertXlsx" disabled>업로드 파일 변환 후 다운로드</button>
+      </div>
+
+      <p class="muted">처리는 브라우저에서만 수행됩니다(서버 업로드 없음).</p>
+      <p class="muted" id="xlsxStats" aria-live="polite"></p>
+
+      <hr />
+
+      <p class="muted">
+        ※ 엑셀에서 전화번호가 <b>숫자</b>로 저장되면 앞자리 0이 사라져 <code>1012345678</code>처럼 보일 수 있어요.
+        그래서 “10자리면 010으로 간주” 옵션을 기본으로 켜놨습니다.
+      </p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell">
+      <p>© 업무보조 - 업무외보조</p>
+    </div>
+  </footer>
+
+  <!-- ✅ SheetJS (xlsx 파싱/저장) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <script>
+    /* global XLSX */
+    (function () {
+      const $ = (id) => document.getElementById(id);
+
+      // --- DOM ---
+      const singleInput = $("singleInput");
+      const singleOutput = $("singleOutput");
+      const btnSingleCopy = $("btnSingleCopy");
+      const btnSingleClear = $("btnSingleClear");
+
+      const pasteInput = $("pasteInput");
+      const btnConvertPaste = $("btnConvertPaste");
+      const btnCopyTsv = $("btnCopyTsv");
+      const btnDownloadFromPaste = $("btnDownloadFromPaste");
+      const pasteStats = $("pasteStats");
+      const previewTable = $("previewTable");
+      const tsvOutput = $("tsvOutput");
+
+      const optOnly010 = $("optOnly010");
+      const optAllow10To11 = $("optAllow10To11");
+      const optAlsoLandline = $("optAlsoLandline");
+
+      const xlsxFile = $("xlsxFile");
+      const btnConvertXlsx = $("btnConvertXlsx");
+      const xlsxStats = $("xlsxStats");
+
+      // --- 상태 ---
+      let lastGrid = null;      // 2D array
+      let lastGridTsv = "";
+      let uploadedArrayBuffer = null;
+      let uploadedFileName = "";
+
+      // --- 유틸 ---
+      function extractDigits(value) {
+        if (value === null || value === undefined) return "";
+        return String(value).replace(/\D/g, "");
+      }
+
+      function getOptions() {
+        return {
+          only010: !!optOnly010.checked,
+          allow10To11: !!optAllow10To11.checked,
+          alsoLandline: !!optAlsoLandline.checked,
+        };
+      }
+
+      /**
+       * @returns {{ formatted: boolean, text: string }}
+       * formatted=false면 원문 유지(오변환 방지)
+       */
+      function tryFormatPhone(raw, opts) {
+        const original = (raw === null || raw === undefined) ? "" : String(raw);
+        const digits0 = extractDigits(original);
+        if (!digits0) return { formatted: false, text: original };
+
+        let digits = digits0;
+
+        // 10자리 "1012345678" -> "01012345678" (옵션)
+        if (opts.allow10To11 && digits.length === 10 && digits.startsWith("10")) {
+          digits = "0" + digits;
+        }
+
+        // 11자리(휴대폰/010) 3-4-4
+        if (digits.length === 11) {
+          if (opts.only010 && !digits.startsWith("010")) {
+            return { formatted: false, text: original };
+          }
+          return {
+            formatted: true,
+            text: digits.slice(0, 3) + "-" + digits.slice(3, 7) + "-" + digits.slice(7),
+          };
+        }
+
+        // 일반전화도 변환 옵션일 때만
+        if (opts.alsoLandline && digits.length === 10) {
+          // 02-xxxx-xxxx
+          if (digits.startsWith("02")) {
+            return {
+              formatted: true,
+              text: "02-" + digits.slice(2, 6) + "-" + digits.slice(6),
+            };
+          }
+          // 0xx-xxx-xxxx
+          return {
+            formatted: true,
+            text: digits.slice(0, 3) + "-" + digits.slice(3, 6) + "-" + digits.slice(6),
+          };
+        }
+
+        return { formatted: false, text: original };
+      }
+
+      function parseTsvGrid(text) {
+        const normalized = String(text || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+        const lines = normalized.split("\n");
+        while (lines.length && lines[lines.length - 1] === "") lines.pop();
+        return lines.map(line => line.split("\t"));
+      }
+
+      function gridToTsv(grid) {
+        return grid.map(row => row.join("\t")).join("\n");
+      }
+
+      function convertGrid(grid, opts) {
+        let changed = 0;
+        let total = 0;
+
+        const out = grid.map(row =>
+          row.map(cell => {
+            total += 1;
+            const res = tryFormatPhone(cell, opts);
+            if (res.formatted && String(cell) !== res.text) changed += 1;
+            return res.formatted ? res.text : cell;
+          })
+        );
+
+        return { out, changed, total };
+      }
+
+      function excelColName(n) {
+        // 0 -> A, 25 -> Z, 26 -> AA ...
+        let s = "";
+        let x = n + 1;
+        while (x > 0) {
+          const r = (x - 1) % 26;
+          s = String.fromCharCode(65 + r) + s;
+          x = Math.floor((x - 1) / 26);
+        }
+        return s;
+      }
+
+      function clearTable(el) {
+        while (el.firstChild) el.removeChild(el.firstChild);
+      }
+
+      function renderPreviewTable(grid, limitRows = 40, limitCols = 20) {
+        clearTable(previewTable);
+        if (!grid || !grid.length) return;
+
+        const totalCols = grid.reduce((m, r) => Math.max(m, r.length), 0);
+        const rows = Math.min(grid.length, limitRows);
+        const cols = Math.min(totalCols, limitCols);
+
+        const thead = document.createElement("thead");
+        const hr = document.createElement("tr");
+
+        const corner = document.createElement("th");
+        corner.textContent = "";
+        hr.appendChild(corner);
+
+        for (let c = 0; c < cols; c++) {
+          const th = document.createElement("th");
+          th.textContent = excelColName(c);
+          hr.appendChild(th);
+        }
+        thead.appendChild(hr);
+        previewTable.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
+        for (let r = 0; r < rows; r++) {
+          const tr = document.createElement("tr");
+
+          const rowHead = document.createElement("th");
+          rowHead.textContent = String(r + 1);
+          tr.appendChild(rowHead);
+
+          for (let c = 0; c < cols; c++) {
+            const td = document.createElement("td");
+            td.textContent = (grid[r] && grid[r][c] !== undefined) ? String(grid[r][c]) : "";
+            tr.appendChild(td);
+          }
+          tbody.appendChild(tr);
+        }
+        previewTable.appendChild(tbody);
+
+        const hiddenRows = grid.length - rows;
+        const hiddenCols = totalCols - cols;
+        if (hiddenRows > 0 || hiddenCols > 0) {
+          const msg = `미리보기는 최대 ${limitRows}행 × ${limitCols}열까지만 표시됩니다.`;
+          pasteStats.textContent = (pasteStats.textContent ? pasteStats.textContent + " " : "") + msg;
+        }
+      }
+
+      async function copyToClipboard(text) {
+        const s = String(text || "");
+        if (!s) return;
+
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(s);
+          return;
+        }
+
+        // fallback
+        const ta = document.createElement("textarea");
+        ta.value = s;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "fixed";
+        ta.style.top = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+
+      // --- 단일 변환 ---
+      function updateSingle() {
+        const opts = getOptions();
+        const res = tryFormatPhone(singleInput.value, opts);
+        singleOutput.value = res.formatted ? res.text : "";
+      }
+
+      singleInput.addEventListener("input", updateSingle);
+
+      btnSingleCopy.addEventListener("click", async () => {
+        if (!singleOutput.value) updateSingle();
+        if (!singleOutput.value) return;
+
+        await copyToClipboard(singleOutput.value);
+        btnSingleCopy.textContent = "복사됨!";
+        setTimeout(() => (btnSingleCopy.textContent = "결과 복사"), 900);
+      });
+
+      btnSingleClear.addEventListener("click", () => {
+        singleInput.value = "";
+        singleOutput.value = "";
+        singleInput.focus();
+      });
+
+      // --- 붙여넣기 변환 ---
+      btnConvertPaste.addEventListener("click", () => {
+        const grid = parseTsvGrid(pasteInput.value || "");
+        const opts = getOptions();
+
+        const { out, changed, total } = convertGrid(grid, opts);
+
+        lastGrid = out;
+        lastGridTsv = gridToTsv(out);
+
+        tsvOutput.value = lastGridTsv;
+        pasteStats.textContent = `총 ${total}개 셀 중 ${changed}개 셀을 변환했습니다.`;
+
+        renderPreviewTable(out);
+
+        btnCopyTsv.disabled = !lastGridTsv;
+        btnDownloadFromPaste.disabled = !lastGridTsv;
+      });
+
+      btnCopyTsv.addEventListener("click", async () => {
+        if (!lastGridTsv) return;
+        await copyToClipboard(lastGridTsv);
+
+        btnCopyTsv.textContent = "복사됨!";
+        setTimeout(() => (btnCopyTsv.textContent = "결과(TSV) 복사"), 900);
+      });
+
+      btnDownloadFromPaste.addEventListener("click", () => {
+        if (!lastGrid || !lastGrid.length) return;
+
+        const ws = XLSX.utils.aoa_to_sheet(lastGrid);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "formatted");
+        XLSX.writeFile(wb, "phone_formatted_from_paste.xlsx", { compression: true });
+      });
+
+      // --- 엑셀 업로드 변환 ---
+      xlsxFile.addEventListener("change", async (e) => {
+        const file = e.target.files && e.target.files[0];
+        uploadedArrayBuffer = null;
+        uploadedFileName = "";
+        btnConvertXlsx.disabled = true;
+
+        if (!file) {
+          xlsxStats.textContent = "";
+          return;
+        }
+
+        uploadedFileName = file.name;
+
+        try {
+          uploadedArrayBuffer = await file.arrayBuffer();
+          btnConvertXlsx.disabled = false;
+          xlsxStats.textContent = `선택됨: ${uploadedFileName}`;
+        } catch (err) {
+          console.error(err);
+          xlsxStats.textContent = "파일을 읽는 중 오류가 발생했습니다.";
+        }
+      });
+
+      function convertWorkbookArrayBuffer(arrayBuffer, opts) {
+        const wb = XLSX.read(arrayBuffer, { type: "array" });
+        const outWb = XLSX.utils.book_new();
+
+        let changedCells = 0;
+        let visitedCells = 0;
+
+        for (const sheetName of wb.SheetNames) {
+          const ws = wb.Sheets[sheetName];
+          if (!ws) {
+            XLSX.utils.book_append_sheet(outWb, XLSX.utils.aoa_to_sheet([]), sheetName);
+            continue;
+          }
+
+          // 시트 복제
+          const newWs = {};
+          for (const key of Object.keys(ws)) {
+            if (key.startsWith("!")) {
+              newWs[key] = ws[key];
+            } else {
+              newWs[key] = { ...ws[key] };
+            }
+          }
+
+          // ✅ 전체 range를 도는 대신, 실제 셀 키만 순회(대용량 시트에서 훨씬 빠름)
+          for (const key of Object.keys(newWs)) {
+            if (key.startsWith("!")) continue;
+
+            const cell = newWs[key];
+            if (!cell) continue;
+
+            // 수식 셀은 건드리지 않는 게 안전 (f가 있으면 skip)
+            if (cell.f) continue;
+
+            if (cell.v === undefined || cell.v === null) continue;
+
+            visitedCells += 1;
+
+            const res = tryFormatPhone(cell.v, opts);
+            if (!res.formatted) continue;
+
+            cell.t = "s";
+            cell.v = res.text;
+            delete cell.w; // 표시 문자열 캐시 제거
+            changedCells += 1;
+          }
+
+          XLSX.utils.book_append_sheet(outWb, newWs, sheetName);
+        }
+
+        return { outWb, changedCells, visitedCells, sheetCount: wb.SheetNames.length };
+      }
+
+      btnConvertXlsx.addEventListener("click", () => {
+        if (!uploadedArrayBuffer) return;
+
+        const opts = getOptions();
+
+        try {
+          const { outWb, changedCells, visitedCells, sheetCount } =
+            convertWorkbookArrayBuffer(uploadedArrayBuffer, opts);
+
+          const base = uploadedFileName.replace(/\.xlsx$/i, "");
+          const outName = `${base}_phone_formatted.xlsx`;
+
+          XLSX.writeFile(outWb, outName, { compression: true });
+
+          xlsxStats.textContent =
+            `시트 ${sheetCount}개 / 검사 ${visitedCells}셀 중 ${changedCells}셀 변환 → ${outName} 다운로드`;
+        } catch (err) {
+          console.error(err);
+          xlsxStats.textContent =
+            "변환 중 오류가 발생했습니다. (파일이 손상되었거나 지원되지 않는 형식일 수 있어요)";
+        }
+      });
+
+      // 초기 반영
+      updateSingle();
+    })();
+  </script>
+</body>
+</html>
