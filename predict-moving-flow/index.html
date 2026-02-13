@@ -3,1404 +3,2206 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>인사이동 흐름 분석기 (로컬 실행)</title>
+  <title>인사발령 이동 흐름 분석기</title>
 
-  <!--
-    외부 라이브러리(필수/옵션)
-    1) SheetJS (xlsx) : 엑셀 파싱 (필수)
-    2) d3 + d3-sankey : 이동 흐름(샌키) 시각화 (옵션)
-    내부망에서 인터넷 불가 시:
-      - 아래 URL의 js 파일을 내부 웹서버에 올리고 src만 교체하면 됨.
-  -->
+  <!-- 엑셀 파싱 라이브러리(SheetJS). 내부망 인터넷 차단 시: 파일로 내려받아 <script src>만 내부경로로 교체 -->
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.20.3/dist/xlsx.full.min.js"></script>
+  <!-- 샌키(흐름) 시각화. 필요 없으면 주석처리 가능 -->
   <script defer src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
 
   <style>
-    :root{
-      --bg:#f4f6f8;
-      --card:#ffffff;
-      --text:#1b1f24;
-      --muted:#5a6572;
-      --line:#d7dde3;
-      --accent:#2563eb;
-      --danger:#b91c1c;
-      --ok:#166534;
-      --chip:#eef2ff;
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", Arial, sans-serif;
+    /* =========================
+       (내장) 공통 스타일(style.css)
+       - 사용자가 제공한 공통 스타일을 단일 파일로 내장
+       ========================= */
+
+    /* 251204목 공통 스타일 */
+    * { box-sizing: border-box; }
+    html { font-size: 16px; }
+    @media (max-width: 600px) { html { font-size: 15px; } }
+    body {
+      margin: 0; padding: 0; background: #fff; color: #111;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+        Arial, "Apple SD Gothic Neo", "Noto Sans KR", "맑은 고딕", sans-serif;
+      line-height: 1.5; word-break: keep-all;
     }
-    html,body{height:100%}
-    body{
-      margin:0;
-      font-family:var(--sans);
-      background:var(--bg);
-      color:var(--text);
+    a { text-decoration: none; color: inherit; }
+
+    body h1 {
+      font-size: 2.2rem; margin: 28px 0 18px;
+      text-align: center !important; color: #111; font-weight: 700;
     }
-    .wrap{max-width:1200px;margin:0 auto;padding:16px}
-    .header{
-      display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
-      margin-bottom:12px;
+    body h2 { font-size: 1.6rem; margin: 28px 0 12px; color: #222; font-weight: 700; }
+    body h3 { font-size: 1.4rem; margin: 20px 0 10px; color: #222; font-weight: 600; }
+    body h4 { font-size: 1.2rem; margin: 16px 0 8px; color: #333; font-weight: 600; }
+
+    body p, body li, body div, body span { font-size: 1.1rem; line-height: 1.65; color: #333; }
+    body p { margin: 14px 0; }
+    body li { margin: 4px 0; line-height: 1.55; }
+    ul, ol { margin: 12px 0 18px; padding-left: 22px; }
+    body .muted { font-size: 0.95rem; color: #666; }
+
+    .local-h2 { font-size: 1.3rem !important; }
+    .local-h3 { font-size: 1.1rem !important; }
+    .local-large { font-size: 1.2rem !important; }
+    .local-small { font-size: 0.9rem !important; }
+    .local-tight { margin-bottom: 6px !important; }
+    .local-accent { color: #0051a8 !important; }
+
+    .shell { max-width: 880px; margin: 0 auto; }
+    main { margin: 0 auto; }
+    .sub { margin: 0.25rem 0 0; font-size: 1rem; color: #555; }
+
+    .site-header { background: #fff; border-bottom: 1px solid #e8e8ef; }
+    .site-header .shell { padding: 16px; }
+
+    .section {
+      border: 1px solid #e5e5e5; border-radius: 12px;
+      padding: 20px 22px; margin: 18px 0; background: #fff;
     }
-    .title{
-      font-size:22px;font-weight:800;letter-spacing:-0.2px;
+    .card {
+      border: 1px solid #e5e5e5; border-radius: 10px;
+      padding: 14px 16px; margin: 14px 0; background: #fafafa;
     }
-    .subtitle{
-      font-size:12px;color:var(--muted);line-height:1.4;margin-top:6px;
+
+    .row { display: flex; align-items: center; gap: 8px; }
+    .row.between { justify-content: space-between; }
+    .row.gap { gap: 10px; }
+
+    .grid { display: grid; gap: 12px; }
+    .grid.two { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+    .grid.three { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+    @media (max-width: 640px) {
+      .row { flex-wrap: wrap; align-items: flex-start; }
+      .grid.two, .grid.three { grid-template-columns: 1fr; }
     }
+
+    .btn {
+      display: inline-block;
+      padding: 10px 16px;
+      border-radius: 12px;
+      border: 1px solid #222;
+      font-weight: 600;
+      font-size: 1rem;
+      color: #111;
+      background: #fff;
+      cursor: pointer;
+    }
+    .btn:hover { background: #f3f4f6; }
+    .btn.primary { background: #111; color: #fff; }
+    .btn.primary:hover { background: #000; }
+    .btn.ghost { background: #f9fafb; border-color: #d4d4d8; }
+    .btn.ghost:hover { background: #eef2ff; }
+    .btn-lightgrey {
+      padding: 8px 14px;
+      border-radius: 10px;
+      background: #f3f4f6;
+      border: 1px solid #d4d4d8;
+    }
+
+    input, select, button, textarea { font: inherit; }
+    input[type="text"], input[type="number"], input[type="time"], input[type="date"], select, textarea {
+      padding: 10px 12px;
+      border: 1px solid #d9d9e3;
+      border-radius: 12px;
+      background: #f9fafb;
+      outline: none;
+      min-width: 0;
+      box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.02);
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: #b4b4d0;
+      box-shadow: 0 0 0 2px rgba(180, 180, 208, 0.25);
+      background: #fff;
+    }
+    input:disabled, select:disabled, textarea:disabled { background: #f6f7fb; color: #888; }
+    .numeric { text-align: right; }
+
+    hr { border-top: 1px solid #ddd; margin: 26px 0; opacity: 0.9; }
+    body h2 + hr { margin-top: 10px !important; }
+
+    .table-wrap, .table-wrapper {
+      width: 100%; max-width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin: 12px 0;
+      padding-bottom: 6px;
+    }
+    .table-wrap table, .table-wrapper table {
+      min-width: 800px;
+      border-collapse: collapse;
+    }
+    .sheetlike {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 1rem;
+      background: #fff;
+    }
+    .sheetlike th, .sheetlike td {
+      border: 1px solid #e5e7eb;
+      padding: 8px 10px;
+    }
+    .sheetlike th {
+      background: #f9fafb;
+      font-weight: 600;
+    }
+    .simple-table th { text-align: left; }
+    .simple-table td { text-align: right; padding-right: 4px; }
+
+    .site-footer {
+      margin-top: 64px;
+      padding: 24px 16px;
+      border-top: 1px solid #e5e7eb;
+      background: #fafafa;
+      color: #6b7280;
+      font-size: 0.875rem;
+    }
+    .site-footer .shell {
+      max-width: 1024px;
+      margin: 0 auto;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    /* =========================
+       이 페이지 전용 추가 스타일
+       ========================= */
+    .container { max-width: 880px; margin: 0 auto; padding: 18px 16px 32px; }
+
+    .page-head{
+      display:flex; align-items:flex-end; justify-content:space-between; gap:12px;
+      margin: 14px 0 10px;
+    }
+    .page-head h1{
+      margin: 0 !important;
+      text-align: left !important;
+      font-size: 1.9rem !important;
+    }
+    .page-head .sub{
+      margin: 6px 0 0;
+    }
+
+    .hint { font-size: 0.95rem; color:#555; margin: 6px 0 0; }
+    .danger { color:#b91c1c; font-weight: 700; }
+    .ok { color:#166534; font-weight: 700; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+
+    .dropzone{
+      border: 2px dashed #d9d9e3;
+      border-radius: 12px;
+      background: #f9fafb;
+      padding: 14px 14px;
+      text-align: center;
+      cursor: pointer;
+      transition: background .12s ease, border-color .12s ease;
+    }
+    .dropzone.dragover{
+      background: #eef2ff;
+      border-color:#b4b4d0;
+    }
+    .drop-title{ font-weight: 700; color:#111; }
+    .drop-desc{ font-size: 0.95rem; color:#666; margin-top: 6px; }
+
+    .filelist{ margin-top: 10px; display:flex; flex-direction:column; gap:8px; }
+    .fileitem{
+      display:flex; justify-content:space-between; align-items:center; gap:10px;
+      padding: 10px 12px;
+      border: 1px solid #e5e5e5;
+      border-radius: 12px;
+      background: #fff;
+    }
+    .fileleft{ min-width: 0; }
+    .filename{ font-weight: 700; color:#111; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width: 560px; }
+    .filemeta{ font-size: 0.95rem; color:#666; margin-top: 2px; }
+    .fileright{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
     .badge{
-      font-size:12px;padding:4px 10px;border-radius:999px;background:var(--chip);
-      border:1px solid #c7d2fe;color:#1e3a8a;
-      white-space:nowrap;
+      border: 1px solid #d4d4d8;
+      background:#f9fafb;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.9rem;
+      color:#555;
+      white-space: nowrap;
     }
-    .grid{display:grid;grid-template-columns: 1fr;gap:12px}
-    @media(min-width:980px){
-      .grid{grid-template-columns: 420px 1fr}
-    }
-    .card{
-      background:var(--card);
-      border:1px solid var(--line);
-      border-radius:10px;
-      box-shadow:0 1px 0 rgba(0,0,0,0.03);
-      padding:12px;
-    }
-    .card h2{
-      margin:0 0 10px 0;
-      font-size:14px;
-      font-weight:800;
-    }
-    .help{
-      color:var(--muted);font-size:12px;line-height:1.5;margin:6px 0 0 0;
-    }
-    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .row > *{flex:1}
-    .row .w-auto{flex:0 0 auto}
-    label{font-size:12px;color:var(--muted);display:block;margin:8px 0 6px}
-    input[type="file"], input[type="text"], input[type="date"], select{
-      width:100%;
-      box-sizing:border-box;
-      border:1px solid var(--line);
-      border-radius:8px;
-      padding:10px 10px;
-      font-size:13px;
-      background:#fff;
-    }
-    button{
-      border:1px solid var(--line);
-      background:#fff;
-      border-radius:8px;
-      padding:10px 12px;
-      font-size:13px;
-      cursor:pointer;
-    }
-    button.primary{
-      background:var(--accent);
-      border-color:var(--accent);
-      color:#fff;
-      font-weight:700;
-    }
-    button.danger{
-      background:var(--danger);
-      border-color:var(--danger);
-      color:#fff;
-      font-weight:700;
-    }
-    button:disabled{opacity:.5;cursor:not-allowed}
-    .progress{
-      width:100%;
-      height:10px;
-      border-radius:999px;
-      overflow:hidden;
-      background:#edf0f3;
-      border:1px solid var(--line);
-    }
-    .progress > div{
-      height:100%;
-      width:0%;
-      background:var(--accent);
-      transition: width .15s ease;
-    }
-    .kpis{
-      display:grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap:8px;
-      margin-top:10px;
-    }
-    .kpi{
-      border:1px solid var(--line);
-      border-radius:10px;
-      padding:10px;
-      background:#fbfcfe;
-    }
-    .kpi .k{font-size:12px;color:var(--muted);margin-bottom:4px}
-    .kpi .v{font-size:16px;font-weight:800}
-    .tabs{
-      display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;
-    }
+    .badge.ok{ border-color:#bbf7d0; background:#f0fdf4; color:#14532d; }
+    .badge.warn{ border-color:#fecaca; background:#fff1f2; color:#7f1d1d; }
+
+    .tabs{ display:flex; gap:8px; flex-wrap:wrap; }
     .tab{
-      padding:8px 10px;border-radius:999px;border:1px solid var(--line);background:#fff;
-      font-size:12px;cursor:pointer;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border:1px solid #d4d4d8;
+      background:#f9fafb;
+      cursor:pointer;
+      font-size: 0.98rem;
+      font-weight: 600;
     }
     .tab.active{
-      background:var(--chip);
-      border-color:#c7d2fe;
-      color:#1e3a8a;
-      font-weight:800;
+      background:#111;
+      border-color:#111;
+      color:#fff;
     }
-    .pane{display:none}
-    .pane.active{display:block}
-    .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:10px}
-    table{border-collapse:collapse;width:100%;min-width:780px;background:#fff}
-    th,td{border-bottom:1px solid var(--line);padding:9px 10px;font-size:12px;vertical-align:top}
-    th{position:sticky;top:0;background:#f8fafc;z-index:1;text-align:left}
-    td.mono{font-family:var(--mono)}
-    .muted{color:var(--muted)}
-    .warn{color:var(--danger);font-weight:700}
-    .ok{color:var(--ok);font-weight:700}
+    .pane{ display:none; margin-top: 12px; }
+    .pane.active{ display:block; }
+
+    .kpi-grid{
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .kpi{
+      border: 1px solid #e5e5e5;
+      border-radius: 12px;
+      background:#fff;
+      padding: 12px;
+    }
+    .kpi .k{ color:#666; font-size: 0.95rem; }
+    .kpi .v{ font-weight: 800; font-size: 1.25rem; margin-top: 2px; }
+
+    .progress-wrap{
+      width:100%;
+      border:1px solid #d9d9e3;
+      border-radius: 999px;
+      background:#f3f4f6;
+      overflow:hidden;
+      height: 12px;
+      margin-top: 8px;
+    }
+    .progress-bar{
+      height: 100%;
+      width:0%;
+      background:#111;
+      transition: width .12s ease;
+    }
     .log{
-      font-family:var(--mono);
       background:#0b1020;
       color:#cfe2ff;
-      border-radius:10px;
-      border:1px solid #111827;
-      padding:10px;
-      font-size:11px;
-      line-height:1.5;
-      white-space:pre-wrap;
-      max-height:260px;
+      border: 1px solid #111827;
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      max-height: 260px;
       overflow:auto;
     }
-    .hr{height:1px;background:var(--line);margin:10px 0}
-    .small{font-size:11px}
+
     .sankey-wrap{
-      border:1px solid var(--line);
-      border-radius:10px;
+      border:1px solid #e5e5e5;
+      border-radius: 12px;
       background:#fff;
-      padding:8px;
+      padding: 8px;
       overflow:auto;
     }
-    svg{display:block}
-    .pill{
-      display:inline-flex;align-items:center;gap:6px;
-      border:1px solid var(--line);border-radius:999px;padding:6px 10px;
-      background:#fff;font-size:12px;color:var(--muted);
+
+    .pager{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-top: 10px;
+      flex-wrap:wrap;
+    }
+    .pager .row { gap: 6px; }
+    .small{ font-size: 0.95rem; color:#666; }
+
+    /* 모바일 테이블 가독성 */
+    @media (max-width: 640px) {
+      .filename{ max-width: 320px; }
     }
   </style>
 </head>
+
 <body>
-  <div class="wrap">
-    <div class="header">
-      <div>
-        <div class="title">인사이동 흐름 분석기 (로컬 실행)</div>
-        <div class="subtitle">
-          엑셀(인사발령 시행) 파일을 선택하면 브라우저 내에서만 분석합니다. 외부 업로드 없음.
-          <br/>
-          ※ 개인정보 포함 자료이므로 내부업무 처리 목적 외 사용 금지, 결과 공유 시 비식별 처리 권장.
+  <header class="site-header">
+    <div class="shell">
+      <div class="page-head">
+        <div>
+          <h1>인사발령 이동 흐름 분석기</h1>
+          <div class="sub">
+            인사발령 시행 엑셀을 구조화하여 <b>이동 이력/흐름/집계</b>를 제공하는 참고용 도구입니다.
+            (확정 발령 예측 도구 아님)
+          </div>
         </div>
-      </div>
-      <div class="badge">moving/index.html · 단일 파일</div>
-    </div>
-
-    <div class="grid">
-      <!-- Left: inputs -->
-      <div class="card">
-        <h2>1) 자료 선택</h2>
-
-        <label>인사발령 시행 엑셀 (다중 선택 가능)</label>
-        <input id="apptFiles" type="file" multiple accept=".xlsx" />
-
-        <label>관내 학교 목록 (옵션) — 학교명 컬럼 포함 엑셀</label>
-        <input id="schoolFile" type="file" accept=".xlsx" />
-
-        <label>정원 조정 내역 (옵션) — “학교 조정내역” 시트 포함 엑셀(복수 가능)</label>
-        <input id="quotaFiles" type="file" multiple accept=".xlsx" />
-
-        <div class="row" style="margin-top:10px;">
-          <button id="btnRun" class="primary" disabled>분석 실행</button>
-          <button id="btnReset" class="danger">초기화</button>
-        </div>
-
-        <div class="hr"></div>
-
-        <h2>2) 처리 옵션</h2>
-
         <div class="row">
-          <div>
-            <label>기관명 정규화</label>
-            <select id="orgMode">
-              <option value="base" selected>기본(괄호/부가설명 제거, 첫 줄만)</option>
-              <option value="full">원문 유지(줄바꿈 제거만)</option>
-            </select>
-          </div>
-          <div>
-            <label>흐름 표시 최소 건수</label>
-            <select id="minFlow">
-              <option value="1">1건 이상</option>
-              <option value="2">2건 이상</option>
-              <option value="5" selected>5건 이상</option>
-              <option value="10">10건 이상</option>
-              <option value="20">20건 이상</option>
-            </select>
-          </div>
+          <button class="btn primary" id="btnAnalyze" disabled>분석하기</button>
         </div>
-
-        <div class="row">
-          <div>
-            <label>기간(시작)</label>
-            <input id="dateFrom" type="date" />
-          </div>
-          <div>
-            <label>기간(종료)</label>
-            <input id="dateTo" type="date" />
-          </div>
-        </div>
-
-        <label>검색(성명/기관/구분)</label>
-        <input id="q" type="text" placeholder="예: 관내전보 / 원주교육지원청 / 홍길동" />
-
-        <div class="row" style="margin-top:10px;">
-          <button id="btnApply">필터 적용</button>
-          <button id="btnExport">CSV 내보내기(흐름)</button>
-        </div>
-
-        <div class="hr"></div>
-
-        <h2>3) 진행 상태</h2>
-        <div class="progress"><div id="bar"></div></div>
-        <div class="help" id="status">대기 중</div>
-
-        <div class="hr"></div>
-
-        <h2>로그</h2>
-        <div id="log" class="log">-</div>
-        <div class="help small">
-          ※ 서식 차이로 일부 열 매핑이 누락되면 “경고”가 로그에 출력됩니다. 해당 파일은 샘플 확보 후 매핑 사전(헤더 동의어)을 확장하면 됩니다.
-        </div>
-      </div>
-
-      <!-- Right: results -->
-      <div class="card">
-        <div class="tabs">
-          <button class="tab active" data-tab="summary">요약</button>
-          <button class="tab" data-tab="flow">이동 흐름</button>
-          <button class="tab" data-tab="person">개인 이력</button>
-          <button class="tab" data-tab="quota">정원 조정(옵션)</button>
-        </div>
-
-        <!-- Summary -->
-        <div class="pane active" id="pane-summary">
-          <h2>요약</h2>
-          <div class="kpis">
-            <div class="kpi"><div class="k">적재 파일(인사)</div><div class="v" id="kpiFiles">0</div></div>
-            <div class="kpi"><div class="k">발령 이벤트</div><div class="v" id="kpiEvents">0</div></div>
-            <div class="kpi"><div class="k">성명(고유)</div><div class="v" id="kpiPersons">0</div></div>
-            <div class="kpi"><div class="k">기관(고유)</div><div class="v" id="kpiOrgs">0</div></div>
-          </div>
-
-          <div class="hr"></div>
-
-          <div class="row">
-            <div class="pill"><span class="muted">분석기간</span> <b id="kpiRange">-</b></div>
-            <div class="pill"><span class="muted">필터 적용 후 이벤트</span> <b id="kpiFiltered">0</b></div>
-          </div>
-
-          <div class="hr"></div>
-          <div class="help">
-            - 본 화면은 “발령 시행 엑셀”을 기반으로 **이동 이벤트를 구조화**한 결과입니다. <br/>
-            - 인사 확정/예측 기능이 아니라, **이력 집계 및 확인용**입니다(행정적 오해 방지 목적).
-          </div>
-        </div>
-
-        <!-- Flow -->
-        <div class="pane" id="pane-flow">
-          <h2>이동 흐름(기관 → 기관)</h2>
-          <div class="help">
-            - 기본은 “현직 부서 → 임용사항 부서” 기준으로 흐름을 집계합니다. <br/>
-            - 임지지정/파견복귀 등은 원문에 따라 기관명이 혼합될 수 있어 “기관명 정규화 옵션”을 활용하십시오.
-          </div>
-
-          <div class="hr"></div>
-
-          <div class="sankey-wrap">
-            <div class="help small muted" id="sankeyHint">
-              샌키 다이어그램은 데이터량에 따라 시간이 걸릴 수 있습니다. (브라우저 성능 영향)
-            </div>
-            <svg id="sankey" width="1000" height="520" aria-label="sankey diagram"></svg>
-          </div>
-
-          <div class="hr"></div>
-
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th style="width:46px;">순위</th>
-                  <th>From(현직)</th>
-                  <th>To(임용)</th>
-                  <th style="width:90px;">건수</th>
-                </tr>
-              </thead>
-              <tbody id="flowTbody"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Person -->
-        <div class="pane" id="pane-person">
-          <h2>개인 이력 조회</h2>
-          <div class="row">
-            <div>
-              <label>성명 검색</label>
-              <input id="personQuery" type="text" placeholder="예: 홍길동" />
-            </div>
-            <div class="w-auto" style="padding-top:26px;">
-              <button id="btnPerson">조회</button>
-            </div>
-          </div>
-
-          <div class="help small muted">
-            - 동명이인이 존재할 수 있습니다. 본 기능은 “성명 단위” 묶음으로 표시하므로, 필요 시 직급/기관으로 추가 식별하십시오.
-          </div>
-
-          <div class="hr"></div>
-
-          <div class="table-wrap">
-            <table style="min-width:900px;">
-              <thead>
-                <tr>
-                  <th style="width:120px;">시행일</th>
-                  <th style="width:120px;">구분</th>
-                  <th>현직(원문)</th>
-                  <th>임용(원문)</th>
-                  <th style="width:120px;">지역/파일</th>
-                </tr>
-              </thead>
-              <tbody id="personTbody"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Quota -->
-        <div class="pane" id="pane-quota">
-          <h2>정원 조정 내역(옵션)</h2>
-          <div class="help">
-            - 정원 조정 내역 자료는 통상 “조정 발생 학교만” 포함되므로, 본 화면은 **조정분 집계**입니다. <br/>
-            - “전체 정원(기준 스냅샷)”이 확보되면, 기준 정원 + 조정(delta) 누적으로 전체 정원 산출이 가능합니다.
-          </div>
-
-          <div class="hr"></div>
-
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th style="width:120px;">기준(파일)</th>
-                  <th style="width:80px;">시군</th>
-                  <th>학교명</th>
-                  <th style="width:90px;">현정원 합계</th>
-                  <th style="width:90px;">조정정원 합계</th>
-                  <th style="width:90px;">증감 합계</th>
-                </tr>
-              </thead>
-              <tbody id="quotaTbody"></tbody>
-            </table>
-          </div>
-        </div>
-
       </div>
     </div>
-  </div>
+  </header>
+
+  <main class="container">
+    <section class="section">
+      <h2 class="local-h2 local-tight">1. 자료 업로드</h2>
+      <div class="muted">
+        엑셀 파일은 브라우저 내에서만 처리됩니다(외부 전송 없음). 파일 개수 제한은 두지 않습니다.
+        대량(수백 개) 업로드 시 처리시간은 PC 성능에 따라 달라질 수 있습니다.
+      </div>
+
+      <div class="grid two" style="margin-top:12px;">
+        <div class="card">
+          <h3 class="local-h3 local-tight">인사발령 시행 엑셀</h3>
+          <div class="muted">드래그&드롭 또는 클릭으로 추가(폴더 드롭 지원: Chrome/Edge)</div>
+
+          <div class="dropzone" id="dzAppt" tabindex="0" role="button" aria-label="인사발령 파일 드롭존">
+            <div class="drop-title">여기에 파일(또는 폴더)을 드롭</div>
+            <div class="drop-desc">또는 클릭해서 파일 선택</div>
+          </div>
+
+          <input id="inAppt" type="file" accept=".xlsx,.xls" multiple hidden />
+          <input id="inApptDir" type="file" webkitdirectory multiple hidden />
+
+          <div class="row" style="margin-top:10px;">
+            <button class="btn ghost" id="btnPickAppt">파일 선택</button>
+            <button class="btn ghost" id="btnPickApptDir">폴더 선택</button>
+            <button class="btn-lightgrey" id="btnClearAppt">비우기</button>
+          </div>
+
+          <div class="filelist" id="listAppt"></div>
+        </div>
+
+        <div class="card">
+          <h3 class="local-h3 local-tight">정원 조정 내역(옵션)</h3>
+          <div class="muted">“학교 조정내역” 시트 기반으로 조정분을 집계합니다.</div>
+
+          <div class="dropzone" id="dzQuota" tabindex="0" role="button" aria-label="정원조정 파일 드롭존">
+            <div class="drop-title">여기에 정원 조정 엑셀 드롭</div>
+            <div class="drop-desc">또는 클릭해서 파일 선택</div>
+          </div>
+
+          <input id="inQuota" type="file" accept=".xlsx,.xls" multiple hidden />
+          <input id="inQuotaDir" type="file" webkitdirectory multiple hidden />
+
+          <div class="row" style="margin-top:10px;">
+            <button class="btn ghost" id="btnPickQuota">파일 선택</button>
+            <button class="btn ghost" id="btnPickQuotaDir">폴더 선택</button>
+            <button class="btn-lightgrey" id="btnClearQuota">비우기</button>
+          </div>
+
+          <div class="filelist" id="listQuota"></div>
+
+          <hr />
+          <h3 class="local-h3 local-tight">학교 목록(옵션)</h3>
+          <div class="muted">학교명 컬럼이 있는 엑셀을 넣으면 기관명 정규화/검색에 도움됩니다(여러 개 가능)</div>
+
+          <div class="dropzone" id="dzSchool" tabindex="0" role="button" aria-label="학교목록 파일 드롭존">
+            <div class="drop-title">여기에 학교 목록 엑셀 드롭</div>
+            <div class="drop-desc">또는 클릭해서 파일 선택</div>
+          </div>
+
+          <input id="inSchool" type="file" accept=".xlsx,.xls" multiple hidden />
+
+          <div class="row" style="margin-top:10px;">
+            <button class="btn ghost" id="btnPickSchool">파일 선택</button>
+            <button class="btn-lightgrey" id="btnClearSchool">비우기</button>
+          </div>
+
+          <div class="filelist" id="listSchool"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="local-h2 local-tight">2. 분석 설정</h2>
+
+      <div class="grid two" style="margin-top:12px;">
+        <div class="card">
+          <h3 class="local-h3 local-tight">기관명 정규화</h3>
+          <div class="muted">
+            흐름 집계 시 기관명이 길거나 괄호/부가 설명이 붙는 경우가 있어,
+            <b>첫 줄 + 괄호 제거</b> 방식이 실무적으로 안정적입니다.
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <div style="flex:1;">
+              <label class="muted">정규화 방식</label>
+              <select id="orgMode">
+                <option value="base" selected>기본(첫 줄 + 괄호 제거)</option>
+                <option value="full">원문 유지(줄바꿈만 정리)</option>
+              </select>
+            </div>
+            <div style="flex:1;">
+              <label class="muted">흐름 최소건수</label>
+              <select id="minFlow">
+                <option value="1">1건 이상</option>
+                <option value="2">2건 이상</option>
+                <option value="5" selected>5건 이상</option>
+                <option value="10">10건 이상</option>
+                <option value="20">20건 이상</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <div style="flex:1;">
+              <label class="muted">중복 파일 자동 제외</label>
+              <select id="dedupMode">
+                <option value="on" selected>사용(파일명+크기+수정일 기준)</option>
+                <option value="off">미사용(중복도 전부 처리)</option>
+              </select>
+            </div>
+            <div style="flex:1;">
+              <label class="muted">기준일자(미탐지 파일용)</label>
+              <input id="defaultBaseDate" type="date" />
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 class="local-h3 local-tight">필터/내보내기</h3>
+          <div class="muted">분석 완료 후 필터를 적용하고 CSV로 내보낼 수 있습니다.</div>
+
+          <div class="row" style="margin-top:10px;">
+            <div style="flex:1;">
+              <label class="muted">기간(시작)</label>
+              <input id="dateFrom" type="date" />
+            </div>
+            <div style="flex:1;">
+              <label class="muted">기간(종료)</label>
+              <input id="dateTo" type="date" />
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <div style="flex:1;">
+              <label class="muted">검색(성명/기관/구분/파일)</label>
+              <input id="q" type="text" placeholder="예: 관내전보 / 원주 / 홍길동 / 임지지정" />
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <button class="btn" id="btnApply" disabled>필터 적용</button>
+            <button class="btn ghost" id="btnCsvFlows" disabled>CSV(흐름)</button>
+            <button class="btn ghost" id="btnCsvEvents" disabled>CSV(이벤트)</button>
+            <button class="btn-lightgrey" id="btnResetAll">전체 초기화</button>
+          </div>
+
+          <hr />
+          <h3 class="local-h3 local-tight">진행상태</h3>
+          <div class="muted" id="status">대기 중</div>
+          <div class="progress-wrap"><div class="progress-bar" id="bar"></div></div>
+
+          <div class="row" style="margin-top:10px;">
+            <button class="btn-lightgrey" id="btnCancel" disabled>중지</button>
+          </div>
+        </div>
+      </div>
+
+      <hr />
+      <h3 class="local-h3 local-tight">로그</h3>
+      <div id="log" class="log">-</div>
+      <div class="muted" style="margin-top:8px;">
+        ※ 서식 차이로 헤더 매핑이 일부 누락될 경우 경고가 출력됩니다. 해당 파일 샘플을 기준으로 “헤더 동의어”를 추가하면 인식률을 올릴 수 있습니다.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="local-h2 local-tight">3. 분석 결과</h2>
+
+      <div class="tabs" id="tabs">
+        <button class="tab active" data-tab="summary">요약</button>
+        <button class="tab" data-tab="files">파일별 적재 결과</button>
+        <button class="tab" data-tab="flow">이동 흐름</button>
+        <button class="tab" data-tab="events">이벤트 목록</button>
+        <button class="tab" data-tab="person">개인 이력</button>
+        <button class="tab" data-tab="quota">정원 조정</button>
+      </div>
+
+      <div class="pane active" id="pane-summary">
+        <div class="kpi-grid">
+          <div class="kpi"><div class="k">인사 파일</div><div class="v" id="kpiApptFiles">0</div></div>
+          <div class="kpi"><div class="k">정원조정 파일</div><div class="v" id="kpiQuotaFiles">0</div></div>
+          <div class="kpi"><div class="k">학교목록 파일</div><div class="v" id="kpiSchoolFiles">0</div></div>
+          <div class="kpi"><div class="k">발령 이벤트</div><div class="v" id="kpiEvents">0</div></div>
+          <div class="kpi"><div class="k">성명(고유)</div><div class="v" id="kpiPersons">0</div></div>
+          <div class="kpi"><div class="k">기관(고유)</div><div class="v" id="kpiOrgs">0</div></div>
+          <div class="kpi"><div class="k">분석기간</div><div class="v" id="kpiRange">-</div></div>
+          <div class="kpi"><div class="k">필터 후 이벤트</div><div class="v" id="kpiFiltered">0</div></div>
+        </div>
+
+        <hr />
+        <div class="muted">
+          <b>참고</b><br/>
+          - 본 도구는 “발령 시행 엑셀”에서 <b>현직→임용</b> 정보를 추출하여 흐름을 집계합니다.<br/>
+          - 파일 내부에 발령일자가 없는 서식은 <b>파일명에서 기준일자</b>(예: 2026.1.1.)를 추출하여 적용합니다.<br/>
+          - 확정 발령/인사권자 판단을 대체하지 않습니다.
+        </div>
+      </div>
+
+      <div class="pane" id="pane-files">
+        <h3 class="local-h3 local-tight">파일별 적재 결과</h3>
+        <div class="muted">파일 단위로 추출 건수/기준일자/경고 여부를 확인합니다.</div>
+
+        <div class="table-wrap">
+          <table class="sheetlike">
+            <thead>
+              <tr>
+                <th style="min-width:320px;">파일명</th>
+                <th style="width:100px;">지역</th>
+                <th style="width:120px;">기준일자</th>
+                <th style="width:120px;">추출건수</th>
+                <th style="width:120px;">경고/오류</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyFileReport"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="pane" id="pane-flow">
+        <h3 class="local-h3 local-tight">이동 흐름(기관 → 기관)</h3>
+        <div class="muted">
+          - 흐름은 “현직 부서(기관) → 임용사항 부서(기관)” 기준입니다.<br/>
+          - 최소건수 미만은 제외되며, 기관명 정규화 설정에 따라 결과가 달라질 수 있습니다.
+        </div>
+
+        <div class="sankey-wrap" style="margin-top:12px;">
+          <svg id="sankey" width="1000" height="520" aria-label="sankey diagram"></svg>
+          <div class="muted" id="sankeyHint" style="margin-top:8px;"></div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="sheetlike">
+            <thead>
+              <tr>
+                <th style="width:70px;">순위</th>
+                <th>From(현직)</th>
+                <th>To(임용)</th>
+                <th style="width:110px;">건수</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyFlows"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="pane" id="pane-events">
+        <h3 class="local-h3 local-tight">이벤트 목록</h3>
+        <div class="muted">필터 적용 결과를 페이지로 조회합니다. 전체는 CSV(이벤트)로 내보내기 권장.</div>
+
+        <div class="pager">
+          <div class="row">
+            <button class="btn ghost" id="btnPrevPage">이전</button>
+            <button class="btn ghost" id="btnNextPage">다음</button>
+          </div>
+          <div class="row">
+            <span class="small">페이지</span>
+            <span class="mono" id="pageInfo">-</span>
+            <span class="small">표시</span>
+            <select id="pageSize" style="max-width:140px;">
+              <option value="100">100</option>
+              <option value="300" selected>300</option>
+              <option value="500">500</option>
+              <option value="1000">1000</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="sheetlike">
+            <thead>
+              <tr>
+                <th style="width:110px;">기준일자</th>
+                <th style="width:110px;">임용일자</th>
+                <th style="width:120px;">구분</th>
+                <th style="width:120px;">성명</th>
+                <th>현직(정규화)</th>
+                <th>임용(정규화)</th>
+                <th style="min-width:320px;">파일/시트</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyEvents"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="pane" id="pane-person">
+        <h3 class="local-h3 local-tight">개인 이력 조회</h3>
+        <div class="row" style="margin-top:10px;">
+          <div style="flex:1;">
+            <label class="muted">성명</label>
+            <input id="personName" type="text" placeholder="예: 홍길동" />
+          </div>
+          <div style="padding-top:26px;">
+            <button class="btn" id="btnPerson">조회</button>
+          </div>
+        </div>
+        <div class="muted">※ 동명이인 가능성이 있으므로 기관/구분/파일을 함께 확인하십시오.</div>
+
+        <div class="table-wrap">
+          <table class="sheetlike">
+            <thead>
+              <tr>
+                <th style="width:110px;">기준일자</th>
+                <th style="width:110px;">임용일자</th>
+                <th style="width:140px;">구분</th>
+                <th>현직(원문)</th>
+                <th>임용(원문)</th>
+                <th style="min-width:320px;">파일/시트</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyPerson"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="pane" id="pane-quota">
+        <h3 class="local-h3 local-tight">정원 조정 내역(옵션)</h3>
+        <div class="muted">
+          - 정원 조정 자료는 “조정 발생 학교만” 포함되는 경우가 일반적이므로, 본 화면은 <b>조정분 중심</b> 집계입니다.<br/>
+          - 기준연도 “전체 정원 스냅샷”이 확보되면, 기준+조정(delta) 누적으로 전체 정원 산출이 가능합니다.
+        </div>
+
+        <div class="table-wrap">
+          <table class="sheetlike">
+            <thead>
+              <tr>
+                <th style="min-width:320px;">파일명</th>
+                <th style="width:90px;">시군</th>
+                <th>학교명</th>
+                <th style="width:120px;">현정원 합계</th>
+                <th style="width:120px;">조정정원 합계</th>
+                <th style="width:120px;">증감 합계</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyQuota"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <footer class="site-footer">
+      <div class="shell">
+        <div>© 내부업무 참고용. 산출 결과는 원자료(시행문서/엑셀)와 대조 검토 후 활용.</div>
+      </div>
+    </footer>
+  </main>
 
   <script>
-    // =========================================================
-    // 유틸
-    // =========================================================
-    const $ = (sel) => document.querySelector(sel);
-    const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+    (() => {
+      "use strict";
 
-    function log(msg, level="INFO"){
-      const el = $("#log");
-      const ts = new Date().toISOString().replace("T"," ").slice(0,19);
-      const line = `[${ts}] ${level}: ${msg}\n`;
-      if (el.textContent.trim()==="-" ) el.textContent = "";
-      el.textContent += line;
-      el.scrollTop = el.scrollHeight;
-    }
-    function setStatus(msg){
-      $("#status").textContent = msg;
-    }
-    function setBar(pct){
-      $("#bar").style.width = `${Math.max(0, Math.min(100, pct))}%`;
-    }
-    function fmtInt(n){
-      if (n==null || isNaN(n)) return "0";
-      return Number(n).toLocaleString("ko-KR");
-    }
-    function toISODate(d){
-      if (!d) return null;
-      if (d instanceof Date) return d.toISOString().slice(0,10);
-      return null;
-    }
+      // =========================================================
+      // DOM 유틸
+      // =========================================================
+      const $ = (sel) => document.querySelector(sel);
+      const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
-    function normalizeSpace(s){
-      return String(s ?? "")
-        .replace(/\u00A0/g, " ")
-        .replace(/[ \t]+/g, " ")
-        .replace(/\r/g, "")
-        .trim();
-    }
+      function setStatus(msg) { $("#status").textContent = msg; }
+      function setBar(pct) { $("#bar").style.width = `${Math.max(0, Math.min(100, pct))}%`; }
 
-    function stripParens(s){
-      // 괄호/대괄호 내용 제거(기관명 정규화용)
-      return normalizeSpace(String(s ?? "")
-        .replace(/\([^)]*\)/g, " ")
-        .replace(/\[[^\]]*\]/g, " ")
-      );
-    }
-
-    function cleanOrg(raw, mode){
-      const s = normalizeSpace(String(raw ?? ""));
-      if (!s) return "";
-      if (mode === "full"){
-        return s.replace(/\s*\n\s*/g, " ").trim();
+      function escapeHtml(s){
+        return String(s ?? "")
+          .replace(/&/g,"&amp;")
+          .replace(/</g,"&lt;")
+          .replace(/>/g,"&gt;")
+          .replace(/"/g,"&quot;")
+          .replace(/'/g,"&#39;");
       }
-      // base: 첫 줄 + 괄호 제거
-      const firstLine = s.split("\n")[0];
-      return stripParens(firstLine);
-    }
 
-    function parseDateCell(v){
-      // 엑셀에서 날짜가 string("2026. 1. 1.") 또는 Date 또는 number(엑셀 serial)로 올 수 있음
-      if (v == null || v === "") return null;
-      if (v instanceof Date){
-        return v;
+      function fmtInt(n){
+        if (n == null || isNaN(n)) return "0";
+        return Number(n).toLocaleString("ko-KR");
       }
-      if (typeof v === "number"){
-        // Excel serial to JS Date
-        // SheetJS는 기본적으로 날짜를 number로 줄 수 있음(옵션/셀형식에 따라)
-        const date = XLSX.SSF.parse_date_code(v);
-        if (date && date.y && date.m && date.d){
-          return new Date(date.y, date.m - 1, date.d);
+
+      function fmtBytes(bytes){
+        const n = Number(bytes || 0);
+        const units = ["B","KB","MB","GB"];
+        let v = n, i = 0;
+        while (v >= 1024 && i < units.length-1) { v /= 1024; i++; }
+        return `${v.toFixed(i === 0 ? 0 : 1)}${units[i]}`;
+      }
+
+      function nowISO(){
+        return new Date().toISOString().replace("T"," ").slice(0,19);
+      }
+
+      function log(msg, level="INFO"){
+        const el = $("#log");
+        const line = `[${nowISO()}] ${level}: ${msg}\n`;
+        if (el.textContent.trim() === "-") el.textContent = "";
+        el.textContent += line;
+        el.scrollTop = el.scrollHeight;
+      }
+
+      // =========================================================
+      // 텍스트 정규화
+      // =========================================================
+      function normalizeSpace(s){
+        return String(s ?? "")
+          .replace(/\u00A0/g, " ")
+          .replace(/\r/g, "")
+          .replace(/[ \t]+/g, " ")
+          .trim();
+      }
+
+      function normalizeInlineText(s){
+        return String(s ?? "")
+          .replace(/\u00A0/g, " ")
+          .replace(/\r?\n/g, " ")
+          .replace(/[ \t]+/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+      }
+
+      function normKey(s){
+        // 비교용: 공백/줄바꿈/구분기호 제거 + 소문자
+        return String(s ?? "")
+          .replace(/\u00A0/g, "")
+          .replace(/\r?\n/g, "")
+          .replace(/\s+/g, "")
+          .replace(/[·ㆍ]/g, "")
+          .replace(/[()［］\[\]{}]/g, "")
+          .toLowerCase()
+          .trim();
+      }
+
+      function stripParens(s){
+        return normalizeSpace(String(s ?? "")
+          .replace(/\([^)]*\)/g, " ")
+          .replace(/\[[^\]]*\]/g, " ")
+        );
+      }
+
+      function cleanOrg(raw, mode){
+        const s = String(raw ?? "");
+        if (!s.trim()) return "";
+        if (mode === "full"){
+          return normalizeInlineText(s);
         }
+        // base: 첫 줄 + 괄호 제거
+        const firstLine = s.split(/\r?\n/)[0] ?? "";
+        return stripParens(firstLine);
+      }
+
+      // =========================================================
+      // 날짜 파싱 (셀 / 파일명 / 제목)
+      // =========================================================
+      function parseDateString(s){
+        const t = normalizeInlineText(s);
+        if (!t) return null;
+
+        // 4자리 연도
+        let m = t.match(/(20\d{2})\s*[.\-/ ]\s*(\d{1,2})\s*[.\-/ ]\s*(\d{1,2})/);
+        if (m){
+          const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+          if (y && mo && d) return new Date(y, mo-1, d);
+        }
+
+        // 2자리 연도(26.1.1 등)
+        m = t.match(/(?:\(|\[)?(\d{2})\s*[.\-/ ]\s*(\d{1,2})\s*[.\-/ ]\s*(\d{1,2})(?:\)|\])?/);
+        if (m){
+          const y = 2000 + Number(m[1]);
+          const mo = Number(m[2]), d = Number(m[3]);
+          if (y && mo && d) return new Date(y, mo-1, d);
+        }
+
         return null;
       }
-      const s = normalizeSpace(v);
-      // "2026. 1. 1." / "2026.1.1." / "2026-01-01"
-      const m = s.match(/(20\d{2})\s*[.\-/]\s*(\d{1,2})\s*[.\-/]\s*(\d{1,2})/);
-      if (!m) return null;
-      const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
-      if (!y || !mo || !d) return null;
-      return new Date(y, mo - 1, d);
-    }
 
-    function parseDateFromFilename(name){
-      // 예: "[원주] 2026. 1. 1.자 ..." / "2026.1.1." / "(26.1.1.)" 등
-      const s = String(name ?? "");
-      let m = s.match(/(20\d{2})\s*[.\-/]\s*(\d{1,2})\s*[.\-/]\s*(\d{1,2})/);
-      if (m){
-        return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-      }
-      m = s.match(/\((\d{2})\s*[.\-/]\s*(\d{1,2})\s*[.\-/]\s*(\d{1,2})\)/);
-      if (m){
-        const yy = Number(m[1]);
-        const y = 2000 + yy;
-        return new Date(y, Number(m[2]) - 1, Number(m[3]));
-      }
-      return null;
-    }
-
-    function pickRegionFromFilename(name){
-      const s = String(name ?? "");
-      const m = s.match(/\[([^\]]+)\]/);
-      if (m) return normalizeSpace(m[1]);
-      return "";
-    }
-
-    // 헤더 동의어 매핑(서식 변동 대응)
-    function normKey(s){
-      return normalizeSpace(String(s ?? ""))
-        .replace(/\n/g, "")
-        .replace(/\s+/g, "")
-        .replace(/[·ㆍ]/g, "")
-        .toLowerCase();
-    }
-
-    const HEADER_SYNONYMS = {
-      seq: ["연번","순번","번호"],
-      name: ["성명","성명(한글)","성 명","이름"],
-      date: ["임용일자","임용일","발령일","임용일자(발령일)","임용일자(발령일자)","임용일자(임용일)","임 용일자","임 용 일 자","임 용\n일 자","임용\n일자"],
-      type: ["구분","임용구분","발령구분","구분(전소속기관)","구분(전소속)","구분(전소속기관)", "구분\n(전소속기관)"],
-      prevOrg: ["전소속기관","전 소속기관","전소속","전 소속", "전소속기관(현직)"],
-      remark: ["비고","비 고","비고란","기타","특이사항"],
-      // 복합 컬럼은 parent|child 형태를 고려
-      curGrade: ["현직직급","현직|직급","현직|직 급","현직|직급(현직)"],
-      curDept: ["현직부서","현직|부서","현직|부 서","현직부서(현직)","현직(부서)","현직부서명"],
-      newGrade: ["임용사항직급","임용사항|직급","임용사항|직 급","임용사항|직급(임용)","임용직급"],
-      newDept: ["임용사항부서","임용사항|부서","임용사항|부 서","임용사항부서(임용)","임용부서","임용부서명"]
-    };
-
-    function matchHeaderToField(headerLabel){
-      const k = normKey(headerLabel);
-      if (!k) return null;
-      for (const [field, syns] of Object.entries(HEADER_SYNONYMS)){
-        for (const s of syns){
-          if (k === normKey(s)) return field;
+      function parseDateCell(v){
+        if (v == null || v === "") return null;
+        if (v instanceof Date) return v;
+        if (typeof v === "number"){
+          // Excel serial date
+          try{
+            const o = XLSX.SSF.parse_date_code(v);
+            if (o && o.y && o.m && o.d) return new Date(o.y, o.m-1, o.d);
+          }catch(e){}
+          return null;
         }
-      }
-      // 느슨한 매칭(부분 포함) - 너무 공격적이면 오탐 가능하므로 제한적으로 사용
-      if (k.includes("성명")) return "name";
-      if (k.includes("연번")) return "seq";
-      if (k.includes("임용") && k.includes("일자")) return "date";
-      if (k.includes("전소속")) return "prevOrg";
-      if (k === "구분") return "type";
-      return null;
-    }
-
-    function forwardFill(row){
-      // 병합셀로 인해 빈칸이 생기는 헤더를 전 값으로 채움
-      const out = [];
-      let last = "";
-      for (const v of row){
-        const s = normalizeSpace(v ?? "");
-        if (s){
-          last = s;
-          out.push(s);
-        }else{
-          out.push(last);
-        }
-      }
-      return out;
-    }
-
-    // =========================================================
-    // 상태(메모리 내)
-    // =========================================================
-    const STATE = {
-      loaded: false,
-      files: { appt: [], school: null, quota: [] },
-      apptFileCount: 0,
-      events: [],          // {date, type, name, curDeptRaw, newDeptRaw, curDept, newDept, region, source}
-      personIndex: new Map(), // name -> [eventIdx...]
-      orgSet: new Set(),
-      minDate: null,
-      maxDate: null,
-
-      schoolSet: null,      // Set of school names (optional)
-      quotaRows: []         // {file, siGun, school, cur, adj, diff}
-    };
-
-    function resetState(){
-      STATE.loaded = false;
-      STATE.apptFileCount = 0;
-      STATE.events = [];
-      STATE.personIndex = new Map();
-      STATE.orgSet = new Set();
-      STATE.minDate = null;
-      STATE.maxDate = null;
-      STATE.schoolSet = null;
-      STATE.quotaRows = [];
-      $("#flowTbody").innerHTML = "";
-      $("#personTbody").innerHTML = "";
-      $("#quotaTbody").innerHTML = "";
-      $("#kpiFiles").textContent = "0";
-      $("#kpiEvents").textContent = "0";
-      $("#kpiPersons").textContent = "0";
-      $("#kpiOrgs").textContent = "0";
-      $("#kpiRange").textContent = "-";
-      $("#kpiFiltered").textContent = "0";
-      $("#sankey").innerHTML = "";
-      $("#log").textContent = "-";
-      setBar(0);
-      setStatus("대기 중");
-    }
-
-    // =========================================================
-    // 엑셀 파서(인사발령)
-    // =========================================================
-    function findHeaderRow(rows){
-      // rows: Array<Array<any>> (sheet_to_json header:1)
-      // 1) "연번" 포함 + "성명" 포함
-      const maxScan = Math.min(rows.length, 30);
-      for (let r=0; r<maxScan; r++){
-        const row = rows[r] || [];
-        const keys = row.map(v => normKey(v));
-        const hasSeq = keys.some(k => k === normKey("연번") || k === normKey("순번"));
-        const hasName = keys.some(k => k === normKey("성명") || k === normKey("성 명") || k.includes("성명"));
-        if (hasSeq && hasName){
-          return r;
-        }
-      }
-      return -1;
-    }
-
-    function buildColumns(rows, headerRowIdx){
-      const headerRow = forwardFill(rows[headerRowIdx] || []);
-      const maybeSub = rows[headerRowIdx + 1] || [];
-      const subRow = forwardFill(maybeSub);
-
-      // subheader 판정: 다음 행에 "직급/부서/호봉" 같은 키워드가 있으면 subheader로 봄
-      const subKeys = subRow.map(v => normKey(v));
-      const looksSub = subKeys.some(k => k.includes("직급") || k.includes("부서") || k.includes("호봉"));
-
-      const cols = [];
-      for (let c=0; c<headerRow.length; c++){
-        const parent = normalizeSpace(headerRow[c] ?? "");
-        const child = looksSub ? normalizeSpace(subRow[c] ?? "") : "";
-        let label = parent;
-        if (looksSub && child && parent && normKey(child) !== normKey(parent)){
-          // 예: "임용사항|부서"
-          label = `${parent}|${child}`;
-        }
-        cols.push({ c, label, field: matchHeaderToField(label) });
-      }
-      return { cols, dataStartRow: headerRowIdx + (looksSub ? 2 : 1), looksSub };
-    }
-
-    function getCell(row, idx){
-      if (!row) return null;
-      if (idx < 0 || idx >= row.length) return null;
-      return row[idx];
-    }
-
-    function parseApptSheet(sheetName, rows, fileMeta){
-      const headerRowIdx = findHeaderRow(rows);
-      if (headerRowIdx < 0){
-        log(`경고: 헤더(연번/성명)를 찾지 못함. sheet="${sheetName}" file="${fileMeta.name}"`, "WARN");
-        return [];
-      }
-      const { cols, dataStartRow } = buildColumns(rows, headerRowIdx);
-
-      // 필요한 필드가 최소한 name, curDept/newDept/type/date 중 일부는 있어야 함
-      const colByField = new Map();
-      for (const col of cols){
-        if (col.field && !colByField.has(col.field)){
-          colByField.set(col.field, col.c);
-        }
+        return parseDateString(String(v));
       }
 
-      const nameCol = colByField.get("name") ?? -1;
-      const typeCol = colByField.get("type") ?? -1;
-      const dateCol = colByField.get("date") ?? -1;
-      const curDeptCol = colByField.get("curDept") ?? -1;
-      const newDeptCol = colByField.get("newDept") ?? -1;
-      const prevOrgCol = colByField.get("prevOrg") ?? -1;
-      const remarkCol = colByField.get("remark") ?? -1;
-
-      if (nameCol < 0){
-        log(`경고: 성명 컬럼 매핑 실패. sheet="${sheetName}" file="${fileMeta.name}"`, "WARN");
-        return [];
-      }
-      if (curDeptCol < 0 || newDeptCol < 0){
-        log(`경고: 현직/임용 부서 컬럼 매핑이 불완전(현직=${curDeptCol}, 임용=${newDeptCol}). sheet="${sheetName}" file="${fileMeta.name}"`, "WARN");
+      function parseBaseDateFromFilename(name){
+        return parseDateString(String(name ?? ""));
       }
 
-      const out = [];
-      let emptyRun = 0;
+      function pickRegionFromFilename(name){
+        const s = String(name ?? "");
+        const m = s.match(/\[([^\]]+)\]/);
+        if (m) return normalizeSpace(m[1]);
+        return "";
+      }
 
-      for (let r=dataStartRow; r<rows.length; r++){
-        const row = rows[r];
-        if (!row) continue;
-
-        const name = normalizeSpace(getCell(row, nameCol));
-        if (!name){
-          // 연속 공백 행이 늘어나면 중단
-          const seq = normalizeSpace(getCell(row, 0));
-          const any = row.some(v => normalizeSpace(v));
-          if (!any || (!seq && !any)){
-            emptyRun++;
-            if (emptyRun >= 8) break;
-          }else{
-            emptyRun = 0;
+      function scanBaseDateFromWorkbookTitle(wb){
+        // 시트 1~2개만, 상단 1~6행에서 날짜 문자열 탐색
+        try{
+          for (const sheetName of wb.SheetNames.slice(0, 2)){
+            const ws = wb.Sheets[sheetName];
+            const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null });
+            const maxR = Math.min(rows.length, 8);
+            for (let r=0; r<maxR; r++){
+              const row = rows[r] || [];
+              const maxC = Math.min(row.length, 8);
+              for (let c=0; c<maxC; c++){
+                const v = row[c];
+                if (typeof v === "string" && v.length <= 80){
+                  const d = parseDateString(v);
+                  if (d) return d;
+                }
+              }
+            }
           }
-          continue;
+        }catch(e){}
+        return null;
+      }
+
+      // =========================================================
+      // 헤더 매핑(서식 다양성 대응)
+      // =========================================================
+      const HEADER_HINTS = {
+        seq: ["연번","순번","일련번호","번호","no","no."],
+        name: ["성명","성명(한글)","성명한글","성명(한글)","성 명","이름"],
+        date: ["임용일자","임용일","발령일","임 용일자","임용\n일자","임용일자(발령일)","임용일자(발령일자)"],
+        type: ["구분","임용구분","발령구분","구분(전소속기관)","구분전소속기관","임지지정","관내전보","전입","전출"],
+        prevOrg: ["전소속기관","전 소속기관","전소속","전 소속"],
+        remark: ["비고","비 고","기타","교부식","발령장","수여식"],
+
+        // 다단 헤더(부서/직급/호봉)
+        grade: ["직급","직 급"],
+        step: ["호봉","호 봉"],
+        dept: ["부서","부 서","부서명"]
+      };
+
+      function isHeaderCellMatch(cell, hints){
+        const k = normKey(cell);
+        return hints.some(h => k === normKey(h));
+      }
+
+      function forwardFill(row){
+        const out = [];
+        let last = "";
+        for (const v of row){
+          const s = normalizeSpace(v ?? "");
+          if (s){
+            last = s;
+            out.push(s);
+          }else{
+            out.push(last);
+          }
         }
-        emptyRun = 0;
+        return out;
+      }
 
-        const typeRaw = normalizeSpace(getCell(row, typeCol));
-        const prevOrgRaw = normalizeSpace(getCell(row, prevOrgCol));
-        const remarkRaw = normalizeSpace(getCell(row, remarkCol));
+      function findHeaderRow(rows){
+        // 0-index rows
+        const maxScan = Math.min(rows.length, 80);
+        for (let r=0; r<maxScan; r++){
+          const row = rows[r] || [];
+          const keys = row.map(v => normKey(v));
+          const hasSeq = keys.some(k => HEADER_HINTS.seq.some(h => k === normKey(h)));
+          const hasName = keys.some(k => HEADER_HINTS.name.some(h => k === normKey(h) || k.includes("성명")));
+          if (hasSeq && hasName) return r;
+        }
+        return -1;
+      }
 
-        let date = parseDateCell(getCell(row, dateCol));
-        if (!date){
-          date = fileMeta.fallbackDate;
+      function looksLikeSubHeader(row){
+        // 직급/부서/호봉 중 하나라도 있으면 subheader로 간주
+        const keys = (row || []).map(v => normKey(v));
+        return keys.some(k => k.includes("직급") || k.includes("부서") || k.includes("호봉"));
+      }
+
+      function buildColumns(rows, headerRowIdx){
+        const headerRow = forwardFill(rows[headerRowIdx] || []);
+        const subRowRaw = rows[headerRowIdx + 1] || [];
+        const hasSub = looksLikeSubHeader(subRowRaw);
+        const subRow = hasSub ? forwardFill(subRowRaw) : [];
+
+        const cols = [];
+        for (let c=0; c<headerRow.length; c++){
+          const p = normalizeSpace(headerRow[c] ?? "");
+          const s = hasSub ? normalizeSpace(subRow[c] ?? "") : "";
+          let label = p;
+          if (hasSub && s && p && normKey(s) !== normKey(p)){
+            label = `${p}|${s}`;
+          }
+          cols.push({ c, label, field: matchHeaderToField(label) });
+        }
+        return { cols, dataStart: headerRowIdx + (hasSub ? 2 : 1), hasSub };
+      }
+
+      function matchHeaderToField(label){
+        const raw = String(label ?? "");
+        const k = normKey(raw);
+        if (!k) return null;
+
+        // 1) 직접 키워드
+        if (HEADER_HINTS.name.some(h => k === normKey(h) || k.includes("성명"))) return "name";
+        if (HEADER_HINTS.seq.some(h => k === normKey(h))) return "seq";
+        if (k.includes("임용") && k.includes("일자")) return "date";
+        if (HEADER_HINTS.date.some(h => k === normKey(h))) return "date";
+        if (k.includes("전소속")) return "prevOrg";
+        if (k === "구분" || k.includes("발령구분") || k.includes("임용구분") || k.includes("구분전소속기관")) return "type";
+        if (k.includes("비고") || k.includes("교부식") || k.includes("수여식") || k.includes("발령장")) return "remark";
+
+        // 2) 다단 헤더: parent|child
+        const parts = raw.split("|").map(x => normalizeSpace(x));
+        if (parts.length === 2){
+          const parent = normKey(parts[0]);
+          const child = normKey(parts[1]);
+
+          const isAppoint = parent.includes("임용") || parent.includes("임용사항") || parent.includes("임용사") || parent.includes("임용사항");
+          const isCurrent = parent.includes("현직") || parent.includes("현직") || parent.includes("현직") || parent.replace(/\s/g,"").includes("현직") || parent.includes("현직");
+
+          const isDept = child.includes("부서");
+          const isGrade = child.includes("직급");
+          const isStep = child.includes("호봉");
+
+          if (isAppoint && isDept) return "newDept";
+          if (isAppoint && isGrade) return "newGrade";
+          if (isAppoint && isStep) return "newStep";
+
+          if (isCurrent && isDept) return "curDept";
+          if (isCurrent && isGrade) return "curGrade";
+          if (isCurrent && isStep) return "curStep";
         }
 
-        const curDeptRaw = normalizeSpace(getCell(row, curDeptCol));
-        const newDeptRaw = normalizeSpace(getCell(row, newDeptCol));
+        // 3) 단일 컬럼인데 “현직부서/임용사항부서”처럼 합쳐진 케이스
+        if (k.includes("현직") && k.includes("부서")) return "curDept";
+        if (k.includes("현직") && k.includes("직급")) return "curGrade";
+        if (k.includes("임용") && k.includes("부서")) return "newDept";
+        if (k.includes("임용") && k.includes("직급")) return "newGrade";
+        if (k.includes("임용") && k.includes("호봉")) return "newStep";
 
-        // 구분 컬럼이 "구분(전소속기관)" 형태로 합쳐져 있는 경우가 있어, 괄호를 분리해서 참고 정보로만 둠
-        let type = typeRaw;
-        let extraFrom = "";
-        if (typeRaw && typeRaw.includes("(") && typeRaw.includes(")")){
-          const m = typeRaw.match(/^(.*?)\((.*)\)\s*$/);
+        return null;
+      }
+
+      function getCell(row, idx){
+        if (!row) return null;
+        if (idx < 0 || idx >= row.length) return null;
+        return row[idx];
+      }
+
+      function isLikelyEndRow(row){
+        const any = (row || []).some(v => normalizeSpace(v));
+        return !any;
+      }
+
+      // =========================================================
+      // 파서: 인사발령 시트
+      // =========================================================
+      function parseApptSheet(rows, meta, options, report){
+        const headerRowIdx = findHeaderRow(rows);
+        if (headerRowIdx < 0){
+          report.warn++;
+          log(`경고: 헤더(연번/성명)를 찾지 못함 (file="${meta.name}", sheet="${meta.sheet}")`, "WARN");
+          return [];
+        }
+
+        const { cols, dataStart } = buildColumns(rows, headerRowIdx);
+        const colByField = new Map();
+        for (const col of cols){
+          if (col.field && !colByField.has(col.field)){
+            colByField.set(col.field, col.c);
+          }
+        }
+
+        const idxName = colByField.get("name") ?? -1;
+        const idxType = colByField.get("type") ?? -1;
+        const idxDate = colByField.get("date") ?? -1;
+        const idxPrevOrg = colByField.get("prevOrg") ?? -1;
+        const idxRemark = colByField.get("remark") ?? -1;
+        const idxCurDept = colByField.get("curDept") ?? -1;
+        const idxNewDept = colByField.get("newDept") ?? -1;
+
+        if (idxName < 0){
+          report.warn++;
+          log(`경고: 성명 컬럼 매핑 실패 (file="${meta.name}", sheet="${meta.sheet}")`, "WARN");
+          return [];
+        }
+
+        if (idxCurDept < 0 || idxNewDept < 0){
+          report.warn++;
+          log(`경고: 현직/임용 부서 매핑 불완전(curDept=${idxCurDept}, newDept=${idxNewDept}) (file="${meta.name}", sheet="${meta.sheet}")`, "WARN");
+        }
+
+        const out = [];
+        let emptyRun = 0;
+
+        for (let r = dataStart; r < rows.length; r++){
+          const row = rows[r];
+
+          if (!row || isLikelyEndRow(row)){
+            emptyRun++;
+            if (emptyRun >= 10) break;
+            continue;
+          }
+          emptyRun = 0;
+
+          const name = normalizeSpace(getCell(row, idxName));
+          if (!name) continue;
+          if (name.includes("합계") || name.includes("계")) continue;
+
+          // type: 줄바꿈/괄호 포함 케이스 대응
+          const typeRaw = normalizeInlineText(getCell(row, idxType));
+          let type = typeRaw || "";
+          let extraFrom = "";
+
+          // 예: "임지지정 (전보)" 또는 "임지지정\n(전보)"
+          const tInline = normalizeInlineText(typeRaw);
+          const m = tInline.match(/^(.*?)\s*\((.*?)\)\s*$/);
           if (m){
             type = normalizeSpace(m[1]);
             extraFrom = normalizeSpace(m[2]);
+          }else{
+            type = tInline;
           }
-        }
-        if (!type && prevOrgRaw){
-          // 춘천처럼 전소속기관/구분 분리인데 type이 비어 있으면 보정(드문 케이스)
-          type = "";
+
+          const prevOrgRaw = normalizeInlineText(getCell(row, idxPrevOrg));
+          const remarkRaw = normalizeInlineText(getCell(row, idxRemark));
+
+          // 날짜: 셀 → 없으면 파일 기준일자
+          let appointDate = parseDateCell(getCell(row, idxDate));
+          if (!appointDate) appointDate = meta.baseDate;
+
+          const curDeptRaw = String(getCell(row, idxCurDept) ?? "");
+          const newDeptRaw = String(getCell(row, idxNewDept) ?? "");
+          const curDept = cleanOrg(curDeptRaw, options.orgMode);
+          const newDept = cleanOrg(newDeptRaw, options.orgMode);
+
+          out.push({
+            baseDate: meta.baseDate,                 // 파일 기준일자(발령 기준)
+            appointDate: appointDate,               // row 임용일자(없으면 baseDate)
+            region: meta.region,
+            file: meta.name,
+            sheet: meta.sheet,
+
+            name,
+            type,
+            extraFrom,
+            prevOrgRaw,
+            remarkRaw,
+
+            curDeptRaw: normalizeInlineText(curDeptRaw),
+            newDeptRaw: normalizeInlineText(newDeptRaw),
+            curDept,
+            newDept
+          });
         }
 
-        out.push({
-          date,
-          type: type || "",
-          name,
-          curDeptRaw,
-          newDeptRaw,
-          prevOrgRaw,
-          extraFrom,
-          remarkRaw,
-          region: fileMeta.region,
-          source: fileMeta.name,
-          sheet: sheetName
-        });
+        return out;
       }
 
-      return out;
-    }
+      async function parseApptWorkbook(fileEntry, options, report){
+        const file = fileEntry.file;
+        const buf = await file.arrayBuffer();
 
-    async function parseApptWorkbook(file){
-      const buf = await file.arrayBuffer();
-      const wb = XLSX.read(buf, { type: "array", cellDates: true });
+        // 일부 파일(openpyxl 문제 케이스)도 SheetJS는 읽히는 경우가 있어, 일단 SheetJS로 처리
+        const wb = XLSX.read(buf, { type: "array", cellDates: true });
 
-      const region = pickRegionFromFilename(file.name);
-      const fallbackDate = parseDateFromFilename(file.name);
+        const region = fileEntry.region || pickRegionFromFilename(file.name);
+        const baseFromName = parseBaseDateFromFilename(file.name);
+        const baseFromTitle = scanBaseDateFromWorkbookTitle(wb);
+        const defaultBase = options.defaultBaseDate ? new Date(options.defaultBaseDate + "T00:00:00") : null;
 
-      const fileMeta = { name: file.name, region, fallbackDate };
+        const baseDate = fileEntry.baseDateOverride
+          ? new Date(fileEntry.baseDateOverride + "T00:00:00")
+          : (baseFromName || baseFromTitle || defaultBase);
 
-      const all = [];
-      for (const sheetName of wb.SheetNames){
+        if (!baseDate){
+          report.warn++;
+          log(`경고: 기준일자 탐지 실패(파일명/제목/기본값). file="${file.name}"`, "WARN");
+        }
+
+        const all = [];
+        for (const sheetName of wb.SheetNames){
+          const ws = wb.Sheets[sheetName];
+          const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null });
+
+          const meta = {
+            name: file.name,
+            region,
+            baseDate,
+            sheet: sheetName
+          };
+
+          const parsed = parseApptSheet(rows, meta, options, report);
+          if (parsed.length) all.push(...parsed);
+        }
+        return { baseDate, region, count: all.length, events: all };
+      }
+
+      // =========================================================
+      // 파서: 학교 목록(옵션)
+      // =========================================================
+      function findColumnIndex(headerRow, candidates){
+        const hdr = (headerRow || []).map(x => normKey(x));
+        for (let i=0; i<hdr.length; i++){
+          const k = hdr[i];
+          if (candidates.some(c => k === normKey(c))) return i;
+        }
+        return -1;
+      }
+
+      async function parseSchoolWorkbook(file, report){
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(buf, { type: "array", cellDates: true });
+        const sheetName = wb.SheetNames[0];
         const ws = wb.Sheets[sheetName];
         const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null });
-        const parsed = parseApptSheet(sheetName, rows, fileMeta);
-        if (parsed.length){
-          all.push(...parsed);
+
+        // 헤더 탐색: "학교명" 또는 "기관명" 또는 "학교"
+        let headerRow = -1;
+        const maxScan = Math.min(rows.length, 60);
+        for (let r=0; r<maxScan; r++){
+          const row = rows[r] || [];
+          const k = row.map(v => normKey(v));
+          const ok = k.includes(normKey("학교명")) || k.includes(normKey("기관명"));
+          if (ok) { headerRow = r; break; }
         }
-      }
-      if (!all.length){
-        log(`경고: 유효 데이터(발령 행)를 찾지 못함. file="${file.name}"`, "WARN");
-      }
-      return all;
-    }
-
-    // =========================================================
-    // 엑셀 파서(학교 목록)
-    // =========================================================
-    async function parseSchoolList(file){
-      const buf = await file.arrayBuffer();
-      const wb = XLSX.read(buf, { type: "array" });
-      const first = wb.SheetNames[0];
-      const ws = wb.Sheets[first];
-      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null });
-
-      // 헤더 행 찾기: "학교명" 포함
-      let headerRow = -1;
-      for (let r=0; r<Math.min(40, rows.length); r++){
-        const row = rows[r] || [];
-        const keys = row.map(v => normKey(v));
-        if (keys.some(k => k === normKey("학교명"))){
-          headerRow = r;
-          break;
+        if (headerRow < 0){
+          report.warn++;
+          log(`경고: 학교목록 헤더(학교명/기관명) 탐지 실패. file="${file.name}"`, "WARN");
+          return new Set();
         }
-      }
-      if (headerRow < 0){
-        log(`경고: 학교 목록에서 "학교명" 헤더를 찾지 못함. file="${file.name}"`, "WARN");
-        return null;
-      }
 
-      const header = forwardFill(rows[headerRow] || []);
-      let schoolCol = -1;
-      for (let c=0; c<header.length; c++){
-        if (normKey(header[c]) === normKey("학교명")){
-          schoolCol = c; break;
+        const header = forwardFill(rows[headerRow] || []);
+        let idxSchool = findColumnIndex(header, ["학교명","기관명"]);
+        if (idxSchool < 0){
+          // 최후: "학교" 포함 컬럼
+          idxSchool = header.findIndex(h => normKey(h).includes("학교"));
         }
-      }
-      if (schoolCol < 0){
-        log(`경고: 학교 목록에서 학교명 컬럼 인덱스 산출 실패. file="${file.name}"`, "WARN");
-        return null;
-      }
+        if (idxSchool < 0){
+          report.warn++;
+          log(`경고: 학교명 컬럼 인덱스 산출 실패. file="${file.name}"`, "WARN");
+          return new Set();
+        }
 
-      const set = new Set();
-      for (let r=headerRow+1; r<rows.length; r++){
-        const v = normalizeSpace(getCell(rows[r], schoolCol));
-        if (v) set.add(stripParens(v));
-      }
-      log(`학교 목록 적재 완료: ${set.size}개 (file="${file.name}")`, "OK");
-      return set;
-    }
-
-    // =========================================================
-    // 엑셀 파서(정원 조정 내역)
-    // =========================================================
-    async function parseQuotaWorkbook(file){
-      const buf = await file.arrayBuffer();
-      const wb = XLSX.read(buf, { type: "array" });
-
-      let sheetName = wb.SheetNames.find(n => normalizeSpace(n) === "학교 조정내역");
-      if (!sheetName){
-        // 유사 이름 탐색
-        sheetName = wb.SheetNames.find(n => normalizeSpace(n).includes("학교") && normalizeSpace(n).includes("조정"));
-      }
-      if (!sheetName){
-        log(`경고: 정원 조정 내역에서 "학교 조정내역" 시트를 찾지 못함. file="${file.name}"`, "WARN");
-        return [];
+        const set = new Set();
+        for (let r=headerRow+1; r<rows.length; r++){
+          const v = normalizeSpace(getCell(rows[r], idxSchool));
+          if (v) set.add(stripParens(v));
+        }
+        return set;
       }
 
-      const ws = wb.Sheets[sheetName];
-      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null });
-      if (!rows.length) return [];
+      // =========================================================
+      // 파서: 정원 조정(옵션) - "학교 조정내역"
+      // =========================================================
+      async function parseQuotaWorkbook(file, report){
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(buf, { type: "array", cellDates: true });
 
-      // 헤더: 시군, 학교명, 구분
-      let headerRow = -1;
-      for (let r=0; r<Math.min(20, rows.length); r++){
-        const row = rows[r] || [];
-        const keys = row.map(v => normKey(v));
-        const ok = keys.includes(normKey("시군")) && keys.includes(normKey("학교명")) && keys.includes(normKey("구분"));
-        if (ok){ headerRow = r; break; }
-      }
-      if (headerRow < 0){
-        log(`경고: 정원 조정 내역 헤더(시군/학교명/구분)를 찾지 못함. file="${file.name}"`, "WARN");
-        return [];
-      }
+        let sheetName = wb.SheetNames.find(n => normalizeSpace(n) === "학교 조정내역");
+        if (!sheetName){
+          sheetName = wb.SheetNames.find(n => normalizeSpace(n).includes("학교") && normalizeSpace(n).includes("조정"));
+        }
+        if (!sheetName){
+          report.warn++;
+          log(`경고: 정원조정 시트("학교 조정내역") 탐지 실패. file="${file.name}"`, "WARN");
+          return [];
+        }
 
-      const header = forwardFill(rows[headerRow] || []);
-      const idxSiGun = header.findIndex(h => normKey(h) === normKey("시군"));
-      const idxSchool = header.findIndex(h => normKey(h) === normKey("학교명"));
-      const idxType = header.findIndex(h => normKey(h) === normKey("구분"));
+        const ws = wb.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null });
 
-      const out = [];
-      for (let r=headerRow+1; r<rows.length; r++){
-        const row = rows[r] || [];
-        const siGun = normalizeSpace(getCell(row, idxSiGun));
-        const school = normalizeSpace(getCell(row, idxSchool));
-        const type = normalizeSpace(getCell(row, idxType));
-        if (!siGun || !school || !type) continue;
-
-        // D열 이후 숫자 합산
-        let sum = 0;
-        for (let c=idxType+1; c<row.length; c++){
-          const v = row[c];
-          if (typeof v === "number" && !isNaN(v)) sum += v;
-          else if (typeof v === "string"){
-            const n = Number(v);
-            if (!isNaN(n)) sum += n;
+        // 헤더(시군/학교명/구분) 탐색
+        let headerRow = -1;
+        for (let r=0; r<Math.min(rows.length, 30); r++){
+          const row = rows[r] || [];
+          const k = row.map(v => normKey(v));
+          if (k.includes(normKey("시군")) && k.includes(normKey("학교명")) && k.includes(normKey("구분"))){
+            headerRow = r; break;
           }
         }
-        out.push({
-          file: file.name,
-          siGun,
-          school: stripParens(school),
-          type,
-          sum
-        });
-      }
-
-      // 현정원/조정정원/증감 합치기
-      const bySchool = new Map(); // key = file|siGun|school -> {cur, adj, diff}
-      for (const r of out){
-        const key = `${r.file}||${r.siGun}||${r.school}`;
-        if (!bySchool.has(key)){
-          bySchool.set(key, { file:r.file, siGun:r.siGun, school:r.school, cur:null, adj:null, diff:null });
+        if (headerRow < 0){
+          report.warn++;
+          log(`경고: 정원조정 헤더(시군/학교명/구분) 탐지 실패. file="${file.name}"`, "WARN");
+          return [];
         }
-        const rec = bySchool.get(key);
-        if (r.type.includes("현정원")) rec.cur = r.sum;
-        else if (r.type.includes("조정정원")) rec.adj = r.sum;
-        else if (r.type.includes("증감")) rec.diff = r.sum;
+
+        const header = forwardFill(rows[headerRow] || []);
+        const idxSiGun = header.findIndex(h => normKey(h) === normKey("시군"));
+        const idxSchool = header.findIndex(h => normKey(h) === normKey("학교명"));
+        const idxType = header.findIndex(h => normKey(h) === normKey("구분"));
+
+        const rawRows = [];
+        for (let r=headerRow+1; r<rows.length; r++){
+          const row = rows[r] || [];
+          const siGun = normalizeSpace(getCell(row, idxSiGun));
+          const school = normalizeSpace(getCell(row, idxSchool));
+          const type = normalizeSpace(getCell(row, idxType));
+          if (!siGun || !school || !type) continue;
+
+          let sum = 0;
+          for (let c=idxType+1; c<row.length; c++){
+            const v = row[c];
+            if (typeof v === "number" && !isNaN(v)) sum += v;
+            else if (typeof v === "string"){
+              const n = Number(v);
+              if (!isNaN(n)) sum += n;
+            }
+          }
+          rawRows.push({
+            file: file.name,
+            siGun,
+            school: stripParens(school),
+            type,
+            sum
+          });
+        }
+
+        // 학교 단위 병합(현정원/조정정원/증감)
+        const by = new Map();
+        for (const r of rawRows){
+          const key = `${r.file}||${r.siGun}||${r.school}`;
+          if (!by.has(key)){
+            by.set(key, { file:r.file, siGun:r.siGun, school:r.school, cur:null, adj:null, diff:null });
+          }
+          const rec = by.get(key);
+          if (r.type.includes("현정원")) rec.cur = r.sum;
+          else if (r.type.includes("조정정원")) rec.adj = r.sum;
+          else if (r.type.includes("증감")) rec.diff = r.sum;
+        }
+
+        return Array.from(by.values());
       }
 
-      const merged = Array.from(bySchool.values());
-      log(`정원 조정 적재 완료: ${merged.length}개 학교(조정표) (file="${file.name}")`, "OK");
-      return merged;
-    }
+      // =========================================================
+      // 분석(집계)
+      // =========================================================
+      function computeStats(events){
+        const persons = new Set();
+        const orgs = new Set();
+        let min = null, max = null;
 
-    // =========================================================
-    // 적재/집계
-    // =========================================================
-    function addEvent(e, orgMode){
-      // 기관 정규화 적용
-      const curDept = cleanOrg(e.curDeptRaw, orgMode);
-      const newDept = cleanOrg(e.newDeptRaw, orgMode);
+        for (const e of events){
+          persons.add(e.name);
 
-      const date = e.date instanceof Date ? e.date : null;
+          if (e.curDept) orgs.add(e.curDept);
+          if (e.newDept) orgs.add(e.newDept);
 
-      const ev = {
-        date,
-        dateISO: date ? date.toISOString().slice(0,10) : "",
-        type: e.type || "",
-        name: e.name,
-        curDeptRaw: e.curDeptRaw || "",
-        newDeptRaw: e.newDeptRaw || "",
-        curDept,
-        newDept,
-        region: e.region || "",
-        source: e.source || "",
-        sheet: e.sheet || "",
-        remarkRaw: e.remarkRaw || "",
-        prevOrgRaw: e.prevOrgRaw || "",
-        extraFrom: e.extraFrom || ""
+          const d = e.baseDate || e.appointDate;
+          if (d instanceof Date && !isNaN(d.getTime())){
+            if (!min || d < min) min = d;
+            if (!max || d > max) max = d;
+          }
+        }
+        return { persons: persons.size, orgs: orgs.size, min, max };
+      }
+
+      function aggregateFlows(events){
+        const map = new Map();
+        for (const e of events){
+          const from = e.curDept || "";
+          const to = e.newDept || "";
+          if (!from || !to) continue;
+          const key = `${from}||${to}`;
+          map.set(key, (map.get(key) || 0) + 1);
+        }
+        const arr = Array.from(map.entries()).map(([k, count]) => {
+          const [from, to] = k.split("||");
+          return { from, to, count };
+        });
+        arr.sort((a,b) => b.count - a.count);
+        return arr;
+      }
+
+      function withinDateRange(ev, df, dt){
+        if (!df && !dt) return true;
+        const d = ev.baseDate || ev.appointDate;
+        if (!(d instanceof Date) || isNaN(d.getTime())) return true;
+        if (df && d < df) return false;
+        if (dt && d > dt) return false;
+        return true;
+      }
+
+      function applyFilter(allEvents, q, df, dt){
+        const query = normalizeInlineText(q).toLowerCase();
+        const out = [];
+        for (const e of allEvents){
+          if (!withinDateRange(e, df, dt)) continue;
+          if (query){
+            const hay = `${e.name} ${e.type} ${e.curDept} ${e.newDept} ${e.curDeptRaw} ${e.newDeptRaw} ${e.file} ${e.region}`.toLowerCase();
+            if (!hay.includes(query)) continue;
+          }
+          out.push(e);
+        }
+        return out;
+      }
+
+      // =========================================================
+      // CSV Export
+      // =========================================================
+      function csvEscape(s){
+        const v = String(s ?? "");
+        if (/[,"\n]/.test(v)) return `"${v.replace(/"/g,'""')}"`;
+        return v;
+      }
+
+      function downloadCSV(filename, header, rows){
+        const lines = [];
+        lines.push(header.map(csvEscape).join(","));
+        for (const row of rows){
+          lines.push(row.map(csvEscape).join(","));
+        }
+        const csv = lines.join("\n");
+        const blob = new Blob([csv], { type:"text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      // =========================================================
+      // Sankey Render
+      // =========================================================
+      function renderSankey(flowArr, minFlow){
+        const svg = document.getElementById("sankey");
+        svg.innerHTML = "";
+        $("#sankeyHint").textContent = "";
+
+        if (!window.d3 || !d3.sankey || !d3.sankeyLinkHorizontal){
+          $("#sankeyHint").innerHTML = `<span class="danger">샌키 라이브러리 로드 실패</span> (인터넷 차단/로딩 실패). 표로만 제공합니다.`;
+          return;
+        }
+
+        const flows = flowArr.filter(x => x.count >= minFlow).slice(0, 140);
+        if (!flows.length){
+          $("#sankeyHint").textContent = "표시할 흐름이 없습니다(필터/최소건수 확인).";
+          return;
+        }
+
+        // node map
+        const nodes = [];
+        const idx = new Map();
+        const getNode = (name) => {
+          if (!idx.has(name)){
+            idx.set(name, nodes.length);
+            nodes.push({ name });
+          }
+          return idx.get(name);
+        };
+        const links = flows.map(f => ({
+          source: getNode(f.from),
+          target: getNode(f.to),
+          value: f.count
+        }));
+
+        const width = 1000;
+        const height = 520;
+        svg.setAttribute("width", String(width));
+        svg.setAttribute("height", String(height));
+
+        const g = d3.select(svg).append("g").attr("transform", "translate(10,10)");
+
+        const sankey = d3.sankey()
+          .nodeWidth(12)
+          .nodePadding(10)
+          .extent([[0,0],[width-40, height-40]]);
+
+        const graph = sankey({
+          nodes: nodes.map(d => ({...d})),
+          links: links.map(d => ({...d}))
+        });
+
+        // Links
+        g.append("g")
+          .attr("fill", "none")
+          .attr("stroke-opacity", 0.35)
+          .selectAll("path")
+          .data(graph.links)
+          .join("path")
+          .attr("d", d3.sankeyLinkHorizontal())
+          .attr("stroke", "#111")
+          .attr("stroke-width", d => Math.max(1, d.width))
+          .append("title")
+          .text(d => `${nodes[d.source.index].name} → ${nodes[d.target.index].name}\n${d.value}건`);
+
+        // Nodes
+        const node = g.append("g")
+          .selectAll("g")
+          .data(graph.nodes)
+          .join("g");
+
+        node.append("rect")
+          .attr("x", d => d.x0)
+          .attr("y", d => d.y0)
+          .attr("height", d => d.y1 - d.y0)
+          .attr("width", d => d.x1 - d.x0)
+          .attr("fill", "#111")
+          .attr("opacity", 0.85)
+          .append("title")
+          .text(d => `${d.name}\n${fmtInt(d.value)}건`);
+
+        node.append("text")
+          .attr("x", d => d.x0 < width/2 ? d.x1 + 6 : d.x0 - 6)
+          .attr("y", d => (d.y0 + d.y1) / 2)
+          .attr("dy", "0.35em")
+          .attr("text-anchor", d => d.x0 < width/2 ? "start" : "end")
+          .attr("font-size", 11)
+          .attr("fill", "#111")
+          .text(d => d.name.length > 28 ? (d.name.slice(0,28) + "…") : d.name);
+
+        $("#sankeyHint").textContent = `샌키 표시: 상위 ${flows.length}개 흐름(최소 ${minFlow}건)`;
+      }
+
+      // =========================================================
+      // 상태(State)
+      // =========================================================
+      const State = {
+        runtime: { parsing: false, cancel: false },
+
+        files: {
+          appt: [],
+          quota: [],
+          school: []
+        },
+
+        parsed: {
+          events: [],
+          quotaRows: [],
+          schools: new Set(),
+          fileReport: []  // {name, region, baseDate, count, warn, err}
+        },
+
+        filtered: {
+          events: [],
+          flows: []
+        },
+
+        pager: {
+          page: 1,
+          pageSize: 300
+        }
       };
 
-      const idx = STATE.events.length;
-      STATE.events.push(ev);
-
-      // person index
-      const key = ev.name;
-      if (!STATE.personIndex.has(key)) STATE.personIndex.set(key, []);
-      STATE.personIndex.get(key).push(idx);
-
-      // org set
-      if (ev.curDept) STATE.orgSet.add(ev.curDept);
-      if (ev.newDept) STATE.orgSet.add(ev.newDept);
-
-      // date range
-      if (date){
-        if (!STATE.minDate || date < STATE.minDate) STATE.minDate = date;
-        if (!STATE.maxDate || date > STATE.maxDate) STATE.maxDate = date;
+      function makeFileEntry(file){
+        return {
+          id: `${file.name}::${file.size}::${file.lastModified}::${Math.random().toString(16).slice(2)}`,
+          file,
+          name: file.name,
+          size: file.size,
+          lastModified: file.lastModified,
+          region: pickRegionFromFilename(file.name),
+          baseDateOverride: "" // yyyy-mm-dd
+        };
       }
-    }
 
-    function refreshKPIs(){
-      $("#kpiFiles").textContent = fmtInt(STATE.apptFileCount);
-      $("#kpiEvents").textContent = fmtInt(STATE.events.length);
-      $("#kpiPersons").textContent = fmtInt(STATE.personIndex.size);
-      $("#kpiOrgs").textContent = fmtInt(STATE.orgSet.size);
-
-      if (STATE.minDate && STATE.maxDate){
-        $("#kpiRange").textContent =
-          `${STATE.minDate.toISOString().slice(0,10)} ~ ${STATE.maxDate.toISOString().slice(0,10)}`;
-        // 기본 필터 기간도 세팅(비어 있을 때만)
-        if (!$("#dateFrom").value) $("#dateFrom").value = STATE.minDate.toISOString().slice(0,10);
-        if (!$("#dateTo").value) $("#dateTo").value = STATE.maxDate.toISOString().slice(0,10);
+      function fileKeySimple(file){
+        return `${file.name}||${file.size}||${file.lastModified}`;
       }
-    }
 
-    function buildFilteredEvents(){
-      const q = normalizeSpace($("#q").value).toLowerCase();
-      const df = $("#dateFrom").value ? new Date($("#dateFrom").value + "T00:00:00") : null;
-      const dt = $("#dateTo").value ? new Date($("#dateTo").value + "T23:59:59") : null;
+      function allowExcel(file){
+        const n = String(file.name || "").toLowerCase();
+        return n.endsWith(".xlsx") || n.endsWith(".xls");
+      }
 
-      const res = [];
-      for (const ev of STATE.events){
-        if (df && ev.date && ev.date < df) continue;
-        if (dt && ev.date && ev.date > dt) continue;
+      function updateAnalyzeButton(){
+        const hasAppt = State.files.appt.length > 0;
+        $("#btnAnalyze").disabled = !hasAppt || State.runtime.parsing;
+      }
 
-        if (q){
-          const hay = `${ev.name} ${ev.type} ${ev.curDept} ${ev.newDept} ${ev.curDeptRaw} ${ev.newDeptRaw} ${ev.source}`.toLowerCase();
-          if (!hay.includes(q)) continue;
+      // =========================================================
+      // 파일 리스트 렌더
+      // =========================================================
+      function renderFileList(kind){
+        const listEl = kind === "appt" ? $("#listAppt") : (kind === "quota" ? $("#listQuota") : $("#listSchool"));
+        listEl.innerHTML = "";
+
+        const arr = State.files[kind];
+        if (!arr.length){
+          const empty = document.createElement("div");
+          empty.className = "muted";
+          empty.textContent = "선택된 파일 없음";
+          listEl.appendChild(empty);
+          return;
         }
-        res.push(ev);
-      }
-      $("#kpiFiltered").textContent = fmtInt(res.length);
-      return res;
-    }
 
-    function aggregateFlows(events){
-      // 흐름 집계: curDept -> newDept
-      const map = new Map(); // key: from||to -> count
-      for (const ev of events){
-        const from = ev.curDept || "";
-        const to = ev.newDept || "";
-        if (!from || !to) continue;
-        const key = `${from}||${to}`;
-        map.set(key, (map.get(key) || 0) + 1);
-      }
-      const arr = Array.from(map.entries()).map(([k, v]) => {
-        const [from, to] = k.split("||");
-        return { from, to, count: v };
-      });
-      arr.sort((a,b) => b.count - a.count);
-      return arr;
-    }
+        for (const fe of arr){
+          const item = document.createElement("div");
+          item.className = "fileitem";
 
-    function renderFlowTable(flowArr){
-      const minFlow = Number($("#minFlow").value || "1");
-      const tbody = $("#flowTbody");
-      tbody.innerHTML = "";
-      const top = flowArr.filter(x => x.count >= minFlow).slice(0, 300);
+          const left = document.createElement("div");
+          left.className = "fileleft";
 
-      top.forEach((x, i) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td class="mono">${i+1}</td>
-          <td>${escapeHtml(x.from)}</td>
-          <td>${escapeHtml(x.to)}</td>
-          <td class="mono">${fmtInt(x.count)}</td>
-        `;
-        tbody.appendChild(tr);
-      });
+          const fn = document.createElement("div");
+          fn.className = "filename";
+          fn.title = fe.name;
+          fn.textContent = fe.name;
 
-      if (!top.length){
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td colspan="4" class="muted">표시할 흐름이 없습니다. (필터/최소건수 설정 확인)</td>`;
-        tbody.appendChild(tr);
-      }
-    }
+          const meta = document.createElement("div");
+          meta.className = "filemeta";
+          const region = fe.region ? `지역: ${fe.region}` : "지역: (미표시)";
+          meta.textContent = `${region} · ${fmtBytes(fe.size)}`;
 
-    function escapeHtml(s){
-      return String(s ?? "")
-        .replace(/&/g,"&amp;")
-        .replace(/</g,"&lt;")
-        .replace(/>/g,"&gt;")
-        .replace(/"/g,"&quot;")
-        .replace(/'/g,"&#39;");
-    }
+          left.appendChild(fn);
+          left.appendChild(meta);
 
-    function renderSankey(flowArr){
-      const svg = document.getElementById("sankey");
-      if (!window.d3 || !window.d3Sankey){
-        $("#sankeyHint").innerHTML = `<span class="warn">경고</span> d3/d3-sankey 로드 실패(인터넷 차단 등). 표로만 제공합니다.`;
-        svg.innerHTML = "";
-        return;
-      }
+          const right = document.createElement("div");
+          right.className = "fileright";
 
-      const minFlow = Number($("#minFlow").value || "1");
-      const flows = flowArr.filter(x => x.count >= minFlow).slice(0, 120); // 과다 시각화 방지
-      if (!flows.length){
-        svg.innerHTML = "";
-        return;
-      }
+          if (kind === "appt"){
+            // 기준일자 오버라이드(필요 시)
+            const inp = document.createElement("input");
+            inp.type = "date";
+            inp.value = fe.baseDateOverride || "";
+            inp.title = "기준일자(파일명 미탐지 시 보정)";
+            inp.style.maxWidth = "160px";
+            inp.addEventListener("change", () => {
+              fe.baseDateOverride = inp.value || "";
+            });
+            right.appendChild(inp);
+          }
 
-      // 노드 생성
-      const nodes = [];
-      const nodeIndex = new Map();
-      function getNode(name){
-        if (!nodeIndex.has(name)){
-          nodeIndex.set(name, nodes.length);
-          nodes.push({ name });
+          const del = document.createElement("button");
+          del.className = "btn-lightgrey";
+          del.textContent = "삭제";
+          del.addEventListener("click", () => {
+            State.files[kind] = State.files[kind].filter(x => x.id !== fe.id);
+            renderFileList(kind);
+            updateAnalyzeButton();
+          });
+
+          right.appendChild(del);
+
+          item.appendChild(left);
+          item.appendChild(right);
+          listEl.appendChild(item);
         }
-        return nodeIndex.get(name);
-      }
-      const links = flows.map(f => ({
-        source: getNode(f.from),
-        target: getNode(f.to),
-        value: f.count
-      }));
-
-      const width = 1000;
-      const height = 520;
-      svg.setAttribute("width", String(width));
-      svg.setAttribute("height", String(height));
-      svg.innerHTML = "";
-
-      const d3 = window.d3;
-      const sankey = window.d3Sankey.sankey;
-
-      const g = d3.select(svg).append("g").attr("transform","translate(10,10)");
-      const sank = sankey()
-        .nodeWidth(12)
-        .nodePadding(10)
-        .extent([[0,0],[width-40,height-40]]);
-
-      const graph = sank({
-        nodes: nodes.map(d => Object.assign({}, d)),
-        links: links.map(d => Object.assign({}, d))
-      });
-
-      // 링크
-      g.append("g")
-        .attr("fill", "none")
-        .attr("stroke-opacity", 0.35)
-        .selectAll("path")
-        .data(graph.links)
-        .join("path")
-        .attr("d", window.d3Sankey.sankeyLinkHorizontal())
-        .attr("stroke", "#2563eb")
-        .attr("stroke-width", d => Math.max(1, d.width))
-        .append("title")
-        .text(d => `${nodes[d.source.index].name} → ${nodes[d.target.index].name}\n${d.value}건`);
-
-      // 노드
-      const node = g.append("g")
-        .selectAll("g")
-        .data(graph.nodes)
-        .join("g");
-
-      node.append("rect")
-        .attr("x", d => d.x0)
-        .attr("y", d => d.y0)
-        .attr("height", d => d.y1 - d.y0)
-        .attr("width", d => d.x1 - d.x0)
-        .attr("fill", "#111827")
-        .attr("opacity", 0.85)
-        .append("title")
-        .text(d => `${d.name}\n${fmtInt(d.value)}건`);
-
-      node.append("text")
-        .attr("x", d => d.x0 < width/2 ? d.x1 + 6 : d.x0 - 6)
-        .attr("y", d => (d.y0 + d.y1) / 2)
-        .attr("dy", "0.35em")
-        .attr("text-anchor", d => d.x0 < width/2 ? "start" : "end")
-        .attr("font-size", 11)
-        .attr("fill", "#111827")
-        .text(d => d.name.length > 28 ? (d.name.slice(0,28) + "…") : d.name);
-    }
-
-    function renderQuotaTable(){
-      const tbody = $("#quotaTbody");
-      tbody.innerHTML = "";
-
-      if (!STATE.quotaRows.length){
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td colspan="6" class="muted">정원 조정 파일을 선택하지 않았습니다.</td>`;
-        tbody.appendChild(tr);
-        return;
       }
 
-      // 파일/학교명 기준 정렬
-      const rows = [...STATE.quotaRows];
-      rows.sort((a,b) => (a.file.localeCompare(b.file) || a.siGun.localeCompare(b.siGun) || a.school.localeCompare(b.school)));
+      function addFiles(kind, files){
+        const dedup = $("#dedupMode").value === "on";
+        const existing = new Set(State.files[kind].map(x => fileKeySimple(x.file)));
 
-      for (const r of rows){
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td class="mono">${escapeHtml(r.file)}</td>
-          <td>${escapeHtml(r.siGun)}</td>
-          <td>${escapeHtml(r.school)}</td>
-          <td class="mono">${r.cur==null ? "-" : fmtInt(r.cur)}</td>
-          <td class="mono">${r.adj==null ? "-" : fmtInt(r.adj)}</td>
-          <td class="mono">${r.diff==null ? "-" : fmtInt(r.diff)}</td>
-        `;
-        tbody.appendChild(tr);
+        let added = 0;
+        for (const f of files){
+          if (!allowExcel(f)) continue;
+          if (dedup && existing.has(fileKeySimple(f))) continue;
+          const fe = makeFileEntry(f);
+          State.files[kind].push(fe);
+          existing.add(fileKeySimple(f));
+          added++;
+        }
+
+        if (added > 0){
+          log(`${kind.toUpperCase()} 파일 추가: ${added}개`, "INFO");
+        }else{
+          log(`${kind.toUpperCase()} 파일 추가: 추가된 파일 없음(중복/확장자 확인)`, "INFO");
+        }
+
+        renderFileList(kind);
+        updateAnalyzeButton();
       }
-    }
 
-    function exportFlowsToCSV(flowArr){
-      const minFlow = Number($("#minFlow").value || "1");
-      const rows = flowArr.filter(x => x.count >= minFlow);
-      const header = ["from","to","count"];
-      const lines = [header.join(",")];
+      // =========================================================
+      // 드롭존(폴더 드롭 지원)
+      // =========================================================
+      async function collectDroppedFiles(ev){
+        const dt = ev.dataTransfer;
+        if (!dt) return [];
 
-      for (const r of rows){
-        const line = [
-          csvEscape(r.from),
-          csvEscape(r.to),
-          String(r.count)
-        ].join(",");
-        lines.push(line);
+        // 폴더 드롭(webkitGetAsEntry 지원 브라우저)
+        if (dt.items && dt.items.length && dt.items[0].webkitGetAsEntry){
+          const entries = [];
+          for (const it of dt.items){
+            const entry = it.webkitGetAsEntry();
+            if (entry) entries.push(entry);
+          }
+
+          const files = [];
+          const traverse = (entry) => new Promise((resolve) => {
+            if (entry.isFile){
+              entry.file((file) => {
+                files.push(file);
+                resolve();
+              }, () => resolve());
+            }else if (entry.isDirectory){
+              const reader = entry.createReader();
+              const readBatch = () => new Promise((res) => reader.readEntries(res, () => res([])));
+              (async () => {
+                while (true){
+                  const batch = await readBatch();
+                  if (!batch || !batch.length) break;
+                  for (const e of batch) await traverse(e);
+                }
+                resolve();
+              })();
+            }else{
+              resolve();
+            }
+          });
+
+          for (const e of entries) await traverse(e);
+          return files;
+        }
+
+        // 기본(파일 드롭)
+        return Array.from(dt.files || []);
       }
-      const csv = lines.join("\n");
-      const blob = new Blob([csv], { type:"text/csv;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `flows_${new Date().toISOString().slice(0,10)}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    }
 
-    function csvEscape(s){
-      const v = String(s ?? "");
-      if (/[,"\n]/.test(v)) return `"${v.replace(/"/g,'""')}"`;
-      return v;
-    }
+      function wireDropZone(zoneEl, kind, inputEl){
+        const onPick = () => inputEl.click();
 
-    // =========================================================
-    // UI 이벤트
-    // =========================================================
-    function bindTabs(){
-      $$(".tab").forEach(btn => {
-        btn.addEventListener("click", () => {
-          $$(".tab").forEach(x => x.classList.remove("active"));
-          btn.classList.add("active");
-
-          const tab = btn.getAttribute("data-tab");
-          $$(".pane").forEach(p => p.classList.remove("active"));
-          $("#pane-" + tab).classList.add("active");
+        zoneEl.addEventListener("click", onPick);
+        zoneEl.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " "){
+            e.preventDefault();
+            onPick();
+          }
         });
-      });
-    }
 
-    async function run(){
-      const apptFiles = $("#apptFiles").files ? Array.from($("#apptFiles").files) : [];
-      const schoolFile = $("#schoolFile").files && $("#schoolFile").files[0] ? $("#schoolFile").files[0] : null;
-      const quotaFiles = $("#quotaFiles").files ? Array.from($("#quotaFiles").files) : [];
-
-      if (!apptFiles.length){
-        alert("인사발령 시행 엑셀 파일을 1개 이상 선택하십시오.");
-        return;
-      }
-      if (!window.XLSX){
-        alert("xlsx 라이브러리 로드 실패입니다. (인터넷 차단 시 내부망에 라이브러리 파일을 배포 후 src를 교체하십시오.)");
-        return;
+        zoneEl.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          zoneEl.classList.add("dragover");
+        });
+        zoneEl.addEventListener("dragleave", () => zoneEl.classList.remove("dragover"));
+        zoneEl.addEventListener("drop", async (e) => {
+          e.preventDefault();
+          zoneEl.classList.remove("dragover");
+          const files = await collectDroppedFiles(e);
+          addFiles(kind, files);
+        });
       }
 
-      resetState();
-      setStatus("초기화 완료. 분석 시작…");
-      log(`분석 시작: 인사 파일 ${apptFiles.length}개`, "INFO");
-      if (schoolFile) log(`학교 목록 파일 선택: ${schoolFile.name}`, "INFO");
-      if (quotaFiles.length) log(`정원 조정 파일 선택: ${quotaFiles.length}개`, "INFO");
+      // =========================================================
+      // 결과 렌더
+      // =========================================================
+      function dateToISO(d){
+        if (!(d instanceof Date) || isNaN(d.getTime())) return "";
+        return d.toISOString().slice(0,10);
+      }
 
-      const orgMode = $("#orgMode").value;
+      function renderKPIs(){
+        $("#kpiApptFiles").textContent = fmtInt(State.files.appt.length);
+        $("#kpiQuotaFiles").textContent = fmtInt(State.files.quota.length);
+        $("#kpiSchoolFiles").textContent = fmtInt(State.files.school.length);
 
-      // 학교 목록(옵션)
-      if (schoolFile){
-        try{
-          STATE.schoolSet = await parseSchoolList(schoolFile);
-        }catch(err){
-          log(`학교 목록 파싱 실패: ${err.message || err}`, "WARN");
-          STATE.schoolSet = null;
+        $("#kpiEvents").textContent = fmtInt(State.parsed.events.length);
+
+        const st = computeStats(State.parsed.events);
+        $("#kpiPersons").textContent = fmtInt(st.persons);
+        $("#kpiOrgs").textContent = fmtInt(st.orgs);
+
+        if (st.min && st.max){
+          $("#kpiRange").textContent = `${dateToISO(st.min)} ~ ${dateToISO(st.max)}`;
+          if (!$("#dateFrom").value) $("#dateFrom").value = dateToISO(st.min);
+          if (!$("#dateTo").value) $("#dateTo").value = dateToISO(st.max);
+        }else{
+          $("#kpiRange").textContent = "-";
+        }
+
+        $("#kpiFiltered").textContent = fmtInt(State.filtered.events.length);
+      }
+
+      function renderFileReportTable(){
+        const tb = $("#tbodyFileReport");
+        tb.innerHTML = "";
+
+        if (!State.parsed.fileReport.length){
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td colspan="5" class="muted">표시할 데이터 없음</td>`;
+          tb.appendChild(tr);
+          return;
+        }
+
+        for (const r of State.parsed.fileReport){
+          const base = r.baseDate ? dateToISO(r.baseDate) : "";
+          const flag = (r.err > 0) ? `<span class="badge warn">오류 ${r.err}</span>` :
+                       (r.warn > 0) ? `<span class="badge warn">경고 ${r.warn}</span>` :
+                                      `<span class="badge ok">정상</span>`;
+
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${escapeHtml(r.name)}</td>
+            <td>${escapeHtml(r.region || "")}</td>
+            <td class="mono">${escapeHtml(base)}</td>
+            <td class="mono">${fmtInt(r.count)}</td>
+            <td>${flag}</td>
+          `;
+          tb.appendChild(tr);
         }
       }
 
-      // 정원 조정(옵션)
-      if (quotaFiles.length){
-        for (let i=0; i<quotaFiles.length; i++){
+      function renderQuotaTable(){
+        const tb = $("#tbodyQuota");
+        tb.innerHTML = "";
+
+        if (!State.parsed.quotaRows.length){
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td colspan="6" class="muted">정원 조정 파일이 없거나, 유효 데이터가 없습니다.</td>`;
+          tb.appendChild(tr);
+          return;
+        }
+
+        const rows = [...State.parsed.quotaRows];
+        rows.sort((a,b) => (a.file.localeCompare(b.file) || a.siGun.localeCompare(b.siGun) || a.school.localeCompare(b.school)));
+
+        for (const r of rows){
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${escapeHtml(r.file)}</td>
+            <td>${escapeHtml(r.siGun)}</td>
+            <td>${escapeHtml(r.school)}</td>
+            <td class="mono numeric">${r.cur == null ? "-" : fmtInt(r.cur)}</td>
+            <td class="mono numeric">${r.adj == null ? "-" : fmtInt(r.adj)}</td>
+            <td class="mono numeric">${r.diff == null ? "-" : fmtInt(r.diff)}</td>
+          `;
+          tb.appendChild(tr);
+        }
+      }
+
+      function renderFlowTable(){
+        const tb = $("#tbodyFlows");
+        tb.innerHTML = "";
+
+        const minFlow = Number($("#minFlow").value || "1");
+        const flows = State.filtered.flows.filter(x => x.count >= minFlow).slice(0, 300);
+
+        if (!flows.length){
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td colspan="4" class="muted">표시할 흐름이 없습니다(필터/최소건수 확인).</td>`;
+          tb.appendChild(tr);
+          return;
+        }
+
+        flows.forEach((f, i) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td class="mono">${i+1}</td>
+            <td>${escapeHtml(f.from)}</td>
+            <td>${escapeHtml(f.to)}</td>
+            <td class="mono numeric">${fmtInt(f.count)}</td>
+          `;
+          tb.appendChild(tr);
+        });
+
+        renderSankey(State.filtered.flows, minFlow);
+      }
+
+      function renderEventsPage(){
+        const tb = $("#tbodyEvents");
+        tb.innerHTML = "";
+
+        const pageSize = State.pager.pageSize;
+        const total = State.filtered.events.length;
+        const pages = Math.max(1, Math.ceil(total / pageSize));
+        State.pager.page = Math.max(1, Math.min(State.pager.page, pages));
+
+        const start = (State.pager.page - 1) * pageSize;
+        const slice = State.filtered.events.slice(start, start + pageSize);
+
+        $("#pageInfo").textContent = `${State.pager.page}/${pages} (총 ${fmtInt(total)}건)`;
+
+        if (!slice.length){
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td colspan="7" class="muted">표시할 이벤트가 없습니다.</td>`;
+          tb.appendChild(tr);
+          return;
+        }
+
+        for (const e of slice){
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td class="mono">${escapeHtml(dateToISO(e.baseDate))}</td>
+            <td class="mono">${escapeHtml(dateToISO(e.appointDate))}</td>
+            <td>${escapeHtml(e.type)}</td>
+            <td>${escapeHtml(e.name)}</td>
+            <td>${escapeHtml(e.curDept || "")}</td>
+            <td>${escapeHtml(e.newDept || "")}</td>
+            <td class="mono">${escapeHtml((e.region || "") + " / " + e.file + " / " + e.sheet)}</td>
+          `;
+          tb.appendChild(tr);
+        }
+      }
+
+      function renderPersonTimeline(name){
+        const tb = $("#tbodyPerson");
+        tb.innerHTML = "";
+        const target = normalizeSpace(name);
+        if (!target){
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td colspan="6" class="muted">성명을 입력하십시오.</td>`;
+          tb.appendChild(tr);
+          return;
+        }
+
+        const rows = State.parsed.events.filter(e => e.name === target);
+        rows.sort((a,b) => {
+          const da = (a.baseDate || a.appointDate) ? (a.baseDate || a.appointDate).getTime() : 0;
+          const db = (b.baseDate || b.appointDate) ? (b.baseDate || b.appointDate).getTime() : 0;
+          return da - db;
+        });
+
+        if (!rows.length){
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td colspan="6" class="muted">해당 성명의 이력이 없습니다.</td>`;
+          tb.appendChild(tr);
+          return;
+        }
+
+        for (const e of rows){
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td class="mono">${escapeHtml(dateToISO(e.baseDate))}</td>
+            <td class="mono">${escapeHtml(dateToISO(e.appointDate))}</td>
+            <td>${escapeHtml(e.type)}</td>
+            <td>${escapeHtml(e.curDeptRaw || "")}</td>
+            <td>${escapeHtml(e.newDeptRaw || "")}</td>
+            <td class="mono">${escapeHtml((e.region || "") + " / " + e.file + " / " + e.sheet)}</td>
+          `;
+          tb.appendChild(tr);
+        }
+      }
+
+      function applyFiltersAndRender(){
+        const q = $("#q").value || "";
+        const df = $("#dateFrom").value ? new Date($("#dateFrom").value + "T00:00:00") : null;
+        const dt = $("#dateTo").value ? new Date($("#dateTo").value + "T23:59:59") : null;
+
+        State.filtered.events = applyFilter(State.parsed.events, q, df, dt);
+        State.filtered.flows = aggregateFlows(State.filtered.events);
+
+        State.pager.page = 1;
+
+        renderKPIs();
+        renderFlowTable();
+        renderEventsPage();
+
+        $("#btnApply").disabled = false;
+        $("#btnCsvFlows").disabled = State.filtered.flows.length === 0;
+        $("#btnCsvEvents").disabled = State.filtered.events.length === 0;
+      }
+
+      // =========================================================
+      // 탭 전환
+      // =========================================================
+      function bindTabs(){
+        $$("#tabs .tab").forEach(btn => {
+          btn.addEventListener("click", () => {
+            $$("#tabs .tab").forEach(x => x.classList.remove("active"));
+            btn.classList.add("active");
+
+            const tab = btn.getAttribute("data-tab");
+            $$(".pane").forEach(p => p.classList.remove("active"));
+            $("#pane-" + tab).classList.add("active");
+          });
+        });
+      }
+
+      // =========================================================
+      // 분석 실행
+      // =========================================================
+      async function runAnalysis(){
+        if (!window.XLSX){
+          alert("xlsx 라이브러리 로드 실패입니다. (내부망 인터넷 차단 시 CDN을 내부경로로 교체 필요)");
+          return;
+        }
+        if (State.runtime.parsing) return;
+        if (!State.files.appt.length){
+          alert("인사발령 시행 엑셀 파일을 먼저 추가하십시오.");
+          return;
+        }
+
+        State.runtime.parsing = true;
+        State.runtime.cancel = false;
+
+        $("#btnAnalyze").disabled = true;
+        $("#btnCancel").disabled = false;
+        $("#btnApply").disabled = true;
+        $("#btnCsvFlows").disabled = true;
+        $("#btnCsvEvents").disabled = true;
+
+        setBar(0);
+        setStatus("분석 시작…");
+        log(`분석 시작: 인사=${State.files.appt.length} / 정원=${State.files.quota.length} / 학교목록=${State.files.school.length}`, "INFO");
+
+        // reset parsed
+        State.parsed.events = [];
+        State.parsed.quotaRows = [];
+        State.parsed.schools = new Set();
+        State.parsed.fileReport = [];
+
+        const options = {
+          orgMode: $("#orgMode").value,
+          defaultBaseDate: $("#defaultBaseDate").value || ""
+        };
+
+        // 1) 학교 목록(옵션)
+        if (State.files.school.length){
+          for (let i=0; i<State.files.school.length; i++){
+            if (State.runtime.cancel) break;
+            const fe = State.files.school[i];
+            const rep = { warn:0, err:0 };
+            try{
+              setStatus(`학교 목록 파싱: ${i+1}/${State.files.school.length} (${fe.name})`);
+              const set = await parseSchoolWorkbook(fe.file, rep);
+              for (const s of set) State.parsed.schools.add(s);
+              log(`학교 목록 적재 완료: ${fe.name} (${fmtInt(set.size)}개)`, "OK");
+            }catch(e){
+              rep.err++;
+              log(`학교 목록 파싱 실패: ${fe.name} (${e && e.message ? e.message : e})`, "WARN");
+            }
+          }
+          log(`학교 목록 합산: ${fmtInt(State.parsed.schools.size)}개`, "INFO");
+        }
+
+        // 2) 정원 조정(옵션)
+        if (State.files.quota.length && !State.runtime.cancel){
+          for (let i=0; i<State.files.quota.length; i++){
+            if (State.runtime.cancel) break;
+            const fe = State.files.quota[i];
+            const rep = { warn:0, err:0 };
+            try{
+              setStatus(`정원 조정 파싱: ${i+1}/${State.files.quota.length} (${fe.name})`);
+              const rows = await parseQuotaWorkbook(fe.file, rep);
+              State.parsed.quotaRows.push(...rows);
+              log(`정원 조정 적재 완료: ${fe.name} (${fmtInt(rows.length)}개 학교)`, "OK");
+            }catch(e){
+              rep.err++;
+              log(`정원 조정 파싱 실패: ${fe.name} (${e && e.message ? e.message : e})`, "WARN");
+            }
+          }
+        }
+
+        // 3) 인사발령(메인)
+        const total = State.files.appt.length;
+        for (let i=0; i<total; i++){
+          if (State.runtime.cancel) break;
+
+          const fe = State.files.appt[i];
+          const rep = { warn:0, err:0 };
+
           try{
-            const rows = await parseQuotaWorkbook(quotaFiles[i]);
-            STATE.quotaRows.push(...rows);
-          }catch(err){
-            log(`정원 조정 파싱 실패(file="${quotaFiles[i].name}"): ${err.message || err}`, "WARN");
+            setStatus(`인사발령 파싱: ${i+1}/${total} (${fe.name})`);
+            setBar(((i) / total) * 100);
+
+            const res = await parseApptWorkbook(fe, options, rep);
+            State.parsed.events.push(...res.events);
+
+            State.parsed.fileReport.push({
+              name: fe.name,
+              region: res.region || fe.region,
+              baseDate: res.baseDate,
+              count: res.count,
+              warn: rep.warn,
+              err: rep.err
+            });
+
+            log(`인사 적재 완료: ${fe.name} (${fmtInt(res.count)}건)`, rep.warn ? "WARN" : "OK");
+          }catch(e){
+            rep.err++;
+            State.parsed.fileReport.push({
+              name: fe.name,
+              region: fe.region,
+              baseDate: parseBaseDateFromFilename(fe.name) || null,
+              count: 0,
+              warn: rep.warn,
+              err: rep.err
+            });
+            log(`인사 파싱 실패: ${fe.name} (${e && e.message ? e.message : e})`, "WARN");
           }
-        }
-        renderQuotaTable();
-      }else{
-        renderQuotaTable();
-      }
 
-      // 인사 파일 적재
-      STATE.apptFileCount = apptFiles.length;
-
-      for (let i=0; i<apptFiles.length; i++){
-        const f = apptFiles[i];
-        setStatus(`인사발령 파싱 중: ${i+1}/${apptFiles.length} (${f.name})`);
-        setBar(((i) / apptFiles.length) * 100);
-
-        try{
-          const parsed = await parseApptWorkbook(f);
-          for (const ev of parsed){
-            addEvent(ev, orgMode);
-          }
-          log(`적재 완료: ${f.name} (행 ${parsed.length}건)`, "OK");
-        }catch(err){
-          log(`실패: ${f.name} (${err.message || err})`, "WARN");
+          // UI 멈춤 방지
+          await new Promise(requestAnimationFrame);
         }
 
-        // 브라우저 UI가 멈추지 않도록 양보
-        await new Promise(requestAnimationFrame);
+        setBar(100);
+
+        if (State.runtime.cancel){
+          setStatus("중지됨(요청에 의해 파싱 중단).");
+          log("사용자 요청으로 분석 중지됨", "WARN");
+        }else{
+          setStatus("분석 완료. 집계/렌더링 중…");
+          log(`분석 완료: 이벤트 총 ${fmtInt(State.parsed.events.length)}건`, "OK");
+        }
+
+        // 결과 렌더
+        renderFileReportTable();
+        renderQuotaTable();
+
+        // 기본 필터(전체)
+        State.filtered.events = State.parsed.events.slice();
+        State.filtered.flows = aggregateFlows(State.filtered.events);
+        State.pager.page = 1;
+        renderKPIs();
+        renderFlowTable();
+        renderEventsPage();
+
+        $("#btnApply").disabled = false;
+        $("#btnCsvFlows").disabled = State.filtered.flows.length === 0;
+        $("#btnCsvEvents").disabled = State.filtered.events.length === 0;
+
+        State.runtime.parsing = false;
+        $("#btnCancel").disabled = true;
+        updateAnalyzeButton();
+
+        if (!State.runtime.cancel){
+          setStatus("완료");
+        }
       }
 
-      setBar(100);
-      setStatus("분석 완료. KPI/흐름 생성 중…");
-      refreshKPIs();
-
-      // 기본 렌더(필터 반영)
-      applyFiltersAndRender();
-
-      setStatus("완료");
-      log("분석 완료", "OK");
-      STATE.loaded = true;
-    }
-
-    function applyFiltersAndRender(){
-      const filtered = buildFilteredEvents();
-      const flows = aggregateFlows(filtered);
-      renderFlowTable(flows);
-      renderSankey(flows);
-    }
-
-    function renderPerson(name){
-      const tbody = $("#personTbody");
-      tbody.innerHTML = "";
-
-      name = normalizeSpace(name);
-      if (!name){
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td colspan="5" class="muted">성명을 입력하십시오.</td>`;
-        tbody.appendChild(tr);
-        return;
+      function cancel(){
+        if (!State.runtime.parsing) return;
+        State.runtime.cancel = true;
+        setStatus("중지 요청 처리 중…(현재 파일 처리 후 중단)");
+        log("중지 요청 접수", "WARN");
       }
 
-      const idxs = STATE.personIndex.get(name);
-      if (!idxs || !idxs.length){
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td colspan="5" class="muted">해당 성명의 이력이 없습니다.</td>`;
-        tbody.appendChild(tr);
-        return;
+      function resetAll(){
+        // 파일/결과/로그 전체 초기화
+        State.runtime.parsing = false;
+        State.runtime.cancel = false;
+
+        State.files.appt = [];
+        State.files.quota = [];
+        State.files.school = [];
+
+        State.parsed.events = [];
+        State.parsed.quotaRows = [];
+        State.parsed.schools = new Set();
+        State.parsed.fileReport = [];
+
+        State.filtered.events = [];
+        State.filtered.flows = [];
+
+        State.pager.page = 1;
+        State.pager.pageSize = Number($("#pageSize").value || "300");
+
+        $("#log").textContent = "-";
+        setStatus("대기 중");
+        setBar(0);
+
+        renderFileList("appt");
+        renderFileList("quota");
+        renderFileList("school");
+
+        $("#tbodyFileReport").innerHTML = "";
+        $("#tbodyFlows").innerHTML = "";
+        $("#tbodyEvents").innerHTML = "";
+        $("#tbodyPerson").innerHTML = "";
+        $("#tbodyQuota").innerHTML = "";
+        $("#sankey").innerHTML = "";
+        $("#sankeyHint").textContent = "";
+
+        $("#dateFrom").value = "";
+        $("#dateTo").value = "";
+        $("#q").value = "";
+
+        $("#btnApply").disabled = true;
+        $("#btnCsvFlows").disabled = true;
+        $("#btnCsvEvents").disabled = true;
+
+        renderKPIs();
+        updateAnalyzeButton();
       }
 
-      const rows = idxs.map(i => STATE.events[i]).filter(Boolean);
-      rows.sort((a,b) => {
-        const da = a.date ? a.date.getTime() : 0;
-        const db = b.date ? b.date.getTime() : 0;
-        return da - db;
-      });
+      // =========================================================
+      // 초기 바인딩
+      // =========================================================
+      function init(){
+        bindTabs();
 
-      for (const ev of rows){
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td class="mono">${escapeHtml(ev.dateISO || "")}</td>
-          <td>${escapeHtml(ev.type)}</td>
-          <td>${escapeHtml(ev.curDeptRaw || ev.curDept)}</td>
-          <td>${escapeHtml(ev.newDeptRaw || ev.newDept)}</td>
-          <td class="mono">${escapeHtml((ev.region||"") + " / " + (ev.source||""))}</td>
-        `;
-        tbody.appendChild(tr);
+        // Drop zones
+        wireDropZone($("#dzAppt"), "appt", $("#inAppt"));
+        wireDropZone($("#dzQuota"), "quota", $("#inQuota"));
+        wireDropZone($("#dzSchool"), "school", $("#inSchool"));
+
+        // Pick buttons
+        $("#btnPickAppt").addEventListener("click", () => $("#inAppt").click());
+        $("#btnPickApptDir").addEventListener("click", () => $("#inApptDir").click());
+        $("#btnPickQuota").addEventListener("click", () => $("#inQuota").click());
+        $("#btnPickQuotaDir").addEventListener("click", () => $("#inQuotaDir").click());
+        $("#btnPickSchool").addEventListener("click", () => $("#inSchool").click());
+
+        // Input change
+        $("#inAppt").addEventListener("change", () => addFiles("appt", Array.from($("#inAppt").files || [])));
+        $("#inApptDir").addEventListener("change", () => addFiles("appt", Array.from($("#inApptDir").files || [])));
+        $("#inQuota").addEventListener("change", () => addFiles("quota", Array.from($("#inQuota").files || [])));
+        $("#inQuotaDir").addEventListener("change", () => addFiles("quota", Array.from($("#inQuotaDir").files || [])));
+        $("#inSchool").addEventListener("change", () => addFiles("school", Array.from($("#inSchool").files || [])));
+
+        // Clear
+        $("#btnClearAppt").addEventListener("click", () => { State.files.appt = []; renderFileList("appt"); updateAnalyzeButton(); });
+        $("#btnClearQuota").addEventListener("click", () => { State.files.quota = []; renderFileList("quota"); updateAnalyzeButton(); });
+        $("#btnClearSchool").addEventListener("click", () => { State.files.school = []; renderFileList("school"); updateAnalyzeButton(); });
+
+        // Analyze
+        $("#btnAnalyze").addEventListener("click", runAnalysis);
+        $("#btnCancel").addEventListener("click", cancel);
+
+        // Filters
+        $("#btnApply").addEventListener("click", () => {
+          applyFiltersAndRender();
+          log("필터 적용 완료", "INFO");
+        });
+
+        // CSV
+        $("#btnCsvFlows").addEventListener("click", () => {
+          const minFlow = Number($("#minFlow").value || "1");
+          const flows = State.filtered.flows.filter(x => x.count >= minFlow);
+          downloadCSV(
+            `flows_${new Date().toISOString().slice(0,10)}.csv`,
+            ["from","to","count"],
+            flows.map(x => [x.from, x.to, String(x.count)])
+          );
+        });
+
+        $("#btnCsvEvents").addEventListener("click", () => {
+          downloadCSV(
+            `events_${new Date().toISOString().slice(0,10)}.csv`,
+            ["base_date","appoint_date","region","type","name","cur_org","new_org","file","sheet","cur_raw","new_raw"],
+            State.filtered.events.map(e => [
+              dateToISO(e.baseDate),
+              dateToISO(e.appointDate),
+              e.region || "",
+              e.type || "",
+              e.name || "",
+              e.curDept || "",
+              e.newDept || "",
+              e.file || "",
+              e.sheet || "",
+              e.curDeptRaw || "",
+              e.newDeptRaw || ""
+            ])
+          );
+        });
+
+        // Pager
+        $("#pageSize").addEventListener("change", () => {
+          State.pager.pageSize = Number($("#pageSize").value || "300");
+          State.pager.page = 1;
+          renderEventsPage();
+        });
+
+        $("#btnPrevPage").addEventListener("click", () => {
+          State.pager.page = Math.max(1, State.pager.page - 1);
+          renderEventsPage();
+        });
+
+        $("#btnNextPage").addEventListener("click", () => {
+          State.pager.page = State.pager.page + 1;
+          renderEventsPage();
+        });
+
+        // Person
+        $("#btnPerson").addEventListener("click", () => {
+          renderPersonTimeline($("#personName").value);
+        });
+
+        // Reset all
+        $("#btnResetAll").addEventListener("click", resetAll);
+
+        // Initial render
+        renderFileList("appt");
+        renderFileList("quota");
+        renderFileList("school");
+        renderKPIs();
+        updateAnalyzeButton();
+        setStatus("대기 중");
       }
-    }
 
-    // =========================================================
-    // 바인딩
-    // =========================================================
-    bindTabs();
-
-    $("#apptFiles").addEventListener("change", () => {
-      const files = $("#apptFiles").files ? $("#apptFiles").files.length : 0;
-      $("#btnRun").disabled = files <= 0;
-    });
-
-    $("#btnRun").addEventListener("click", run);
-
-    $("#btnReset").addEventListener("click", () => {
-      resetState();
-      $("#apptFiles").value = "";
-      $("#schoolFile").value = "";
-      $("#quotaFiles").value = "";
-      $("#btnRun").disabled = true;
-    });
-
-    $("#btnApply").addEventListener("click", () => {
-      if (!STATE.events.length){
-        alert("먼저 분석을 실행하십시오.");
-        return;
-      }
-      applyFiltersAndRender();
-    });
-
-    $("#btnExport").addEventListener("click", () => {
-      if (!STATE.events.length){
-        alert("먼저 분석을 실행하십시오.");
-        return;
-      }
-      const filtered = buildFilteredEvents();
-      const flows = aggregateFlows(filtered);
-      exportFlowsToCSV(flows);
-    });
-
-    $("#btnPerson").addEventListener("click", () => {
-      if (!STATE.events.length){
-        alert("먼저 분석을 실행하십시오.");
-        return;
-      }
-      renderPerson($("#personQuery").value);
-    });
-
-    // 옵션 변경 시 즉시 반영(기관명 정규화는 재적재가 정확하지만, 여기서는 안내)
-    $("#orgMode").addEventListener("change", () => {
-      if (STATE.events.length){
-        log("기관명 정규화 옵션 변경: 이미 적재된 데이터에는 즉시 반영되지 않습니다. 정확한 반영을 위해 [초기화] 후 재분석하십시오.", "WARN");
-      }
-    });
-
-    // 초기 상태
-    resetState();
+      window.addEventListener("DOMContentLoaded", init);
+    })();
   </script>
-
-<script src="/static/disable-copy.js"></script>
-<script src="/static/footer.js"></script>
-<script src="/static/global-loader.js?v=1"></script>
 </body>
 </html>
