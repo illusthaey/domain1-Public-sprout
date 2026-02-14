@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>학교별 전입·전출 인사발령자 명단 집계기</title>
+  <title>교육공무직 인사발령 학교별 전입/전출 정리</title>
 
   <style>
 /* ===== 인라인 공통 스타일(style.css) ===== */
@@ -27,10 +27,8 @@ body {
   word-break: keep-all;
 }
 
-/* 링크 기본 */
 a { text-decoration: none; color: inherit; }
 
-/* 전역 헤딩 계층 */
 body h1 {
   font-size: 2.2rem;
   margin: 28px 0 18px;
@@ -57,7 +55,6 @@ body h4 {
   font-weight: 600;
 }
 
-/* 본문 텍스트 */
 body p, body li, body div, body span {
   font-size: 1.1rem;
   line-height: 1.65;
@@ -68,7 +65,6 @@ body li { margin: 4px 0; line-height: 1.55; }
 ul, ol { margin: 12px 0 18px; padding-left: 22px; }
 body .muted { font-size: 0.95rem; color: #666; }
 
-/* 예외 클래스(local-*) */
 .local-h2 { font-size: 1.3rem !important; }
 .local-h3 { font-size: 1.1rem !important; }
 .local-large { font-size: 1.2rem !important; }
@@ -76,16 +72,13 @@ body .muted { font-size: 0.95rem; color: #666; }
 .local-tight { margin-bottom: 6px !important; }
 .local-accent { color: #0051a8 !important; }
 
-/* 레이아웃 공통 */
 .shell { max-width: 880px; margin: 0 auto; }
 main { margin: 0 auto; }
 .sub { margin: 0.25rem 0 0; font-size: 1rem; color: #555; }
 
-/* 상단 헤더 */
 .site-header { background: #fff; border-bottom: 1px solid #e8e8ef; }
 .site-header .shell { padding: 16px; }
 
-/* 섹션 카드 */
 .section {
   border: 1px solid #e5e5e5;
   border-radius: 12px;
@@ -94,7 +87,6 @@ main { margin: 0 auto; }
   background: #fff;
 }
 
-/* 내부 카드 */
 .card {
   border: 1px solid #e5e5e5;
   border-radius: 10px;
@@ -103,7 +95,6 @@ main { margin: 0 auto; }
   background: #fafafa;
 }
 
-/* 레이아웃 유틸 */
 .row { display: flex; align-items: center; gap: 8px; }
 .row.between { justify-content: space-between; }
 .row.gap { gap: 10px; }
@@ -111,13 +102,11 @@ main { margin: 0 auto; }
 .grid { display: grid; gap: 12px; }
 .grid.two { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 .grid.three { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
-
 @media (max-width: 640px) {
   .row { flex-wrap: wrap; align-items: flex-start; }
   .grid.two, .grid.three { grid-template-columns: 1fr; }
 }
 
-/* 버튼 스타일 */
 .btn {
   display: inline-block;
   padding: 10px 16px;
@@ -144,9 +133,9 @@ main { margin: 0 auto; }
   background: #f3f4f6;
   border: 1px solid #d4d4d8;
 }
+
 .row .btn + .btn { margin-left: 0; }
 
-/* 입력 UI */
 input, select, button, textarea { font: inherit; }
 
 input[type="text"],
@@ -169,7 +158,6 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 0 0 2px rgba(180, 180, 208, 0.25);
   background: #fff;
 }
-
 input:disabled, select:disabled, textarea:disabled {
   background: #f6f7fb;
   color: #888;
@@ -177,7 +165,6 @@ input:disabled, select:disabled, textarea:disabled {
 
 .numeric { text-align: right; }
 
-/* 구분선(hr) */
 hr {
   border-top: 1px solid #ddd;
   margin: 26px 0;
@@ -185,7 +172,6 @@ hr {
 }
 body h2 + hr { margin-top: 10px !important; }
 
-/* 테이블 스타일 */
 .table-wrap,
 .table-wrapper {
   width: 100%;
@@ -243,23 +229,19 @@ body h2 + hr { margin-top: 10px !important; }
   background: #fff;
   margin: 18px 0;
 }
-
 .tool-head { margin-bottom: 10px; }
-
 .tool-title {
   font-size: 1.2rem;
   font-weight: 700;
   margin: 0 0 4px;
   color: #111;
 }
-
 .tool-sub {
   font-size: 0.95rem;
   color: #555;
   margin: 0;
 }
 
-/* 푸터 */
 .site-footer {
   margin-top: 64px;
   padding: 24px 16px;
@@ -275,6 +257,13 @@ body h2 + hr { margin-top: 10px !important; }
   line-height: 1.6;
 }
 
+/* 카드/섹션 내부에서 넘침 차단(공통) */
+.section,
+.tool-card,
+.tool-shot {
+  overflow-x: hidden;
+}
+
 /* ===== 페이지 전용 추가 스타일 ===== */
 
 .card-head{
@@ -285,27 +274,33 @@ body h2 + hr { margin-top: 10px !important; }
   flex-wrap: wrap;
 }
 .card-title { margin: 0; }
+
 .card-actions{
   display:flex;
   gap: 10px;
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
+
+  /* ✅ 핵심: flex 아이템이 글자 길이 때문에 커지지 않도록 */
+  min-width: 0;
+  max-width: 100%;
+  flex: 1 1 420px;
 }
 
-/* 파일 input 숨김(라벨 버튼으로 클릭) */
-#fileInput { display:none; }
+/* ✅ 핵심: 자식들도 줄어들 수 있게 */
+.card-actions > * { min-width: 0; }
 
-/* 로그 */
+@media (max-width: 640px) {
+  .card-actions { justify-content: flex-start; width: 100%; }
+}
+
+#fileInput { display:none; }
 #logBox { white-space: pre-wrap; margin: 0; }
 
-/* 클릭 가능한 행 */
 tr.clickable:hover { background:#f3f4f6; cursor:pointer; }
-
-/* 선택 강조 */
 tr.is-selected { outline: 2px solid rgba(0,0,0,0.18); outline-offset: -2px; }
 
-/* 스크롤 컨테이너 + 틀고정 */
 .sticky-wrap{
   max-height: 520px;
   overflow: auto;
@@ -335,7 +330,6 @@ table.sticky-table thead th:first-child{
   .sticky-wrap { max-height: 460px; }
 }
 
-/* 배지/필 */
 .pill{
   display:inline-block;
   padding: 2px 10px;
@@ -354,7 +348,6 @@ table.sticky-table thead th:first-child{
 .diff.neg{ color:#1d4ed8; font-weight:700; }
 .diff.zero{ color:#6b7280; }
 
-/* 키보드 */
 .kbd{
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   font-size: 0.95rem;
@@ -364,31 +357,10 @@ table.sticky-table thead th:first-child{
   border-radius: 6px;
 }
 
-/* 리스트 */
 .clean-list { list-style: none; margin: 0; padding: 0; }
 .clean-list li { margin: 8px 0; }
 .clean-list .who { font-weight: 700; color: #111; }
 .clean-list .meta { display:block; color:#555; font-size: 0.95rem; margin-top:2px; }
-
-/* details(접기/펼치기) */
-.shot-details{
-  margin-top: 12px;
-  border: 1px solid #e5e5e5;
-  border-radius: 12px;
-  background: #fafafa;
-  padding: 10px 12px;
-}
-.shot-summary{
-  cursor: pointer;
-  font-weight: 700;
-  color: #111;
-  font-size: 0.98rem;
-  list-style: none;
-}
-.shot-summary::-webkit-details-marker{ display:none; }
-.shot-summary::before{ content:"▸ "; }
-.shot-details[open] .shot-summary::before{ content:"▾ "; }
-.shot-summary:hover{ text-decoration: underline; }
 
 /* 직종 그룹(details) */
 details.job-group{
@@ -411,16 +383,127 @@ details.job-group summary{
 details.job-group summary::-webkit-details-marker{ display:none; }
 details.job-group .group-body{ padding: 0 12px 12px; }
 
+/* ==========================
+   ✅ 커스텀 드롭다운(줄바꿈)
+   ========================== */
+
+/* 드롭다운이 잘려 보이지 않게(해당 섹션만) */
+#detailSection { overflow: visible; }
+
+/* 네이티브 select는 숨기고, 커스텀 UI로 대체 */
+.native-select { display: none !important; }
+
+.cselect{
+  position: relative;
+  flex: 1 1 320px;
+  min-width: 220px;
+  max-width: 100%;
+}
+
+@media (max-width: 640px){
+  .cselect{ flex-basis: 100%; }
+}
+
+.cselect-btn{
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+
+  padding: 10px 12px;
+  padding-right: 34px;
+  border: 1px solid #d9d9e3;
+  border-radius: 12px;
+  background: #f9fafb;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.02);
+
+  /* ✅ 핵심: 선택된 텍스트도 줄바꿈 */
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.35;
+}
+
+.cselect-btn:focus{
+  border-color: #b4b4d0;
+  box-shadow: 0 0 0 2px rgba(180, 180, 208, 0.25);
+  background: #fff;
+  outline: none;
+}
+
+.cselect-btn::after{
+  content: "▾";
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.cselect.open .cselect-btn::after{
+  content: "▴";
+}
+
+.cselect-list{
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 60;
+
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+
+  max-height: 360px;
+  overflow: auto;
+}
+
+.cselect-item{
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+
+  /* ✅ 옵션도 줄바꿈 */
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.35;
+}
+
+.cselect-item:hover{ background: #f3f4f6; }
+.cselect-item.is-selected{ background: #eef2ff; }
+.cselect-item.is-disabled{ opacity: 0.5; cursor: not-allowed; }
+
+/* ==========================
+   ✅ 로그: 기본 숨김(details)
+   ========================== */
+details.log-details summary{
+  cursor: pointer;
+  font-weight: 800;
+  color: #111;
+  font-size: 1.05rem;
+  list-style: none;
+}
+details.log-details summary::-webkit-details-marker{ display:none; }
+details.log-details summary::before{ content:"▸ "; }
+details.log-details[open] summary::before{ content:"▾ "; }
+
   </style>
 </head>
 
 <body>
   <header class="site-header">
     <div class="shell">
-      <h1>교육공무직 인사발령 학교별 전출입 내역 집계</h1>
-      <p class="muted">
-        ·에듀파인 업무관리-일반게시판에서 교육공무직 관내 인사발령 엑셀 파일 다운 받아서 올리면 학교별 인사변동 내역 정리해줌. <br/>
-        ·결원 의심은 직종별로 전출자/퇴직자 수가 전입자 수보다 더 많을 경우 스크리닝 되게 해둠.
+      <h1>교육공무직 인사발령 학교별 전입/전출 정리</h1>
+      <p class="subtitle">
+        엑셀(여러 파일 가능)을 업로드하면 <span class="kbd">학교(부서)</span> 기준으로
+        <b>모든 직종</b>의 <span class="kbd">전입(도착)</span> / <span class="kbd">전출·퇴직(출발)</span> 명단을 한 화면에 정리합니다.
+      </p>
+      <p class="subtitle" style="margin-top:-6px;">
+        ※ “결원 의심(정원 확인 필요)”는 <b>직종별</b>로 <b>전출·퇴직 &gt; 전입</b>인 경우를 합산한 값입니다.
       </p>
     </div>
   </header>
@@ -585,7 +668,6 @@ details.job-group .group-body{ padding: 0 12px 12px; }
 
       <p class="muted">
         ※ “결원 의심/순증가”는 <b>직종별</b> 차이를 합산한 값입니다.
-        (예: A직종 -1, B직종 +1 이면 총차이 0이지만 결원 의심 1명 + 순증가 1명으로 따로 표시)
       </p>
     </section>
 
@@ -685,15 +767,15 @@ details.job-group .group-body{ padding: 0 12px 12px; }
       </div>
     </section>
 
-    <!-- 로그 -->
-    <section class="tool-card">
-      <div class="tool-head">
-        <h2 class="tool-title">처리 로그</h2>
+    <!-- ✅ 로그(기본 숨김) -->
+    <details class="tool-card log-details">
+      <summary>처리 로그 (원할 때만 펼치기)</summary>
+      <div style="margin-top:12px;">
         <p class="tool-sub">엑셀 파서 로드/분석 진행 상황을 확인할 수 있습니다.</p>
+        <hr style="margin:14px 0;"/>
+        <pre id="logBox" class="muted"></pre>
       </div>
-      <hr/>
-      <pre id="logBox" class="muted"></pre>
-    </section>
+    </details>
   </main>
 
   <footer class="site-footer">
@@ -843,7 +925,6 @@ details.job-group .group-body{ padding: 0 12px 12px; }
     if (typeof v === "number" && Number.isFinite(v)) return Math.trunc(v);
     const s = String(v ?? "").trim();
     if (!s) return null;
-    // "1", "01" 등만 허용 (필요하면 확장 가능)
     if (/^\d+$/.test(s)) return parseInt(s, 10);
     return null;
   }
@@ -860,7 +941,7 @@ details.job-group .group-body{ padding: 0 12px 12px; }
   }
 
   function downloadCsv(filename, rows2d) {
-    const bom = "\uFEFF"; // Excel 한글 깨짐 방지
+    const bom = "\uFEFF";
     const csv = rows2d.map(row => row.map(cell => {
       const raw = String(cell ?? "");
       const escaped = raw.replace(/\"/g, '""');
@@ -886,6 +967,137 @@ details.job-group .group-body{ padding: 0 12px 12px; }
     const s = String(fileName ?? "");
     const m = s.match(/\[([^\]]+)\]/);
     return m ? String(m[1]).trim() : "";
+  }
+
+  // ---------------------------
+  // ✅ Custom Select (wrap options)
+  // ---------------------------
+  const customSelectInstances = [];
+  const custom = { school: null, job: null };
+
+  function createCustomSelect(selectEl, { placeholder = "선택" } = {}) {
+    // 이미 생성된 경우 재사용
+    const exist = customSelectInstances.find(x => x.select === selectEl);
+    if (exist) return exist;
+
+    selectEl.classList.add("native-select");
+
+    const wrap = document.createElement("div");
+    wrap.className = "cselect";
+    const parent = selectEl.parentNode;
+    parent.insertBefore(wrap, selectEl);
+    wrap.appendChild(selectEl);
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "cselect-btn";
+    btn.setAttribute("aria-haspopup", "listbox");
+    btn.setAttribute("aria-expanded", "false");
+    wrap.appendChild(btn);
+
+    const list = document.createElement("div");
+    list.className = "cselect-list";
+    list.setAttribute("role", "listbox");
+    list.hidden = true;
+    wrap.appendChild(list);
+
+    function close() {
+      if (list.hidden) return;
+      list.hidden = true;
+      wrap.classList.remove("open");
+      btn.setAttribute("aria-expanded", "false");
+    }
+
+    function open() {
+      // 다른 셀렉트 닫기
+      for (const inst of customSelectInstances) {
+        if (inst.wrap !== wrap) inst.close();
+      }
+      list.hidden = false;
+      wrap.classList.add("open");
+      btn.setAttribute("aria-expanded", "true");
+    }
+
+    function toggle() {
+      if (list.hidden) open();
+      else close();
+    }
+
+    function sync() {
+      const opt = selectEl.options[selectEl.selectedIndex];
+      const text = opt ? opt.textContent : "";
+      btn.textContent = text || placeholder;
+      btn.title = text || "";
+
+      // 선택 하이라이트
+      const items = list.querySelectorAll(".cselect-item");
+      items.forEach(it => {
+        it.classList.toggle("is-selected", it.dataset.value === selectEl.value);
+      });
+
+      // disabled 반영
+      btn.disabled = !!selectEl.disabled;
+      if (btn.disabled) close();
+    }
+
+    function refresh() {
+      list.innerHTML = "";
+      const frag = document.createDocumentFragment();
+
+      for (const opt of Array.from(selectEl.options)) {
+        const item = document.createElement("div");
+        item.className = "cselect-item";
+        item.textContent = opt.textContent || "";
+        item.dataset.value = opt.value;
+
+        if (opt.disabled) {
+          item.classList.add("is-disabled");
+        } else {
+          item.addEventListener("click", () => {
+            selectEl.value = opt.value;
+            // change 이벤트는 기존 로직 재사용
+            selectEl.dispatchEvent(new Event("change", { bubbles: true }));
+            sync();
+            close();
+          });
+        }
+
+        frag.appendChild(item);
+      }
+
+      list.appendChild(frag);
+      sync();
+    }
+
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      toggle();
+    });
+
+    // 바깥 클릭 시 닫기
+    document.addEventListener("click", (e) => {
+      if (!wrap.contains(e.target)) close();
+    });
+
+    // ESC 닫기
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") close();
+    });
+
+    // select가 코드로 바뀌는 경우에도 동기화
+    selectEl.addEventListener("change", () => {
+      sync();
+    });
+
+    const inst = { select: selectEl, wrap, btn, list, refresh, sync, open, close };
+    customSelectInstances.push(inst);
+    refresh();
+    return inst;
+  }
+
+  function ensureCustomSelects() {
+    if (!custom.school) custom.school = createCustomSelect(el.schoolSelect, { placeholder: "학교 선택" });
+    if (!custom.job) custom.job = createCustomSelect(el.jobSelect, { placeholder: "직종 선택" });
   }
 
   // ---------------------------
@@ -942,11 +1154,9 @@ details.job-group .group-body{ padding: 0 12px 12px; }
   function cellStr(v) {
     return String(v ?? "").replace(/\s+/g, " ").trim();
   }
-
   function cellKey(v) {
     return normalizeKey(cellStr(v));
   }
-
   function forwardFill(keys) {
     const out = [];
     let last = "";
@@ -956,7 +1166,6 @@ details.job-group .group-body{ padding: 0 12px 12px; }
     }
     return out;
   }
-
   function countHeaderSignals(keys, RE) {
     let c = 0;
     for (const k of keys) {
@@ -965,7 +1174,6 @@ details.job-group .group-body{ padding: 0 12px 12px; }
     }
     return c;
   }
-
   function findIdxPrefer(primaryKeys, secondaryKeys, re) {
     for (let i = 0; i < primaryKeys.length; i++) {
       if (primaryKeys[i] && re.test(primaryKeys[i])) return i;
@@ -1139,13 +1347,20 @@ details.job-group .group-body{ padding: 0 12px 12px; }
   }
 
   function addMoveToSchool(rec, move, dir) {
-    // dir: "in" | "out"
     if (dir === "in") rec.inMoves.push(move);
     else rec.outMoves.push(move);
 
     const ji = getOrCreateJobInfo(rec, move.jobName);
     if (dir === "in") { ji.inCount++; ji.inMoves.push(move); }
     else { ji.outCount++; ji.outMoves.push(move); }
+  }
+
+  function getRegionText(rec) {
+    const arr = [...rec.regions].filter(Boolean);
+    arr.sort((a,b)=>a.localeCompare(b,"ko"));
+    if (!arr.length) return "-";
+    if (arr.length <= 2) return arr.join(", ");
+    return `${arr.slice(0,2).join(", ")} 외 ${arr.length - 2}`;
   }
 
   function finalizeSchoolSummary(rec) {
@@ -1181,17 +1396,7 @@ details.job-group .group-body{ padding: 0 12px 12px; }
     };
   }
 
-  function getRegionText(rec) {
-    const arr = [...rec.regions].filter(Boolean);
-    arr.sort((a,b)=>a.localeCompare(b,"ko"));
-    if (!arr.length) return "-";
-    // 너무 길면 요약
-    if (arr.length <= 2) return arr.join(", ");
-    return `${arr.slice(0,2).join(", ")} 외 ${arr.length - 2}`;
-  }
-
   function rebuildSchoolOrder() {
-    // 기본: 결원 의심 인원(합) 큰 순
     state.schoolOrder = [...state.schools.keys()].sort((ka, kb) => {
       const a = state.schools.get(ka)?.summary;
       const b = state.schools.get(kb)?.summary;
@@ -1246,7 +1451,6 @@ details.job-group .group-body{ padding: 0 12px 12px; }
       return;
     }
 
-    // 수동 컬럼
     const seqIdxManual = colToIndex(el.colSeq.value);
     const nameIdxManual = colToIndex(el.colName.value);
     const jobIdxManual = colToIndex(el.colJob.value);
@@ -1268,12 +1472,10 @@ details.job-group .group-body{ padding: 0 12px 12px; }
       return;
     }
 
-    // 옵션
     const normOn = el.optNormalize.checked;
     const autoOn = el.optAutoDetect.checked;
     const includePrefix = el.optSchoolKeyPrefix.checked;
 
-    // 상태 초기화
     state.analyzed = false;
     state.moves = [];
     state.schools.clear();
@@ -1283,7 +1485,6 @@ details.job-group .group-body{ padding: 0 12px 12px; }
 
     log(`분석 시작: 파일 ${state.files.length}개`);
 
-    // 여러 파일 순회
     for (const file of state.files) {
       const region = parseRegionFromFilename(file.name);
       log(`- 파일: ${file.name}${region ? ` (구분=${region})` : ""}`);
@@ -1297,7 +1498,6 @@ details.job-group .group-body{ padding: 0 12px 12px; }
         const ws = wb.Sheets[sheetName];
         const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
 
-        // 레이아웃 결정
         let layout = null;
         if (autoOn) {
           layout = detectLayout(rows);
@@ -1346,7 +1546,6 @@ details.job-group .group-body{ padding: 0 12px 12px; }
           state.moves.push(move);
           used++;
 
-          // 학교 집계
           if (inSchool) {
             const k = makeSchoolKey(inSchool, region, includePrefix);
             const rec = getOrCreateSchoolRecord(k, splitSchoolKey(k).school);
@@ -1362,19 +1561,16 @@ details.job-group .group-body{ padding: 0 12px 12px; }
           }
         }
 
-        if (used > 0) {
-          log(`    [${sheetName}] 데이터행 ${used}건 처리`);
-        }
+        if (used > 0) log(`    [${sheetName}] 데이터행 ${used}건 처리`);
       }
     }
 
-    // 요약 생성
     for (const [, rec] of state.schools) finalizeSchoolSummary(rec);
     rebuildSchoolOrder();
 
     state.analyzed = true;
 
-    // UI 렌더
+    // 렌더 + 커스텀 셀렉트 리프레시
     renderSchoolSummary();
     renderSuspectList();
     initSchoolSelect();
@@ -1422,7 +1618,6 @@ details.job-group .group-body{ padding: 0 12px 12px; }
       rows.push({ key, rec, s });
     }
 
-    // 정렬: 모드별
     rows.sort((a, b) => {
       if (mode === "surplus") {
         if (b.s.surplusPositions !== a.s.surplusPositions) return b.s.surplusPositions - a.s.surplusPositions;
@@ -1572,7 +1767,6 @@ details.job-group .group-body{ padding: 0 12px 12px; }
     el.schoolSelect.innerHTML = "";
     const frag = document.createDocumentFragment();
 
-    // 셀렉트는 가독성 위해 “구분+학교” 기준 정렬
     const keys = [...state.schools.keys()].sort((a, b) => {
       const ra = state.schools.get(a);
       const rb = state.schools.get(b);
@@ -1596,6 +1790,10 @@ details.job-group .group-body{ padding: 0 12px 12px; }
       state.selectedSchoolKey = state.schoolOrder[0] || keys[0] || "";
     }
     if (state.selectedSchoolKey) el.schoolSelect.value = state.selectedSchoolKey;
+
+    // ✅ 커스텀 드롭다운 옵션 갱신
+    ensureCustomSelects();
+    custom.school.refresh();
   }
 
   function selectSchool(key, jobName = "__ALL__") {
@@ -1611,7 +1809,10 @@ details.job-group .group-body{ padding: 0 12px 12px; }
 
     if (el.schoolSelect.value !== key) el.schoolSelect.value = key;
 
-    // 요약표 선택 표시 갱신
+    // ✅ 커스텀 드롭다운 라벨 동기화
+    ensureCustomSelects();
+    custom.school.sync();
+
     [...el.schoolSummaryBody.querySelectorAll("tr")].forEach(tr => {
       tr.classList.toggle("is-selected", tr.dataset.key === key);
     });
@@ -1634,10 +1835,7 @@ details.job-group .group-body{ padding: 0 12px 12px; }
 
     const s = rec.summary;
 
-    // 직종 셀렉트 구성
     const jobNames = [...rec.byJob.keys()].sort((a,b)=>a.localeCompare(b,"ko"));
-
-    // 선택된 직종 유효성
     if (state.selectedJob !== "__ALL__" && !rec.byJob.has(state.selectedJob)) {
       state.selectedJob = "__ALL__";
     }
@@ -1659,10 +1857,11 @@ details.job-group .group-body{ padding: 0 12px 12px; }
     el.jobSelect.appendChild(jf);
     el.jobSelect.value = state.selectedJob;
 
-    // 직종표 렌더
-    renderJobTable(rec);
+    // ✅ 커스텀 드롭다운 옵션 갱신
+    ensureCustomSelects();
+    custom.job.refresh();
 
-    // 명단 렌더
+    renderJobTable(rec);
     renderMoveLists(rec);
   }
 
@@ -1690,11 +1889,10 @@ details.job-group .group-body{ padding: 0 12px 12px; }
       if (mode === "suspect") {
         if (b.diff !== a.diff) return b.diff - a.diff;
       } else if (mode === "surplus") {
-        if (a.diff !== b.diff) return a.diff - b.diff; // 음수 큰 절댓값 먼저
+        if (a.diff !== b.diff) return a.diff - b.diff;
       } else if (mode === "balanced") {
         // 알파
       } else {
-        // 전체: abs diff 큰 순
         const ad = Math.abs(a.diff), bd = Math.abs(b.diff);
         if (bd !== ad) return bd - ad;
       }
@@ -1739,6 +1937,9 @@ details.job-group .group-body{ padding: 0 12px 12px; }
         state.selectedJob = row.jobName;
         el.jobSelect.value = row.jobName;
 
+        ensureCustomSelects();
+        custom.job.sync();
+
         [...el.jobTableBody.querySelectorAll("tr")].forEach(x => x.classList.remove("is-selected"));
         tr.classList.add("is-selected");
 
@@ -1761,8 +1962,6 @@ details.job-group .group-body{ padding: 0 12px 12px; }
   }
 
   function renderMoveItem(move, dir) {
-    // dir: "out" => current school is outSchool, show → inSchool
-    // dir: "in"  => current school is inSchool, show ← outSchool
     const who = escapeHtml(move.name || "(이름없음)");
     const other = dir === "out" ? (move.inSchool || "-") : (move.outSchool || "-");
     const arrow = dir === "out" ? "→" : "←";
@@ -1770,8 +1969,6 @@ details.job-group .group-body{ padding: 0 12px 12px; }
     const chips = [];
     if (move.note) chips.push(`<span class="pill gray">${escapeHtml(move.note)}</span>`);
     if (move.region) chips.push(`<span class="pill gray">${escapeHtml(move.region)}</span>`);
-    // 시트명/파일명은 너무 길 수 있어 기본은 숨김, 필요하면 아래 주석 해제
-    // chips.push(`<span class="pill gray">${escapeHtml(move.sheetName)}</span>`);
 
     return `
       <li>
@@ -1802,7 +1999,6 @@ details.job-group .group-body{ padding: 0 12px 12px; }
       inGroups = ji && ji.inMoves.length ? [{ jobName: job, moves: ji.inMoves, count: ji.inMoves.length }] : [];
     }
 
-    // CSV용: 현재 보여주는 명단(전출+전입)
     const flatMoves = [];
     for (const g of outGroups) for (const m of g.moves) flatMoves.push({ dir: "전출", jobName: g.jobName, move: m });
     for (const g of inGroups) for (const m of g.moves) flatMoves.push({ dir: "전입", jobName: g.jobName, move: m });
@@ -1826,7 +2022,6 @@ details.job-group .group-body{ padding: 0 12px 12px; }
     function renderGroupList(groups, dir) {
       if (!groups.length) return `<p class="muted" style="margin:8px 0 0;">없음</p>`;
 
-      // 전체 직종일 때는 직종별로 접기/펼치기
       if (job === "__ALL__") {
         return groups.map(g => {
           const moves = sortMovesForDisplay(g.moves);
@@ -1849,7 +2044,6 @@ details.job-group .group-body{ padding: 0 12px 12px; }
         }).join("");
       }
 
-      // 특정 직종일 때는 단일 리스트
       const moves = sortMovesForDisplay(groups[0].moves);
       const listHtml = moves.map(m => renderMoveItem(m, dir)).join("");
       return `<ul class="clean-list">${listHtml}</ul>`;
@@ -1883,7 +2077,6 @@ details.job-group .group-body{ padding: 0 12px 12px; }
       </p>
     `;
 
-    // 직종표 선택 표시(명단 변경에 따라)
     [...el.jobTableBody.querySelectorAll("tr")].forEach(tr => {
       tr.classList.toggle("is-selected", tr.dataset.job === state.selectedJob);
     });
@@ -1903,8 +2096,7 @@ details.job-group .group-body{ padding: 0 12px 12px; }
     }
 
     const totalBytes = state.files.reduce((a,f)=>a+(f.size||0), 0);
-    el.fileMeta.innerHTML =
-      `파일 <b>${state.files.length}</b>개 선택됨 · 총 ${bytesToHuman(totalBytes)}`;
+    el.fileMeta.innerHTML = `파일 <b>${state.files.length}</b>개 선택됨 · 총 ${bytesToHuman(totalBytes)}`;
 
     const listHtml = state.files.map(f => {
       const region = parseRegionFromFilename(f.name);
@@ -1940,6 +2132,11 @@ details.job-group .group-body{ padding: 0 12px 12px; }
     el.schoolSelect.innerHTML = "";
     el.jobSelect.innerHTML = "";
 
+    // ✅ 커스텀 드롭다운도 비우기
+    ensureCustomSelects();
+    custom.school.refresh();
+    custom.job.refresh();
+
     el.schoolFilter.value = "";
     el.suspectFilter.value = "";
     el.jobFilter.value = "";
@@ -1955,7 +2152,6 @@ details.job-group .group-body{ padding: 0 12px 12px; }
 
   el.schoolFilter.addEventListener("input", () => renderSchoolSummary());
   el.schoolModeSelect.addEventListener("change", () => renderSchoolSummary());
-
   el.suspectFilter.addEventListener("input", () => renderSuspectList());
 
   el.schoolSelect.addEventListener("change", () => {
@@ -2085,6 +2281,9 @@ details.job-group .group-body{ padding: 0 12px 12px; }
   async function init() {
     log("페이지 로드 완료");
     log("엑셀 업로드 후 '분석 실행'을 누르세요.");
+
+    // ✅ 커스텀 드롭다운 준비(초기에는 옵션이 없어도 placeholder 표시)
+    ensureCustomSelects();
 
     const ok = await ensureXLSX();
     setLibWarning(ok);
