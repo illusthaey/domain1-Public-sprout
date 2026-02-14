@@ -180,19 +180,16 @@
     <!-- 2) 설정 -->
     <section class="section">
       <div class="row between">
-        <h2 class="local-h2 local-tight" style="margin:0;">2. 기본 설정</h2>
-        <div class="row gap">
-          <button class="btn" id="btnApplyPreset" type="button">기본 프리셋 적용</button>
-        </div>
+        <h2 class="local-h2 local-tight" style="margin:0;">2. 징수 정보 입력</h2>
       </div>
 
       <div class="grid two">
         <div class="field">
           <label>학교명</label>
-          <input id="schoolName" type="text" placeholder="예시: 교행초등학교" />
+          <input id="schoolName" type="text" placeholder="예시: 금쪽초등학교" />
         </div>
         <div class="field">
-          <label>부과 년월 (선택입력)</label>
+          <label>부과년월 (입력 선택택)</label>
           <input id="roundText" type="text" placeholder="예시: 2025년 2학기" />
         </div>
       </div>
@@ -200,44 +197,27 @@
       <div class="grid two">
         <div class="field">
           <label>은행명</label>
-          <input id="bankName" type="text" placeholder="예) 농협" />
+          <input id="bankName" type="text" placeholder="예: 농협" />
         </div>
         <div class="field">
-          <label>계좌번호</label>
-          <input id="accountNumber" type="text" placeholder="예) 000-0000-0000-00" />
-        </div>
-      </div>
-
-      <div class="grid two">
-        <div class="field">
-          <label>안내문 라벨 색상</label>
-          <select id="labelTheme">
-            <option value="gray" selected>샘플(회색)</option>
-            <option value="blue">파스텔 블루</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>내보내기 배율(선명도)</label>
-          <select id="exportScale">
-            <option value="1" selected>1x (기본)</option>
-            <option value="2">2x (더 선명)</option>
-          </select>
+          <label>학교 계좌 번호</label>
+          <input id="accountNumber" type="text" placeholder="예시: 123456-78-901234" />
         </div>
       </div>
 
       <div class="grid two">
         <div class="field">
-          <label>납부 기한(안내문 문구)</label>
+          <label>이체 기한</label>
           <input id="dueDate" type="date" />
         </div>
         <div class="field">
-          <label>안내문 작성일(하단 날짜)</label>
+          <label>안내문 하단 기재할 날</label>
           <input id="docDate" type="date" />
         </div>
       </div>
 
       <details class="shot-details">
-        <summary class="shot-summary">고급 설정(미세 조정)</summary>
+        <summary class="shot-summary">안내문 레이아웃 미세 설정하기</summary>
 
         <div class="mini-grid">
           <div class="field"><label>박스 여백(px)</label><input id="cfg_boxMargin" type="number" min="20" max="140" step="1"></div>
@@ -272,37 +252,19 @@
 
     <!-- 3) 문자 템플릿 & 다운로드 -->
     <section class="section">
-      <h2 class="local-h2 local-tight">3) 문자 템플릿 & 다운로드</h2>
+      <h2 class="local-h2 local-tight">3. 납부 안내 문구 설정</h2>
       <p class="muted">
         치환: [학교명] [학년] [반] [번호] [이름] [차수] [납입금명] [은행명] [계좌번호] [미납액]
       </p>
 
       <textarea id="smsTemplate"></textarea>
-
-      <div class="btnbar">
-        <button class="btn primary" id="btnDownloadAllZip" type="button" disabled>
-          전체 결과 ZIP 다운로드 (문구 엑셀 + PNG + PDF)
-        </button>
-        <button class="btn" id="btnCopyAllSms" type="button" disabled>
-          전체 문자 문구 복사
-        </button>
-      </div>
-
-      <details class="shot-details" style="margin-top:12px;">
-        <summary class="shot-summary">개별 다운로드(선택)</summary>
-        <div class="btnbar">
-          <button class="btn" id="btnDownloadXlsxOnly" type="button" disabled>문구 엑셀만(.xlsx)</button>
-          <button class="btn" id="btnDownloadPngZipOnly" type="button" disabled>안내문 PNG ZIP만</button>
-          <button class="btn" id="btnDownloadPdfOnly" type="button" disabled>안내문 PDF만</button>
-        </div>
-      </details>
     </section>
 
     <!-- 4) 추출 결과 -->
     <section class="section">
-      <h2 class="local-h2 local-tight">4) 추출 결과</h2>
+      <h2 class="local-h2 local-tight">4. 추출 내역 조회 및 결과 파일 다운로드</h2>
 
-      <h3 class="local-h3 local-tight">행 단위(7개만)</h3>
+      <h3 class="local-h3 local-tight">미납 건별 조회하기 (이름 중복 가능)</h3>
       <div class="table-wrap">
         <table class="sheetlike">
           <thead>
@@ -312,17 +274,17 @@
               <th>번호</th>
               <th>이름</th>
               <th>납입금명</th>
-              <th>차수(행)</th>
+              <th>납입차수</th>
               <th class="numeric">미납액</th>
             </tr>
           </thead>
           <tbody id="rawTbody">
-            <tr><td colspan="7" class="muted">아직 데이터가 없습니다.</td></tr>
+            <tr><td colspan="7" class="muted">파일부터 올리쇼</td></tr>
           </tbody>
         </table>
       </div>
 
-      <h3 class="local-h3 local-tight" style="margin-top:18px;">학생별 통합</h3>
+      <h3 class="local-h3 local-tight" style="margin-top:18px;">학생별 미납 총액 조회하기</h3>
       <div class="table-wrap">
         <table class="sheetlike">
           <thead>
@@ -331,8 +293,8 @@
               <th>반</th>
               <th>번호</th>
               <th>이름</th>
-              <th>차수(요약)</th>
-              <th>납입금명(요약)</th>
+              <th>납입차수</th>
+              <th>납입금명</th>
               <th class="numeric">총 미납액</th>
             </tr>
           </thead>
@@ -345,7 +307,7 @@
 
     <!-- 5) 미리보기 -->
     <section class="section">
-      <h2 class="local-h2 local-tight">5) 학생 개인별 미리보기</h2>
+      <h2 class="local-h2 local-tight">5. 학생 개인별 미리보기</h2>
 
       <div class="grid two">
         <div class="field">
