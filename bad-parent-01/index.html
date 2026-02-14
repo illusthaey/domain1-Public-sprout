@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>세입 미납자 문자 독촉 업무 경감기</title>
+  <title>미수납 → 미납안내문/문자 생성기</title>
 
   <!-- ✅ 사이트 공통 CSS 그대로 -->
   <link rel="stylesheet" href="/static/style.css" />
@@ -14,8 +14,15 @@
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
   <style>
+    /* ===========================================
+       페이지 전용(최소): 공통 style.css와 일관성 유지
+       - 회색(ghost) 버튼 미사용
+       - textarea: 가로 100% + 세로 스크롤 + 세로 리사이즈
+       - 메인으로 돌아가기: footer 위, 흰 배경
+       =========================================== */
 
-    /* 드롭존 */
+    #excelFile { display:none; }
+
     .dropzone{
       border: 2px dashed #d4d4d8;
       background: #fafafa;
@@ -61,10 +68,6 @@
       white-space: nowrap;
     }
 
-    /* 업로드 input 숨김 */
-    #excelFile{ display:none; }
-
-    /* 버튼바 */
     .btnbar{
       display:flex;
       gap: 10px;
@@ -73,7 +76,6 @@
       margin-top: 10px;
     }
 
-    /* 상태 박스 */
     .status-box{
       white-space: pre-line;
       font-size: 1rem;
@@ -88,21 +90,15 @@
       background: #fff1f2 !important;
     }
 
-    /* textarea: 가로폭 꽉 + 세로 스크롤/리사이즈 */
     textarea{
       width: 100%;
       max-width: 100%;
       resize: vertical;
       overflow-y: auto;
     }
-    #smsTemplate{
-      min-height: 320px;
-    }
-    #smsPreview{
-      min-height: 360px;
-    }
+    #smsTemplate{ min-height: 320px; }
+    #smsPreview{ min-height: 360px; }
 
-    /* 미리보기 캔버스 */
     .canvasbox{
       border: 1px solid #e5e5e5;
       border-radius: 12px;
@@ -130,7 +126,6 @@
       }
     }
 
-    /* 고급설정 그리드 */
     .mini-grid{
       display:grid;
       gap: 12px;
@@ -154,17 +149,17 @@
 
 <body>
   <main class="container">
-    <h1>미납자 문자 독촉 문구 및 고지내역 파일 생성기</h1>
-    <p class="muted">
-      ·에듀파인 학교회계-수입관리-출납관리-미수납관리에서 다운로드한 미수납 대상 엑셀파일을 첨부하면, 개인별 독촉 문구랑 고지안내서 pdf/png파일 생성해드림.
+    <h1>미수납대상(.xlsx) → 미납 안내 문자 + 미납안내문(PNG/PDF)</h1>
+    <p class="subtitle">
+      엑셀에서 <b>학년/반/번호/이름/납입금명/차수/미납액</b>만 사용합니다.
+      (정리: <b>주간</b>, <b>야간</b>, <b>_</b>, <b>-</b> 제거)
     </p>
 
     <!-- 1) 업로드 -->
     <section class="section">
       <div class="row between">
-        <h2 class="local-h2 local-tight" style="margin:0;">1. 미수납대상 엑셀 업로드</h2>
+        <h2 class="local-h2 local-tight" style="margin:0;">1) 엑셀 업로드</h2>
         <div class="row gap">
-          <button class="btn" id="btnLoadSample" type="button">샘플 데이터</button>
           <button class="btn" id="btnReset" type="button">초기화</button>
         </div>
       </div>
@@ -197,18 +192,22 @@
       <div class="row between">
         <h2 class="local-h2 local-tight" style="margin:0;">2) 기본 설정</h2>
         <div class="row gap">
-          <button class="btn" id="btnApplySamplePreset" type="button">샘플 프리셋 적용</button>
+          <button class="btn" id="btnApplyPreset" type="button">기본 프리셋 적용</button>
         </div>
       </div>
 
       <div class="grid two">
         <div class="field">
           <label>학교명</label>
-          <input id="schoolName" type="text" placeholder="예) 문막초등학교" />
+          <input id="schoolName" type="text" placeholder="예) ○○초등학교" />
         </div>
         <div class="field">
-          <label>차수(문자용 / 안내문 비고 기본값)</label>
+          <label>차수(기본값)</label>
           <input id="roundText" type="text" placeholder="예) 2025년 2학기" />
+          <p class="note">
+            엑셀에 ‘차수/학기/부과기간/비고’ 컬럼이 있으면 <b>행 단위로 우선 사용</b>하고,
+            없으면 이 값을 사용합니다.
+          </p>
         </div>
       </div>
 
@@ -225,17 +224,18 @@
 
       <div class="grid two">
         <div class="field">
-          <label>안내문 비고(선택)</label>
-          <input id="noticeRemark" type="text" placeholder="비어있으면 ‘차수’ 자동 입력" />
-          <p class="note">샘플 안내문 비고 칸 값입니다.</p>
-        </div>
-        <div class="field">
           <label>안내문 라벨 색상</label>
           <select id="labelTheme">
             <option value="gray" selected>샘플(회색)</option>
             <option value="blue">파스텔 블루</option>
           </select>
-          <p class="note">버튼은 회색(ghost) 안 쓰고, 안내문 라벨만 선택입니다.</p>
+        </div>
+        <div class="field">
+          <label>내보내기 배율(선명도)</label>
+          <select id="exportScale">
+            <option value="1" selected>1x (기본)</option>
+            <option value="2">2x (더 선명)</option>
+          </select>
         </div>
       </div>
 
@@ -247,16 +247,6 @@
         <div class="field">
           <label>안내문 작성일(하단 날짜)</label>
           <input id="docDate" type="date" />
-        </div>
-      </div>
-
-      <div class="grid two">
-        <div class="field">
-          <label>내보내기 배율(선명도)</label>
-          <select id="exportScale">
-            <option value="1" selected>1x (기본)</option>
-            <option value="2">2x (더 선명)</option>
-          </select>
         </div>
       </div>
 
@@ -326,7 +316,7 @@
     <section class="section">
       <h2 class="local-h2 local-tight">4) 추출 결과</h2>
 
-      <h3 class="local-h3 local-tight">행 단위(6개만)</h3>
+      <h3 class="local-h3 local-tight">행 단위(7개만)</h3>
       <div class="table-wrap">
         <table class="sheetlike">
           <thead>
@@ -336,11 +326,12 @@
               <th>번호</th>
               <th>이름</th>
               <th>납입금명</th>
+              <th>차수(행)</th>
               <th class="numeric">미납액</th>
             </tr>
           </thead>
           <tbody id="rawTbody">
-            <tr><td colspan="6" class="muted">아직 데이터가 없습니다.</td></tr>
+            <tr><td colspan="7" class="muted">아직 데이터가 없습니다.</td></tr>
           </tbody>
         </table>
       </div>
@@ -354,12 +345,13 @@
               <th>반</th>
               <th>번호</th>
               <th>이름</th>
+              <th>차수(요약)</th>
               <th>납입금명(요약)</th>
               <th class="numeric">총 미납액</th>
             </tr>
           </thead>
           <tbody id="caseTbody">
-            <tr><td colspan="6" class="muted">아직 데이터가 없습니다.</td></tr>
+            <tr><td colspan="7" class="muted">아직 데이터가 없습니다.</td></tr>
           </tbody>
         </table>
       </div>
@@ -388,7 +380,7 @@
       <div class="preview-grid" style="margin-top:12px;">
         <div class="canvasbox">
           <canvas id="previewCanvas" width="1080" height="1350"></canvas>
-          <p class="note">샘플 “미납안내문” 구조로 렌더링됩니다.</p>
+          <p class="note">엑셀에서 추출된 값이 그대로 안내문에 렌더링됩니다.</p>
         </div>
 
         <div class="card">
@@ -413,7 +405,7 @@
     /***********************
      * 공통
      ***********************/
-    const STORAGE_KEY = "eduFine_unpaid_notice_reqfix_v1";
+    const STORAGE_KEY = "eduFine_unpaid_notice_fixed_render_v2";
 
     const DEFAULT_SMS_TEMPLATE =
 `안녕하세요,
@@ -476,7 +468,7 @@
 
     function saveSettings(){
       const ids = [
-        "schoolName","bankName","accountNumber","roundText","noticeRemark",
+        "schoolName","bankName","accountNumber","roundText",
         "dueDate","docDate","labelTheme","exportScale","smsTemplate",
         "cfg_boxMargin","cfg_boxBottomMargin","cfg_titleTop","cfg_boxTopGap",
         "cfg_outerLine","cfg_innerLine","cfg_topRowH","cfg_moneyRowH",
@@ -506,9 +498,9 @@
     }
 
     /***********************
-     * 샘플 프리셋(기본)
+     * 기본 프리셋(레이아웃)
      ***********************/
-    const SAMPLE_PRESET = {
+    const BASE_PRESET = {
       labelTheme: "gray",
       exportScale: "1",
       cfg_boxMargin: "86",
@@ -544,8 +536,8 @@
     /***********************
      * 상태 데이터
      ***********************/
-    let pendingFile = null;   // ✅ 업로드만 된 파일(추출 전)
-    let rawRows = [];         // {학년, 반, 번호, 이름, 납입금명, 미납액}
+    let pendingFile = null;   // 업로드만 된 파일(추출 전)
+    let rawRows = [];         // {학년, 반, 번호, 이름, 납입금명, 차수, 미납액}
     let cases = [];           // 학생별 통합
     let selectedCaseKey = "";
 
@@ -561,7 +553,7 @@
       return Number.isFinite(nn) ? Math.round(nn) : 0;
     }
 
-    // ✅ 제외: 주간 야간 _ -
+    // 제외: 주간 야간 _ -
     function cleanSchoolToken(s){
       let out = String(s ?? "")
         .replace(/주간/g, "")
@@ -657,7 +649,6 @@
       el("btnExtract").disabled = !pendingFile;
       el("btnClearFile").disabled = !pendingFile;
 
-      // ✅ 새 파일 선택 시 기존 결과는 비워서 혼동 방지
       clearResults();
 
       if(pendingFile){
@@ -671,7 +662,7 @@
     }
 
     /***********************
-     * XLSX 파싱(필요 6개만) + 매칭 헤더 표시(검토용)
+     * XLSX 파싱(필요 7개만)
      ***********************/
     function normalizeHeader(h){
       return String(h ?? "").trim().replace(/\s+/g,"").replace(/[_-]/g,"_");
@@ -679,8 +670,6 @@
 
     function findHeaderRow(rows){
       const limit = Math.min(rows.length, 40);
-
-      // 먼저 "이름+납입금명+미납액" 같이 있는 줄 찾기
       for(let i=0;i<limit;i++){
         const row = (rows[i] || []).map(normalizeHeader);
         const hasName = row.some(x => /이름|성명/.test(x));
@@ -714,7 +703,6 @@
       const headerRaw = (rows[headerRowIdx] || []).map(v => String(v ?? "").trim());
       const headerNorm = headerRaw.map(normalizeHeader);
 
-      // ✅ 학생 번호: '계좌번호' 같은 것에 끌려가지 않게 제외조건 추가
       const idxGrade = pickIndexSmart(headerNorm, [
         { include: [/주야.*학년/i, /계열.*학년/i, /^학년$/i, /학년/i] },
       ]);
@@ -723,8 +711,7 @@
       ]);
       const idxNo = pickIndexSmart(headerNorm, [
         { include: [/^번호$/i, /^출석번호$/i, /^학생번호$/i, /^학번$/i] },
-        { include: [/출석번호/i, /학생번호/i, /학번/i], exclude: [/계좌/i, /통장/i, /가상/i] },
-        { include: [/번호/i], exclude: [/계좌/i, /통장/i, /가상/i, /연락/i, /전화/i, /휴대/i] },
+        { include: [/출석번호/i, /학생번호/i, /학번/i, /번호/i], exclude: [/계좌/i, /통장/i, /가상/i, /연락/i, /전화/i, /휴대/i] },
       ]);
       const idxName = pickIndexSmart(headerNorm, [
         { include: [/^이름$/i, /^성명$/i] },
@@ -737,6 +724,14 @@
       const idxAmt = pickIndexSmart(headerNorm, [
         { include: [/^미납액$/i] },
         { include: [/미납.*액/i, /미납.*금/i, /미납/i], exclude: [/일수/i] },
+      ]);
+
+      // ✅ 차수(행) 컬럼: 있으면 추출, 없으면 "" (UI 기본값 사용)
+      const idxTerm = pickIndexSmart(headerNorm, [
+        { include: [/^차수$/i, /차수/i] },
+        { include: [/학기/i, /년도학기/i, /학년도/i], exclude: [/미사용/i] },
+        { include: [/부과기간/i, /적용기간/i, /부과.*기간/i] },
+        { include: [/비고/i], exclude: [/결재/i] },
       ]);
 
       if([idxGrade, idxClass, idxNo, idxName, idxItem, idxAmt].some(x => x === -1)){
@@ -756,11 +751,18 @@
         const item = String(row[idxItem] ?? "").trim();
         const amt  = toIntMoney(row[idxAmt]);
 
-        if(!norm.학년 && !norm.반 && (no===null) && !name && !item && !amt) continue;
+        let term = "";
+        if(idxTerm !== -1){
+          term = String(row[idxTerm] ?? "")
+            .replace(/[_-]/g, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+        }
+
+        if(!norm.학년 && !norm.반 && (no===null) && !name && !item && !amt && !term) continue;
         if(!name || !item) continue;
 
-        // ✅ 딱 6개만 보관
-        out.push({ 학년: norm.학년, 반: norm.반, 번호: no, 이름: name, 납입금명: item, 미납액: amt });
+        out.push({ 학년: norm.학년, 반: norm.반, 번호: no, 이름: name, 납입금명: item, 차수: term, 미납액: amt });
       }
 
       const meta = {
@@ -773,6 +775,7 @@
           이름: headerRaw[idxName] || `(col ${idxName+1})`,
           납입금명: headerRaw[idxItem] || `(col ${idxItem+1})`,
           미납액: headerRaw[idxAmt] || `(col ${idxAmt+1})`,
+          차수: (idxTerm !== -1) ? (headerRaw[idxTerm] || `(col ${idxTerm+1})`) : "(없음 → 차수 기본값 사용)",
         }
       };
 
@@ -795,21 +798,35 @@
           });
         }
         const c = map.get(key);
-        c.items.push({ 납입금명: rr.납입금명, 미납액: rr.미납액 });
+        c.items.push({ 납입금명: rr.납입금명, 미납액: rr.미납액, 차수: rr.차수 || "" });
         c.total += rr.미납액;
       }
 
       const list = Array.from(map.values());
       for(const c of list){
-        const uniq = [];
-        const seen = new Set();
+        // 납입금명 요약
+        const uniqItems = [];
+        const seenItem = new Set();
         for(const it of c.items){
-          if(!seen.has(it.납입금명)){
-            seen.add(it.납입금명);
-            uniq.push(it.납입금명);
+          if(!seenItem.has(it.납입금명)){
+            seenItem.add(it.납입금명);
+            uniqItems.push(it.납입금명);
           }
         }
-        c.납입금명요약 = uniq.join(", ");
+        c.납입금명요약 = uniqItems.join(", ");
+
+        // 차수 요약
+        const uniqTerms = [];
+        const seenTerm = new Set();
+        for(const it of c.items){
+          const t = String(it.차수 || "").trim();
+          if(!t) continue;
+          if(!seenTerm.has(t)){
+            seenTerm.add(t);
+            uniqTerms.push(t);
+          }
+        }
+        c.차수요약 = uniqTerms.join(", ");
       }
 
       function gradeNum(g){
@@ -840,13 +857,16 @@
       const roundText  = el("roundText").value.trim();
       const template   = el("smsTemplate").value;
 
+      // ✅ 차수는 "엑셀 차수요약" 우선, 없으면 UI 기본값
+      const termText = (c.차수요약 && c.차수요약.trim()) ? c.차수요약.trim() : roundText;
+
       const repl = {
         "[학교명]": schoolName,
         "[학년]": c.학년 ?? "",
         "[반]": c.반 ?? "",
         "[번호]": (c.번호 ?? "") ? `${c.번호}번` : "",
         "[이름]": c.이름 ?? "",
-        "[차수]": roundText,
+        "[차수]": termText,
         "[납입금명]": c.납입금명요약 ?? "",
         "[은행명]": bankName,
         "[계좌번호]": accountNum,
@@ -868,7 +888,9 @@
     }
 
     /***********************
-     * 안내문 렌더링(캔버스) - 샘플 구조 기반 1
+     * 안내문 렌더링(캔버스)
+     * ✅ FIX: 셀 채우기(fillStyle)가 텍스트 색을 덮지 않도록
+     *        cell()에서 save/restore 처리 -> 텍스트가 흰색으로 찍히는 버그 해결
      ***********************/
     const DIG_KOR = ["", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"];
     function fourToKor(n){
@@ -929,11 +951,11 @@
       ctx.setTransform(scale, 0, 0, scale, 0, 0);
 
       const family = `"맑은 고딕","Apple SD Gothic Neo","Noto Sans KR",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif`;
+      const TEXT = "#111";
+      const stroke = "#222";
 
       const schoolName = el("schoolName").value.trim();
       const roundText = el("roundText").value.trim();
-      const remarkRaw = el("noticeRemark").value.trim();
-      const remarkText = remarkRaw || roundText;
 
       const dueDate = parseDateInput(el("dueDate").value);
       const docDate = parseDateInput(el("docDate").value) || new Date();
@@ -967,14 +989,14 @@
       const dateSize = num("cfg_dateSize", 26);
 
       const labelBg = getNoticeLabelColor();
-      const stroke = "#222";
 
+      // 배경
       ctx.save();
       ctx.fillStyle = "#fff";
       ctx.fillRect(0,0,baseW,baseH);
 
       // 제목 + 밑줄
-      ctx.fillStyle = "#111";
+      ctx.fillStyle = TEXT;
       ctx.textAlign = "center";
       ctx.textBaseline = "alphabetic";
       ctx.font = `800 ${Math.round(titleSize)}px ${family}`;
@@ -1001,12 +1023,16 @@
 
       function cell(x, y, w, h, fill){
         if(fill){
+          ctx.save();
           ctx.fillStyle = fill;
           ctx.fillRect(x,y,w,h);
+          ctx.restore();
         }
+        ctx.save();
         ctx.strokeStyle = stroke;
         ctx.lineWidth = innerLine;
         ctx.strokeRect(x,y,w,h);
+        ctx.restore();
       }
 
       let y = boxY;
@@ -1019,7 +1045,8 @@
       // 1행: 학번
       cell(boxX, y, labelW, topRowH, labelBg);
       cell(boxX+labelW, y, valW, topRowH, "#fff");
-      ctx.fillStyle="#111";
+
+      ctx.fillStyle = TEXT;
       ctx.textAlign="center";
       ctx.font = `700 ${labelSize}px ${family}`;
       ctx.fillText("학   번", boxX + labelW/2, y + topRowH/2);
@@ -1039,6 +1066,8 @@
       // 2행: 이름
       cell(boxX, y, labelW, topRowH, labelBg);
       cell(boxX+labelW, y, valW, topRowH, "#fff");
+
+      ctx.fillStyle = TEXT;
       ctx.textAlign="center";
       ctx.font = `700 ${labelSize}px ${family}`;
       ctx.fillText("이   름", boxX + labelW/2, y + topRowH/2);
@@ -1050,12 +1079,13 @@
 
       // 일금
       cell(boxX, y, boxW, moneyRowH, "#fff");
+      ctx.fillStyle = TEXT;
       ctx.textAlign="center";
       ctx.font = `600 ${valueSize}px ${family}`;
       ctx.fillText(`일금 ${numberToKor(caseObj.total)} 원정`, boxX + boxW/2, y + moneyRowH/2);
       y += moneyRowH;
 
-      // 표
+      // 표(구분/금액/비고)
       const col1 = Math.round(boxW * col1Ratio);
       const col2 = Math.round(boxW * col2Ratio);
       const col3 = boxW - col1 - col2;
@@ -1064,6 +1094,7 @@
       cell(boxX+col1, y, col2, headH, labelBg);
       cell(boxX+col1+col2, y, col3, headH, labelBg);
 
+      ctx.fillStyle = TEXT;
       ctx.textAlign="center";
       ctx.font = `700 ${tableSize}px ${family}`;
       ctx.fillText("구   분", boxX + col1/2, y + headH/2);
@@ -1078,6 +1109,9 @@
 
         const it = caseObj.items[i];
         if(it){
+          ctx.fillStyle = TEXT;
+
+          // 구분
           let nm = String(it.납입금명||"");
           let s = tableSize;
           ctx.textAlign="center";
@@ -1088,13 +1122,16 @@
           }
           ctx.fillText(nm, boxX + col1/2, y + rowH/2);
 
+          // 금액
           ctx.textAlign="right";
           ctx.font = `600 ${tableSize}px ${family}`;
           ctx.fillText((it.미납액||0).toLocaleString("ko-KR"), boxX + col1 + col2 - 14, y + rowH/2);
 
-          if(remarkText){
+          // 비고(행 차수 우선, 없으면 차수 기본값)
+          const remark = (String(it.차수 || "").trim()) || (roundText || "");
+          if(remark){
             ctx.textAlign="center";
-            ctx.fillText(remarkText, boxX + col1 + col2 + col3/2, y + rowH/2);
+            ctx.fillText(remark, boxX + col1 + col2 + col3/2, y + rowH/2);
           }
         }
         y += rowH;
@@ -1105,6 +1142,7 @@
       cell(boxX+col1, y, col2, sumH, "#fff");
       cell(boxX+col1+col2, y, col3, sumH, "#fff");
 
+      ctx.fillStyle = TEXT;
       ctx.font = `700 ${tableSize}px ${family}`;
       ctx.textAlign="center";
       ctx.fillText("합   계", boxX + col1/2, y + sumH/2);
@@ -1114,6 +1152,7 @@
       y += sumH;
 
       // 하단 문구
+      ctx.fillStyle = TEXT;
       ctx.font = `600 23px ${family}`;
       ctx.textAlign="left";
       ctx.textBaseline="alphabetic";
@@ -1124,6 +1163,7 @@
         : "납부 기한을 입력하면 여기에 표시됩니다.";
       ctx.fillText(dueLine, boxX + 10, y + 66);
 
+      // 날짜/학교장
       const boxBottom = boxY + boxH;
       ctx.textAlign="center";
       ctx.font = `600 ${dateSize}px ${family}`;
@@ -1151,13 +1191,13 @@
     }
 
     /***********************
-     * 렌더
+     * 렌더(테이블/셀렉트/프리뷰)
      ***********************/
     function renderRawTable(){
       const tbody = el("rawTbody");
       tbody.innerHTML = "";
       if(!rawRows.length){
-        tbody.innerHTML = `<tr><td colspan="6" class="muted">아직 데이터가 없습니다.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="muted">아직 데이터가 없습니다.</td></tr>`;
         return;
       }
       for(const r of rawRows){
@@ -1168,6 +1208,7 @@
           <td>${r.번호 ?? ""}</td>
           <td>${escapeHtml(r.이름)}</td>
           <td>${escapeHtml(r.납입금명)}</td>
+          <td>${escapeHtml(r.차수 || "")}</td>
           <td class="numeric">${(r.미납액||0).toLocaleString("ko-KR")}</td>
         `;
         tbody.appendChild(tr);
@@ -1178,7 +1219,7 @@
       const tbody = el("caseTbody");
       tbody.innerHTML = "";
       if(!cases.length){
-        tbody.innerHTML = `<tr><td colspan="6" class="muted">아직 데이터가 없습니다.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="muted">아직 데이터가 없습니다.</td></tr>`;
         return;
       }
       for(const c of cases){
@@ -1188,7 +1229,8 @@
           <td>${escapeHtml(c.반)}</td>
           <td>${c.번호 ?? ""}</td>
           <td>${escapeHtml(c.이름)}</td>
-          <td>${escapeHtml(c.납입금명요약)}</td>
+          <td>${escapeHtml(c.차수요약 || "")}</td>
+          <td>${escapeHtml(c.납입금명요약 || "")}</td>
           <td class="numeric">${c.total.toLocaleString("ko-KR")}</td>
         `;
         tbody.appendChild(tr);
@@ -1258,35 +1300,38 @@
     }
     function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
-    // 문구 엑셀 생성
     function buildMessageWorkbookArrayBuffer(){
       const wb = XLSX.utils.book_new();
 
-      const header1 = ["학년","반","번호","이름","납입금명(요약)","총 미납액","문자문구"];
+      // 문자문구 시트
+      const header1 = ["학년","반","번호","이름","차수(요약)","납입금명(요약)","총 미납액","문자문구"];
       const rows1 = cases.map(c => ([
         c.학년 ?? "",
         c.반 ?? "",
         (c.번호 ?? "") ? `${c.번호}번` : "",
         c.이름 ?? "",
+        c.차수요약 ?? "",
         c.납입금명요약 ?? "",
         c.total ?? 0,
         buildSmsForCase(c),
       ]));
       const ws1 = XLSX.utils.aoa_to_sheet([header1, ...rows1]);
-      ws1["!cols"] = [{wch:10},{wch:10},{wch:8},{wch:10},{wch:30},{wch:12},{wch:60}];
+      ws1["!cols"] = [{wch:10},{wch:10},{wch:8},{wch:10},{wch:16},{wch:30},{wch:12},{wch:60}];
       XLSX.utils.book_append_sheet(wb, ws1, "문자문구");
 
-      const header2 = ["학년","반","번호","이름","납입금명","미납액"];
+      // 추출원본 시트(7개만)
+      const header2 = ["학년","반","번호","이름","납입금명","차수(행)","미납액"];
       const rows2 = rawRows.map(r => ([
         r.학년 ?? "",
         r.반 ?? "",
         (r.번호 ?? "") ? `${r.번호}번` : "",
         r.이름 ?? "",
         r.납입금명 ?? "",
+        r.차수 ?? "",
         r.미납액 ?? 0,
       ]));
       const ws2 = XLSX.utils.aoa_to_sheet([header2, ...rows2]);
-      ws2["!cols"] = [{wch:10},{wch:10},{wch:8},{wch:10},{wch:22},{wch:12}];
+      ws2["!cols"] = [{wch:10},{wch:10},{wch:8},{wch:10},{wch:22},{wch:18},{wch:12}];
       XLSX.utils.book_append_sheet(wb, ws2, "추출원본");
 
       return XLSX.write(wb, { bookType: "xlsx", type: "array" });
@@ -1500,7 +1545,7 @@
     }
 
     /***********************
-     * 업로드/드롭: 파일만 pending으로 저장(추출은 버튼으로)
+     * 업로드/드롭: 파일만 pending 저장(추출은 버튼)
      ***********************/
     function setupDropzone(){
       const dz = el("dropZone");
@@ -1525,7 +1570,7 @@
           return;
         }
         setPendingFile(file);
-        input.value = ""; // 같은 파일 재선택 허용
+        input.value = "";
       });
 
       dz.addEventListener("dragenter", (e) => { e.preventDefault(); e.stopPropagation(); dz.classList.add("is-dragover"); });
@@ -1573,10 +1618,13 @@
         cases = buildCasesFromRaw(rawRows);
         renderAll();
 
-        // ✅ 검토용: 어떤 헤더를 잡았는지 같이 표시
+        // ✅ 어떤 헤더로 매칭했는지 표시(검증용)
         const m = parsed.meta.matchedHeaders;
+        const withTermCount = rawRows.filter(r => String(r.차수||"").trim()).length;
+        const defaultTerm = el("roundText").value.trim();
+
         setStatus(
-          `추출 완료 ✅\n- 행 단위: ${rawRows.length}건\n- 학생별 통합: ${cases.length}건\n\n[매칭된 헤더]\n- 학년: ${m.학년}\n- 반: ${m.반}\n- 번호: ${m.번호}\n- 이름: ${m.이름}\n- 납입금명: ${m.납입금명}\n- 미납액: ${m.미납액}`,
+          `추출 완료 ✅\n- 행 단위: ${rawRows.length}건\n- 학생별 통합: ${cases.length}건\n- 차수(행) 값이 있는 행: ${withTermCount}건\n- 차수 기본값: ${defaultTerm ? defaultTerm : "(비어있음)"}\n\n[매칭된 헤더]\n- 학년: ${m.학년}\n- 반: ${m.반}\n- 번호: ${m.번호}\n- 이름: ${m.이름}\n- 납입금명: ${m.납입금명}\n- 차수: ${m.차수}\n- 미납액: ${m.미납액}`,
           "ok"
         );
 
@@ -1593,24 +1641,9 @@
     /***********************
      * 이벤트
      ***********************/
-    el("btnApplySamplePreset").addEventListener("click", () => {
-      applyPreset(SAMPLE_PRESET, true);
-      setStatus("샘플 프리셋 적용 완료 ✅", "ok");
-    });
-
-    el("btnLoadSample").addEventListener("click", () => {
-      // 샘플은 바로 결과를 세팅(업로드-추출 흐름과 별개)
-      setPendingFile(null);
-      rawRows = [
-        { 학년:"1학년", 반:"달반", 번호:2, 이름:"김가온", 납입금명:"우유급식비", 미납액:15710 },
-        { 학년:"3학년", 반:"달반", 번호:5, 이름:"노승민", 납입금명:"우유급식비", 미납액:44170 },
-        { 학년:"3학년", 반:"별반", 번호:4, 이름:"김민지", 납입금명:"우유급식비", 미납액:36290 },
-        { 학년:"3학년", 반:"별반", 번호:4, 이름:"김민지", 납입금명:"우유급식비", 미납액:44170 },
-      ];
-      cases = buildCasesFromRaw(rawRows);
-      renderAll();
-      setStatus("샘플 데이터 로드 완료 ✅", "ok");
-      saveSettings();
+    el("btnApplyPreset").addEventListener("click", () => {
+      applyPreset(BASE_PRESET, true);
+      setStatus("기본 프리셋 적용 완료 ✅", "ok");
     });
 
     el("btnReset").addEventListener("click", () => {
@@ -1621,12 +1654,11 @@
       el("bankName").value = "";
       el("accountNumber").value = "";
       el("roundText").value = "";
-      el("noticeRemark").value = "";
       el("dueDate").value = "";
       el("docDate").value = toISODate(new Date());
       el("smsTemplate").value = DEFAULT_SMS_TEMPLATE;
 
-      applyPreset(SAMPLE_PRESET, false);
+      applyPreset(BASE_PRESET, false);
       localStorage.removeItem(STORAGE_KEY);
       saveSettings();
 
@@ -1652,8 +1684,9 @@
     el("btnOnePng").addEventListener("click", () => downloadOnePng());
     el("btnCopySms").addEventListener("click", () => copySelectedSms());
 
+    // 변경 감지 → 미리보기 업데이트 + 저장
     const watchIds = [
-      "schoolName","bankName","accountNumber","roundText","noticeRemark",
+      "schoolName","bankName","accountNumber","roundText",
       "dueDate","docDate","labelTheme","exportScale","smsTemplate",
       "cfg_boxMargin","cfg_boxBottomMargin","cfg_titleTop","cfg_boxTopGap",
       "cfg_outerLine","cfg_innerLine","cfg_topRowH","cfg_moneyRowH",
@@ -1677,12 +1710,13 @@
       if(!el("docDate").value) el("docDate").value = toISODate(new Date());
 
       if(!hasSaved){
-        applyPreset(SAMPLE_PRESET, false);
+        applyPreset(BASE_PRESET, false);
         saveSettings();
       }
 
       enableActions(false);
       setPendingFile(null);
+      setStatus("대기중… 엑셀 업로드 후 ‘추출하기’를 누르세요.", "");
     })();
   </script>
 
