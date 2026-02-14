@@ -152,38 +152,35 @@
     <section class="section">
       <div class="row between">
         <h2 class="local-h2 local-tight" style="margin:0;">1. 미수납 대상 정보 업로드</h2>
-        <div class="row gap">
-          <button class="btn" id="btnReset" type="button">초기화하기</button>
-        </div>
       </div>
 
       <p class="muted local-tight">
-        보호자연락처/학적구분/수납방법/미납일수/납입기한/결재상태 등은 <b>무시</b>합니다.
+        ·학년, 반, 번호, 이름, 미납 내역, 미납 금액 데이터만 추출함.
       </p>
 
       <input id="excelFile" type="file" accept=".xlsx,.xls" />
 
-      <div id="dropZone" class="dropzone" role="button" tabindex="0" aria-label="엑셀 업로드 드롭존">
+      <div id="dropZone" class="dropzone" role="button" tabindex="0" aria-label="엑셀 파일 드롭존">
         <p class="dz-title">엑셀 파일을 드래그해서 놓기</p>
-        <p class="dz-sub">또는 클릭해서 선택하세요. <code>.xlsx</code></p>
+        <p class="dz-sub">또는 여기를 마우스로 클릭하면 폴더 경로 열림. <code>.xlsx</code></p>
         <p class="dz-file" id="selectedFileName">선택된 파일 없음</p>
       </div>
 
-      <!-- ✅ 업로드 후 즉시 추출하지 않고, 버튼 눌러 추출 -->
       <div class="btnbar">
-        <button class="btn primary" id="btnExtract" type="button" disabled>추출하기</button>
+        <button class="btn primary" id="btnExtract" type="button" disabled>미수납자 정보 추출하기</button>
         <button class="btn" id="btnClearFile" type="button" disabled>파일 지우기</button>
+        <button class="btn" id="btnReset" type="button">추출내역 삭제하기</button>
       </div>
 
       <div id="statusBox" class="card status-box" style="margin-top:12px;">
-        대기중… 엑셀을 올린 뒤 <b>추출하기</b>를 누르세요.
+        기다리는 중. 엑셀 파일을 올리고 나서 추출하기를 누르십시오.
       </div>
     </section>
 
     <!-- 2) 설정 -->
     <section class="section">
       <div class="row between">
-        <h2 class="local-h2 local-tight" style="margin:0;">2) 기본 설정</h2>
+        <h2 class="local-h2 local-tight" style="margin:0;">2. 기본 설정</h2>
         <div class="row gap">
           <button class="btn" id="btnApplyPreset" type="button">기본 프리셋 적용</button>
         </div>
@@ -192,15 +189,11 @@
       <div class="grid two">
         <div class="field">
           <label>학교명</label>
-          <input id="schoolName" type="text" placeholder="예) ○○초등학교" />
+          <input id="schoolName" type="text" placeholder="예시: 교행초등학교" />
         </div>
         <div class="field">
-          <label>차수(기본값)</label>
-          <input id="roundText" type="text" placeholder="예) 2025년 2학기" />
-          <p class="note">
-            엑셀에 ‘차수/학기/부과기간/비고’ 컬럼이 있으면 <b>행 단위로 우선 사용</b>하고,
-            없으면 이 값을 사용합니다.
-          </p>
+          <label>부과 년월 (선택입력)</label>
+          <input id="roundText" type="text" placeholder="예시: 2025년 2학기" />
         </div>
       </div>
 
