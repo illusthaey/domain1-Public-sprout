@@ -3,9 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>인사발령 결원 의심(정원 확인 필요) 체크</title>
+  <title>교육공무직 인사발령 공석 검출기</title>
 
-  <!-- 공통 스타일: 서버에서는 /static/style.css. 로컬/하위경로는 static/style.css 폴백 -->
   <link id="commonStyle" rel="stylesheet" href="/static/style.css" />
   <script>
     (function () {
@@ -134,13 +133,10 @@
 </head>
 
 <body>
-  <div class="home-link-wrap">
-    <a class="btn-home" href="/">← 메인으로</a>
-  </div>
 
   <header class="site-header">
     <div class="shell">
-      <h1>인사발령 결원 의심 체크</h1>
+      <h1>교육공무직 인사발령 공석(결원 의심) 검출</h1>
       <p class="subtitle">
         엑셀을 업로드하면 <span class="kbd">전출/퇴직(출발)</span> 대비 <span class="kbd">전입(도착)</span>이 부족한 학교(부서)를
         <b>“결원 의심(정원 확인 필요)”</b>로 표시합니다.
@@ -1818,5 +1814,11 @@
 })();
 </script>
 
+<a href="/" class="btn">메인으로 돌아가기</a>
+
+<script src="/static/disable-copy.js"></script>
+<script src="/static/footer.js"></script>
+<script src="/static/global-loader.js?v=1"></script>
+  
 </body>
 </html>
