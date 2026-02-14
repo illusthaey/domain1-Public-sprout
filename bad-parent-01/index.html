@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>미수납 → 미납안내문/문자 생성기</title>
+  <title>세입 미납자 독촉 업무 경감 기능</title>
 
   <!-- ✅ 사이트 공통 CSS 그대로 -->
   <link rel="stylesheet" href="/static/style.css" />
@@ -14,12 +14,6 @@
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
   <style>
-    /* ===========================================
-       페이지 전용(최소): 공통 style.css와 일관성 유지
-       - 회색(ghost) 버튼 미사용
-       - textarea: 가로 100% + 세로 스크롤 + 세로 리사이즈
-       - 메인으로 돌아가기: footer 위, 흰 배경
-       =========================================== */
 
     #excelFile { display:none; }
 
@@ -149,18 +143,17 @@
 
 <body>
   <main class="container">
-    <h1>미수납대상(.xlsx) → 미납 안내 문자 + 미납안내문(PNG/PDF)</h1>
-    <p class="subtitle">
-      엑셀에서 <b>학년/반/번호/이름/납입금명/차수/미납액</b>만 사용합니다.
-      (정리: <b>주간</b>, <b>야간</b>, <b>_</b>, <b>-</b> 제거)
+    <h1>미수납자 독촉 문자 문구 및 미납 안내장 파일 생성기</h1>
+    <p class="muted">
+      ·에듀파인 학교회계-수입관리-출납관리-미수납관리에서 미수납대상 엑셀파일 다운로드하고 여기에 올리면, 학생별 독촉 문자 문구 및 미납안내장 PDF/PNG 파일 둘 다 자동 생성해줌.
     </p>
 
     <!-- 1) 업로드 -->
     <section class="section">
       <div class="row between">
-        <h2 class="local-h2 local-tight" style="margin:0;">1) 엑셀 업로드</h2>
+        <h2 class="local-h2 local-tight" style="margin:0;">1. 미수납 대상 정보 업로드</h2>
         <div class="row gap">
-          <button class="btn" id="btnReset" type="button">초기화</button>
+          <button class="btn" id="btnReset" type="button">초기화하기</button>
         </div>
       </div>
 
