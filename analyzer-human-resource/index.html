@@ -2234,7 +2234,7 @@
 
     state.analyzed = true;
 
-    log(`\n집계 완료 ✅`);
+    log(`\n집계 완료. 고주무관 천재.`);
     log(`- 총 이동 레코드(중복 제거 후): ${totalRecords}건`);
     log(`- 근무지(학교/부서) 수: ${state.workplaceOrder.length}개`);
     log(`- 중복(완전 동일) 제외: ${state.dedupe.strictSkipped}건`);
@@ -2555,14 +2555,13 @@
 
   async function init() {
     log("페이지 로드 완료");
-    log("엑셀을 업로드한 뒤 '데이터 집계하기'를 누르세요.");
+    log("엑셀을 업로드한 뒤 '발령 정보 집계하기'를 누르세요.");
     setFiles([]);
 
     const ok = await ensureXLSX();
     setLibWarning(ok);
   }
 
-  // ✅ 중요: 이벤트 바인딩(wire)을 실제로 호출해야 파일 업로드/버튼 동작
   document.addEventListener("DOMContentLoaded", () => {
     wire();
     init();
