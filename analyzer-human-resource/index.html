@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>학교별 전입·전출 인사발령자 명단 집계기</title>
 
-  <!-- 공통 CSS(있으면 적용). 없으면 이 페이지 내 스타일로도 충분히 동작하도록 구성 -->
   <link id="commonStyle" rel="stylesheet" href="/static/style.css" />
   <script>
     (function () {
@@ -192,10 +191,9 @@
   <header class="site-header">
     <div class="shell">
       <h1>학교별 전입·전출 인사발령자 명단 집계기</h1>
-      <p class="subtitle">
-        여러 개의 엑셀(교육공무직/교육공무원/지방공무원)을 한 번에 업로드하면,
-        <span class="kbd">근무지(학교·부서)별</span>로 <span class="kbd">전입/전출</span>을 묶어 보여주고,
-        <b>직종(직급·과목) 단위</b>로 <b>결원 의심(전출&gt;전입)</b> 후보도 따로 모아줍니다.
+      <p class="muted">
+        ·에듀파인 업무지원-일반게시판에서 인사발령 엑셀 첨부파일 다운받아서 한꺼번에 업로드하면 학교별 전입자, 전출자 명단 집계해주는 기능 <br/>
+        ·발령 일자가 같은 모든 직군의 엑셀 파일을 한꺼번에 다 올리시면 됩니다. 교육공무원, 지방공무원, 교육공무직 한번에 집계 가능
       </p>
     </div>
   </header>
@@ -206,9 +204,9 @@
     <section class="tool-card" id="uploadSection">
       <div class="tool-head">
         <div>
-          <h2 class="tool-title">1) 엑셀 파일 업로드</h2>
+          <h2 class="tool-title">1. 인사발령 엑셀파일 업로드</h2>
           <p class="tool-sub">
-            드래그 &amp; 드롭 또는 <span class="kbd">파일 선택하기</span>로 여러 파일을 한 번에 올릴 수 있습니다.
+            ·드래그해서 업로드 가능합니다. 
           </p>
         </div>
       </div>
@@ -222,7 +220,7 @@
         <input id="fileInput" type="file" accept=".xlsx,.xls" multiple
                style="position:absolute; left:-9999px; width:1px; height:1px; opacity:0;" />
 
-        <button id="btnAnalyze" class="btn primary">데이터 집계하기</button>
+        <button id="btnAnalyze" class="btn primary">발령 정보 집계하기</button>
         <button id="btnClear" class="btn ghost">초기화하기</button>
 
         <span id="fileMeta" class="muted mini"></span>
