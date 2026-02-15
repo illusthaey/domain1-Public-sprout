@@ -206,7 +206,7 @@
         <div>
           <h2 class="tool-title">1. 인사발령 엑셀파일 업로드</h2>
           <p class="tool-sub">
-            ·드래그해서 업로드 가능합니다. 
+            ·드래그해서 업로드 가능합니다.
           </p>
         </div>
       </div>
@@ -348,7 +348,7 @@
       <div class="field">
         <label>학교/부서 검색</label>
         <input id="workplaceSearch" type="text" placeholder="예: oo교육지원청, oo초 ..." />
-        <div class="help">공백/괄호/대소문자 차이는 무시함. 정규화함함.</div>
+        <div class="help">공백/괄호/대소문자 차이는 무시함. 정규화합니다.</div>
       </div>
 
       <div class="field">
@@ -363,33 +363,28 @@
         <div id="jobMeta" class="muted mini" style="margin-top:6px;"></div>
       </div>
 
-      <div class="grid-two">
-        <div>
-          <p class="muted mini" style="margin:0 0 8px;">
-            ·아래 표 행에 마우스를 올리면 요약이 뜨고, 클릭하면 명단이 해당 직종으로 전환됨.
-          </p>
+      <!-- ✅ 직종 목록 표 아래로 '선택 근무지 + 명단' 영역 이동 -->
+      <p class="muted mini" style="margin:0 0 8px;">
+        ·아래 표 행에 마우스를 올리면 요약이 뜨고, 클릭하면 <b>아래 명단</b>이 해당 직종으로 전환됨.
+      </p>
 
-          <div class="table-wrap">
-            <table id="jobTable">
-              <thead>
-                <tr>
-                  <th class="sortable" data-sort="staffType">구분<span class="sort-ind"></span></th>
-                  <th class="sortable" data-sort="jobName">직종(직급·과목)<span class="sort-ind"></span></th>
-                  <th class="numeric sortable" data-sort="out">전출<span class="sort-ind"></span></th>
-                  <th class="numeric sortable" data-sort="in">전입<span class="sort-ind"></span></th>
-                  <th class="numeric sortable" data-sort="diff">차이(전출-전입)<span class="sort-ind"></span></th>
-                  <th class="numeric sortable" data-sort="total">총변동<span class="sort-ind"></span></th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-
-        <div>
-          <div id="detailLists"></div>
-        </div>
+      <div class="table-wrap">
+        <table id="jobTable">
+          <thead>
+            <tr>
+              <th class="sortable" data-sort="staffType">구분<span class="sort-ind"></span></th>
+              <th class="sortable" data-sort="jobName">직종(직급·과목)<span class="sort-ind"></span></th>
+              <th class="numeric sortable" data-sort="out">전출<span class="sort-ind"></span></th>
+              <th class="numeric sortable" data-sort="in">전입<span class="sort-ind"></span></th>
+              <th class="numeric sortable" data-sort="diff">차이(전출-전입)<span class="sort-ind"></span></th>
+              <th class="numeric sortable" data-sort="total">총변동<span class="sort-ind"></span></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
       </div>
+
+      <div id="detailLists" style="margin-top: 14px;"></div>
     </section>
 
     <!-- 3) 근무지별 요약 -->
@@ -500,10 +495,7 @@
       </details>
     </section>
 
-    <p><a class="btn" href="../index.html">메인으로 돌아가기</a></p>
   </main>
-
-
 
 <script>
 (() => {
@@ -1414,7 +1406,7 @@
   // Rendering: Workplace select + job select
   // ---------------------------
   function renderWorkplaceSelect() {
-    const q = el.workplaceSearch.value || "";
+    const q = (el.workplaceSearch.value || "").trim();
     const opts = [];
 
     for (const key of state.workplaceOrder) {
@@ -1571,7 +1563,7 @@
           <div class="mini" style="margin-top:6px;">
             전출 <b>${r.out}</b> · 전입 <b>${r.in}</b> · 차이 <b>${escapeHtml(r.diff>0?`+${r.diff}`:String(r.diff))}</b>
           </div>
-          <div class="mini muted" style="margin-top:6px;">클릭하면 오른쪽 명단이 이 직종으로 전환됩니다.</div>
+          <div class="mini muted" style="margin-top:6px;">클릭하면 아래 명단이 이 직종으로 전환됩니다.</div>
         `;
         showTooltip(html, e.clientX, e.clientY);
       });
@@ -1671,7 +1663,7 @@
 
     el.detailLists.innerHTML = `
       <div class="tool-card" style="margin:0; border-color: var(--line);">
-        <div class="row between" style="flex-wrap:wrap;">
+        <div class="row between" style="flex-wrap:wrap; margin-bottom:8px;">
           <div>
             <div class="mini muted">선택 근무지</div>
             <div style="font-weight:900; font-size:1.05rem;">${escapeHtml(w.name)}</div>
@@ -2228,7 +2220,7 @@
 
     state.analyzed = true;
 
-    log(`\n집계 완료. 고주무관 천재.`);
+    log(`\n집계 완료 ✅`);
     log(`- 총 이동 레코드(중복 제거 후): ${totalRecords}건`);
     log(`- 근무지(학교/부서) 수: ${state.workplaceOrder.length}개`);
     log(`- 중복(완전 동일) 제외: ${state.dedupe.strictSkipped}건`);
@@ -2563,11 +2555,11 @@
 })();
 </script>
 
-  
-  
+  <p><a class="btn" href="../index.html">메인으로 돌아가기</a></p>
+
 <script src="/static/disable-copy.js"></script>
 <script src="/static/footer.js"></script>
 <script src="/static/global-loader.js?v=1"></script>
-  
+
 </body>
 </html>
