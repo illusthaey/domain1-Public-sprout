@@ -157,8 +157,8 @@
     <div class="shell">
       <h1>2025회계 교육공무직 연차 미사용 수당 계산기</h1>
       <p class="subtitle">
-        ·2025회계에 부여된 연차 일수 중에서 미사용분에 대해 연차 미사용 수당을 산정 (통상임금: 2026.2월 기준) <br/>
-        ·연차 사용 집계 기간: 2025.3.1.~2026.2.28.<br/>
+        ·2025회계에 부여된 연차 일수 중에서 미사용분에 대해 연차 미사용 수당을 산정 (연차 일수는 수기 입력해야함) <br/>
+        ·연차 사용 집계 기간: 2025.3.1.~2026.2.28./ 통상임금 산정 기준 시기: 2026.2월<br/>
         ※ 업로드한 파일은 저장되지 않습니다. 서버랑 DB 없음<br/>
       </p>
     </div>
@@ -183,7 +183,7 @@
             <input type="file" id="hrFile" accept=".xlsx,.xls" class="hidden" multiple />
 
             <div class="row gap" style="margin-top:10px;">
-              <button class="btn primary" id="btnLoadHr">인사기록 불러오기</button>
+              <button class="btn primary" id="btnLoadHr">인사 기록 불러오기</button>
               <button class="btn" id="btnClearAll">초기화하기</button>
             </div>
             <div id="hrMsg" class="msg" style="margin-top:12px;"></div>
@@ -201,9 +201,9 @@
                 <th class="nowrap right">1일 소정근무시간</th>
                 <th class="nowrap right">주당 소정근무시간</th>
                 <th class="nowrap right">근속 년수(2026.2.28. 기준)</th>
-                <th class="nowrap right">2025회계 부여 연차일수</th>
+                <th class="nowrap right">2025회계 부여된 연차일수</th>
                 <th class="nowrap right">통상임금 수기 입력</th>
-                <th class="nowrap center">행삭제</th>
+                <th class="nowrap center">행 삭제</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -222,7 +222,7 @@
       <p class="muted">
         ·개별 근로자 조회하지 않고 교내 교육공무직 전체 복무 섞인 파일 올려도 됨니다. 알아서 추출함. <br/>
         ·나이스 복무에서 근무상황 조회내역 엑셀 파일 원자료 그대로 업로드할 것. <br/>
-        <span class="muted">※ 결재상태는 <b>완료/완결</b>만 집계하고, <b>취소/회수/반려</b> 등은 제외합니다.</span>
+        <span class="muted">※ 결재상태는 완료(완결)상태만 집계하고, 기결취소/회수/반려 등은 제외함.</span>
       </p>
 
       <div class="card">
