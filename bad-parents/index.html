@@ -188,10 +188,8 @@
         ·학년, 반, 번호, 이름, 미납 내역, 미납 금액 데이터만 추출함.
       </p>
 
-      <!--  file input: display:none 제거 + label for 연결 -->
       <input id="excelFile" type="file" accept=".xlsx,.xls" />
 
-      <!--  div → label (클릭은 “브라우저 기본 동작”으로 파일 선택창 열림) -->
       <label id="dropZone" class="dropzone" for="excelFile" role="button" tabindex="0" aria-label="엑셀 파일 드롭존">
         <p class="dz-title">엑셀 파일을 드래그해서 놓기</p>
         <p class="dz-sub">또는 여기를 마우스로 클릭하면 파일 선택창 열림. <code>.xlsx</code></p>
@@ -204,7 +202,6 @@
         <button class="btn" id="btnReset" type="button" disabled>초기화</button>
       </div>
 
-      <!-- statusBox 내부에 라이브러리 로딩 진행바 + 상태 텍스트 분리 -->
       <div id="statusBox" class="card status-box" style="margin-top:12px;">
         <div id="libProgressWrap">
           <div class="lib-progress-head">
@@ -264,8 +261,6 @@
       </p>
     </section>
 
-    
-    
     <!-- 3) 추출 결과 -->
     <section class="section">
       <h2 class="local-h2 local-tight">3. 추출 내역 상세 조회</h2>
@@ -311,8 +306,7 @@
       </div>
     </section>
 
-
-    <!-- 4) 문자 템플릿 & 다운로드 -->
+    <!-- 4) 문자 템플릿 -->
     <section class="section">
       <h2 class="local-h2 local-tight">4. 납부 안내 문구 설정</h2>
       <p class="muted">
@@ -328,8 +322,7 @@
       </div>
     </section>
 
-    
-
+    <!-- 5) 다운로드 + 미리보기 -->
     <section class="section">
       <h2 class="local-h2 local-tight">5. 파일 다운로드</h2>
 
@@ -337,7 +330,7 @@
         <button class="btn primary" id="btnDownloadAllZip" type="button" disabled>
           압축 파일로 전체 다운로드
         </button>
-        
+
         <button class="btn" id="btnCopyAllSms" type="button" disabled>
           전체 학생 미납 안내 문구 복사하기
         </button>
@@ -351,7 +344,7 @@
           <button class="btn" id="btnDownloadPdfOnly" type="button" disabled>안내문 PDF만 다운로드</button>
         </div>
       </details>
-      
+
       <div class="grid two">
         <div class="field">
           <label>학생 선택</label>
@@ -393,8 +386,8 @@
      * 공통
      ***********************/
     const STORAGE_KEY = "eduFine_unpaid_notice_badparents_v4";
-    const EXPORT_SCALE = 2;        // ✅ 선명한 버전 고정(2x)
-    const LABEL_BG = "#BFBFBF";    // ✅ 회색 고정
+    const EXPORT_SCALE = 2;        // 선명한 버전(2x)
+    const LABEL_BG = "#BFBFBF";    // 회색 고정
     const TABLE_SLOTS = 10;        // 안내문 표 빈줄 포함 슬롯 수(고정)
 
     // 안내문 레이아웃(고정값)
@@ -461,7 +454,7 @@
       return `${y}년 ${m}월 ${day}일`;
     }
 
-    /* ✅ statusBox 구조 변경: 텍스트는 statusText에만 */
+    /* statusBox 구조: 텍스트는 statusText에만 */
     function setStatus(msg, kind=""){
       const box = el("statusBox");
       box.classList.remove("status-ok","status-err","status-warn");
@@ -491,10 +484,7 @@
     }
 
     /***********************
-     * ✅ 라이브러리 로딩 진행바 + fallback 로더
-     * - 학교/기관망에서 CDN 차단이 잦아서:
-     *   1) 로컬(/static/vendor/...) 먼저 시도
-     *   2) jsDelivr → unpkg → cdnjs 순서로 시도
+     * 라이브러리 로딩 진행바 + fallback 로더
      ***********************/
     const LIB_SPECS = [
       {
@@ -558,13 +548,18 @@
       const detail = el("libProgressDetail");
       if(!bar || !label || !percent || !detail) return;
 
-      const okCount = Object.values(libState.items).filter(x => x.status === "ok").length;
-      bar.max = libState.total;
-      bar.value = okCount;
+      // ✅ 오류 수정: 진행률은 "성공 개수"가 아니라 "완료(성공+실패) 개수"로 계산
+      const items = Object.values(libState.items);
+      const okCount = items.filter(x => x.status === "ok").length;
+      const errCount = items.filter(x => x.status === "err").length;
+      const doneCount = items.filter(x => x.status === "ok" || x.status === "err").length;
 
-      const pct = Math.round((okCount / libState.total) * 100);
+      bar.max = libState.total;
+      bar.value = doneCount;
+
+      const pct = Math.round((doneCount / libState.total) * 100);
       percent.textContent = `${pct}%`;
-      label.textContent = `필수 라이브러리 로딩: ${okCount}/${libState.total}`;
+      label.textContent = `필수 라이브러리 로딩: ${doneCount}/${libState.total} (성공 ${okCount}, 실패 ${errCount})`;
 
       const map = { pending: "대기", loading: "로딩중…", ok: "완료", err: "실패" };
       const lines = LIB_SPECS.map(s => {
@@ -623,7 +618,6 @@
     }
 
     async function loadOneLib(spec){
-      // 이미 로드되어 있다면 스킵
       if(spec.check()){
         setLibStatus(spec.key, "ok", { usedUrl: "(이미 로드됨)", source: "cached", error: "" });
         return;
@@ -648,7 +642,7 @@
       setLibStatus(spec.key, "err", {
         usedUrl: "",
         source: "",
-        error: "네트워크/CSP/CDN 차단 등으로 로드 실패"
+        error: `네트워크/CSP/CDN 차단 등으로 로드 실패 (${lastErr || "unknown"})`
       });
     }
 
@@ -659,7 +653,6 @@
         await loadOneLib(spec);
       }
 
-      // 최소 필수(XLSX) 실패 시 명확히 안내
       if(!isLibOk("xlsx")){
         setStatus(
           "필수 라이브러리(XLSX)를 불러오지 못해 엑셀 추출이 비활성화되었습니다.\n" +
@@ -729,8 +722,8 @@
     let cases = [];              // 학생별 통합
     let selectedCaseKey = "";
 
-    // ✅ “적용(미리보기)” 버튼을 눌러야 다운로드 활성화
-    let appliedSettings = null;  // 다운로드/전체복사 등은 이 스냅샷으로 생성
+    // “반영하기” 눌러야 다운로드 활성화
+    let appliedSettings = null;
 
     /***********************
      * 유틸
@@ -808,7 +801,7 @@
         updateUIStates();
         if(reasonText){
           setStatus(
-            reasonText + "\n\n※ 3번의 “문구 및 파일 적용 결과 미리보기”를 다시 눌러야 다운로드가 활성화됩니다.",
+            reasonText + "\n\n※ “추출한 미납자 정보 반영하기” 버튼을 다시 눌러야 다운로드가 활성화됩니다.",
             "warn"
           );
         }
@@ -824,30 +817,32 @@
       const zipOk  = isLibOk("jszip");
       const pdfOk  = isLibOk("jspdf");
 
-      // ✅ 추출은 XLSX 준비 + 파일 선택이 되어야
+      // 추출은 XLSX 준비 + 파일 선택이 되어야
       el("btnExtract").disabled = !hasFile || !xlsxOk;
       el("btnClearFile").disabled = !hasFile;
 
-      // 추출내역 삭제는 "추출 후"만 활성화(파일은 유지)
+      // 초기화는 "추출 후"만 활성화(파일은 유지)
       el("btnReset").disabled = !hasCases;
 
-      // 미리보기(적용) 버튼: 추출 후만 가능
+      // 반영 버튼: 추출 후만 가능
       el("btnApply").disabled = !hasCases;
 
-      // 학생별 기능: 추출 후 가능(미리보기는 계속 유지)
+      // 학생별 기능: 추출 후 가능
       el("caseSelect").disabled = !hasCases;
       el("btnOnePng").disabled = !hasCases;
       el("btnCopySms").disabled = !hasCases;
 
-      // ✅ 다운로드는 “적용” + 각 기능에 필요한 라이브러리 준비 필요
+      // 다운로드는 “반영” 후 활성화
       const dlBase = hasCases && isApplied;
 
-      el("btnCopyAllSms").disabled = !dlBase;                 // 복사는 라이브러리 불필요
+      el("btnCopyAllSms").disabled = !dlBase;
 
       el("btnDownloadXlsxOnly").disabled   = !(dlBase && xlsxOk);
       el("btnDownloadPngZipOnly").disabled = !(dlBase && zipOk);
       el("btnDownloadPdfOnly").disabled    = !(dlBase && pdfOk);
-      el("btnDownloadAllZip").disabled     = !(dlBase && xlsxOk && zipOk && pdfOk);
+
+      // ✅ 오류/불편 개선: 전체 ZIP은 jsPDF가 없어도 (엑셀+PNG)로 가능
+      el("btnDownloadAllZip").disabled     = !(dlBase && xlsxOk && zipOk);
     }
 
     function clearResultsOnly(){
@@ -875,7 +870,7 @@
 
       if(pendingFile){
         setStatus(
-          `파일 선택됨\n- ${pendingFile.name}\n\n이제 “미수납자 정보 추출하기”를 누르십시오.`,
+          `파일 선택됨\n- ${pendingFile.name}\n\n이제 “미납내역 추출하기”를 누르십시오.`,
           ""
         );
       }else{
@@ -884,7 +879,7 @@
     }
 
     /***********************
-     * XLSX 파싱(필요 7개만)
+     * XLSX 파싱
      ***********************/
     function normalizeHeader(h){
       return String(h ?? "").trim().replace(/\s+/g,"").replace(/[_-]/g,"_");
@@ -917,7 +912,6 @@
     }
 
     function parseXlsx(arrayBuffer){
-      // ✅ XLSX 준비 체크 (방어)
       if(!window.XLSX) throw new Error("XLSX 라이브러리가 로드되지 않았습니다.");
 
       const wb = XLSX.read(arrayBuffer, { type: "array" });
@@ -953,7 +947,6 @@
         { include: [/미납.*액/i, /미수납.*액/i, /미납.*금/i, /미수납.*금/i, /미납/i, /미수납/i], exclude: [/일수/i] },
       ]);
 
-      // ✅ 차수(행) 컬럼: 있으면 추출, 없으면 "" (UI 기본값 사용)
       const idxTerm = pickIndexSmart(headerNorm, [
         { include: [/^차수$/i, /차수/i] },
         { include: [/학기/i, /년도학기/i, /학년도/i, /부과년월/i], exclude: [/미사용/i] },
@@ -1000,7 +993,7 @@
           이름: headerRaw[idxName] || `(col ${idxName+1})`,
           납입금명: headerRaw[idxItem] || `(col ${idxItem+1})`,
           미납액: headerRaw[idxAmt] || `(col ${idxAmt+1})`,
-          차수: (idxTerm !== -1) ? (headerRaw[idxTerm] || `(col ${idxTerm+1})`) : "(없음 → 부과년월(입력 선택택) 사용)"
+          차수: (idxTerm !== -1) ? (headerRaw[idxTerm] || `(col ${idxTerm+1})`) : "(없음 → 부과년월(입력 선택) 사용)"
         }
       };
 
@@ -1081,7 +1074,6 @@
       const roundText  = settings.roundText;
       const template   = settings.smsTemplate;
 
-      // 차수는 "엑셀 차수요약" 우선, 없으면 roundText
       const termText = (c.차수요약 && c.차수요약.trim()) ? c.차수요약.trim() : roundText;
 
       const repl = {
@@ -1177,12 +1169,10 @@
       const docDate = parseDateInput(settings.docDate) || new Date();
       const principalTitle = schoolName ? (schoolName + "장") : "학교장";
 
-      // 배경
       ctx.save();
       ctx.fillStyle = "#fff";
       ctx.fillRect(0,0,baseW,baseH);
 
-      // 제목 + 밑줄
       ctx.fillStyle = TEXT;
       ctx.textAlign = "center";
       ctx.textBaseline = "alphabetic";
@@ -1198,7 +1188,6 @@
       ctx.lineTo(baseW/2 + titleWidth/2, underlineY);
       ctx.stroke();
 
-      // 박스
       const boxX = LAYOUT.boxMargin;
       const boxY = underlineY + LAYOUT.boxTopGap;
       const boxW = baseW - LAYOUT.boxMargin*2;
@@ -1228,7 +1217,6 @@
 
       ctx.textBaseline = "middle";
 
-      // 1행: 학번
       cell(boxX, y, labelW, LAYOUT.topRowH, LABEL_BG);
       cell(boxX+labelW, y, valW, LAYOUT.topRowH, "#fff");
 
@@ -1249,7 +1237,6 @@
       ctx.fillText(classLine, boxX + labelW + 18, y + LAYOUT.topRowH/2);
       y += LAYOUT.topRowH;
 
-      // 2행: 이름
       cell(boxX, y, labelW, LAYOUT.topRowH, LABEL_BG);
       cell(boxX+labelW, y, valW, LAYOUT.topRowH, "#fff");
 
@@ -1263,7 +1250,6 @@
       ctx.fillText(String(caseObj.이름||""), boxX + labelW + 18, y + LAYOUT.topRowH/2);
       y += LAYOUT.topRowH;
 
-      // 일금
       cell(boxX, y, boxW, LAYOUT.moneyRowH, "#fff");
       ctx.fillStyle = TEXT;
       ctx.textAlign="center";
@@ -1271,7 +1257,6 @@
       ctx.fillText(`일금 ${numberToKor(caseObj.total)} 원정`, boxX + boxW/2, y + LAYOUT.moneyRowH/2);
       y += LAYOUT.moneyRowH;
 
-      // 표(구분/금액/비고)
       const col1 = Math.round(boxW * LAYOUT.col1Ratio);
       const col2 = Math.round(boxW * LAYOUT.col2Ratio);
       const col3 = boxW - col1 - col2;
@@ -1297,7 +1282,6 @@
         if(it){
           ctx.fillStyle = TEXT;
 
-          // 구분
           let nm = String(it.납입금명||"");
           let s = LAYOUT.tableSize;
           ctx.textAlign="center";
@@ -1308,12 +1292,10 @@
           }
           ctx.fillText(nm, boxX + col1/2, y + LAYOUT.rowH/2);
 
-          // 금액
           ctx.textAlign="right";
           ctx.font = `600 ${LAYOUT.tableSize}px ${family}`;
           ctx.fillText((it.미납액||0).toLocaleString("ko-KR"), boxX + col1 + col2 - 14, y + LAYOUT.rowH/2);
 
-          // 비고(행 차수 우선, 없으면 roundText)
           const remark = (String(it.차수 || "").trim()) || (roundText || "");
           if(remark){
             ctx.textAlign="center";
@@ -1323,7 +1305,6 @@
         y += LAYOUT.rowH;
       }
 
-      // 합계
       cell(boxX, y, col1, LAYOUT.sumH, "#fff");
       cell(boxX+col1, y, col2, LAYOUT.sumH, "#fff");
       cell(boxX+col1+col2, y, col3, LAYOUT.sumH, "#fff");
@@ -1337,7 +1318,6 @@
       ctx.fillText(caseObj.total.toLocaleString("ko-KR"), boxX + col1 + col2 - 14, y + LAYOUT.sumH/2);
       y += LAYOUT.sumH;
 
-      // 하단 문구
       ctx.fillStyle = TEXT;
       ctx.font = `600 23px ${family}`;
       ctx.textAlign="left";
@@ -1349,7 +1329,6 @@
         : "이체 기한을 입력하면 여기에 표시됩니다.";
       ctx.fillText(dueLine, boxX + 10, y + 66);
 
-      // 날짜/학교장
       const boxBottom = boxY + boxH;
       ctx.textAlign="center";
       ctx.font = `600 ${LAYOUT.dateSize}px ${family}`;
@@ -1376,7 +1355,7 @@
     }
 
     /***********************
-     * 렌더(테이블/셀렉트/프리뷰)
+     * 렌더
      ***********************/
     function renderRawTable(){
       const tbody = el("rawTbody");
@@ -1459,7 +1438,6 @@
         return;
       }
 
-      // ✅ 미리보기는 "현재 입력값"으로 보여줌(라이브)
       const live = collectSettings();
       renderNoticeToCanvas(c, canvas, live, { scale: 1 });
       el("smsPreview").value = buildSmsForCase(c, live);
@@ -1493,7 +1471,7 @@
 
     function requireApplied(){
       if(!appliedSettings){
-        setStatus("먼저 3번에서 “문구 및 파일 적용 결과 미리보기” 버튼을 눌러 적용해주세요.", "warn");
+        setStatus("먼저 “추출한 미납자 정보 반영하기” 버튼을 눌러 적용해주세요.", "warn");
         return false;
       }
       return true;
@@ -1512,7 +1490,6 @@
 
       const wb = XLSX.utils.book_new();
 
-      // 문자문구 시트
       const header1 = ["학년","반","번호","이름","차수(요약)","납입금명(요약)","총 미납액","문자문구"];
       const rows1 = cases.map(c => ([
         c.학년 ?? "",
@@ -1528,7 +1505,6 @@
       ws1["!cols"] = [{wch:10},{wch:10},{wch:8},{wch:10},{wch:18},{wch:30},{wch:12},{wch:70}];
       XLSX.utils.book_append_sheet(wb, ws1, "문자문구");
 
-      // 추출원본 시트(7개만)
       const header2 = ["학년","반","번호","이름","납입금명","차수(행)","미납액"];
       const rows2 = rawRows.map(r => ([
         r.학년 ?? "",
@@ -1652,7 +1628,9 @@
       if(!requireApplied()) return;
       if(!requireLib("xlsx", "XLSX(엑셀)")) return;
       if(!requireLib("jszip", "JSZip(압축)")) return;
-      if(!requireLib("jspdf", "jsPDF(PDF)")) return;
+
+      const includePdf = isLibOk("jspdf"); // ✅ jsPDF 있으면 PDF도 포함, 없으면 생략
+      const stepsTotal = includePdf ? 3 : 2;
 
       const settings = appliedSettings;
       const btn = el("btnDownloadAllZip");
@@ -1664,12 +1642,12 @@
         const zip = new JSZip();
 
         // 1) 엑셀
-        setStatus("전체 ZIP 생성중… (1/3) 문구 엑셀 생성", "");
+        setStatus(`전체 ZIP 생성중… (1/${stepsTotal}) 문구 엑셀 생성`, "");
         const xlsxBuf = buildMessageWorkbookArrayBuffer(settings);
         zip.file(`미납_문구_${dateISO}.xlsx`, xlsxBuf);
 
         // 2) PNG
-        setStatus("전체 ZIP 생성중… (2/3) 안내문 PNG 생성", "");
+        setStatus(`전체 ZIP 생성중… (2/${stepsTotal}) 안내문 PNG 생성`, "");
         const noticesFolder = zip.folder("notices");
         const tempCanvas = document.createElement("canvas");
 
@@ -1694,22 +1672,29 @@
           const suffix = (cnt > 1) ? `_p${idx}` : "";
           noticesFolder.file(`${safeName}${suffix}.png`, blob);
 
-          setStatus(`전체 ZIP 생성중… (2/3) 안내문 PNG 생성 (${i+1}/${pagesList.length})`, "");
+          setStatus(`전체 ZIP 생성중… (2/${stepsTotal}) 안내문 PNG 생성 (${i+1}/${pagesList.length})`, "");
           await sleep(0);
         }
 
-        // 3) PDF
-        setStatus("전체 ZIP 생성중… (3/3) 안내문 PDF 생성", "");
-        const pdfBlob = await buildPdfBlob(settings, (cur,total) => {
-          setStatus(`전체 ZIP 생성중… (3/3) 안내문 PDF 생성 (${cur}/${total})`, "");
-        });
-        zip.file(`미납안내문_${dateISO}.pdf`, pdfBlob);
+        // 3) PDF (옵션)
+        if(includePdf){
+          setStatus(`전체 ZIP 생성중… (3/${stepsTotal}) 안내문 PDF 생성`, "");
+          const pdfBlob = await buildPdfBlob(settings, (cur,total) => {
+            setStatus(`전체 ZIP 생성중… (3/${stepsTotal}) 안내문 PDF 생성 (${cur}/${total})`, "");
+          });
+          zip.file(`미납안내문_${dateISO}.pdf`, pdfBlob);
+        }
 
         // ZIP
         setStatus("전체 ZIP 압축 중…", "");
         const zipBlob = await zip.generateAsync({ type: "blob" });
         downloadBlob(zipBlob, `미납_전체결과_${dateISO}.zip`);
-        setStatus("전체 결과 압축파일 다운로드 준비완료", "ok");
+
+        if(includePdf){
+          setStatus("전체 결과 압축파일 다운로드 준비완료 (엑셀+PNG+PDF)", "ok");
+        }else{
+          setStatus("전체 결과 압축파일 다운로드 준비완료 (엑셀+PNG)  ※ PDF는 jsPDF 미로드로 제외됨", "warn");
+        }
 
       }catch(err){
         console.error(err);
@@ -1724,7 +1709,6 @@
       const c = getSelectedCase();
       if(!c) return;
 
-      // ✅ 학생 1장 생성은 “현재 입력값” 기준(미리보기 그대로)
       const settings = collectSettings();
       const d = parseDateInput(settings.docDate) || new Date();
       const dateISO = toISODate(d);
@@ -1780,14 +1764,12 @@
     }
 
     /***********************
-     * 업로드/드롭: 파일만 pending 저장(추출은 버튼)
+     * 업로드/드롭
      ***********************/
     function setupDropzone(){
       const dz = el("dropZone");
       const input = el("excelFile");
 
-      // ✅ label은 클릭 시 기본 동작으로 파일 선택창이 열림
-      // 키보드 접근성(Enter/Space)만 보완
       dz.addEventListener("keydown", (e) => {
         if(e.key === "Enter" || e.key === " "){
           e.preventDefault();
@@ -1827,7 +1809,7 @@
     }
 
     /***********************
-     * 추출 실행(버튼)
+     * 추출 실행
      ***********************/
     async function runExtract(){
       if(!pendingFile){
@@ -1858,14 +1840,14 @@
         }
 
         cases = buildCasesFromRaw(rawRows);
-        appliedSettings = null; // ✅ 추출 후에는 다시 적용 필요
+        appliedSettings = null;
         renderAll();
 
         const m = parsed.meta.matchedHeaders;
         const withTermCount = rawRows.filter(r => String(r.차수||"").trim()).length;
 
         setStatus(
-          `추출 완료\n- 행 단위: ${rawRows.length}건\n- 학생별 통합: ${cases.length}건\n- 차수(행) 값이 있는 행: ${withTermCount}건\n\n[매칭된 헤더]\n- 학년: ${m.학년}\n- 반: ${m.반}\n- 번호: ${m.번호}\n- 이름: ${m.이름}\n- 납입금명: ${m.납입금명}\n- 차수: ${m.차수}\n- 미납액: ${m.미납액}\n\n이제 2,3번에서 정보 입력 후 “문구 및 파일 적용 결과 미리보기”를 누르십시오.`,
+          `추출 완료\n- 행 단위: ${rawRows.length}건\n- 학생별 통합: ${cases.length}건\n- 차수(행) 값이 있는 행: ${withTermCount}건\n\n[매칭된 헤더]\n- 학년: ${m.학년}\n- 반: ${m.반}\n- 번호: ${m.번호}\n- 이름: ${m.이름}\n- 납입금명: ${m.납입금명}\n- 차수: ${m.차수}\n- 미납액: ${m.미납액}\n\n이제 징수 정보/문구 입력 후 “추출한 미납자 정보 반영하기”를 누르십시오.`,
           "ok"
         );
 
@@ -1880,7 +1862,7 @@
     }
 
     /***********************
-     * 적용(미리보기) 버튼
+     * 적용(반영) 버튼
      ***********************/
     function applyOutputs(){
       if(!cases.length){
@@ -1915,10 +1897,10 @@
       saveSettings();
     });
 
-    // ✅ “추출내역 삭제하기”는 파일 유지, 결과만 지움
+    // 초기화: 결과만 지움(파일 유지)
     safeOn("btnReset", "click", () => {
       clearResultsOnly();
-      setStatus("추출내역을 삭제했습니다. (파일은 유지됨)\n원하면 다시 ‘미수납자 정보 추출하기’를 누르십시오.", "");
+      setStatus("초기화했습니다. (파일은 유지됨)\n원하면 다시 ‘미납내역 추출하기’를 누르십시오.", "");
     });
 
     safeOn("btnApply", "click", () => applyOutputs());
@@ -1938,7 +1920,7 @@
     safeOn("btnOnePng", "click", () => downloadOnePng());
     safeOn("btnCopySms", "click", () => copySelectedSms());
 
-    // 입력 변경 → 다운로드 적용 해제(추출 버튼 다시 누를 필요 없음!)
+    // 입력 변경 → 적용 해제
     const watchIds = ["schoolName","roundText","bankName","accountNumber","dueDate","docDate","smsTemplate"];
     for(const id of watchIds){
       safeOn(id, "input", () => {
@@ -1969,7 +1951,6 @@
       updateUIStates();
       setStatus("기다리는 중. 엑셀 파일을 올리고 나서 추출하기를 누르십시오.", "");
 
-      // ✅ 라이브러리 로딩 시작 (진행바에 반영)
       startLibraryLoad();
     })();
   </script>
