@@ -39,7 +39,7 @@
           <h3 class="tool-title">[사회보험료] 방과후강사 월보수액 계산기</h3>
         </header>
 
-        <a class="btn primary tool-btn" id="downloadafterschoolpay" href="#" download>
+        <a class="btn primary tool-btn" id="downloadAfterschoolpay" href="#" download>
           [사회보험료] 방과후강사 월보수액 계산기 다운로드
         </a>
 
@@ -89,7 +89,6 @@
 
   <!-- ========================= 본문 계산기 섹션 ========================= -->
 
-
   <!-- 인사발령 관련 -->
   <section class="section">
     <h2 class="local-h2">인사발령 관련 기능</h2>
@@ -104,7 +103,6 @@
     </div>
   </section>
 
-
   <!-- 세입 업무 관련 -->
   <section class="section">
     <h2 class="local-h2">세입 업무 관련 기능</h2>
@@ -118,8 +116,6 @@
       </div>
     </div>
   </section>
-
-  
 
   <!-- 노무제공자 -->
   <section class="section">
@@ -220,23 +216,6 @@
       <a class="btn" href="/sports-contract-teacher-budget-calculator/">스포츠강사 연간 인건비 계산기 (테스트중)</a>
       <div class="btn-desc">·2025회계 기준</div>
     </div>
-
-    <!--
-    <div>
-      <a class="btn" href="/dc-retirement/">DC형 퇴직연금 소요액 계산기 (미완료)</a>
-      <div class="btn-desc">·회계연도 선택</div>
-    </div>
-
-    <div>
-      <a class="btn" href="/wage-ledger-2025/">학교장 임용권자 2025 임금대장 (미완료)</a>
-      <div class="btn-desc">·엑셀 변환 제공</div>
-    </div>
-
-    <div>
-      <a class="btn" href="/coach-ot/">학교운동부지도자 초과근무수당 계산기 (미완료)</a>
-      <div class="btn-desc">·산출 로직</div>
-    </div>
-    -->
   </section>
 
   <section class="section">
@@ -248,7 +227,7 @@
     </div>
   </section>
 
-    <!-- 사용자 의견 보내기 -->
+  <!-- 사용자 의견 보내기 -->
   <section class="section">
     <h2 class="local-h2">고주무관에게 사용자 의견 보내기</h2>
     <hr/>
@@ -261,7 +240,6 @@
     </div>
   </section>
 
-  
   <!-- ========================= 도원결의 사이트 ========================= -->
   <section class="section">
     <h2 class="local-h2">연계 업무지원 개인제작 웹사이트</h2>
@@ -286,7 +264,8 @@
   const EXPENSE_URL =
     "https://github.com/comicshaey/FILErealease/releases/download/pdf-to-excel/expense_pdf_to_excel_data_v260117.exe.exe";
 
-const AFTERSCHOOL_PAY_URL = "https://github.com/comicshaey/FILErealease/releases/download/exe-to-excel/monthlypayv260201v1.exe";
+  const AFTERSCHOOL_PAY_URL =
+    "https://github.com/comicshaey/FILErealease/releases/download/exe-to-excel/monthlypayv260201v1.exe";
 
   window.addEventListener("DOMContentLoaded", () => {
     const afterschoolPay = document.getElementById("downloadAfterschoolpay");
@@ -294,7 +273,6 @@ const AFTERSCHOOL_PAY_URL = "https://github.com/comicshaey/FILErealease/releases
 
     if (expense) expense.href = EXPENSE_URL;
     if (afterschoolPay) afterschoolPay.href = AFTERSCHOOL_PAY_URL;
-    
   });
 </script>
 
