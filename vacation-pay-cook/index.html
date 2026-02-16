@@ -233,7 +233,7 @@
         <span class="pill">유급 휴일</span>
         <label>설 전날 <input id="seollalEve" type="date" style="width:170px; display:inline-block;" value="2026-02-16" /></label>
         <label>설 당일 <input id="seollalDay" type="date" style="width:170px; display:inline-block;" value="2026-02-17" /></label>
-        <button type="button" class="btn" id="applySeollalBtn">달력에 잊ㄹ정 반영하기</button>
+        <button type="button" class="btn" id="applySeollalBtn">달력에 일정 반영하기</button>
       </div>
 
       <div class="cal-legend" style="margin:10px 0 6px;">
@@ -565,6 +565,20 @@
         if (dow >= 1 && dow <= 5) rec.hasWeekdayPlan = true;
         weeks.set(wk, rec);
       });
+
+      // ✅ FIX: 방학이 주중(월요일이 아닌 날)에 시작하는 경우
+      // - 달력 입력 범위(방학) 밖에 있는 "학기 중 근무일"이 주휴 판단에서 빠져 주휴가 누락되는 문제 보정
+      // - 학기 중 개근 + 주 소정근로시간(>=15h) 충족을 가정하여, 방학 시작 주(월~방학시작 전날)는 최소 15시간을 충족한 것으로 처리
+      if (range){
+        const startMon = startOfWeekMon(range.s);
+        if (startMon < range.s){
+          const wk = toYMD(startMon);
+          const rec = weeks.get(wk) || { mon: startMon, totalHours:0, hasWeekdayPlan:false };
+          rec.totalHours = Math.max(rec.totalHours, 15);
+          rec.hasWeekdayPlan = true;
+          weeks.set(wk, rec);
+        }
+      }
 
       let resumeWeek = '';
       if (afterSemesterWork && range){
@@ -1508,7 +1522,7 @@
     els.calcBtn.addEventListener('click', calculate);
 
     (function init(){
-      if (!els.startDate.value) els.startDate.value = '2026-01-03';
+      if (!els.startDate.value) els.startDate.value = '2026-01-08';
       if (!els.endDate.value) els.endDate.value = '2026-03-02';
 
       refreshPublicHolidays();
