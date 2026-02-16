@@ -1,6 +1,9 @@
-/* 251204목 공통 스타일 */
+/* 2026.2.17.(화) */
 
-/* 박스 모델 통일 */
+
+
+
+
 * {
   box-sizing: border-box;
 }
@@ -733,4 +736,12 @@ body h2 + hr {
 .btn.notice-use-btn:hover{
   background: #FFEFA0; /* 살짝 진한 호버 */
 }
+
+
+.btn.btn-blue { background: #E6F0FF; }
+.btn.btn-blue:hover { background: #D7E8FF; }
+
+
+
+
 
