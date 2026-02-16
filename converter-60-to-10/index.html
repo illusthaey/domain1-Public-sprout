@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>복무시간 10진법 환산기기</title>
+  <title>복무시간 10진법 환산기</title>
 
 
   <link rel="stylesheet" href="/static/style.css" />
@@ -93,23 +93,23 @@
   <main class="container" style="padding: 0 16px 40px;">
 
     <section class="section">
-      <h2 style="margin:0 0 10px;">1) 60진(HH:MM) → 10진(시간)</h2>
+      <h2 style="margin:0 0 10px;">1) 일/시간/분단위 → 10진법</h2>
       <div class="card">
         <div class="row gap" style="margin-bottom:10px;">
-          <button class="btn primary" id="addA">행 추가</button>
-          <button class="btn light" id="clearA">초기화</button>
-          <span class="pill">붙여넣기: 엑셀 표(TSV) 그대로 OK</span>
-          <span class="pill">이동: 방향키 / Enter / Shift+Enter</span>
+          <button class="btn primary" id="addA">행 추가하기</button>
+          <button class="btn light" id="clearA">초기화하기</button>
+          <span class="pill">엑셀 표 그대로 붙여넣기</span>
+          <span class="pill">엑셀처럼 키보드 방향키로 이동 가능</span>
         </div>
 
         <div class="row gap" style="margin-bottom:10px;">
           <label class="row gap">
-            <span class="mini nowrap">10진 표시 소수점</span>
+            <span class="mini nowrap">10진법 수 (소수점 표기)</span>
             <input type="number" id="decPlaces" min="0" max="6" step="1" value="4" style="width:90px; min-width:90px;" />
             <span class="mini nowrap">자리(표시용)</span>
           </label>
           <div class="mini muted">
-            ※ 휴가 “일수/시간” 산정은 별도 규칙(소수점 둘째자리 반올림 등)이 있지만, 시간외(가산임금) 계산은 분 단위까지 반영이 원칙입니다.
+            ※ 연차유급휴가 일수 산정은 소수점 둘째자리 반올림해야하고, 시간외근무수당은 분 단위까지 반영이 원칙임.
           </div>
         </div>
 
@@ -119,9 +119,9 @@
               <tr>
                 <th class="w-no center nowrap">연번</th>
                 <th class="w-name nowrap">성명</th>
-                <th class="w-time nowrap">60진 시간 입력</th>
-                <th class="w-min right nowrap">총 분(자동)</th>
-                <th class="w-dec right nowrap">10진 시간(자동)</th>
+                <th class="w-time nowrap">일/시간/분단위 입력</th>
+                <th class="w-min right nowrap">분단위로 환산</th>
+                <th class="w-dec right nowrap">10진수 변환</th>
                 <th class="w-note nowrap">비고</th>
                 <th class="center nowrap">행삭제</th>
               </tr>
@@ -137,11 +137,11 @@
     </section>
 
     <section class="section">
-      <h2 style="margin:0 0 10px;">2) 10진(시간) → 60진(H:MM)</h2>
+      <h2 style="margin:0 0 10px;">2) 10진수 → 일/시간/분단위로 전환</h2>
       <div class="card">
         <div class="row gap" style="margin-bottom:10px;">
-          <button class="btn primary" id="addB">행 추가</button>
-          <button class="btn light" id="clearB">초기화</button>
+          <button class="btn primary" id="addB">행 추가하기</button>
+          <button class="btn light" id="clearB">초기화하기</button>
 
           <label class="row gap">
             <span class="mini nowrap">10진→분 변환</span>
