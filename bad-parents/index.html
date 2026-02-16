@@ -264,9 +264,57 @@
       </p>
     </section>
 
-    <!-- 3) 문자 템플릿 & 다운로드 -->
+    
+    
+    <!-- 3) 추출 결과 -->
     <section class="section">
-      <h2 class="local-h2 local-tight">3. 납부 안내 문구 설정</h2>
+      <h2 class="local-h2 local-tight">3. 추출 내역 상세 조회</h2>
+
+      <h3 class="local-h3 local-tight">미납 건별 조회하기</h3>
+      <div class="table-wrap">
+        <table class="sheetlike">
+          <thead>
+            <tr>
+              <th>학년</th>
+              <th>반</th>
+              <th>번호</th>
+              <th>이름</th>
+              <th>납입금명</th>
+              <th>납입차수</th>
+              <th class="numeric">미납액</th>
+            </tr>
+          </thead>
+          <tbody id="rawTbody">
+            <tr><td colspan="7" class="muted">파일부터 올리쇼</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="local-h3 local-tight" style="margin-top:18px;">학생별 미납액 조회하기</h3>
+      <div class="table-wrap">
+        <table class="sheetlike">
+          <thead>
+            <tr>
+              <th>학년</th>
+              <th>반</th>
+              <th>번호</th>
+              <th>이름</th>
+              <th>납입차수</th>
+              <th>납입금명</th>
+              <th class="numeric">총 미납액</th>
+            </tr>
+          </thead>
+          <tbody id="caseTbody">
+            <tr><td colspan="7" class="muted">아직 데이터가 없습니다.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+
+    <!-- 4) 문자 템플릿 & 다운로드 -->
+    <section class="section">
+      <h2 class="local-h2 local-tight">4. 납부 안내 문구 설정</h2>
       <p class="muted">
         치환: [학교명] [학년] [반] [번호] [이름] [차수] [납입금명] [은행명] [계좌번호] [미납액]
       </p>
@@ -283,7 +331,7 @@
     
 
     <section class="section">
-      <h2 class="local-h2 local-tight">4. 파일 다운로드</h2>
+      <h2 class="local-h2 local-tight">5. 파일 다운로드</h2>
 
       <div class="btnbar">
         <button class="btn primary" id="btnDownloadAllZip" type="button" disabled>
