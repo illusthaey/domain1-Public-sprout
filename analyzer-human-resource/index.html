@@ -74,7 +74,6 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    /* option 줄바꿈은 브라우저별 제약이 있어도, 최소한 폭이 레이아웃을 넘어가지 않게 유지 */
     select option{
       white-space: normal;
       word-break: break-word;
@@ -137,7 +136,6 @@
       table{ min-width: 860px; }
     }
 
-    /* 툴팁: 흰색 배경 + 얇은 검정 테두리 */
     #tooltip{
       position: fixed;
       z-index: 9999;
@@ -182,6 +180,27 @@
     .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
     .small-note{ font-size: .9rem; color: var(--muted); line-height: 1.45; }
     .wrap-any{ overflow-wrap:anywhere; word-break: break-word; }
+
+    /* ✅ 집계 진행 상태바 */
+    .progress-track{
+      width:100%;
+      height: 12px;
+      background: #e5e7eb;
+      border: 1px solid #d1d5db;
+      border-radius: 999px;
+      overflow:hidden;
+    }
+    .progress-fill{
+      height:100%;
+      width:0%;
+      background:#111827;
+      transition: width .18s ease;
+    }
+
+    /* ✅ 요약 표 체크박스 */
+    .td-check{ text-align:center; vertical-align: middle; }
+    .th-check{ text-align:center; vertical-align: middle; width:48px; }
+    .th-check input{ transform: translateY(1px); }
   </style>
 </head>
 
@@ -231,6 +250,19 @@
         <div class="muted mini">지원: .xlsx, .xls · 여러 개 파일 가능</div>
       </div>
 
+      <!-- ✅ 집계 진행 상태바: 드래그 영역과 집계 결과 요약 사이 -->
+      <div id="progressWrap" class="banner" style="display:none; margin-top: 12px;">
+        <div class="title">집계 진행 상황</div>
+        <div id="progressText" class="small-note" style="margin-top:6px;"></div>
+        <div id="progressTrack" class="progress-track" style="margin-top:8px;" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div id="progressBar" class="progress-fill"></div>
+        </div>
+        <div class="row between" style="margin-top:8px;">
+          <span id="progressPct" class="pill gray">0%</span>
+          <span id="progressElapsed" class="muted mini"></span>
+        </div>
+      </div>
+
       <div id="analyzeBanner" class="banner" style="display:none; margin-top: 12px;">
         <div class="title">집계 결과 요약</div>
         <div id="globalTotals" class="small-note" style="margin-top:6px;"></div>
@@ -262,9 +294,10 @@
                 <span>교육공무원 과목이 있으면 직종에 포함</span>
               </label>
 
+              <!-- ✅ 기본값: OFF (본명 전체 표시) -->
               <label class="mini" style="display:flex; gap:8px; align-items:center; font-weight:700;">
-                <input id="optMaskNames" type="checkbox" checked />
-                <span>이름 마스킹하기 (기본 설정)</span>
+                <input id="optMaskNames" type="checkbox" />
+                <span>이름 마스킹하기 (선택)</span>
               </label>
             </div>
 
@@ -335,8 +368,9 @@
           </p>
         </div>
         <div class="btn-row">
+          <!-- ✅ 기본값: OFF (본명 전체 표시) -->
           <label class="mini" style="display:flex; gap:8px; align-items:center; font-weight:700;">
-            <input id="optMaskNamesQuick" type="checkbox" checked />
+            <input id="optMaskNamesQuick" type="checkbox" />
             <span>이름 마스킹</span>
           </label>
           <button id="btnDownloadDetail" class="btn">현재 상세 CSV</button>
@@ -363,7 +397,6 @@
         <div id="jobMeta" class="muted mini" style="margin-top:6px;"></div>
       </div>
 
-      <!-- ✅ 직종 목록 표 아래로 '선택 근무지 + 명단' 영역 이동 -->
       <p class="muted mini" style="margin:0 0 8px;">
         ·아래 표 행에 마우스를 올리면 요약이 뜨고, 클릭하면 <b>아래 명단</b>이 해당 직종으로 전환됨.
       </p>
@@ -395,6 +428,9 @@
           <p class="tool-sub">기본적으로 근무지명 오름차순 정렬임. 행 클릭 시 상세로 이동.</p>
         </div>
         <div class="btn-row">
+          <button id="btnDownloadXlsxAll" class="btn">전체 학교 엑셀</button>
+          <button id="btnDownloadXlsxSelected" class="btn primary">선택 학교 엑셀</button>
+          <button id="btnClearSelected" class="btn ghost">선택 해제</button>
           <button id="btnDownloadSummary" class="btn">현재 요약 CSV</button>
         </div>
       </div>
@@ -417,11 +453,15 @@
       </div>
 
       <p id="summaryStats" class="muted" style="margin:0 0 10px;"></p>
+      <p class="muted mini" style="margin:0 0 10px;">
+        ·표 왼쪽 체크로 학교를 선택한 뒤 <b>선택 학교 엑셀</b>을 누르면 선택한 학교만 한 번에 저장됩니다.
+      </p>
 
       <div class="table-wrap">
         <table id="summaryTable">
           <thead>
             <tr>
+              <th class="th-check"><input id="summaryCheckAll" type="checkbox" title="현재 표시 목록 전체 선택" /></th>
               <th class="sortable" data-sort="name">근무지<span class="sort-ind"></span></th>
               <th class="numeric sortable" data-sort="out">전출<span class="sort-ind"></span></th>
               <th class="numeric sortable" data-sort="in">전입<span class="sort-ind"></span></th>
@@ -495,7 +535,7 @@
       </details>
     </section>
 
-<p><a class="btn" href="../index.html">메인으로 돌아가기</a></p>
+    <p><a class="btn" href="../index.html">메인으로 돌아가기</a></p>
   </main>
 
 <script>
@@ -515,6 +555,14 @@
     btnAnalyze: $("#btnAnalyze"),
     btnClear: $("#btnClear"),
     fileMeta: $("#fileMeta"),
+
+    // progress
+    progressWrap: $("#progressWrap"),
+    progressText: $("#progressText"),
+    progressTrack: $("#progressTrack"),
+    progressBar: $("#progressBar"),
+    progressPct: $("#progressPct"),
+    progressElapsed: $("#progressElapsed"),
 
     analyzeBanner: $("#analyzeBanner"),
     globalTotals: $("#globalTotals"),
@@ -555,7 +603,12 @@
     summaryFilter: $("#summaryFilter"),
     summaryStats: $("#summaryStats"),
     summaryTableBody: $("#summaryTable tbody"),
+    summaryCheckAll: $("#summaryCheckAll"),
+
     btnDownloadSummary: $("#btnDownloadSummary"),
+    btnDownloadXlsxAll: $("#btnDownloadXlsxAll"),
+    btnDownloadXlsxSelected: $("#btnDownloadXlsxSelected"),
+    btnClearSelected: $("#btnClearSelected"),
 
     suspectSection: $("#suspectSection"),
     suspectSearch: $("#suspectSearch"),
@@ -582,6 +635,10 @@
     selectedWorkplaceKey: "",
     selectedJobKey: "ALL",
 
+    // summary selection
+    summarySelected: new Set(), // workplaceKey set
+    summaryLastKeys: [],        // last rendered list keys (for check-all)
+
     // sorting states
     sortSummary: { key: "name", dir: "asc" },
     sortJobs: { key: "staffType", dir: "asc" },
@@ -590,7 +647,8 @@
     heur: null,
     regionTags: new Map(), // fileName -> regionTag
 
-    maskNames: true,
+    // default: unmasked
+    maskNames: false,
 
     dedupe: {
       strictSeen: new Set(),
@@ -639,6 +697,58 @@
   }
 
   // ---------------------------
+  // Progress helpers
+  // ---------------------------
+  let progressStartAt = 0;
+
+  function formatElapsed(ms) {
+    const sec = Math.max(0, Math.floor(ms / 1000));
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}:${String(s).padStart(2, "0")}`;
+  }
+
+  function showProgress() { el.progressWrap.style.display = ""; }
+
+  function hideProgress() {
+    progressStartAt = 0;
+    el.progressWrap.style.display = "none";
+    el.progressBar.style.width = "0%";
+    el.progressTrack?.setAttribute("aria-valuenow", "0");
+    el.progressPct.textContent = "0%";
+    el.progressText.textContent = "";
+    el.progressElapsed.textContent = "";
+  }
+
+  function startProgress(text = "준비 중...") {
+    progressStartAt = Date.now();
+    showProgress();
+    setProgress(0, text);
+  }
+
+  function setProgress(pct, text = "") {
+    const p = Math.max(0, Math.min(100, Number(pct) || 0));
+    showProgress();
+    el.progressBar.style.width = `${p.toFixed(1)}%`;
+    el.progressTrack?.setAttribute("aria-valuenow", String(Math.round(p)));
+    el.progressPct.textContent = `${Math.round(p)}%`;
+    el.progressText.textContent = text;
+
+    if (progressStartAt) {
+      const ms = Date.now() - progressStartAt;
+      el.progressElapsed.textContent = `경과 ${formatElapsed(ms)}`;
+    } else {
+      el.progressElapsed.textContent = "";
+    }
+  }
+
+  function doneProgress(text = "집계 완료 ✅") { setProgress(100, text); }
+
+  function rafTick() {
+    return new Promise((resolve) => requestAnimationFrame(() => resolve(true)));
+  }
+
+  // ---------------------------
   // Utilities
   // ---------------------------
   function escapeHtml(s) {
@@ -658,7 +768,6 @@
     return normalizeSpaces(v).replace(/\s+/g, "");
   }
 
-  // 정규화 검색(공백/괄호/대소문자/구두점 차이 완화)
   function normalizeSearch(v) {
     return String(v ?? "")
       .toLowerCase()
@@ -758,7 +867,6 @@
     const last = hangul[hangul.length - 1];
     const middleCount = Math.max(1, hangul.length - 2);
     const masked = first + "○".repeat(middleCount) + (hangul.length >= 3 ? last : "");
-    // 2글자면 김○, 3글자면 김○동, 4글자면 김○○동 ...
     if (hangul.length === 2) return first + "○";
     return masked;
   }
@@ -985,6 +1093,7 @@
     return nonEmpty ? hit / nonEmpty : 0;
   }
 
+  // ✅ 교체 적용: detectLayoutPlus() (병합 헤더 대응 + placeCols top/bot 전체 수집)
   function detectLayoutPlus(rows, heur) {
     const RE = {
       seq: /(연번|순번|일련|번호)/,
@@ -994,7 +1103,6 @@
       subject: /(과목|교과|담당|전공)/,
       place: /(부서|근무처|근무지|기관명|기관|학교명|학교\(기관\)명|교육지원청|소속|부서명|학교)/,
 
-      // 방향 힌트(전입=발령, 전출=현소속/전소속)
       inHint: /(발령|임용|전입|전보후|발령후|신규|임지|변경후|발령사항|임용사항)/,
       outHint: /(현소속|현직|현근무|현근무처|전출|퇴직|발령전|출발|변경전|종전|전보전|전소속)/,
     };
@@ -1002,7 +1110,6 @@
     const maxScan = Math.min(rows.length, 70);
     let best = null;
 
-    // 2-row header scan
     for (let r = 0; r < maxScan - 1; r++) {
       const topRow = rows[r] || [];
       const botRow = rows[r + 1] || [];
@@ -1026,21 +1133,43 @@
       const noteIdx = findIdxPrefer(fieldKeys, otherKeys, RE.note);
       const subjectIdx = findIdxPrefer(fieldKeys, otherKeys, RE.subject);
 
-      let placeCols = [];
+      const placeSet = new Set();
       for (let i = 0; i < n; i++) {
-        if (fieldKeys[i] && RE.place.test(fieldKeys[i])) placeCols.push(i);
-      }
-      if (placeCols.length < 1) {
-        for (let i = 0; i < n; i++) {
-          if ((topKeys[i] && RE.place.test(topKeys[i])) || (botKeys[i] && RE.place.test(botKeys[i]))) {
-            placeCols.push(i);
-          }
-        }
+        const kField = fieldKeys[i];
+        const kOther = otherKeys[i];
+        const kTop = topKeys[i];
+        const kBot = botKeys[i];
+
+        if (kField && RE.place.test(kField)) placeSet.add(i);
+        if (kOther && RE.place.test(kOther)) placeSet.add(i);
+        if (kTop && RE.place.test(kTop)) placeSet.add(i);
+        if (kBot && RE.place.test(kBot)) placeSet.add(i);
       }
 
+      if (noteIdx >= 0) placeSet.delete(noteIdx);
+      if (seqIdx >= 0) placeSet.delete(seqIdx);
+      if (nameIdx >= 0) placeSet.delete(nameIdx);
+      if (jobIdx >= 0) placeSet.delete(jobIdx);
+      if (subjectIdx >= 0) placeSet.delete(subjectIdx);
+
+      let placeCols = [...placeSet].sort((a, b) => a - b);
       if (nameIdx < 0 || placeCols.length < 1) continue;
 
       const dataStart = r + 2;
+
+      if (placeCols.length < 2) {
+        const threshold = 0.22;
+        const exclude = new Set([seqIdx, nameIdx, jobIdx, noteIdx, subjectIdx].filter(x => x >= 0));
+
+        for (let i = 0; i < n; i++) {
+          if (exclude.has(i)) continue;
+          if (placeSet.has(i)) continue;
+
+          const stats = analyzeColumnStats(rows, dataStart, i, heur, 120);
+          if (stats.placeLikeRatio >= threshold) placeCols.push(i);
+        }
+        placeCols = [...new Set(placeCols)].sort((a, b) => a - b);
+      }
 
       const scored = placeCols.map((i) => {
         const combined = (topFF[i] || "") + " " + (fieldKeys[i] || "");
@@ -1054,25 +1183,22 @@
       let inIdx = -1;
       let outIdx = -1;
 
-      // 1) header 힌트 우선
-      const inSorted = [...scored].sort((a,b) => (b.inScore - a.inScore) || (b.dataScore - a.dataScore) || (a.i - b.i));
-      const outSorted = [...scored].sort((a,b) => (b.outScore - a.outScore) || (b.dataScore - a.dataScore) || (b.i - a.i));
+      const inSorted = [...scored].sort((a, b) => (b.inScore - a.inScore) || (b.dataScore - a.dataScore) || (a.i - b.i));
+      const outSorted = [...scored].sort((a, b) => (b.outScore - a.outScore) || (b.dataScore - a.dataScore) || (b.i - a.i));
 
       if (inSorted[0] && inSorted[0].inScore > 0) inIdx = inSorted[0].i;
       if (outSorted[0] && outSorted[0].outScore > 0) outIdx = outSorted[0].i;
 
-      // 2) 사용자 제안 방식: 좌→우(발령), 우→좌(현소속)
       const threshold = 0.22;
       if (inIdx < 0) {
-        const leftToRight = scored.slice().sort((a,b) => a.i - b.i);
+        const leftToRight = scored.slice().sort((a, b) => a.i - b.i);
         inIdx = leftToRight.find(x => x.dataScore >= threshold)?.i ?? -1;
       }
       if (outIdx < 0) {
-        const rightToLeft = scored.slice().sort((a,b) => b.i - a.i);
+        const rightToLeft = scored.slice().sort((a, b) => b.i - a.i);
         outIdx = rightToLeft.find(x => x.dataScore >= threshold)?.i ?? -1;
       }
 
-      // 3) fallback + 1컬럼 대응(중복 카운트 방지)
       if (placeCols.length === 1) {
         const only = scored[0];
         if (only) {
@@ -1089,7 +1215,6 @@
         }
       }
 
-      // 데이터 기반 크로스체크(이름/번호)
       const nameRatio = (nameIdx >= 0) ? analyzeLikeRatio(rows, dataStart, nameIdx, heur.looksLikeName, 120) : 0;
       const seqRatio = (seqIdx >= 0) ? analyzeSeqRatio(rows, dataStart, seqIdx, 120) : 0;
 
@@ -1123,7 +1248,6 @@
       }
     }
 
-    // 1-row fallback
     if (!best) {
       for (let r = 0; r < maxScan; r++) {
         const row = rows[r] || [];
@@ -1342,7 +1466,7 @@
   }
 
   // ---------------------------
-  // Rendering: analysis banner (totals + dedupe)
+  // Rendering: analysis banner
   // ---------------------------
   function renderAnalyzeBanner() {
     if (!state.stats) return;
@@ -1359,7 +1483,6 @@
     `;
 
     el.globalBadges.innerHTML = "";
-
     const frag = document.createDocumentFragment();
 
     const wCnt = state.workplaceOrder.length;
@@ -1368,7 +1491,6 @@
     pillW.textContent = `근무지 ${wCnt}개`;
     frag.appendChild(pillW);
 
-    // 중복 제거 결과
     if (state.dedupe.strictSkipped > 0) {
       const p = document.createElement("span");
       p.className = "pill red";
@@ -1381,7 +1503,6 @@
       frag.appendChild(p);
     }
 
-    // 중복 의심
     if (state.dedupe.looseCollisions > 0) {
       const p = document.createElement("span");
       p.className = "pill amber";
@@ -1394,10 +1515,9 @@
       frag.appendChild(p);
     }
 
-    // 마스킹 상태
     const pMask = document.createElement("span");
     pMask.className = "pill gray";
-    pMask.textContent = state.maskNames ? "이름 마스킹: ON" : "이름 마스킹: OFF";
+    pMask.textContent = state.maskNames ? "이름 마스킹: ON" : "이름 마스킹: OFF(본명 표시)";
     frag.appendChild(pMask);
 
     el.globalBadges.appendChild(frag);
@@ -1430,9 +1550,7 @@
     }
     el.workplaceSelect.appendChild(frag);
 
-    if (!hasCurrent) {
-      state.selectedWorkplaceKey = (opts[0]?.key || "");
-    }
+    if (!hasCurrent) state.selectedWorkplaceKey = (opts[0]?.key || "");
     el.workplaceSelect.value = state.selectedWorkplaceKey;
 
     el.workplaceMeta.textContent = `표시 중: ${opts.length}개 근무지`;
@@ -1696,7 +1814,21 @@
   }
 
   // ---------------------------
-  // Rendering: Summary table
+  // Summary selection meta
+  // ---------------------------
+  function updateSummarySelectionMeta(displayKeys) {
+    const totalSelected = state.summarySelected.size;
+    const displaySelected = displayKeys.reduce((acc, k) => acc + (state.summarySelected.has(k) ? 1 : 0), 0);
+    el.summaryStats.textContent = `표시 중: ${displayKeys.length}개 근무지 · 선택: ${totalSelected}개 (현재 표시 중 ${displaySelected}개)`;
+
+    if (el.summaryCheckAll) {
+      el.summaryCheckAll.checked = displayKeys.length > 0 && displaySelected === displayKeys.length;
+      el.summaryCheckAll.indeterminate = displaySelected > 0 && displaySelected < displayKeys.length;
+    }
+  }
+
+  // ---------------------------
+  // Rendering: Summary table (with selection)
   // ---------------------------
   function renderSummary() {
     const q = el.summarySearch.value || "";
@@ -1731,7 +1863,9 @@
       return cmpKo(a.name, b.name, "asc");
     });
 
-    el.summaryStats.textContent = `표시 중: ${list.length}개 근무지`;
+    const displayKeys = list.map(x => x.key);
+    state.summaryLastKeys = displayKeys.slice();
+    updateSummarySelectionMeta(displayKeys);
 
     el.summaryTableBody.innerHTML = "";
     const frag = document.createDocumentFragment();
@@ -1741,12 +1875,17 @@
       tr.className = "clickable";
       tr.dataset.key = r.key;
 
+      const checked = state.summarySelected.has(r.key);
+
       const diffPill =
         r.diff > 0 ? `<span class="pill red">+${r.diff}</span>` :
         r.diff < 0 ? `<span class="pill blue">${r.diff}</span>` :
         `<span class="pill gray">0</span>`;
 
       tr.innerHTML = `
+        <td class="td-check">
+          <input type="checkbox" class="summaryRowCheck" ${checked ? "checked" : ""} aria-label="학교 선택" />
+        </td>
         <td><b>${escapeHtml(r.name)}</b></td>
         <td class="numeric">${r.out}</td>
         <td class="numeric">${r.in}</td>
@@ -1754,13 +1893,23 @@
         <td class="numeric">${diffPill}</td>
       `;
 
+      // checkbox handlers (stop row click)
+      const cb = tr.querySelector(".summaryRowCheck");
+      cb.addEventListener("click", (e) => e.stopPropagation());
+      cb.addEventListener("change", (e) => {
+        e.stopPropagation();
+        if (cb.checked) state.summarySelected.add(r.key);
+        else state.summarySelected.delete(r.key);
+        updateSummarySelectionMeta(state.summaryLastKeys);
+      });
+
       tr.addEventListener("mouseenter", (e) => {
         const html = `
           <div><b>${escapeHtml(r.name)}</b></div>
           <div class="mini" style="margin-top:6px;">
             전출 <b>${r.out}</b> · 전입 <b>${r.in}</b> · 총변동 <b>${r.total}</b> · 차이 <b>${escapeHtml(r.diff>0?`+${r.diff}`:String(r.diff))}</b>
           </div>
-          <div class="mini muted" style="margin-top:6px;">클릭하면 “학교별 상세내역”으로 이동합니다.</div>
+          <div class="mini muted" style="margin-top:6px;">행 클릭: “학교별 상세내역” 이동 · 체크: 선택 엑셀 저장 대상</div>
         `;
         showTooltip(html, e.clientX, e.clientY);
       });
@@ -1942,7 +2091,6 @@
   }
 
   function makeStrictKey(m) {
-    // fileName 제외: 동일 레코드가 원본/정정 파일에 중복될 때 제거되도록
     return [
       m.sheetName,
       m.seq,
@@ -1979,7 +2127,7 @@
     const prev = state.dedupe.looseMap.get(looseKey);
     if (prev !== undefined && prev !== m.note) {
       state.dedupe.looseCollisions++;
-      if (state.dedupe.looseExamples.length < 6) {
+      if (state.dedupe.looseExamples.length < 12) {
         state.dedupe.looseExamples.push({
           name: m.name,
           jobName: m.jobName,
@@ -1999,259 +2147,212 @@
   }
 
   // ---------------------------
-  // Analysis
+  // ✅ XLSX export helpers
   // ---------------------------
-  async function analyzeAllFiles() {
-    clearLog();
+  function pad2(n){ return String(n).padStart(2,"0"); }
+  function nowStamp() {
+    const d = new Date();
+    return `${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}_${pad2(d.getHours())}${pad2(d.getMinutes())}`;
+  }
 
-    if (!state.files.length) {
-      log("파일이 선택되지 않았습니다.");
+  function sanitizeFileName(name) {
+    return String(name || "인사집계").replace(/[\\/:*?"<>|]/g, "_");
+  }
+
+  function sanitizeSheetName(name) {
+    let s = String(name || "시트");
+    // Excel sheet invalid chars: \ / ? * [ ] :
+    s = s.replace(/[\\\/\?\*\[\]\:]/g, "_").trim();
+    if (!s) s = "시트";
+    // limit 31
+    if (s.length > 31) s = s.slice(0, 31);
+    return s;
+  }
+
+  function uniqueSheetName(base, used) {
+    let name = sanitizeSheetName(base);
+    if (!used.has(name)) { used.add(name); return name; }
+
+    let i = 2;
+    while (i < 1000) {
+      const suffix = `_${i}`;
+      const cut = Math.max(1, 31 - suffix.length);
+      const candidate = sanitizeSheetName(name.slice(0, cut) + suffix);
+      if (!used.has(candidate)) { used.add(candidate); return candidate; }
+      i++;
+    }
+    // extreme fallback
+    const fallback = `시트_${used.size+1}`;
+    used.add(fallback);
+    return fallback;
+  }
+
+  function buildSummaryAoa(workplaceKeys) {
+    const rows = [["근무지", "전출", "전입", "총 인사변동", "차이(전출-전입)"]];
+    for (const key of workplaceKeys) {
+      const w = state.workplaces.get(key);
+      if (!w) continue;
+      const inC = w.inMoves.length;
+      const outC = w.outMoves.length;
+      const diff = outC - inC;
+      const total = inC + outC;
+      rows.push([w.name, outC, inC, total, diff]);
+    }
+    return rows;
+  }
+
+  function buildWorkplaceDetailAoa(w) {
+    const rows = [[
+      "근무지(기준)",
+      "구분",
+      "성명",
+      "직종(직급·과목)",
+      "직군(구분)",
+      "전출(현소속) 근무지",
+      "전입(발령) 근무지",
+      "비고",
+      "파일",
+      "시트",
+      "행"
+    ]];
+
+    const outMoves = w.outMoves.slice().sort((a,b)=>a.seq-b.seq);
+    const inMoves  = w.inMoves.slice().sort((a,b)=>a.seq-b.seq);
+
+    for (const m of outMoves) {
+      rows.push([
+        w.name,
+        "전출",
+        displayName(m.name),
+        m.jobName,
+        m.staffType,
+        m.outWorkplace,
+        m.inWorkplace,
+        m.note,
+        m.fileName,
+        m.sheetName,
+        m.rowIndex
+      ]);
+    }
+    for (const m of inMoves) {
+      rows.push([
+        w.name,
+        "전입",
+        displayName(m.name),
+        m.jobName,
+        m.staffType,
+        m.outWorkplace,
+        m.inWorkplace,
+        m.note,
+        m.fileName,
+        m.sheetName,
+        m.rowIndex
+      ]);
+    }
+    return rows;
+  }
+
+  function buildSuspectAoa(workplaceKeysSetOrNull) {
+    const rows = [["구분", "근무지", "직종(직급·과목)", "전출", "전입", "결원 의심(전출-전입)"]];
+    for (const key of state.workplaceOrder) {
+      if (workplaceKeysSetOrNull && !workplaceKeysSetOrNull.has(key)) continue;
+      const w = state.workplaces.get(key);
+      if (!w) continue;
+      for (const [, j] of w.jobs) {
+        const inC = j.inMoves.length;
+        const outC = j.outMoves.length;
+        const diff = outC - inC;
+        if (diff <= 0) continue;
+        rows.push([j.staffType, w.name, j.jobName, outC, inC, diff]);
+      }
+    }
+    return rows;
+  }
+
+  function buildDedupeExamplesAoa() {
+    const rows = [["시트", "연번", "성명", "직종", "전출→전입", "note(기존)", "note(신규)"]];
+    for (const ex of state.dedupe.looseExamples) {
+      rows.push([
+        ex.sheetName,
+        ex.seq,
+        ex.name,
+        ex.jobName,
+        `${ex.outWorkplace} → ${ex.inWorkplace}`,
+        ex.noteA,
+        ex.noteB
+      ]);
+    }
+    return rows;
+  }
+
+  function downloadWorkbookForKeys(workplaceKeys, filenameBase) {
+    if (!state.analyzed) return;
+    if (!window.XLSX) {
+      alert("엑셀(XLSX) 라이브러리가 로드되지 않아 저장할 수 없습니다.");
+      return;
+    }
+    const keys = Array.from(workplaceKeys || []).filter(Boolean);
+    if (!keys.length) {
+      alert("저장할 학교가 없습니다.");
       return;
     }
 
-    state.heur = buildHeuristics();
-    state.maskNames = !!el.optMaskNames.checked;
-    el.optMaskNamesQuick.checked = state.maskNames;
+    const wb = XLSX.utils.book_new();
+    const used = new Set();
 
-    const ok = await ensureXLSX();
-    setLibWarning(ok);
-    if (!ok) {
-      log("XLSX 라이브러리 없음 → 중단");
+    // 요약
+    const wsSummary = XLSX.utils.aoa_to_sheet(buildSummaryAoa(keys));
+    XLSX.utils.book_append_sheet(wb, wsSummary, uniqueSheetName("요약", used));
+
+    // 결원의심(선택 범위 기준)
+    const wsSus = XLSX.utils.aoa_to_sheet(buildSuspectAoa(new Set(keys)));
+    XLSX.utils.book_append_sheet(wb, wsSus, uniqueSheetName("결원의심", used));
+
+    // 중복 의심 예시(있으면)
+    if (state.dedupe.looseExamples.length) {
+      const wsDup = XLSX.utils.aoa_to_sheet(buildDedupeExamplesAoa());
+      XLSX.utils.book_append_sheet(wb, wsDup, uniqueSheetName("중복의심예시", used));
+    }
+
+    // 학교별 시트
+    for (const key of keys) {
+      const w = state.workplaces.get(key);
+      if (!w) continue;
+      const aoa = buildWorkplaceDetailAoa(w);
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      XLSX.utils.book_append_sheet(wb, ws, uniqueSheetName(w.name, used));
+    }
+
+    const file = sanitizeFileName(`${filenameBase}_${keys.length}개_${nowStamp()}.xlsx`);
+    XLSX.writeFile(wb, file);
+    log(`엑셀 다운로드: ${file}`);
+  }
+
+  function downloadXlsxAll() {
+    downloadWorkbookForKeys(state.workplaceOrder, "인사집계_전체학교");
+  }
+
+  function downloadXlsxSelected() {
+    const keys = [...state.summarySelected];
+    if (!keys.length) {
+      alert("선택된 학교가 없습니다. (요약 표에서 체크 후 다시 시도)");
       return;
     }
+    // 정렬된 순서로 저장(원하면)
+    const orderSet = new Set(keys);
+    const ordered = state.workplaceOrder.filter(k => orderSet.has(k));
+    downloadWorkbookForKeys(ordered, "인사집계_선택학교");
+  }
 
-    // manual mapping
-    const seqIdxManual = colToIndex(el.colSeq.value);
-    const nameIdxManual = colToIndex(el.colName.value);
-    const jobIdxManual = colToIndex(el.colJob.value);
-    const inIdxManual = colToIndex(el.colIn.value);
-    const outIdxManual = colToIndex(el.colOut.value);
-    const noteIdxManual = colToIndex(el.colNote.value);
-
-    const badCols = [
-      ["연번", seqIdxManual],
-      ["성명", nameIdxManual],
-      ["직종", jobIdxManual],
-      ["전입", inIdxManual],
-      ["전출", outIdxManual],
-      ["비고", noteIdxManual],
-    ].filter(([, idx]) => idx === null);
-
-    if (badCols.length) {
-      log("수동 컬럼 입력이 잘못되었습니다: " + badCols.map(([k]) => k).join(", "));
-      return;
-    }
-
-    const autoOn = el.optAutoDetect.checked;
-    const normalizeOn = el.optNormalize.checked;
-    const prefixOn = el.optPrefixRegion.checked;
-    const useSubject = el.optUseSubject.checked;
-
-    // reset
-    state.moves = [];
-    state.workplaces.clear();
-    state.workplaceOrder = [];
-    state.analyzed = false;
-    state.selectedWorkplaceKey = "";
-    state.selectedJobKey = "ALL";
-    state.regionTags.clear();
-    state.stats = null;
-    resetDedupe();
-
-    el.analyzeBanner.style.display = "none";
-
-    log(`집계 시작: 파일 ${state.files.length}개`);
-
-    for (const file of state.files) {
-      const regionTag = inferRegionTag(file.name);
-      state.regionTags.set(file.name, regionTag);
-
-      log(`\n[파일] ${file.name}${regionTag ? ` (태그: ${regionTag})` : ""}`);
-
-      let wb = null;
-      try {
-        const buf = await file.arrayBuffer();
-        wb = XLSX.read(buf, { type: "array" });
-      } catch (err) {
-        log(`  ⚠️ 파일 읽기 실패: ${err?.message || err}`);
-        continue;
-      }
-
-      const sheetNames = wb.SheetNames.slice();
-      log(`  시트 ${sheetNames.length}개: ${sheetNames.join(", ")}`);
-
-      for (const sheetName of sheetNames) {
-        const ws = wb.Sheets[sheetName];
-        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
-        if (!rows || rows.length < 3) continue;
-
-        let layout = null;
-        if (autoOn) {
-          layout = detectLayoutPlus(rows, state.heur);
-          if (layout) {
-            log(`  - [${sheetName}] 자동감지 OK: seq=${layout.seqIdx>=0?indexToCol(layout.seqIdx):"(없음)"} name=${indexToCol(layout.nameIdx)} job=${layout.jobIdx>=0?indexToCol(layout.jobIdx):"(없음)"} in=${layout.inIdx>=0?indexToCol(layout.inIdx):"(없음)"} out=${layout.outIdx>=0?indexToCol(layout.outIdx):"(없음)"} note=${layout.noteIdx>=0?indexToCol(layout.noteIdx):"(없음)"} subj=${layout.subjectIdx>=0?indexToCol(layout.subjectIdx):"(없음)"} startRow=${layout.dataStart+1}`);
-          } else {
-            log(`  - [${sheetName}] 자동감지 실패 → 수동 매핑 사용`);
-          }
-        }
-
-        const seqIdx = layout ? layout.seqIdx : seqIdxManual;
-        const nameIdx = layout ? layout.nameIdx : nameIdxManual;
-        const jobIdx = (layout && layout.jobIdx >= 0) ? layout.jobIdx : jobIdxManual;
-        const inIdx = layout ? layout.inIdx : inIdxManual;
-        const outIdx = layout ? layout.outIdx : outIdxManual;
-        const noteIdx = (layout && layout.noteIdx >= 0) ? layout.noteIdx : noteIdxManual;
-        const subjectIdx = layout ? layout.subjectIdx : -1;
-
-        const dataStart = layout ? layout.dataStart : 0;
-
-        // column stats for override decision
-        const outStats = (outIdx >= 0) ? analyzeColumnStats(rows, dataStart, outIdx, state.heur, 200) : null;
-        const noteStats = (noteIdx >= 0) ? analyzeColumnStats(rows, dataStart, noteIdx, state.heur, 200) : null;
-
-        // note header key for "전소속" 판단
-        let noteHeaderKey = "";
-        if (layout && layout.fieldKeys && noteIdx >= 0) noteHeaderKey = layout.fieldKeys[noteIdx] || "";
-        else {
-          for (let rr = 0; rr < Math.min(rows.length, 8); rr++) {
-            const k = cellKey((rows[rr] || [])[noteIdx]);
-            if (k) { noteHeaderKey = k; break; }
-          }
-        }
-
-        const useNoteAsOut =
-          !!(outStats && noteStats) &&
-          noteIdx >= 0 &&
-          noteHeaderSuggestsPrevAffiliation(noteHeaderKey) &&
-          outStats.uniqueCount <= 3 &&
-          outStats.eduOfficeLikeRatio >= 0.55 &&
-          outStats.schoolLikeRatio < 0.25 &&
-          noteStats.schoolLikeRatio >= 0.25;
-
-        if (useNoteAsOut) {
-          log(`    ↳ 비고(전소속) 기반 '전출 근무지' 보정 적용(현소속 컬럼이 교육지원청 위주로 판단됨)`);
-        }
-
-        let recordCount = 0;
-
-        for (let r = dataStart; r < rows.length; r++) {
-          const row = rows[r] || [];
-
-          // 데이터 행 판정
-          if (seqIdx >= 0) {
-            const seq = toIntLike(row[seqIdx]);
-            if (seq === null) continue;
-          } else {
-            if (!state.heur.looksLikeName(row[nameIdx])) continue;
-          }
-
-          const seq = (seqIdx >= 0 ? (toIntLike(row[seqIdx]) ?? 0) : (r + 1));
-          const name = normalizeSpaces(row[nameIdx]);
-          if (!name) continue;
-
-          let baseJob = (jobIdx >= 0 ? normalizeSpaces(row[jobIdx]) : "");
-          if (!baseJob) baseJob = sheetName;
-
-          const subject = (useSubject && subjectIdx >= 0) ? normalizeSpaces(row[subjectIdx]) : "";
-          const jobName = subject ? `${baseJob}(${subject})` : baseJob;
-
-          const staffType = detectStaffType(file.name, sheetName, jobName);
-          const jobKey = `${staffType}||${jobName}`;
-
-          const inPlaceRaw = (inIdx >= 0 ? row[inIdx] : "");
-          const outPlaceRaw = (outIdx >= 0 ? row[outIdx] : "");
-          const noteRaw = (noteIdx >= 0 ? row[noteIdx] : "");
-
-          let inWorkplace = normalizeWorkplace(inPlaceRaw, regionTag, { normalizeOn, prefixOn });
-          let outWorkplace = normalizeWorkplace(outPlaceRaw, regionTag, { normalizeOn, prefixOn });
-
-          const note = normalizeSpaces(noteRaw);
-
-          // out override from note
-          if (useNoteAsOut && note) {
-            const inferred = parsePlaceFromNote(note, state.heur);
-            if (inferred) {
-              // inferred에는 이미 지역이 들어있을 수도 있어서 prefix는 건드리지 않고 normalize만
-              outWorkplace = normalizeWorkplace(inferred, regionTag, { normalizeOn, prefixOn });
-            }
-          }
-
-          const move = {
-            fileName: file.name,
-            sheetName,
-            regionTag,
-            staffType,
-            seq,
-            name,
-            jobName,
-            jobKey,
-            inWorkplace: inWorkplace || "",
-            outWorkplace: outWorkplace || "",
-            note,
-            rowIndex: r + 1,
-          };
-
-          // ✅ 중복 제거(완전 동일)
-          if (!tryDedupe(move)) continue;
-
-          addMove(move);
-          recordCount++;
-        }
-
-        if (recordCount) log(`    → [${sheetName}] 반영 ${recordCount}건`);
-        else log(`    → [${sheetName}] 데이터 행을 찾지 못함(서식/헤더 확인 필요)`);
-      }
-    }
-
-    // finalize
-    state.workplaceOrder = [...state.workplaces.values()]
-      .sort((a,b) => a.name.localeCompare(b.name, "ko"))
-      .map(w => w.key);
-
-    // global stats
-    const totalRecords = state.moves.length;
-    const totalIn = state.moves.reduce((acc,m)=>acc + (m.inWorkplace ? 1 : 0), 0);
-    const totalOut = state.moves.reduce((acc,m)=>acc + (m.outWorkplace ? 1 : 0), 0);
-    const netDiff = totalOut - totalIn;
-    const onlyIn = state.moves.reduce((acc,m)=>acc + (m.inWorkplace && !m.outWorkplace ? 1 : 0), 0);
-    const onlyOut = state.moves.reduce((acc,m)=>acc + (m.outWorkplace && !m.inWorkplace ? 1 : 0), 0);
-    const both = state.moves.reduce((acc,m)=>acc + (m.inWorkplace && m.outWorkplace ? 1 : 0), 0);
-
-    state.stats = { totalRecords, totalIn, totalOut, netDiff, onlyIn, onlyOut, both };
-
-    state.analyzed = true;
-
-    log(`\n집계 완료 ✅`);
-    log(`- 총 이동 레코드(중복 제거 후): ${totalRecords}건`);
-    log(`- 근무지(학교/부서) 수: ${state.workplaceOrder.length}개`);
-    log(`- 중복(완전 동일) 제외: ${state.dedupe.strictSkipped}건`);
-    if (state.dedupe.looseCollisions > 0) {
-      log(`- 중복 의심(일부 값 상이): ${state.dedupe.looseCollisions}건`);
-      for (const ex of state.dedupe.looseExamples) {
-        log(`  · [의심] ${ex.sheetName} ${ex.seq} ${ex.name} / ${ex.jobName} / ${ex.outWorkplace}→${ex.inWorkplace} / note: "${ex.noteA}" vs "${ex.noteB}"`);
-      }
-    }
-
-    // default selection
-    state.selectedWorkplaceKey = state.workplaceOrder[0] || "";
-    state.selectedJobKey = "ALL";
-
-    // show sections
-    el.detailSection.style.display = "";
-    el.summarySection.style.display = "";
-    el.suspectSection.style.display = "";
-
-    renderAnalyzeBanner();
-
-    renderWorkplaceSelect();
-    renderJobSelect();
-    renderWorkplaceDetail();
+  function clearSelectedSchools() {
+    state.summarySelected.clear();
+    updateSummarySelectionMeta(state.summaryLastKeys);
+    // 체크박스 표시 업데이트를 위해 재렌더
     renderSummary();
-    renderSuspect();
   }
 
   // ---------------------------
-  // CSV downloads (마스킹 상태 반영)
+  // CSV downloads
   // ---------------------------
   function downloadSummaryCsv() {
     if (!state.analyzed) return;
@@ -2359,6 +2460,299 @@
   }
 
   // ---------------------------
+  // Analysis
+  // ---------------------------
+  async function analyzeAllFiles() {
+    clearLog();
+    hideTooltip();
+
+    if (!state.files.length) {
+      log("파일이 선택되지 않았습니다.");
+      return;
+    }
+
+    startProgress("집계 준비 중...");
+    setProgress(1, "설정/옵션 확인 중...");
+    await rafTick();
+
+    el.btnAnalyze.disabled = true;
+
+    try {
+      state.heur = buildHeuristics();
+      state.maskNames = !!el.optMaskNames.checked;
+      el.optMaskNamesQuick.checked = state.maskNames;
+
+      // selection reset (새 집계 기준)
+      state.summarySelected.clear();
+      state.summaryLastKeys = [];
+      if (el.summaryCheckAll) {
+        el.summaryCheckAll.checked = false;
+        el.summaryCheckAll.indeterminate = false;
+      }
+
+      setProgress(3, "엑셀 파서(XLSX) 준비 중...");
+      await rafTick();
+
+      const ok = await ensureXLSX();
+      setLibWarning(ok);
+      if (!ok) {
+        log("XLSX 라이브러리 없음 → 중단");
+        setProgress(0, "엑셀 파서(XLSX) 로드 실패");
+        return;
+      }
+
+      el.btnAnalyze.disabled = true;
+
+      const seqIdxManual = colToIndex(el.colSeq.value);
+      const nameIdxManual = colToIndex(el.colName.value);
+      const jobIdxManual = colToIndex(el.colJob.value);
+      const inIdxManual = colToIndex(el.colIn.value);
+      const outIdxManual = colToIndex(el.colOut.value);
+      const noteIdxManual = colToIndex(el.colNote.value);
+
+      const badCols = [
+        ["연번", seqIdxManual],
+        ["성명", nameIdxManual],
+        ["직종", jobIdxManual],
+        ["전입", inIdxManual],
+        ["전출", outIdxManual],
+        ["비고", noteIdxManual],
+      ].filter(([, idx]) => idx === null);
+
+      if (badCols.length) {
+        log("수동 컬럼 입력이 잘못되었습니다: " + badCols.map(([k]) => k).join(", "));
+        setProgress(0, "수동 컬럼 입력 오류");
+        return;
+      }
+
+      const autoOn = el.optAutoDetect.checked;
+      const normalizeOn = el.optNormalize.checked;
+      const prefixOn = el.optPrefixRegion.checked;
+      const useSubject = el.optUseSubject.checked;
+
+      state.moves = [];
+      state.workplaces.clear();
+      state.workplaceOrder = [];
+      state.analyzed = false;
+      state.selectedWorkplaceKey = "";
+      state.selectedJobKey = "ALL";
+      state.regionTags.clear();
+      state.stats = null;
+      resetDedupe();
+
+      el.analyzeBanner.style.display = "none";
+
+      log(`집계 시작: 파일 ${state.files.length}개`);
+      setProgress(5, `파일 ${state.files.length}개 집계 시작...`);
+      await rafTick();
+
+      const totalFiles = state.files.length;
+
+      for (let fi = 0; fi < totalFiles; fi++) {
+        const file = state.files[fi];
+        const regionTag = inferRegionTag(file.name);
+        state.regionTags.set(file.name, regionTag);
+
+        const fileBaseRatio = fi / Math.max(1, totalFiles);
+        setProgress(5 + 85 * fileBaseRatio, `[${fi + 1}/${totalFiles}] 파일 읽는 중: ${file.name}`);
+        await rafTick();
+
+        log(`\n[파일] ${file.name}${regionTag ? ` (태그: ${regionTag})` : ""}`);
+
+        let wb = null;
+        try {
+          const buf = await file.arrayBuffer();
+          wb = XLSX.read(buf, { type: "array" });
+        } catch (err) {
+          log(`  ⚠️ 파일 읽기 실패: ${err?.message || err}`);
+          continue;
+        }
+
+        const sheetNames = wb.SheetNames.slice();
+        log(`  시트 ${sheetNames.length}개: ${sheetNames.join(", ")}`);
+
+        const sheetsTotal = Math.max(1, sheetNames.length);
+
+        for (let si = 0; si < sheetNames.length; si++) {
+          const sheetName = sheetNames[si];
+
+          const ratio = (fi + (si / sheetsTotal)) / Math.max(1, totalFiles);
+          setProgress(5 + 85 * ratio, `[${fi + 1}/${totalFiles}] ${file.name} · 시트 ${si + 1}/${sheetsTotal} 처리 중: ${sheetName}`);
+          await rafTick();
+
+          const ws = wb.Sheets[sheetName];
+          const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+          if (!rows || rows.length < 3) continue;
+
+          let layout = null;
+          if (autoOn) {
+            layout = detectLayoutPlus(rows, state.heur);
+            if (layout) {
+              log(`  - [${sheetName}] 자동감지 OK: seq=${layout.seqIdx>=0?indexToCol(layout.seqIdx):"(없음)"} name=${indexToCol(layout.nameIdx)} job=${layout.jobIdx>=0?indexToCol(layout.jobIdx):"(없음)"} in=${layout.inIdx>=0?indexToCol(layout.inIdx):"(없음)"} out=${layout.outIdx>=0?indexToCol(layout.outIdx):"(없음)"} note=${layout.noteIdx>=0?indexToCol(layout.noteIdx):"(없음)"} subj=${layout.subjectIdx>=0?indexToCol(layout.subjectIdx):"(없음)"} startRow=${layout.dataStart+1}`);
+            } else {
+              log(`  - [${sheetName}] 자동감지 실패 → 수동 매핑 사용`);
+            }
+          }
+
+          const seqIdx = layout ? layout.seqIdx : seqIdxManual;
+          const nameIdx = layout ? layout.nameIdx : nameIdxManual;
+          const jobIdx = (layout && layout.jobIdx >= 0) ? layout.jobIdx : jobIdxManual;
+          const inIdx = layout ? layout.inIdx : inIdxManual;
+          const outIdx = layout ? layout.outIdx : outIdxManual;
+          const noteIdx = (layout && layout.noteIdx >= 0) ? layout.noteIdx : noteIdxManual;
+          const subjectIdx = layout ? layout.subjectIdx : -1;
+
+          const dataStart = layout ? layout.dataStart : 0;
+
+          const outStats = (outIdx >= 0) ? analyzeColumnStats(rows, dataStart, outIdx, state.heur, 200) : null;
+          const noteStats = (noteIdx >= 0) ? analyzeColumnStats(rows, dataStart, noteIdx, state.heur, 200) : null;
+
+          let noteHeaderKey = "";
+          if (layout && layout.fieldKeys && noteIdx >= 0) noteHeaderKey = layout.fieldKeys[noteIdx] || "";
+          else {
+            for (let rr = 0; rr < Math.min(rows.length, 8); rr++) {
+              const k = cellKey((rows[rr] || [])[noteIdx]);
+              if (k) { noteHeaderKey = k; break; }
+            }
+          }
+
+          const useNoteAsOut =
+            !!(outStats && noteStats) &&
+            noteIdx >= 0 &&
+            noteHeaderSuggestsPrevAffiliation(noteHeaderKey) &&
+            outStats.uniqueCount <= 3 &&
+            outStats.eduOfficeLikeRatio >= 0.55 &&
+            outStats.schoolLikeRatio < 0.25 &&
+            noteStats.schoolLikeRatio >= 0.25;
+
+          if (useNoteAsOut) {
+            log(`    ↳ 비고(전소속) 기반 '전출 근무지' 보정 적용(현소속 컬럼이 교육지원청 위주로 판단됨)`);
+          }
+
+          let recordCount = 0;
+
+          for (let r = dataStart; r < rows.length; r++) {
+            const row = rows[r] || [];
+
+            if (seqIdx >= 0) {
+              const seq = toIntLike(row[seqIdx]);
+              if (seq === null) continue;
+            } else {
+              if (!state.heur.looksLikeName(row[nameIdx])) continue;
+            }
+
+            const seq = (seqIdx >= 0 ? (toIntLike(row[seqIdx]) ?? 0) : (r + 1));
+            const name = normalizeSpaces(row[nameIdx]);
+            if (!name) continue;
+
+            let baseJob = (jobIdx >= 0 ? normalizeSpaces(row[jobIdx]) : "");
+            if (!baseJob) baseJob = sheetName;
+
+            const subject = (useSubject && subjectIdx >= 0) ? normalizeSpaces(row[subjectIdx]) : "";
+            const jobName = subject ? `${baseJob}(${subject})` : baseJob;
+
+            const staffType = detectStaffType(file.name, sheetName, jobName);
+            const jobKey = `${staffType}||${jobName}`;
+
+            const inPlaceRaw = (inIdx >= 0 ? row[inIdx] : "");
+            const outPlaceRaw = (outIdx >= 0 ? row[outIdx] : "");
+            const noteRaw = (noteIdx >= 0 ? row[noteIdx] : "");
+
+            let inWorkplace = normalizeWorkplace(inPlaceRaw, regionTag, { normalizeOn, prefixOn });
+            let outWorkplace = normalizeWorkplace(outPlaceRaw, regionTag, { normalizeOn, prefixOn });
+
+            const note = normalizeSpaces(noteRaw);
+
+            if (useNoteAsOut && note) {
+              const inferred = parsePlaceFromNote(note, state.heur);
+              if (inferred) outWorkplace = normalizeWorkplace(inferred, regionTag, { normalizeOn, prefixOn });
+            }
+
+            const move = {
+              fileName: file.name,
+              sheetName,
+              regionTag,
+              staffType,
+              seq,
+              name,
+              jobName,
+              jobKey,
+              inWorkplace: inWorkplace || "",
+              outWorkplace: outWorkplace || "",
+              note,
+              rowIndex: r + 1,
+            };
+
+            if (!tryDedupe(move)) continue;
+
+            addMove(move);
+            recordCount++;
+
+            if (recordCount % 900 === 0) await rafTick();
+          }
+
+          if (recordCount) log(`    → [${sheetName}] 반영 ${recordCount}건`);
+          else log(`    → [${sheetName}] 데이터 행을 찾지 못함(서식/헤더 확인 필요)`);
+        }
+      }
+
+      setProgress(93, "집계 결과 정리/렌더링 중...");
+      await rafTick();
+
+      state.workplaceOrder = [...state.workplaces.values()]
+        .sort((a,b) => a.name.localeCompare(b.name, "ko"))
+        .map(w => w.key);
+
+      const totalRecords = state.moves.length;
+      const totalIn = state.moves.reduce((acc,m)=>acc + (m.inWorkplace ? 1 : 0), 0);
+      const totalOut = state.moves.reduce((acc,m)=>acc + (m.outWorkplace ? 1 : 0), 0);
+      const netDiff = totalOut - totalIn;
+      const onlyIn = state.moves.reduce((acc,m)=>acc + (m.inWorkplace && !m.outWorkplace ? 1 : 0), 0);
+      const onlyOut = state.moves.reduce((acc,m)=>acc + (m.outWorkplace && !m.inWorkplace ? 1 : 0), 0);
+      const both = state.moves.reduce((acc,m)=>acc + (m.inWorkplace && m.outWorkplace ? 1 : 0), 0);
+
+      state.stats = { totalRecords, totalIn, totalOut, netDiff, onlyIn, onlyOut, both };
+
+      state.analyzed = true;
+
+      log(`\n집계 완료 ✅`);
+      log(`- 총 이동 레코드(중복 제거 후): ${totalRecords}건`);
+      log(`- 근무지(학교/부서) 수: ${state.workplaceOrder.length}개`);
+      log(`- 중복(완전 동일) 제외: ${state.dedupe.strictSkipped}건`);
+      if (state.dedupe.looseCollisions > 0) {
+        log(`- 중복 의심(일부 값 상이): ${state.dedupe.looseCollisions}건`);
+        for (const ex of state.dedupe.looseExamples) {
+          log(`  · [의심] ${ex.sheetName} ${ex.seq} ${ex.name} / ${ex.jobName} / ${ex.outWorkplace}→${ex.inWorkplace} / note: "${ex.noteA}" vs "${ex.noteB}"`);
+        }
+      }
+
+      state.selectedWorkplaceKey = state.workplaceOrder[0] || "";
+      state.selectedJobKey = "ALL";
+
+      el.detailSection.style.display = "";
+      el.summarySection.style.display = "";
+      el.suspectSection.style.display = "";
+
+      renderAnalyzeBanner();
+      renderWorkplaceSelect();
+      renderJobSelect();
+      renderWorkplaceDetail();
+      renderSummary();
+      renderSuspect();
+
+      doneProgress("집계 완료 ✅");
+    } catch (err) {
+      console.error(err);
+      log("에러: " + (err?.message || err));
+      setProgress(0, "에러로 중단됨: " + (err?.message || err));
+    } finally {
+      const ok = !!window.XLSX;
+      setLibWarning(ok);
+      if (ok) el.btnAnalyze.disabled = false;
+    }
+  }
+
+  // ---------------------------
   // Events: table header sorting
   // ---------------------------
   function bindSortableHeaders() {
@@ -2451,7 +2845,11 @@
       state.stats = null;
       resetDedupe();
 
+      state.summarySelected.clear();
+      state.summaryLastKeys = [];
+
       el.analyzeBanner.style.display = "none";
+      hideProgress();
 
       el.detailSection.style.display = "none";
       el.summarySection.style.display = "none";
@@ -2460,6 +2858,11 @@
       el.workplaceSearch.value = "";
       el.summarySearch.value = "";
       el.suspectSearch.value = "";
+
+      if (el.summaryCheckAll) {
+        el.summaryCheckAll.checked = false;
+        el.summaryCheckAll.indeterminate = false;
+      }
 
       clearLog();
       log("초기화 완료");
@@ -2471,10 +2874,10 @@
       el.optMaskNames.checked = state.maskNames;
       el.optMaskNamesQuick.checked = state.maskNames;
 
-      // 갱신
       if (state.analyzed) {
         renderAnalyzeBanner();
         renderWorkplaceDetail();
+        // 엑셀/CSV도 displayName을 쓰므로 그대로 반영됨
       }
     };
     el.optMaskNames.addEventListener("change", () => syncMask(el.optMaskNames.checked));
@@ -2525,10 +2928,25 @@
       renderSuspect();
     });
 
+    // summary check all
+    el.summaryCheckAll.addEventListener("click", (e) => e.stopPropagation());
+    el.summaryCheckAll.addEventListener("change", () => {
+      if (!state.analyzed) return;
+      const keys = state.summaryLastKeys.slice();
+      if (el.summaryCheckAll.checked) keys.forEach(k => state.summarySelected.add(k));
+      else keys.forEach(k => state.summarySelected.delete(k));
+      renderSummary();
+    });
+
     // downloads
     el.btnDownloadSummary.addEventListener("click", downloadSummaryCsv);
     el.btnDownloadSuspect.addEventListener("click", downloadSuspectCsv);
     el.btnDownloadDetail.addEventListener("click", downloadDetailCsv);
+
+    // xlsx exports
+    el.btnDownloadXlsxAll.addEventListener("click", downloadXlsxAll);
+    el.btnDownloadXlsxSelected.addEventListener("click", downloadXlsxSelected);
+    el.btnClearSelected.addEventListener("click", clearSelectedSchools);
 
     // tooltip hide
     window.addEventListener("scroll", hideTooltip, { passive:true });
@@ -2544,6 +2962,7 @@
     log("페이지 로드 완료");
     log("엑셀을 업로드한 뒤 '발령 정보 집계하기'를 누르세요.");
     setFiles([]);
+    hideProgress();
 
     const ok = await ensureXLSX();
     setLibWarning(ok);
@@ -2555,8 +2974,6 @@
   });
 })();
 </script>
-
-  
 
 <script src="/static/disable-copy.js"></script>
 <script src="/static/footer.js"></script>
