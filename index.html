@@ -283,23 +283,18 @@
 </main>
 
 <script>
-  const UNPAID_URL =
-    "https://github.com/comicshaey/FILErealease/releases/download/pdf-to-png/unpaid_tool.exe";
-
   const EXPENSE_URL =
     "https://github.com/comicshaey/FILErealease/releases/download/pdf-to-excel/expense_pdf_to_excel_data_v260117.exe.exe";
 
-  // const AFTERSCHOOL_PAY_URL = "https://github.com/comicshaey/FILErealease/releases/download/exe-to-excel/monthlypayv260201v1.exe";
+const AFTERSCHOOL_PAY_URL = "https://github.com/comicshaey/FILErealease/releases/download/exe-to-excel/monthlypayv260201v1.exe";
 
   window.addEventListener("DOMContentLoaded", () => {
-    const afterschoolPay = document.getElementById("downloadafterschoolpay");
-    const unpaid = document.getElementById("downloadUnpaid");
+    const afterschoolPay = document.getElementById("downloadAfterschoolpay");
     const expense = document.getElementById("downloadExpense");
 
-    if (unpaid) unpaid.href = UNPAID_URL;
     if (expense) expense.href = EXPENSE_URL;
-
-    // if (afterschoolPay) afterschoolPay.href = AFTERSCHOOL_PAY_URL;
+    if (afterschoolPay) afterschoolPay.href = AFTERSCHOOL_PAY_URL;
+    
   });
 </script>
 
