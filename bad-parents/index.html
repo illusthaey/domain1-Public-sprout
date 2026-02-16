@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/static/style.css" />
 
   <style>
-    /* ✅ display:none 제거 (파일 선택창이 막히는 브라우저 방지)
+    /* display:none 제거 (파일 선택창이 막히는 브라우저 방지)
        - "시각적으로만 숨김" 패턴 */
     #excelFile{
       position:absolute;
@@ -173,8 +173,9 @@
   <main class="container">
     <h1>미수납자 독촉 문자 문구 및 미납 안내장 파일 생성기</h1>
     <p class="muted">
-      ·에듀파인 학교회계-수입관리-출납관리-미수납관리에서 미수납대상 엑셀파일 다운로드하고 여기에 올리면,
-      학생별 독촉 문자 문구 및 미납안내장 PDF/PNG 파일 둘 다 자동 생성해줌.
+      ·에듀파인 학교회계-수입관리-출납관리-미수납관리에서 미수납대상 엑셀파일 다운로드 <br/>
+      ·학생별 독촉 문자 문구 및 미납 안내장 PNG 파일 둘 다 일괄 생성해줌. <br/>
+      ※서버 및 데이터베이스 없이 로컬 브라우저 내에서만 작동하는 정적페이지로, 학생 개인정보가 저장되지 않습니다. 새로고침 하면 초기화됨.
     </p>
 
     <!-- 1) 업로드 -->
@@ -187,10 +188,10 @@
         ·학년, 반, 번호, 이름, 미납 내역, 미납 금액 데이터만 추출함.
       </p>
 
-      <!-- ✅ file input: display:none 제거 + label for 연결 -->
+      <!--  file input: display:none 제거 + label for 연결 -->
       <input id="excelFile" type="file" accept=".xlsx,.xls" />
 
-      <!-- ✅ div → label (클릭은 “브라우저 기본 동작”으로 파일 선택창 열림) -->
+      <!--  div → label (클릭은 “브라우저 기본 동작”으로 파일 선택창 열림) -->
       <label id="dropZone" class="dropzone" for="excelFile" role="button" tabindex="0" aria-label="엑셀 파일 드롭존">
         <p class="dz-title">엑셀 파일을 드래그해서 놓기</p>
         <p class="dz-sub">또는 여기를 마우스로 클릭하면 파일 선택창 열림. <code>.xlsx</code></p>
@@ -198,12 +199,12 @@
       </label>
 
       <div class="btnbar">
-        <button class="btn primary" id="btnExtract" type="button" disabled>미수납자 정보 추출하기</button>
+        <button class="btn primary" id="btnExtract" type="button" disabled>미납내역 추출하기</button>
         <button class="btn" id="btnClearFile" type="button" disabled>파일 지우기</button>
-        <button class="btn" id="btnReset" type="button" disabled>추출내역 삭제하기</button>
+        <button class="btn" id="btnReset" type="button" disabled>초기화</button>
       </div>
 
-      <!-- ✅ statusBox 내부에 라이브러리 로딩 진행바 + 상태 텍스트 분리 -->
+      <!-- statusBox 내부에 라이브러리 로딩 진행바 + 상태 텍스트 분리 -->
       <div id="statusBox" class="card status-box" style="margin-top:12px;">
         <div id="libProgressWrap">
           <div class="lib-progress-head">
@@ -228,10 +229,10 @@
       <div class="grid two">
         <div class="field">
           <label>학교명</label>
-          <input id="schoolName" type="text" placeholder="예시: 금쪽초등학교" />
+          <input id="schoolName" type="text" placeholder="예시: 금쪽부모 초등학교" />
         </div>
         <div class="field">
-          <label>부과년월 (입력 선택택)</label>
+          <label>부과년월 (선택)</label>
           <input id="roundText" type="text" placeholder="예시: 2025년 2학기" />
         </div>
       </div>
@@ -242,7 +243,7 @@
           <input id="bankName" type="text" placeholder="예: 농협" />
         </div>
         <div class="field">
-          <label>학교 계좌 번호</label>
+          <label>학교 계좌번호</label>
           <input id="accountNumber" type="text" placeholder="예시: 123456-78-901234" />
         </div>
       </div>
@@ -253,13 +254,13 @@
           <input id="dueDate" type="date" />
         </div>
         <div class="field">
-          <label>안내문 하단 기재할 날</label>
+          <label>미납안내서 발송 일자</label>
           <input id="docDate" type="date" />
         </div>
       </div>
 
       <p class="note" style="margin-top:10px;">
-        ※ 입력값을 바꾸면, 3번의 “문구 및 파일 적용 결과 미리보기”를 다시 눌러야 다운로드가 활성화됩니다.
+        ※입력값 변경 시 미반영 방지하기 위해 "추출한 미납자 정보 반영하기" 버튼을 다시 눌러야 파일 다운로드 버튼이 활성화됨
       </p>
     </section>
 
@@ -274,82 +275,35 @@
 
       <div class="btnbar">
         <button class="btn" id="btnApply" type="button" disabled>
-          문구 및 파일 적용 결과 미리보기
+          추출한 미납자 정보 반영하기
         </button>
       </div>
+    </section>
+
+    
+
+    <section class="section">
+      <h2 class="local-h2 local-tight">4. 파일 다운로드</h2>
 
       <div class="btnbar">
         <button class="btn primary" id="btnDownloadAllZip" type="button" disabled>
           압축 파일로 전체 다운로드
         </button>
+        
         <button class="btn" id="btnCopyAllSms" type="button" disabled>
           전체 학생 미납 안내 문구 복사하기
         </button>
       </div>
 
       <details class="shot-details" style="margin-top:12px;">
-        <summary class="shot-summary">개별 다운로드 (선택 가능)</summary>
+        <summary class="shot-summary">개별 다운로드 (선택)</summary>
         <div class="btnbar">
-          <button class="btn" id="btnDownloadXlsxOnly" type="button" disabled>문구 엑셀만(.xlsx)</button>
-          <button class="btn" id="btnDownloadPngZipOnly" type="button" disabled>안내문 PNG ZIP만</button>
-          <button class="btn" id="btnDownloadPdfOnly" type="button" disabled>안내문 PDF만</button>
+          <button class="btn" id="btnDownloadXlsxOnly" type="button" disabled>문구 엑셀만 다운로드</button>
+          <button class="btn" id="btnDownloadPngZipOnly" type="button" disabled>안내문 PNG 파일만 다운로드</button>
+          <button class="btn" id="btnDownloadPdfOnly" type="button" disabled>안내문 PDF만 다운로드</button>
         </div>
       </details>
-
-      <p class="note" style="margin-top:10px;">
-        보통은 “압축 파일로 전체 다운로드”가 가장 편합니다.
-      </p>
-    </section>
-
-    <!-- 4) 추출 결과 -->
-    <section class="section">
-      <h2 class="local-h2 local-tight">4. 추출 내역 조회 및 결과 파일 다운로드</h2>
-
-      <h3 class="local-h3 local-tight">미납 건별 조회하기 (이름 중복 가능)</h3>
-      <div class="table-wrap">
-        <table class="sheetlike">
-          <thead>
-            <tr>
-              <th>학년</th>
-              <th>반</th>
-              <th>번호</th>
-              <th>이름</th>
-              <th>납입금명</th>
-              <th>납입차수</th>
-              <th class="numeric">미납액</th>
-            </tr>
-          </thead>
-          <tbody id="rawTbody">
-            <tr><td colspan="7" class="muted">파일부터 올리쇼</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <h3 class="local-h3 local-tight" style="margin-top:18px;">학생별 미납 총액 조회하기</h3>
-      <div class="table-wrap">
-        <table class="sheetlike">
-          <thead>
-            <tr>
-              <th>학년</th>
-              <th>반</th>
-              <th>번호</th>
-              <th>이름</th>
-              <th>납입차수</th>
-              <th>납입금명</th>
-              <th class="numeric">총 미납액</th>
-            </tr>
-          </thead>
-          <tbody id="caseTbody">
-            <tr><td colspan="7" class="muted">아직 데이터가 없습니다.</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- 5) 미리보기 -->
-    <section class="section">
-      <h2 class="local-h2 local-tight">5. 학생 개인별 미리보기</h2>
-
+      
       <div class="grid two">
         <div class="field">
           <label>학생 선택</label>
@@ -369,20 +323,17 @@
       <div class="preview-grid" style="margin-top:12px;">
         <div class="canvasbox">
           <canvas id="previewCanvas" width="1080" height="1350"></canvas>
-          <p class="note">엑셀에서 추출된 값이 그대로 안내문에 렌더링됩니다.</p>
+          <p class="note">엑셀에서 추출된 값이 그대로 안내문에 반영됩니다.</p>
         </div>
 
         <div class="card">
-          <h3 class="local-h3 local-tight">선택 학생 문자 문구</h3>
+          <h3 class="local-h3 local-tight">선택한 학생 정보로 문구 생성</h3>
           <textarea id="smsPreview" readonly></textarea>
-          <p class="note">‘문자 복사’ 버튼으로 클립보드에 저장됩니다.</p>
+          <p class="note">저장해서 문자 보내삼.</p>
         </div>
       </div>
     </section>
 
-    <p class="muted" style="margin-top:18px;">
-      ※ 정적 페이지: 브라우저에서만 동작합니다. 엑셀은 로컬에서만 읽습니다.
-    </p>
   </main>
 
   <div class="home-link-wrap">
