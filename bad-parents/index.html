@@ -5,16 +5,23 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>[세입] 미납 금쪽 학부모 문자 독촉 업무 경감 기능</title>
 
-
   <link rel="stylesheet" href="/static/style.css" />
 
-  <!-- 라이브러리(CDN) -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-
   <style>
-    #excelFile { display:none; }
+    /* ✅ display:none 제거 (파일 선택창이 막히는 브라우저 방지)
+       - "시각적으로만 숨김" 패턴 */
+    #excelFile{
+      position:absolute;
+      width:1px;
+      height:1px;
+      padding:0;
+      margin:-1px;
+      overflow:hidden;
+      clip: rect(0, 0, 0, 0);
+      clip-path: inset(50%);
+      white-space:nowrap;
+      border:0;
+    }
 
     .dropzone{
       border: 2px dashed #d4d4d8;
@@ -23,6 +30,8 @@
       padding: 14px 16px;
       cursor: pointer;
       transition: background .12s ease, border-color .12s ease, transform .08s ease;
+      display:block; /* label로 바뀌어도 레이아웃 유지 */
+      user-select:none;
     }
     .dropzone:hover{ background:#f9fafb; }
     .dropzone:active{ transform: scale(0.998); }
@@ -70,7 +79,6 @@
     }
 
     .status-box{
-      white-space: pre-line;
       font-size: 1rem;
       color: #333;
     }
@@ -85,6 +93,30 @@
     .status-warn{
       border-color: #fde68a !important;
       background: #fffbeb !important;
+    }
+
+    /* ✅ 상태박스 내부: 라이브러리 진행바 */
+    .lib-progress-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    #libProgressBar{
+      width: 100%;
+      height: 14px;
+    }
+    .lib-progress-detail{
+      margin-top: 8px;
+      font-size: 0.92rem;
+      color: #555;
+      white-space: pre-line;
+    }
+    .status-text{
+      margin-top: 10px;
+      white-space: pre-line;
     }
 
     textarea{
@@ -139,10 +171,10 @@
 
 <body>
   <main class="container">
-    <h1>미수납자 독촉문자 문구 및 안내장 이미지 파일 학생별 일괄 생성기</h1>
+    <h1>미수납자 독촉 문자 문구 및 미납 안내장 파일 생성기</h1>
     <p class="muted">
       ·에듀파인 학교회계-수입관리-출납관리-미수납관리에서 미수납대상 엑셀파일 다운로드하고 여기에 올리면,
-      학생별 독촉 문자 문구 및 미납안내장 PDF/PNG 파일 둘 다 일괄 생성해줌.
+      학생별 독촉 문자 문구 및 미납안내장 PDF/PNG 파일 둘 다 자동 생성해줌.
     </p>
 
     <!-- 1) 업로드 -->
@@ -155,13 +187,15 @@
         ·학년, 반, 번호, 이름, 미납 내역, 미납 금액 데이터만 추출함.
       </p>
 
+      <!-- ✅ file input: display:none 제거 + label for 연결 -->
       <input id="excelFile" type="file" accept=".xlsx,.xls" />
 
-      <div id="dropZone" class="dropzone" role="button" tabindex="0" aria-label="엑셀 파일 드롭존">
+      <!-- ✅ div → label (클릭은 “브라우저 기본 동작”으로 파일 선택창 열림) -->
+      <label id="dropZone" class="dropzone" for="excelFile" role="button" tabindex="0" aria-label="엑셀 파일 드롭존">
         <p class="dz-title">엑셀 파일을 드래그해서 놓기</p>
-        <p class="dz-sub">또는 여기를 마우스로 클릭하면 폴더 경로 열림. <code>.xlsx</code></p>
+        <p class="dz-sub">또는 여기를 마우스로 클릭하면 파일 선택창 열림. <code>.xlsx</code></p>
         <p class="dz-file" id="selectedFileName">선택된 파일 없음</p>
-      </div>
+      </label>
 
       <div class="btnbar">
         <button class="btn primary" id="btnExtract" type="button" disabled>미수납자 정보 추출하기</button>
@@ -169,8 +203,19 @@
         <button class="btn" id="btnReset" type="button" disabled>추출내역 삭제하기</button>
       </div>
 
+      <!-- ✅ statusBox 내부에 라이브러리 로딩 진행바 + 상태 텍스트 분리 -->
       <div id="statusBox" class="card status-box" style="margin-top:12px;">
-        기다리는 중. 엑셀 파일을 올리고 나서 추출하기를 누르십시오.
+        <div id="libProgressWrap">
+          <div class="lib-progress-head">
+            <span id="libProgressLabel">필수 라이브러리 로딩: 0/3</span>
+            <span id="libProgressPercent">0%</span>
+          </div>
+          <progress id="libProgressBar" max="3" value="0" aria-label="라이브러리 로딩 진행률"></progress>
+          <div id="libProgressDetail" class="muted lib-progress-detail">-</div>
+        </div>
+        <div id="statusText" class="status-text">
+          기다리는 중. 엑셀 파일을 올리고 나서 추출하기를 누르십시오.
+        </div>
       </div>
     </section>
 
@@ -186,7 +231,7 @@
           <input id="schoolName" type="text" placeholder="예시: 금쪽초등학교" />
         </div>
         <div class="field">
-          <label>부과년월 (입력 선택)</label>
+          <label>부과년월 (입력 선택택)</label>
           <input id="roundText" type="text" placeholder="예시: 2025년 2학기" />
         </div>
       </div>
@@ -227,14 +272,12 @@
 
       <textarea id="smsTemplate"></textarea>
 
-      <!-- ✅ 요청: 여기 맨 밑에 "미리보기(=입력내용 적용)" 버튼 -->
       <div class="btnbar">
         <button class="btn" id="btnApply" type="button" disabled>
           문구 및 파일 적용 결과 미리보기
         </button>
       </div>
 
-      <!-- ✅ 그다음: 전체 다운로드 + 전체 복사 + 개별 다운로드 -->
       <div class="btnbar">
         <button class="btn primary" id="btnDownloadAllZip" type="button" disabled>
           압축 파일로 전체 다운로드
@@ -342,7 +385,6 @@
     </p>
   </main>
 
-  <!-- ✅ 요청: 메인으로 돌아가기 버튼은 footer 위에, 흰색으로 항상 표시 -->
   <div class="home-link-wrap">
     <a class="btn" href="/">메인으로 돌아가기</a>
   </div>
@@ -401,7 +443,7 @@
       const y = d.getFullYear();
       const m = String(d.getMonth()+1).padStart(2,"0");
       const day = String(d.getDate()).padStart(2,"0");
-      return \`\${y}-\${m}-\${day}\`;
+      return `${y}-${m}-${day}`;
     }
     function parseDateInput(value){
       if(!value) return null;
@@ -415,31 +457,232 @@
       const m = d.getMonth()+1;
       const day = d.getDate();
       if(pad){
-        return \`\${y}년 \${String(m).padStart(2,"0")}월 \${String(day).padStart(2,"0")}일\`;
+        return `${y}년 ${String(m).padStart(2,"0")}월 ${String(day).padStart(2,"0")}일`;
       }
-      return \`\${y}년 \${m}월 \${day}일\`;
+      return `${y}년 ${m}월 ${day}일`;
     }
 
+    /* ✅ statusBox 구조 변경: 텍스트는 statusText에만 */
     function setStatus(msg, kind=""){
       const box = el("statusBox");
       box.classList.remove("status-ok","status-err","status-warn");
       if(kind === "ok") box.classList.add("status-ok");
       if(kind === "err") box.classList.add("status-err");
       if(kind === "warn") box.classList.add("status-warn");
-      box.textContent = msg;
+
+      const t = el("statusText");
+      if(t) t.textContent = msg;
+      else box.textContent = msg;
     }
 
     function disableWhile(btn, on=true, text="처리중…"){
       if(!btn) return;
       if(on){
         btn.dataset._oldText = btn.textContent;
+        btn.dataset._oldDisabled = String(btn.disabled);
         btn.disabled = true;
         btn.textContent = text;
       }else{
-        btn.disabled = false;
+        const oldDisabled = (btn.dataset._oldDisabled === "true");
+        btn.disabled = oldDisabled;
         if(btn.dataset._oldText) btn.textContent = btn.dataset._oldText;
         delete btn.dataset._oldText;
+        delete btn.dataset._oldDisabled;
       }
+    }
+
+    /***********************
+     * ✅ 라이브러리 로딩 진행바 + fallback 로더
+     * - 학교/기관망에서 CDN 차단이 잦아서:
+     *   1) 로컬(/static/vendor/...) 먼저 시도
+     *   2) jsDelivr → unpkg → cdnjs 순서로 시도
+     ***********************/
+    const LIB_SPECS = [
+      {
+        key: "xlsx",
+        label: "XLSX (엑셀 파서)",
+        urls: [
+          "/static/vendor/xlsx.full.min.js",
+          "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js",
+          "https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js",
+          "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"
+        ],
+        check: () => !!window.XLSX
+      },
+      {
+        key: "jszip",
+        label: "JSZip (ZIP 생성)",
+        urls: [
+          "/static/vendor/jszip.min.js",
+          "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js",
+          "https://unpkg.com/jszip@3.10.1/dist/jszip.min.js",
+          "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
+        ],
+        check: () => !!window.JSZip
+      },
+      {
+        key: "jspdf",
+        label: "jsPDF (PDF 생성)",
+        urls: [
+          "/static/vendor/jspdf.umd.min.js",
+          "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js",
+          "https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js",
+          "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+        ],
+        check: () => !!(window.jspdf && window.jspdf.jsPDF)
+      }
+    ];
+
+    const libState = {
+      total: LIB_SPECS.length,
+      items: Object.fromEntries(LIB_SPECS.map(s => [s.key, { status: "pending", usedUrl: "", source: "", error: "" }]))
+    };
+
+    function libSourceFromUrl(url){
+      if(!url) return "";
+      if(url.startsWith("/")) return "local";
+      if(url.includes("jsdelivr.net")) return "jsDelivr";
+      if(url.includes("unpkg.com")) return "unpkg";
+      if(url.includes("cdnjs.cloudflare.com")) return "cdnjs";
+      return "custom";
+    }
+
+    function isLibOk(key){
+      const it = libState.items[key];
+      return it && it.status === "ok";
+    }
+
+    function renderLibProgress(){
+      const bar = el("libProgressBar");
+      const label = el("libProgressLabel");
+      const percent = el("libProgressPercent");
+      const detail = el("libProgressDetail");
+      if(!bar || !label || !percent || !detail) return;
+
+      const okCount = Object.values(libState.items).filter(x => x.status === "ok").length;
+      bar.max = libState.total;
+      bar.value = okCount;
+
+      const pct = Math.round((okCount / libState.total) * 100);
+      percent.textContent = `${pct}%`;
+      label.textContent = `필수 라이브러리 로딩: ${okCount}/${libState.total}`;
+
+      const map = { pending: "대기", loading: "로딩중…", ok: "완료", err: "실패" };
+      const lines = LIB_SPECS.map(s => {
+        const it = libState.items[s.key];
+        const st = map[it.status] || it.status;
+        const src = it.source ? ` (${it.source})` : "";
+        const err = it.status === "err" && it.error ? ` — ${it.error}` : "";
+        return `- ${s.label}: ${st}${src}${err}`;
+      });
+      detail.textContent = lines.join("\n");
+    }
+
+    function setLibStatus(key, status, meta={}){
+      const it = libState.items[key];
+      if(!it) return;
+      it.status = status;
+      if(meta.usedUrl !== undefined) it.usedUrl = meta.usedUrl;
+      if(meta.source !== undefined) it.source = meta.source;
+      if(meta.error !== undefined) it.error = meta.error;
+
+      renderLibProgress();
+      updateUIStates();
+    }
+
+    function loadScript(url, timeoutMs=20000){
+      return new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = url;
+        s.async = true;
+        s.crossOrigin = "anonymous";
+
+        let done = false;
+        const t = setTimeout(() => {
+          if(done) return;
+          done = true;
+          s.remove();
+          reject(new Error("timeout"));
+        }, timeoutMs);
+
+        s.onload = () => {
+          if(done) return;
+          done = true;
+          clearTimeout(t);
+          resolve(url);
+        };
+        s.onerror = () => {
+          if(done) return;
+          done = true;
+          clearTimeout(t);
+          s.remove();
+          reject(new Error("loaderror"));
+        };
+
+        document.head.appendChild(s);
+      });
+    }
+
+    async function loadOneLib(spec){
+      // 이미 로드되어 있다면 스킵
+      if(spec.check()){
+        setLibStatus(spec.key, "ok", { usedUrl: "(이미 로드됨)", source: "cached", error: "" });
+        return;
+      }
+
+      setLibStatus(spec.key, "loading", { usedUrl: "", source: "", error: "" });
+
+      let lastErr = "";
+      for(const url of spec.urls){
+        try{
+          await loadScript(url);
+          if(spec.check()){
+            setLibStatus(spec.key, "ok", { usedUrl: url, source: libSourceFromUrl(url), error: "" });
+            return;
+          }
+          lastErr = "로드는 됐지만 전역 객체 확인 실패";
+        }catch(err){
+          lastErr = String(err?.message || err);
+        }
+      }
+
+      setLibStatus(spec.key, "err", {
+        usedUrl: "",
+        source: "",
+        error: "네트워크/CSP/CDN 차단 등으로 로드 실패"
+      });
+    }
+
+    async function startLibraryLoad(){
+      renderLibProgress();
+
+      for(const spec of LIB_SPECS){
+        await loadOneLib(spec);
+      }
+
+      // 최소 필수(XLSX) 실패 시 명확히 안내
+      if(!isLibOk("xlsx")){
+        setStatus(
+          "필수 라이브러리(XLSX)를 불러오지 못해 엑셀 추출이 비활성화되었습니다.\n" +
+          "- 사내/학교망에서 CDN(jsDelivr/unpkg/cdnjs)이 차단된 경우가 많습니다.\n" +
+          "- 해결(권장): xlsx.full.min.js를 로컬(/static/vendor)에 내려받아 두고 로드하세요.\n" +
+          "  (이 파일은 위 로더가 자동으로 먼저 시도합니다.)",
+          "err"
+        );
+      }else{
+        const missing = [];
+        if(!isLibOk("jszip")) missing.push("JSZip(압축)");
+        if(!isLibOk("jspdf")) missing.push("jsPDF(PDF)");
+        if(missing.length){
+          setStatus(
+            "엑셀 추출용 라이브러리(XLSX)는 준비되었습니다.\n" +
+            `하지만 ${missing.join(", ")} 로드가 실패하여 일부 다운로드 기능이 비활성화될 수 있습니다.`,
+            "warn"
+          );
+        }
+      }
+
+      updateUIStates();
     }
 
     function collectSettings(){
@@ -508,9 +751,9 @@
         .replace(/주간/g, "")
         .replace(/야간/g, "")
         .replace(/[_-]/g, "")
-        .replace(/\\s+/g, " ")
+        .replace(/\s+/g, " ")
         .trim();
-      out = out.replace(/\\b\\d+\\s*번\\b/g, "").replace(/\\s+/g," ").trim();
+      out = out.replace(/\b\d+\s*번\b/g, "").replace(/\s+/g," ").trim();
       return out;
     }
 
@@ -518,20 +761,20 @@
       let g = cleanSchoolToken(gradeIn);
       let c = cleanSchoolToken(classIn);
 
-      const gHas = /(\\d+)\\s*학년/.test(g);
-      const cHas = /(\\d+)\\s*학년/.test(c);
+      const gHas = /(\d+)\s*학년/.test(g);
+      const cHas = /(\d+)\s*학년/.test(c);
       if(!gHas && cHas){
         const tmp = g; g = c; c = tmp;
       }
 
-      const m = g.match(/(\\d+)\\s*학년/);
+      const m = g.match(/(\d+)\s*학년/);
       if(m){
-        const gradePart = \`\${m[1]}학년\`;
-        let rest = g.replace(m[0], "").trim().replace(/\\s+/g," ");
+        const gradePart = `${m[1]}학년`;
+        let rest = g.replace(m[0], "").trim().replace(/\s+/g," ");
         g = gradePart;
         if(rest){
           if(!c) c = rest;
-          else if(!c.includes(rest)) c = \`\${rest} \${c}\`.trim();
+          else if(!c.includes(rest)) c = `${rest} ${c}`.trim();
         }
       }
       return { 학년: g, 반: c };
@@ -539,15 +782,15 @@
 
     function parseStudentNo(v){
       const s = String(v ?? "").trim();
-      const m = s.match(/(\\d{1,3})/);
+      const m = s.match(/(\d{1,3})/);
       return m ? Number(m[1]) : null;
     }
 
     function normalizeSpacesPerLine(text){
       return String(text ?? "")
-        .split("\\n")
-        .map(line => line.replace(/[ \\t]+/g, " ").replace(/\\s+$/g,""))
-        .join("\\n")
+        .split("\n")
+        .map(line => line.replace(/[ \t]+/g, " ").replace(/\s+$/g,""))
+        .join("\n")
         .trim();
     }
 
@@ -566,7 +809,7 @@
         updateUIStates();
         if(reasonText){
           setStatus(
-            reasonText + "\\n\\n※ 3번의 “문구 및 파일 적용 결과 미리보기”를 다시 눌러야 다운로드가 활성화됩니다.",
+            reasonText + "\n\n※ 3번의 “문구 및 파일 적용 결과 미리보기”를 다시 눌러야 다운로드가 활성화됩니다.",
             "warn"
           );
         }
@@ -578,7 +821,12 @@
       const hasCases = cases.length > 0;
       const isApplied = (appliedSettings !== null);
 
-      el("btnExtract").disabled = !hasFile;
+      const xlsxOk = isLibOk("xlsx");
+      const zipOk  = isLibOk("jszip");
+      const pdfOk  = isLibOk("jspdf");
+
+      // ✅ 추출은 XLSX 준비 + 파일 선택이 되어야
+      el("btnExtract").disabled = !hasFile || !xlsxOk;
       el("btnClearFile").disabled = !hasFile;
 
       // 추출내역 삭제는 "추출 후"만 활성화(파일은 유지)
@@ -592,13 +840,15 @@
       el("btnOnePng").disabled = !hasCases;
       el("btnCopySms").disabled = !hasCases;
 
-      // 전체/개별 다운로드는 “적용”해야 활성화
-      const dl = hasCases && isApplied;
-      el("btnDownloadAllZip").disabled = !dl;
-      el("btnCopyAllSms").disabled = !dl;
-      el("btnDownloadXlsxOnly").disabled = !dl;
-      el("btnDownloadPngZipOnly").disabled = !dl;
-      el("btnDownloadPdfOnly").disabled = !dl;
+      // ✅ 다운로드는 “적용” + 각 기능에 필요한 라이브러리 준비 필요
+      const dlBase = hasCases && isApplied;
+
+      el("btnCopyAllSms").disabled = !dlBase;                 // 복사는 라이브러리 불필요
+
+      el("btnDownloadXlsxOnly").disabled   = !(dlBase && xlsxOk);
+      el("btnDownloadPngZipOnly").disabled = !(dlBase && zipOk);
+      el("btnDownloadPdfOnly").disabled    = !(dlBase && pdfOk);
+      el("btnDownloadAllZip").disabled     = !(dlBase && xlsxOk && zipOk && pdfOk);
     }
 
     function clearResultsOnly(){
@@ -626,7 +876,7 @@
 
       if(pendingFile){
         setStatus(
-          \`파일 선택됨\\n- \${pendingFile.name}\\n\\n이제 “미수납자 정보 추출하기”를 누르십시오.\`,
+          `파일 선택됨\n- ${pendingFile.name}\n\n이제 “미수납자 정보 추출하기”를 누르십시오.`,
           ""
         );
       }else{
@@ -638,7 +888,7 @@
      * XLSX 파싱(필요 7개만)
      ***********************/
     function normalizeHeader(h){
-      return String(h ?? "").trim().replace(/\\s+/g,"").replace(/[_-]/g,"_");
+      return String(h ?? "").trim().replace(/\s+/g,"").replace(/[_-]/g,"_");
     }
 
     function findHeaderRow(rows){
@@ -668,6 +918,9 @@
     }
 
     function parseXlsx(arrayBuffer){
+      // ✅ XLSX 준비 체크 (방어)
+      if(!window.XLSX) throw new Error("XLSX 라이브러리가 로드되지 않았습니다.");
+
       const wb = XLSX.read(arrayBuffer, { type: "array" });
       const sheetName = wb.SheetNames[0];
       const sheet = wb.Sheets[sheetName];
@@ -711,8 +964,8 @@
 
       if([idxGrade, idxClass, idxNo, idxName, idxItem, idxAmt].some(x => x === -1)){
         throw new Error(
-          "필수 컬럼을 찾지 못했습니다.\\n" +
-          "필요: 학년/반/번호/이름/납입금명/미납액\\n" +
+          "필수 컬럼을 찾지 못했습니다.\n" +
+          "필요: 학년/반/번호/이름/납입금명/미납액\n" +
           "※ 엑셀 헤더명이 특이하면 헤더 줄(열 제목)을 확인해주세요."
         );
       }
@@ -730,12 +983,11 @@
         if(idxTerm !== -1){
           term = String(row[idxTerm] ?? "")
             .replace(/[_-]/g, " ")
-            .replace(/\\s+/g, " ")
+            .replace(/\s+/g, " ")
             .trim();
         }
 
         if(!name || !item) continue;
-
         out.push({ 학년: norm.학년, 반: norm.반, 번호: no, 이름: name, 납입금명: item, 차수: term, 미납액: amt });
       }
 
@@ -743,13 +995,13 @@
         sheetName,
         headerRowIdx,
         matchedHeaders: {
-          학년: headerRaw[idxGrade] || \`(col \${idxGrade+1})\`,
-          반: headerRaw[idxClass] || \`(col \${idxClass+1})\`,
-          번호: headerRaw[idxNo] || \`(col \${idxNo+1})\`,
-          이름: headerRaw[idxName] || \`(col \${idxName+1})\`,
-          납입금명: headerRaw[idxItem] || \`(col \${idxItem+1})\`,
-          미납액: headerRaw[idxAmt] || \`(col \${idxAmt+1})\`,
-          차수: (idxTerm !== -1) ? (headerRaw[idxTerm] || \`(col \${idxTerm+1})\`) : "(없음 → 부과년월(입력 선택택) 사용)"
+          학년: headerRaw[idxGrade] || `(col ${idxGrade+1})`,
+          반: headerRaw[idxClass] || `(col ${idxClass+1})`,
+          번호: headerRaw[idxNo] || `(col ${idxNo+1})`,
+          이름: headerRaw[idxName] || `(col ${idxName+1})`,
+          납입금명: headerRaw[idxItem] || `(col ${idxItem+1})`,
+          미납액: headerRaw[idxAmt] || `(col ${idxAmt+1})`,
+          차수: (idxTerm !== -1) ? (headerRaw[idxTerm] || `(col ${idxTerm+1})`) : "(없음 → 부과년월(입력 선택택) 사용)"
         }
       };
 
@@ -759,7 +1011,7 @@
     function buildCasesFromRaw(rows){
       const map = new Map();
       for(const rr of rows){
-        const key = \`\${rr.학년}||\${rr.반}||\${rr.번호 ?? ""}||\${rr.이름}\`;
+        const key = `${rr.학년}||${rr.반}||${rr.번호 ?? ""}||${rr.이름}`;
         if(!map.has(key)){
           map.set(key, {
             key,
@@ -803,7 +1055,7 @@
       }
 
       function gradeNum(g){
-        const m = String(g||"").match(/(\\d+)/);
+        const m = String(g||"").match(/(\d+)/);
         return m ? Number(m[1]) : 999;
       }
 
@@ -837,7 +1089,7 @@
         "[학교명]": schoolName,
         "[학년]": c.학년 ?? "",
         "[반]": c.반 ?? "",
-        "[번호]": (c.번호 ?? "") ? \`\${c.번호}번\` : "",
+        "[번호]": (c.번호 ?? "") ? `${c.번호}번` : "",
         "[이름]": c.이름 ?? "",
         "[차수]": termText,
         "[납입금명]": c.납입금명요약 ?? "",
@@ -855,15 +1107,13 @@
 
     function buildAllSmsText(settings){
       return cases.map(c => {
-        const header = \`\${c.학년} \${c.반} \${c.번호 ?? ""}번 \${c.이름}\`.replace(/\\s+/g," ").trim();
-        return \`▶ \${header}\\n\${buildSmsForCase(c, settings)}\\n\`;
-      }).join("\\n").trim();
+        const header = `${c.학년} ${c.반} ${c.번호 ?? ""}번 ${c.이름}`.replace(/\s+/g," ").trim();
+        return `▶ ${header}\n${buildSmsForCase(c, settings)}\n`;
+      }).join("\n").trim();
     }
 
     /***********************
      * 안내문 렌더링(캔버스)
-     * - 라벨색 회색 고정
-     * - 내보내기 2x 고정(EXPORT_SCALE)
      ***********************/
     const DIG_KOR = ["", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"];
     function fourToKor(n){
@@ -1188,7 +1438,7 @@
       for(const c of cases){
         const opt = document.createElement("option");
         opt.value = c.key;
-        const label = `${c.학년} ${c.반} ${c.번호 ?? ""}번 ${c.이름}`.replace(/\\s+/g," ").trim();
+        const label = `${c.학년} ${c.반} ${c.번호 ?? ""}번 ${c.이름}`.replace(/\s+/g," ").trim();
         opt.textContent = `${label} (${c.total.toLocaleString("ko-KR")}원)`;
         sel.appendChild(opt);
       }
@@ -1250,7 +1500,17 @@
       return true;
     }
 
+    function requireLib(key, human){
+      if(!isLibOk(key)){
+        setStatus(`필수 라이브러리(${human})가 로드되지 않아 이 기능을 사용할 수 없습니다.`, "err");
+        return false;
+      }
+      return true;
+    }
+
     function buildMessageWorkbookArrayBuffer(settings){
+      if(!window.XLSX) throw new Error("XLSX 라이브러리가 로드되지 않았습니다.");
+
       const wb = XLSX.utils.book_new();
 
       // 문자문구 시트
@@ -1289,8 +1549,9 @@
 
     function downloadXlsxOnly(){
       if(!requireApplied()) return;
-      const settings = appliedSettings;
+      if(!requireLib("xlsx", "XLSX(엑셀)")) return;
 
+      const settings = appliedSettings;
       const d = parseDateInput(settings.docDate) || new Date();
       const dateISO = toISODate(d);
 
@@ -1300,6 +1561,8 @@
     }
 
     async function buildPdfBlob(settings, progressCb){
+      if(!(window.jspdf && window.jspdf.jsPDF)) throw new Error("jsPDF 라이브러리가 로드되지 않았습니다.");
+
       const { jsPDF } = window.jspdf;
       const pageW = LAYOUT.baseW, pageH = LAYOUT.baseH;
       const doc = new jsPDF({ orientation: "portrait", unit: "px", format: [pageW, pageH] });
@@ -1330,8 +1593,9 @@
 
     async function downloadPdfOnly(){
       if(!requireApplied()) return;
-      const settings = appliedSettings;
+      if(!requireLib("jspdf", "jsPDF(PDF)")) return;
 
+      const settings = appliedSettings;
       const d = parseDateInput(settings.docDate) || new Date();
       const dateISO = toISODate(d);
 
@@ -1345,8 +1609,9 @@
 
     async function downloadPngZipOnly(){
       if(!requireApplied()) return;
-      const settings = appliedSettings;
+      if(!requireLib("jszip", "JSZip(압축)")) return;
 
+      const settings = appliedSettings;
       const d = parseDateInput(settings.docDate) || new Date();
       const dateISO = toISODate(d);
 
@@ -1386,8 +1651,11 @@
 
     async function downloadAllInOneZip(){
       if(!requireApplied()) return;
-      const settings = appliedSettings;
+      if(!requireLib("xlsx", "XLSX(엑셀)")) return;
+      if(!requireLib("jszip", "JSZip(압축)")) return;
+      if(!requireLib("jspdf", "jsPDF(PDF)")) return;
 
+      const settings = appliedSettings;
       const btn = el("btnDownloadAllZip");
       disableWhile(btn, true, "ZIP 생성중…");
 
@@ -1449,6 +1717,7 @@
         setStatus(String(err?.message || err), "err");
       }finally{
         disableWhile(btn, false);
+        updateUIStates();
       }
     }
 
@@ -1518,20 +1787,19 @@
       const dz = el("dropZone");
       const input = el("excelFile");
 
-      function openPicker(){ input.click(); }
-
-      dz.addEventListener("click", openPicker);
+      // ✅ label은 클릭 시 기본 동작으로 파일 선택창이 열림
+      // 키보드 접근성(Enter/Space)만 보완
       dz.addEventListener("keydown", (e) => {
         if(e.key === "Enter" || e.key === " "){
           e.preventDefault();
-          openPicker();
+          input.click();
         }
       });
 
       input.addEventListener("change", (e) => {
         const file = e.target.files?.[0];
         if(!file) return;
-        if(!/\\.xlsx?$/.test(file.name.toLowerCase())){
+        if(!/\.xlsx?$/.test(file.name.toLowerCase())){
           setStatus("엑셀(.xlsx/.xls) 파일만 업로드할 수 있습니다.", "err");
           input.value = "";
           return;
@@ -1551,7 +1819,7 @@
 
         const file = e.dataTransfer?.files?.[0];
         if(!file) return;
-        if(!/\\.xlsx?$/.test(file.name.toLowerCase())){
+        if(!/\.xlsx?$/.test(file.name.toLowerCase())){
           setStatus("엑셀(.xlsx/.xls) 파일만 업로드할 수 있습니다.", "err");
           return;
         }
@@ -1565,6 +1833,14 @@
     async function runExtract(){
       if(!pendingFile){
         setStatus("먼저 엑셀 파일을 업로드하세요.", "err");
+        return;
+      }
+      if(!isLibOk("xlsx")){
+        setStatus(
+          "XLSX 라이브러리가 준비되지 않아 추출할 수 없습니다.\n" +
+          "상단의 ‘필수 라이브러리 로딩’ 상태를 확인하세요.",
+          "warn"
+        );
         return;
       }
 
@@ -1600,6 +1876,7 @@
         setStatus(String(err?.message || err), "err");
       }finally{
         disableWhile(btn, false);
+        updateUIStates();
       }
     }
 
@@ -1688,9 +1965,13 @@
       if(!el("docDate").value) el("docDate").value = toISODate(new Date());
       if(!loaded) saveSettings();
 
-      updateUIStates();
       setPendingFile(null);
+      renderLibProgress();
+      updateUIStates();
       setStatus("기다리는 중. 엑셀 파일을 올리고 나서 추출하기를 누르십시오.", "");
+
+      // ✅ 라이브러리 로딩 시작 (진행바에 반영)
+      startLibraryLoad();
     })();
   </script>
 
