@@ -93,18 +93,24 @@
   <main class="container" style="padding: 0 16px 40px;">
 
     <section class="section">
-      <h2 style="margin:0 0 10px;">1) 일/시간/분단위 → 10진법</h2>
+      <h2 style="margin:0 0 10px;">1) 일/시간/분단위를 10진수로 환산</h2>
       <div class="card">
         <div class="row gap" style="margin-bottom:10px;">
           <button class="btn primary" id="addA">행 추가하기</button>
           <button class="btn light" id="clearA">초기화하기</button>
           <span class="pill">엑셀 표 그대로 붙여넣기</span>
           <span class="pill">엑셀처럼 키보드 방향키로 이동 가능</span>
+
+
+        <div id="msgA" class="msg" style="margin-top:10px;">
+          입력 예시: <span class="kbd">2:20</span>, <span class="kbd">02:20</span>, <span class="kbd">2시간 20분</span>, <span class="kbd">140분</span>, <span class="kbd">1일 2:30</span>
+        </div>
+
         </div>
 
         <div class="row gap" style="margin-bottom:10px;">
           <label class="row gap">
-            <span class="mini nowrap">10진법 수 (소수점 표기)</span>
+            <span class="mini nowrap">10진수 (소수점 표기)</span>
             <input type="number" id="decPlaces" min="0" max="6" step="1" value="4" style="width:90px; min-width:90px;" />
             <span class="mini nowrap">자리(표시용)</span>
           </label>
@@ -128,10 +134,6 @@
             </thead>
             <tbody></tbody>
           </table>
-        </div>
-
-        <div id="msgA" class="msg" style="margin-top:10px;">
-          입력 예시: <span class="kbd">2:20</span>, <span class="kbd">02:20</span>, <span class="kbd">2시간 20분</span>, <span class="kbd">140분</span>, <span class="kbd">1일 2:30</span>
         </div>
       </div>
     </section>
