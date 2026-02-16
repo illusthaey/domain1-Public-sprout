@@ -8,8 +8,7 @@
   <link rel="stylesheet" href="/static/style.css" />
 
   <style>
-    /* display:none 제거 (파일 선택창이 막히는 브라우저 방지)
-       - "시각적으로만 숨김" 패턴 */
+    /* 파일 input: display:none 대신 "시각적으로만 숨김" */
     #excelFile{
       position:absolute;
       width:1px;
@@ -30,7 +29,7 @@
       padding: 14px 16px;
       cursor: pointer;
       transition: background .12s ease, border-color .12s ease, transform .08s ease;
-      display:block; /* label로 바뀌어도 레이아웃 유지 */
+      display:block;
       user-select:none;
     }
     .dropzone:hover{ background:#f9fafb; }
@@ -95,7 +94,7 @@
       background: #fffbeb !important;
     }
 
-    /* ✅ 상태박스 내부: 라이브러리 진행바 */
+    /* 라이브러리 진행바 */
     .lib-progress-head{
       display:flex;
       align-items:center;
@@ -155,7 +154,6 @@
       }
     }
 
-    /* footer 위 홈 버튼: 흰 배경 고정 */
     .home-link-wrap{
       background:#fff;
       max-width: 880px;
@@ -174,8 +172,9 @@
     <h1>미수납자 독촉 문자 문구 및 미납 안내장 파일 생성기</h1>
     <p class="muted">
       ·에듀파인 학교회계-수입관리-출납관리-미수납관리에서 미수납대상 엑셀파일 다운로드 <br/>
-      ·학생별 독촉 문자 문구 및 미납 안내장 PNG 파일 둘 다 일괄 생성해줌. <br/>
-      ※서버 및 데이터베이스 없이 로컬 브라우저 내에서만 작동하는 정적페이지로, 학생 개인정보가 저장되지 않습니다. 새로고침 하면 초기화됨.
+      ·학생별 독촉 문자 문구 및 미납 안내장 PNG 파일을 일괄 생성해줌. <br/>
+      ※서버/DB 없이 로컬 브라우저에서만 처리됩니다(학생 데이터는 서버로 전송되지 않음). <br/>
+      ※편의를 위해 “징수정보/문구” 입력값은 이 브라우저에만 저장될 수 있으며, “초기화”로 모두 삭제됩니다.
     </p>
 
     <!-- 1) 업로드 -->
@@ -192,14 +191,13 @@
 
       <label id="dropZone" class="dropzone" for="excelFile" role="button" tabindex="0" aria-label="엑셀 파일 드롭존">
         <p class="dz-title">엑셀 파일을 드래그해서 놓기</p>
-        <p class="dz-sub">또는 여기를 마우스로 클릭하면 파일 선택창 열림. <code>.xlsx</code></p>
+        <p class="dz-sub">또는 여기를 클릭하면 파일 선택창 열림. <code>.xlsx</code></p>
         <p class="dz-file" id="selectedFileName">선택된 파일 없음</p>
       </label>
 
       <div class="btnbar">
         <button class="btn primary" id="btnExtract" type="button" disabled>미납내역 추출하기</button>
-        <button class="btn" id="btnClearFile" type="button" disabled>파일 지우기</button>
-        <button class="btn" id="btnReset" type="button" disabled>초기화</button>
+        <button class="btn" id="btnReset" type="button">초기화</button>
       </div>
 
       <div id="statusBox" class="card status-box" style="margin-top:12px;">
@@ -257,7 +255,7 @@
       </div>
 
       <p class="note" style="margin-top:10px;">
-        ※입력값 변경 시 미반영 방지하기 위해 "추출한 미납자 정보 반영하기" 버튼을 다시 눌러야 파일 다운로드 버튼이 활성화됨
+        ※입력값 변경 시 미반영 방지를 위해 “추출한 미납자 정보 반영하기” 버튼을 다시 눌러야 다운로드 버튼이 활성화됩니다.
       </p>
     </section>
 
@@ -340,7 +338,7 @@
         <summary class="shot-summary">개별 다운로드 (선택)</summary>
         <div class="btnbar">
           <button class="btn" id="btnDownloadXlsxOnly" type="button" disabled>문구 엑셀만 다운로드</button>
-          <button class="btn" id="btnDownloadPngZipOnly" type="button" disabled>안내문 PNG 파일만 다운로드</button>
+          <button class="btn" id="btnDownloadPngZipOnly" type="button" disabled>안내문 PNG ZIP만 다운로드</button>
           <button class="btn" id="btnDownloadPdfOnly" type="button" disabled>안내문 PDF만 다운로드</button>
         </div>
       </details>
@@ -386,11 +384,10 @@
      * 공통
      ***********************/
     const STORAGE_KEY = "eduFine_unpaid_notice_badparents_v4";
-    const EXPORT_SCALE = 2;        // 선명한 버전(2x)
-    const LABEL_BG = "#BFBFBF";    // 회색 고정
-    const TABLE_SLOTS = 10;        // 안내문 표 빈줄 포함 슬롯 수(고정)
+    const EXPORT_SCALE = 2;
+    const LABEL_BG = "#BFBFBF";
+    const TABLE_SLOTS = 10;
 
-    // 안내문 레이아웃(고정값)
     const LAYOUT = {
       baseW: 1080,
       baseH: 1350,
@@ -454,7 +451,6 @@
       return `${y}년 ${m}월 ${day}일`;
     }
 
-    /* statusBox 구조: 텍스트는 statusText에만 */
     function setStatus(msg, kind=""){
       const box = el("statusBox");
       box.classList.remove("status-ok","status-err","status-warn");
@@ -548,7 +544,6 @@
       const detail = el("libProgressDetail");
       if(!bar || !label || !percent || !detail) return;
 
-      // ✅ 오류 수정: 진행률은 "성공 개수"가 아니라 "완료(성공+실패) 개수"로 계산
       const items = Object.values(libState.items);
       const okCount = items.filter(x => x.status === "ok").length;
       const errCount = items.filter(x => x.status === "err").length;
@@ -677,6 +672,9 @@
       updateUIStates();
     }
 
+    /***********************
+     * 설정 저장/로드 (로컬)
+     ***********************/
     function collectSettings(){
       return {
         schoolName: (el("schoolName").value || "").trim(),
@@ -690,8 +688,9 @@
     }
 
     function saveSettings(){
-      const s = collectSettings();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+      try{
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(collectSettings()));
+      }catch(_){}
     }
 
     function loadSettings(){
@@ -717,12 +716,10 @@
     /***********************
      * 상태 데이터
      ***********************/
-    let pendingFile = null;      // 업로드만 된 파일(추출 전)
-    let rawRows = [];            // {학년, 반, 번호, 이름, 납입금명, 차수, 미납액}
-    let cases = [];              // 학생별 통합
+    let pendingFile = null;
+    let rawRows = [];
+    let cases = [];
     let selectedCaseKey = "";
-
-    // “반영하기” 눌러야 다운로드 활성화
     let appliedSettings = null;
 
     /***********************
@@ -737,7 +734,6 @@
       return Number.isFinite(nn) ? Math.round(nn) : 0;
     }
 
-    // 제외: 주간 야간 _ -
     function cleanSchoolToken(s){
       let out = String(s ?? "")
         .replace(/주간/g, "")
@@ -817,31 +813,22 @@
       const zipOk  = isLibOk("jszip");
       const pdfOk  = isLibOk("jspdf");
 
-      // 추출은 XLSX 준비 + 파일 선택이 되어야
       el("btnExtract").disabled = !hasFile || !xlsxOk;
-      el("btnClearFile").disabled = !hasFile;
 
-      // 초기화는 "추출 후"만 활성화(파일은 유지)
-      el("btnReset").disabled = !hasCases;
-
-      // 반영 버튼: 추출 후만 가능
       el("btnApply").disabled = !hasCases;
 
-      // 학생별 기능: 추출 후 가능
       el("caseSelect").disabled = !hasCases;
       el("btnOnePng").disabled = !hasCases;
       el("btnCopySms").disabled = !hasCases;
 
-      // 다운로드는 “반영” 후 활성화
       const dlBase = hasCases && isApplied;
 
       el("btnCopyAllSms").disabled = !dlBase;
-
       el("btnDownloadXlsxOnly").disabled   = !(dlBase && xlsxOk);
       el("btnDownloadPngZipOnly").disabled = !(dlBase && zipOk);
       el("btnDownloadPdfOnly").disabled    = !(dlBase && pdfOk);
 
-      // ✅ 오류/불편 개선: 전체 ZIP은 jsPDF가 없어도 (엑셀+PNG)로 가능
+      // 전체 ZIP: XLSX+JSZip만 있으면 가능 (PDF는 있으면 포함, 없으면 제외)
       el("btnDownloadAllZip").disabled     = !(dlBase && xlsxOk && zipOk);
     }
 
@@ -852,7 +839,6 @@
       appliedSettings = null;
 
       renderAll();
-      updateUIStates();
 
       el("smsPreview").value = "";
       const canvas = el("previewCanvas");
@@ -863,9 +849,7 @@
       pendingFile = file || null;
       el("selectedFileName").textContent = pendingFile ? pendingFile.name : "선택된 파일 없음";
 
-      // 파일 바뀌면 추출 데이터 초기화
       clearResultsOnly();
-
       updateUIStates();
 
       if(pendingFile){
@@ -876,6 +860,39 @@
       }else{
         setStatus("기다리는 중. 엑셀 파일을 올리고 나서 추출하기를 누르십시오.", "");
       }
+    }
+
+    /***********************
+     * ✅ 전체 초기화 (파일/추출결과/입력값/로컬저장까지)
+     ***********************/
+    function resetAll(){
+      // 1) 로컬 저장 삭제
+      try{ localStorage.removeItem(STORAGE_KEY); }catch(_){}
+
+      // 2) 입력값 초기화
+      el("schoolName").value = "";
+      el("roundText").value = "";
+      el("bankName").value = "";
+      el("accountNumber").value = "";
+      el("dueDate").value = "";
+      el("docDate").value = toISODate(new Date());
+      el("smsTemplate").value = DEFAULT_SMS_TEMPLATE;
+
+      // 3) 파일/데이터 초기화
+      try{ el("excelFile").value = ""; }catch(_){}
+      pendingFile = null;
+      rawRows = [];
+      cases = [];
+      selectedCaseKey = "";
+      appliedSettings = null;
+
+      // 4) UI 초기화
+      el("selectedFileName").textContent = "선택된 파일 없음";
+
+      renderAll();
+      updateUIStates();
+
+      setStatus("초기화 완료. 엑셀 파일을 다시 올려주세요.", "ok");
     }
 
     /***********************
@@ -1005,15 +1022,7 @@
       for(const rr of rows){
         const key = `${rr.학년}||${rr.반}||${rr.번호 ?? ""}||${rr.이름}`;
         if(!map.has(key)){
-          map.set(key, {
-            key,
-            학년: rr.학년,
-            반: rr.반,
-            번호: rr.번호,
-            이름: rr.이름,
-            items: [],
-            total: 0
-          });
+          map.set(key, { key, 학년: rr.학년, 반: rr.반, 번호: rr.번호, 이름: rr.이름, items: [], total: 0 });
         }
         const c = map.get(key);
         c.items.push({ 납입금명: rr.납입금명, 미납액: rr.미납액, 차수: rr.차수 || "" });
@@ -1217,9 +1226,9 @@
 
       ctx.textBaseline = "middle";
 
+      // 1행 학번
       cell(boxX, y, labelW, LAYOUT.topRowH, LABEL_BG);
       cell(boxX+labelW, y, valW, LAYOUT.topRowH, "#fff");
-
       ctx.fillStyle = TEXT;
       ctx.textAlign="center";
       ctx.font = `700 ${LAYOUT.labelSize}px ${family}`;
@@ -1237,9 +1246,9 @@
       ctx.fillText(classLine, boxX + labelW + 18, y + LAYOUT.topRowH/2);
       y += LAYOUT.topRowH;
 
+      // 2행 이름
       cell(boxX, y, labelW, LAYOUT.topRowH, LABEL_BG);
       cell(boxX+labelW, y, valW, LAYOUT.topRowH, "#fff");
-
       ctx.fillStyle = TEXT;
       ctx.textAlign="center";
       ctx.font = `700 ${LAYOUT.labelSize}px ${family}`;
@@ -1250,6 +1259,7 @@
       ctx.fillText(String(caseObj.이름||""), boxX + labelW + 18, y + LAYOUT.topRowH/2);
       y += LAYOUT.topRowH;
 
+      // 일금
       cell(boxX, y, boxW, LAYOUT.moneyRowH, "#fff");
       ctx.fillStyle = TEXT;
       ctx.textAlign="center";
@@ -1257,6 +1267,7 @@
       ctx.fillText(`일금 ${numberToKor(caseObj.total)} 원정`, boxX + boxW/2, y + LAYOUT.moneyRowH/2);
       y += LAYOUT.moneyRowH;
 
+      // 표
       const col1 = Math.round(boxW * LAYOUT.col1Ratio);
       const col2 = Math.round(boxW * LAYOUT.col2Ratio);
       const col3 = boxW - col1 - col2;
@@ -1282,6 +1293,7 @@
         if(it){
           ctx.fillStyle = TEXT;
 
+          // 구분
           let nm = String(it.납입금명||"");
           let s = LAYOUT.tableSize;
           ctx.textAlign="center";
@@ -1292,10 +1304,12 @@
           }
           ctx.fillText(nm, boxX + col1/2, y + LAYOUT.rowH/2);
 
+          // 금액
           ctx.textAlign="right";
           ctx.font = `600 ${LAYOUT.tableSize}px ${family}`;
           ctx.fillText((it.미납액||0).toLocaleString("ko-KR"), boxX + col1 + col2 - 14, y + LAYOUT.rowH/2);
 
+          // 비고
           const remark = (String(it.차수 || "").trim()) || (roundText || "");
           if(remark){
             ctx.textAlign="center";
@@ -1305,6 +1319,7 @@
         y += LAYOUT.rowH;
       }
 
+      // 합계
       cell(boxX, y, col1, LAYOUT.sumH, "#fff");
       cell(boxX+col1, y, col2, LAYOUT.sumH, "#fff");
       cell(boxX+col1+col2, y, col3, LAYOUT.sumH, "#fff");
@@ -1318,6 +1333,7 @@
       ctx.fillText(caseObj.total.toLocaleString("ko-KR"), boxX + col1 + col2 - 14, y + LAYOUT.sumH/2);
       y += LAYOUT.sumH;
 
+      // 하단 문구
       ctx.fillStyle = TEXT;
       ctx.font = `600 23px ${family}`;
       ctx.textAlign="left";
@@ -1329,6 +1345,7 @@
         : "이체 기한을 입력하면 여기에 표시됩니다.";
       ctx.fillText(dueLine, boxX + 10, y + 66);
 
+      // 날짜/학교장
       const boxBottom = boxY + boxH;
       ctx.textAlign="center";
       ctx.font = `600 ${LAYOUT.dateSize}px ${family}`;
@@ -1464,9 +1481,11 @@
       a.remove();
       URL.revokeObjectURL(url);
     }
+
     function canvasToBlob(canvas, type="image/png", quality){
       return new Promise((resolve) => canvas.toBlob((b) => resolve(b), type, quality));
     }
+
     function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
     function requireApplied(){
@@ -1629,7 +1648,7 @@
       if(!requireLib("xlsx", "XLSX(엑셀)")) return;
       if(!requireLib("jszip", "JSZip(압축)")) return;
 
-      const includePdf = isLibOk("jspdf"); // ✅ jsPDF 있으면 PDF도 포함, 없으면 생략
+      const includePdf = isLibOk("jspdf");
       const stepsTotal = includePdf ? 3 : 2;
 
       const settings = appliedSettings;
@@ -1641,12 +1660,10 @@
         const dateISO = toISODate(d);
         const zip = new JSZip();
 
-        // 1) 엑셀
         setStatus(`전체 ZIP 생성중… (1/${stepsTotal}) 문구 엑셀 생성`, "");
         const xlsxBuf = buildMessageWorkbookArrayBuffer(settings);
         zip.file(`미납_문구_${dateISO}.xlsx`, xlsxBuf);
 
-        // 2) PNG
         setStatus(`전체 ZIP 생성중… (2/${stepsTotal}) 안내문 PNG 생성`, "");
         const noticesFolder = zip.folder("notices");
         const tempCanvas = document.createElement("canvas");
@@ -1676,7 +1693,6 @@
           await sleep(0);
         }
 
-        // 3) PDF (옵션)
         if(includePdf){
           setStatus(`전체 ZIP 생성중… (3/${stepsTotal}) 안내문 PDF 생성`, "");
           const pdfBlob = await buildPdfBlob(settings, (cur,total) => {
@@ -1685,7 +1701,6 @@
           zip.file(`미납안내문_${dateISO}.pdf`, pdfBlob);
         }
 
-        // ZIP
         setStatus("전체 ZIP 압축 중…", "");
         const zipBlob = await zip.generateAsync({ type: "blob" });
         downloadBlob(zipBlob, `미납_전체결과_${dateISO}.zip`);
@@ -1786,7 +1801,7 @@
           return;
         }
         setPendingFile(file);
-        input.value = "";
+        input.value = ""; // 같은 파일 재선택 가능하게
       });
 
       dz.addEventListener("dragenter", (e) => { e.preventDefault(); e.stopPropagation(); dz.classList.add("is-dragover"); });
@@ -1818,8 +1833,7 @@
       }
       if(!isLibOk("xlsx")){
         setStatus(
-          "XLSX 라이브러리가 준비되지 않아 추출할 수 없습니다.\n" +
-          "상단의 ‘필수 라이브러리 로딩’ 상태를 확인하세요.",
+          "XLSX 라이브러리가 준비되지 않아 추출할 수 없습니다.\n상단의 ‘필수 라이브러리 로딩’ 상태를 확인하세요.",
           "warn"
         );
         return;
@@ -1862,7 +1876,7 @@
     }
 
     /***********************
-     * 적용(반영) 버튼
+     * 적용(반영)
      ***********************/
     function applyOutputs(){
       if(!cases.length){
@@ -1891,17 +1905,7 @@
     }
 
     safeOn("btnExtract", "click", () => runExtract());
-    safeOn("btnClearFile", "click", () => {
-      setPendingFile(null);
-      setStatus("파일을 지웠습니다. 다시 업로드해주세요.", "");
-      saveSettings();
-    });
-
-    // 초기화: 결과만 지움(파일 유지)
-    safeOn("btnReset", "click", () => {
-      clearResultsOnly();
-      setStatus("초기화했습니다. (파일은 유지됨)\n원하면 다시 ‘미납내역 추출하기’를 누르십시오.", "");
-    });
+    safeOn("btnReset", "click", () => resetAll());
 
     safeOn("btnApply", "click", () => applyOutputs());
 
@@ -1920,7 +1924,6 @@
     safeOn("btnOnePng", "click", () => downloadOnePng());
     safeOn("btnCopySms", "click", () => copySelectedSms());
 
-    // 입력 변경 → 적용 해제
     const watchIds = ["schoolName","roundText","bankName","accountNumber","dueDate","docDate","smsTemplate"];
     for(const id of watchIds){
       safeOn(id, "input", () => {
