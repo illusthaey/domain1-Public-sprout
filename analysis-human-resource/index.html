@@ -3,9 +3,9 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>강원도교육청 인사발령 집계/분류</title>
+    <title>강원도교육청 인사발령 집계기</title>
 
-    <!-- ✅ 공통 CSS 유지 -->
+
     <link rel="stylesheet" href="/static/style.css" />
 
     <style>
@@ -265,9 +265,9 @@
   <body>
     <header class="site-header">
       <div class="shell">
-        <h1>강원도교육청 인사발령 집계/분류</h1>
+        <h1>강원도교육청 인사발령 집계기</h1>
         <p class="subtitle">
-          도단위/관내 인사발령 엑셀을 업로드하면 <b>지방공무원·교육공무원·교육공무직</b>을 자동으로 분류/집계합니다.
+          ·도발령 및 관내 인사발령 엑셀 파일 전체 업로드하면 학교/기관별, 지역별 발령자 명단 집계해드림.
         </p>
       </div>
     </header>
@@ -283,14 +283,14 @@
         </div>
 
         <p class="sub" style="margin-top: 6px">
-          파일은 <b>드래그&드롭</b> 또는 “파일 추가”로 계속 누적 업로드할 수 있습니다. “초기화”로 전부 비웁니다.
+          ·드래그해서 업로드 가능. 
         </p>
 
         <div class="card">
           <div class="row between gap" style="align-items: flex-start">
             <div class="row gap">
-              <button class="btn" id="btnAddFiles" type="button">파일 추가</button>
-              <button class="btn ghost" id="btnResetFiles" type="button">초기화</button>
+              <button class="btn" id="btnAddFiles" type="button">파일 추가하기</button>
+              <button class="btn ghost" id="btnResetFiles" type="button">초기화하기</button>
             </div>
 
             <div class="row gap">
@@ -312,7 +312,7 @@
           <div class="row between" style="margin-top: 12px">
             <div class="file-mini">
               업로드된 파일: <b id="fileCount">0</b>개
-              <span class="muted"> · 중복(이름+용량+수정시간)은 자동으로 건너뜁니다.</span>
+              <span class="muted"> ·중복 파일은 제외함.</span>
             </div>
             <div class="row gap">
               <span class="pill" id="xlsxBadge">XLSX: 로딩 중…</span>
@@ -515,7 +515,7 @@
         </details>
 
         <div class="mini-note">
-          ※ 병설유치원은 원소속 초등학교로 자동 합산합니다. (예: “문막초 및 병설유치원”)
+          ※ 병설유치원은 원소속 초등학교로 자동 합산합니다. (예: “oo초 및 병설유치원”)
         </div>
       </section>
 
@@ -1201,7 +1201,7 @@
         function schoolBaseName(schoolName) {
           const t = normalizeText(schoolName).replace(/\s+/g, "");
           if (!t) return "";
-          // “문막초병설유”, “문막초병설유치원” 등
+          // “oo초병설유”, “oo초병설유치원” 등
           const base = t.replace(/병설유치원/g, "").replace(/병설유/g, "");
           return base;
         }
