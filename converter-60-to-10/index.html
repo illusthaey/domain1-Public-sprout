@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>복무시간 10진법 환산기</title>
 
-
   <link rel="stylesheet" href="/static/style.css" />
 
   <style>
@@ -22,6 +21,15 @@
     .right { text-align:right; }
     .center { text-align:center; }
     .nowrap { white-space:nowrap; }
+
+    .kbd {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 0.95rem;
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      padding: 1px 6px;
+      border-radius: 6px;
+    }
 
     .card { border:1px solid #e5e7eb; border-radius:14px; padding:14px 14px; background:#fff; }
     .section { margin: 18px 0; }
@@ -47,6 +55,14 @@
       background:#f9fafb;
       cursor: text;
     }
+
+    select{
+      padding:7px 10px;
+      border:1px solid #d1d5db;
+      border-radius:10px;
+      background:#fff;
+    }
+
     .w-no { width:72px; min-width:72px; }
     .w-name { width:140px; min-width:140px; }
     .w-time { width:140px; min-width:140px; }
@@ -84,8 +100,8 @@
   <header class="site-header">
     <div class="shell" style="padding:16px 16px;">
       <h1>복무시간 10진법 환산기</h1>
-      <p class="muted"">
-        ·일/시간/분단위로 된 복무시간을 10진법 정수(소수점)로 변환해줌
+      <p class="muted">
+        ·일/시간/분(60진) 입력을 10진 시간으로 바꾸거나, 10진 시간을 다시 60진 시간으로 되돌립니다.
       </p>
     </div>
   </header>
@@ -100,22 +116,31 @@
           <button class="btn light" id="clearA">초기화하기</button>
           <span class="pill">엑셀 표 그대로 붙여넣기</span>
           <span class="pill">엑셀처럼 키보드 방향키로 이동 가능</span>
-
+        </div>
 
         <div id="msgA" class="msg" style="margin-top:10px;">
-          입력 예시: <span class="kbd">2:20</span>, <span class="kbd">02:20</span>, <span class="kbd">2시간 20분</span>, <span class="kbd">140분</span>, <span class="kbd">1일 2:30</span>
+          입력 예시:
+          <span class="kbd">2:20</span>, <span class="kbd">02:20</span>, <span class="kbd">2시간 20분</span>, <span class="kbd">140분</span>, <span class="kbd">1일</span>, <span class="kbd">1일 2:30</span>, <span class="kbd">1일 2시간 30분</span>
+          <div class="mini muted" style="margin-top:6px;">
+            ※ ‘n일’은 아래의 “1일 기준시간”으로 환산됩니다. (기본 8시간)
+          </div>
         </div>
 
-        </div>
+        <div class="row gap" style="margin:10px 0; align-items:flex-start;">
+          <label class="row gap">
+            <span class="mini nowrap">1일 기준시간</span>
+            <input type="number" id="dayHours" min="0" max="24" step="0.5" value="8" style="width:90px; min-width:90px;" />
+            <span class="mini nowrap">시간</span>
+          </label>
 
-        <div class="row gap" style="margin-bottom:10px;">
           <label class="row gap">
             <span class="mini nowrap">10진수 (소수점 표기)</span>
             <input type="number" id="decPlaces" min="0" max="6" step="1" value="4" style="width:90px; min-width:90px;" />
             <span class="mini nowrap">자리(표시용)</span>
           </label>
-          <div class="mini muted">
-            ※ 연차유급휴가 일수 산정은 소수점 둘째자리 반올림해야하고, 시간외근무수당은 분 단위까지 반영이 원칙임.
+
+          <div class="mini muted" style="max-width:620px;">
+            ※ “10진수”는 <b>표시용</b>입니다. 돈 계산은 가능하면 <b>총 분</b>을 기준으로(예: 분 × 시급 ÷ 60) 하는 게 오차가 가장 적습니다.
           </div>
         </div>
 
@@ -147,7 +172,7 @@
 
           <label class="row gap">
             <span class="mini nowrap">10진→분 변환</span>
-            <select id="roundMode" style="padding:7px 10px;border:1px solid #d1d5db;border-radius:10px;">
+            <select id="roundMode">
               <option value="round" selected>반올림(기본)</option>
               <option value="floor">절사(내림)</option>
               <option value="ceil">올림</option>
@@ -175,16 +200,17 @@
         </div>
 
         <div id="msgB" class="msg" style="margin-top:10px;">
-          팁: 위 표에서 만들어진 10진수를 그대로 아래에 붙여넣으면, 원래 분 단위가 거의 그대로 복원됩니다(표시 소수점 자리수에 따라 약간 달라질 수 있음).
+          팁: 위 표에서 만들어진 10진수를 그대로 아래에 붙여넣으면, 원래 “분” 단위가 거의 그대로 복원됩니다.
+          <span class="muted">(단, 표시 소수점 자리수/반올림에 따라 약간의 차이는 날 수 있음)</span>
         </div>
       </div>
     </section>
 
     <div class="msg ok">
-      <div><b>정책/근거 메모(핵심)</b></div>
+      <div><b>메모</b></div>
       <ul style="margin:8px 0 0;">
-        <li>시간외(연장·야간·휴일) 가산임금 계산 단위: 발생한 시간외근로의 <b>‘분’ 단위까지 모두 반영</b></li>
-        <li>연차/휴가 “일수” 부여·정산은 소수점 처리 규칙이 별도로 존재(일수 소수점 반올림, 분 단위 부여 안 함 등)</li>
+        <li>이 페이지는 “환산” 도구라서, 최종 돈 계산(10원 절사 등)은 별도 계산 규칙을 따라야 합니다.</li>
+        <li>가장 안전한 계산 흐름: <b>총 분</b> → (분 ÷ 60) → 통상임금 곱 → 금액 절사/반올림</li>
       </ul>
     </div>
 
@@ -195,25 +221,23 @@
   "use strict";
 
   const cfg = {
-    decPlaces: 4,     // 10진 표시 소수점 자리(표시용)
-    roundMode: "round"// 10진->분 변환 방식
+    dayHours: 8,       // ‘n일’의 기준시간(기본 8시간)
+    decPlaces: 4,      // 10진 표시 소수점 자리(표시용)
+    roundMode: "round" // 10진->분 변환 방식
   };
 
   const $ = (sel) => document.querySelector(sel);
 
   // ---------- 유틸 ----------
-  function escapeHtml(s) {
-    return String(s ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
-  }
-
   function clampInt(n, min, max) {
     n = Math.trunc(n);
     return Math.max(min, Math.min(max, n));
+  }
+
+  function clampFloat(n, min, max) {
+    const x = Number(n);
+    if (!Number.isFinite(x)) return min;
+    return Math.max(min, Math.min(max, x));
   }
 
   function pow10(n) {
@@ -235,20 +259,36 @@
     return String(s ?? "").trim().replaceAll(",", ""); // 1,234.5 허용
   }
 
-  // ---------- 파싱: 60진 시간 입력(기간/누적시간) ----------
-  // 허용 예시: "2:20", "02:20", "2시간 20분", "140분", "1일 2:30", "1일 2시간 30분"
+  // ---------- 파싱: 60진(일/시간/분) -> 총 분 ----------
+  // 허용 예시:
+  // - "2:20", "02:20"
+  // - "2시간 20분", "2시간", "75분", "140분"
+  // - "1일", "1일 2:30", "1일 2시간 30분"
+  // - 숫자만: "140" -> 140분으로 간주(보수적이지만 편의상)
   function parseDurationToMinutes(raw) {
     const s0 = String(raw ?? "").trim();
     if (!s0) return null;
 
     let s = s0.replace(/\s+/g, " ").trim();
 
-    // 1) 일(day) 먼저 처리
+    // 1) 일(day)
     let days = 0;
-    const md = s.match(/(\d+)\s*일/);
+    const md = s.match(/(\d+(?:\.\d+)?)\s*일/);
     if (md) {
       days = Number(md[1]);
       s = s.replace(md[0], "").trim();
+    }
+
+    const dayMinutes = Math.max(0, Number(cfg.dayHours || 0) * 60);
+    let total = 0;
+
+    if (Number.isFinite(days) && days > 0) {
+      total += days * dayMinutes;
+    }
+
+    // "1일" 단독
+    if (!s) {
+      return total;
     }
 
     // 2) H:MM
@@ -256,27 +296,29 @@
     if (mt) {
       const h = Number(mt[1]);
       const m = Number(mt[2]);
-      return (days * 24 * 60) + (h * 60) + m;
+      if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+      return total + (h * 60) + m;
     }
 
     // 3) "n시간 n분" / "n시간" / "n분"
-    const mhm = s.match(/(?:(\d+)\s*시간)?\s*(?:(\d+)\s*분)?$/);
+    // - 단, "시간"이 있는 경우에만 분이 60 이상이면 에러 처리(예: 2시간 75분)
+    const mhm = s.match(/^(?:(\d+(?:\.\d+)?)\s*시간)?\s*(?:(\d+(?:\.\d+)?)\s*분)?$/);
     if (mhm && (mhm[1] || mhm[2])) {
       const h = mhm[1] ? Number(mhm[1]) : 0;
       const m = mhm[2] ? Number(mhm[2]) : 0;
-      if (m >= 60) return null; // "2시간 75분"은 에러로 처리
-      return (days * 24 * 60) + (h * 60) + m;
+
+      if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+
+      if (mhm[1] && m >= 60) return null; // "시간"이 있으면 분은 0~59만 허용
+
+      return total + (h * 60) + m;
     }
 
-    // 4) "140분" 같은 케이스(명시 분)
-    const mOnly = s.match(/^(\d+)\s*분$/);
-    if (mOnly) {
-      return (days * 24 * 60) + Number(mOnly[1]);
-    }
-
-    // 5) 숫자만 있으면 "분"으로 간주(너무 파워풀하면 오히려 사고나서…)
-    if (/^\d+$/.test(s)) {
-      return (days * 24 * 60) + Number(s);
+    // 4) 숫자만 있으면 "분"으로 간주
+    if (/^\d+(?:\.\d+)?$/.test(s)) {
+      const mins = Number(s);
+      if (!Number.isFinite(mins)) return null;
+      return total + mins;
     }
 
     return null;
@@ -335,7 +377,6 @@
       return;
     }
 
-    // Arrow: 엑셀 느낌(좌/우는 커서가 끝/처음일 때만 셀 이동)
     if (e.key === "ArrowUp") {
       e.preventDefault();
       focusCell(tableEl, r - 1, c);
@@ -368,7 +409,6 @@
         focusCell(tableEl, r, c + 1);
         return;
       }
-      // 그 외는 기본(커서 이동) 허용
     }
   }
 
@@ -378,7 +418,7 @@
     if (inp.dataset.grid !== "1") return;
 
     const text = e.clipboardData?.getData("text") ?? "";
-    if (!text.includes("\t") && !text.includes("\n")) return; // 일반 paste는 브라우저에 맡김
+    if (!text.includes("\t") && !text.includes("\n")) return;
 
     const tableEl = inp.closest("table");
     if (!tableEl) return;
@@ -388,11 +428,32 @@
     const startR = Number(inp.dataset.r);
     const startC = Number(inp.dataset.c);
 
-    const rows = text
+    let rows = text
       .replace(/\r\n/g, "\n")
       .replace(/\r/g, "\n")
       .split("\n")
       .map(line => line.split("\t"));
+
+    // 엑셀에서 복사하면 마지막에 빈 줄이 붙는 경우가 많아서 제거
+    while (rows.length && rows[rows.length - 1].length === 1 && rows[rows.length - 1][0] === "") {
+      rows.pop();
+    }
+    if (!rows.length) return;
+
+    // 필요하면 행 자동 추가
+    const tbody = tableEl.tBodies[0];
+    const needRows = startR + rows.length;
+    const curRows = tbody.rows.length;
+
+    if (needRows > curRows) {
+      const toAdd = needRows - curRows;
+      for (let i = 0; i < toAdd; i++) {
+        tbody.appendChild(tableEl.id === "tableA" ? makeRowA() : makeRowB());
+      }
+    }
+
+    // 메타 갱신
+    setGridMeta(tableEl);
 
     for (let rr = 0; rr < rows.length; rr++) {
       for (let cc = 0; cc < rows[rr].length; cc++) {
@@ -404,6 +465,10 @@
         cell.dispatchEvent(new Event("change", { bubbles: true }));
       }
     }
+
+    // 붙여넣기 후 재계산(안전)
+    if (tableEl.id === "tableA") refreshA();
+    else refreshB();
 
     // 마지막 셀로 포커스 이동
     focusCell(tableEl, startR + rows.length - 1, startC + rows[rows.length - 1].length - 1);
@@ -419,23 +484,24 @@
     const timeInp = tr.querySelector("input[data-a='time']");
     const minsOut = tr.querySelector("input[data-a='mins']");
     const decOut  = tr.querySelector("input[data-a='dec']");
-    const rowOk = tr;
 
-    const raw = timeInp.value;
-    const mins = parseDurationToMinutes(raw);
+    const raw = String(timeInp.value ?? "");
+    const minsRaw = parseDurationToMinutes(raw);
 
-    rowOk.classList.remove("bad");
+    tr.classList.remove("bad");
     minsOut.value = "";
     decOut.value = "";
 
     if (raw.trim() === "") return;
 
-    if (mins == null || !Number.isFinite(mins) || mins < 0) {
-      rowOk.classList.add("bad");
+    if (minsRaw == null || !Number.isFinite(minsRaw) || minsRaw < 0) {
+      tr.classList.add("bad");
       return;
     }
 
-    minsOut.value = String(Math.round(mins));
+    const mins = Math.round(minsRaw); // 최종은 “분” 단위로
+    minsOut.value = String(mins);
+
     const dec = mins / 60;
     decOut.value = fmtFixed(dec, cfg.decPlaces);
   }
@@ -467,7 +533,6 @@
     const timeInp = tr.querySelector("input[data-a='time']");
     timeInp.addEventListener("input", () => computeRowA(tr));
 
-    // name/note는 계산 없음
     return tr;
   }
 
@@ -482,6 +547,7 @@
     const decInp  = tr.querySelector("input[data-b='decIn']");
     const minsOut = tr.querySelector("input[data-b='mins']");
     const timeOut = tr.querySelector("input[data-b='time']");
+
     tr.classList.remove("bad");
     minsOut.value = "";
     timeOut.value = "";
@@ -497,6 +563,7 @@
 
     const rawMinutes = h * 60;
     let mins;
+
     if (cfg.roundMode === "floor") mins = Math.floor(rawMinutes + 1e-9);
     else if (cfg.roundMode === "ceil") mins = Math.ceil(rawMinutes - 1e-9);
     else mins = Math.round(rawMinutes);
@@ -571,6 +638,13 @@
 
   // ---------- 설정 바인딩 ----------
   function bindConfig() {
+    $("#dayHours").addEventListener("change", () => {
+      const v = clampFloat(Number($("#dayHours").value), 0, 24);
+      cfg.dayHours = v;
+      $("#dayHours").value = String(v);
+      refreshA();
+    });
+
     $("#decPlaces").addEventListener("change", () => {
       const v = clampInt(Number($("#decPlaces").value), 0, 6);
       cfg.decPlaces = v;
@@ -586,6 +660,15 @@
 
   // ---------- init ----------
   function init() {
+    // 초기 설정 동기화
+    cfg.dayHours = clampFloat(Number($("#dayHours").value), 0, 24);
+    $("#dayHours").value = String(cfg.dayHours);
+
+    cfg.decPlaces = clampInt(Number($("#decPlaces").value), 0, 6);
+    $("#decPlaces").value = String(cfg.decPlaces);
+
+    cfg.roundMode = String($("#roundMode").value || "round");
+
     // grid 바인딩
     bindGrid($("#tableA"));
     bindGrid($("#tableB"));
@@ -614,8 +697,5 @@
 <script src="/static/disable-copy.js"></script>
 <script src="/static/footer.js"></script>
 <script src="/static/global-loader.js?v=1"></script>
-
-
-  
 </body>
 </html>
