@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>통장 입출금 내역 집계기</title>
+
+  <!-- 공통 CSS(기존 파일 재사용) -->
+  <link rel="stylesheet" href="/static/style.css" />
+
+  <!-- 이 페이지 전용 최소 CSS(공통 CSS 수정 없이 동작하도록) -->
+  <style>
+    /* 업로드 드랍존 */
+    .drop-zone{
+      border: 2px dashed #cbd5e1;
+      border-radius: 14px;
+      padding: 18px 16px;
+      background: #fafafa;
+      cursor: pointer;
+      transition: background-color 0.15s ease, border-color 0.15s ease;
+    }
+    .drop-zone.dragover{
+      background: #eef2ff;
+      border-color: #94a3b8;
+    }
+    .drop-zone .dz-title{
+      font-weight: 800;
+      margin-bottom: 4px;
+      color:#111;
+    }
+    .drop-zone .dz-sub{
+      margin: 0;
+    }
+
+    progress{
+      height: 16px;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    /* 날짜 칩 */
+    .date-list{
+      display:flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .date-chip{
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 0.95rem;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    /* 상세(패널2) */
+    .detail-panel{
+      margin-top: 10px;
+    }
+    .day-block{
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      background: #fff;
+      margin: 12px 0;
+      overflow: hidden;
+    }
+    .day-summary{
+      cursor: pointer;
+      padding: 12px 14px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      background: #f9fafb;
+      font-weight: 800;
+      list-style: none;
+    }
+    .day-summary::-webkit-details-marker{ display:none; }
+    .day-title{ font-weight: 900; color:#111; }
+    .day-badges{
+      display:flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .badge{
+      display:inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      color:#111;
+      font-weight: 700;
+    }
+    .badge-muted{ color:#666; background:#fff; }
+    .badge-deposit{ background:#E6F0FF; border-color:#bcd7ff; }
+    .badge-withdraw{ background:#FFF4B8; border-color:#f1df7a; }
+
+    .day-inner{ padding: 12px 14px; }
+    .day-sumline{
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px dashed #e5e7eb;
+      flex-wrap: wrap;
+    }
+    .day-sumline .sumvals{
+      display:flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* sticky table: 헤더 + (구분/거래일자) 틀고정 */
+    .sticky-table thead th{
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+    .col-seq{ min-width: 70px; width: 70px; }
+    .col-datetime{ min-width: 210px; width: 210px; }
+    .sticky-1{
+      position: sticky;
+      left: 0;
+      z-index: 6;
+      background: #fff;
+    }
+    .sticky-2{
+      position: sticky;
+      left: 70px; /* col-seq 폭과 동일 */
+      z-index: 6;
+      background: #fff;
+    }
+    .sticky-table thead .sticky-1,
+    .sticky-table thead .sticky-2{
+      background: #f9fafb;
+      z-index: 7;
+    }
+
+    /* 맨위로 버튼 */
+    #btnToTop{
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      display: none;
+      z-index: 999;
+      border-radius: 999px;
+      padding: 10px 12px;
+    }
+
+    /* 로그 summary 줄바꿈 */
+    #logSummary{ white-space: pre-line; }
+
+    /* 라이브러리 상태 */
+    #libStatus.err{ color:#b42318; font-weight: 700; }
+  </style>
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="shell">
+      <h1>통장 입출금 내역 집계기</h1>
+      <p class="muted">농협 통장거래내역 엑셀(.xlsx) 파일 업로드하면 일별 수입 및 지출 금액 집계해줌</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- 1. 업로드 섹션 -->
+    <section class="section" id="secUpload">
+      <h2>1. 거래내역 파일 업로드</h2>
+
+      <div class="card">
+        <div id="dropZone" class="drop-zone" role="button" tabindex="0" aria-label="엑셀 파일 드래그 앤 드롭">
+          <div class="dz-title">여기에 엑셀(.xlsx) 파일을 끌어다 놓거나 클릭해서 선택</div>
+          <p class="dz-sub muted">농협 로그인없이 빠른 조회 서비스-거래내역조회-다운로드</p>
+        </div>
+
+        <div class="row gap" style="margin-top:12px;">
+          <input id="fileInput" type="file" accept=".xlsx,.xls" hidden />
+          <button class="btn" id="btnPick" type="button">파일 선택하기</button>
+          <button class="btn ghost" id="btnReset" type="button" disabled>초기화하기</button>
+          <span id="fileMeta" class="muted"></span>
+        </div>
+
+        <hr/>
+
+        <!-- 진행률 -->
+        <div class="card">
+          <div class="row between">
+            <div><strong>XLSX 로드</strong> <span id="loadLabel" class="muted"></span></div>
+            <span id="loadPct" class="muted">0%</span>
+          </div>
+          <progress id="pLoad" max="100" value="0" style="width:100%;"></progress>
+
+          <div style="height:10px;"></div>
+
+          <div class="row between">
+            <div><strong>파일 분석</strong> <span id="analyzeLabel" class="muted"></span></div>
+            <span id="analyzePct" class="muted">0%</span>
+          </div>
+          <progress id="pAnalyze" max="100" value="0" style="width:100%;"></progress>
+
+          <p class="note muted" style="margin-top:10px;">
+            라이브러리 상태: <span id="libStatus">로딩 중…</span>
+          </p>
+        </div>
+
+        <div class="row" style="margin-top:12px;">
+          <button class="btn primary" id="btnRun" type="button" disabled>거래내역 집계하기</button>
+        </div>
+      </div>
+
+      <!-- 자동 감지/수동 매핑 -->
+      <details class="card" id="mappingDetails">
+        <summary class="shot-summary">고급: 컬럼 자동 감지 / 수동 매핑</summary>
+        <p class="muted">
+          자동 감지가 실패하거나 서식이 조금 다르면 여기서 직접 매핑할 수 있습니다.
+        </p>
+        <p class="note" id="mappingStatus">파일을 업로드하면 자동 감지 결과가 표시됩니다.</p>
+
+        <div class="row gap" style="margin-top:10px;">
+          <label class="field" style="min-width:160px;">
+            헤더 행(1-based)
+            <input id="inpHeaderRow" type="number" min="1" step="1" value="12" />
+          </label>
+        </div>
+
+        <div class="row gap" style="margin-top:10px; flex-wrap:wrap;">
+          <label class="field" style="min-width:160px;">구분 <select id="selSeq"></select></label>
+          <label class="field" style="min-width:160px;">거래일자 <select id="selDatetime"></select></label>
+          <label class="field" style="min-width:160px;">출금금액 <select id="selWithdraw"></select></label>
+          <label class="field" style="min-width:160px;">입금금액 <select id="selDeposit"></select></label>
+          <label class="field" style="min-width:160px;">거래후잔액 <select id="selBalance"></select></label>
+          <label class="field" style="min-width:160px;">거래내용 <select id="selContent"></select></label>
+          <label class="field" style="min-width:160px;">거래기록사항 <select id="selNote"></select></label>
+          <label class="field" style="min-width:160px;">거래점 <select id="selBranch"></select></label>
+        </div>
+
+        <div class="row" style="margin-top:12px;">
+          <button class="btn pastel-blue" id="btnApplyMapping" type="button">매핑 적용</button>
+        </div>
+      </details>
+
+      <!-- 로그 -->
+      <div class="card" id="logCard" style="display:none;">
+        <h3 class="local-h3 local-tight">분석 로그</h3>
+        <div id="logSummary" class="note"></div>
+        <ul id="logList"></ul>
+      </div>
+    </section>
+
+    <!-- 2. 대시보드 -->
+    <section class="section" id="secDashboard" hidden>
+      <h2>2. 전체 집계 대시보드</h2>
+
+      <div class="card">
+        <p id="periodLabel" class="note" style="margin:0;"></p>
+        <div class="row gap" id="dashboardTotals" style="margin-top:12px; flex-wrap:wrap;"></div>
+      </div>
+
+      <div class="card">
+        <h3 class="local-h3 local-tight">월별 합계</h3>
+        <div class="table-wrap">
+          <table class="sheetlike" id="monthlyTable"></table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 class="local-h3 local-tight">입금이 있었던 날짜</h3>
+        <p class="muted" style="margin-top:6px;">입금 내역이 1건이라도 있는 날짜만 표시합니다.</p>
+        <div class="table-wrap">
+          <table class="sheetlike" id="depositDaysTable"></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. 상세 -->
+    <section class="section" id="secDetails" hidden>
+      <h2>3. 상세 집계 내역</h2>
+
+      <div class="card">
+        <div class="row gap" style="flex-wrap:wrap;">
+          <label class="field" style="min-width:200px;">
+            정렬
+            <select id="selOrder">
+              <option value="desc" selected>내림차순 (기본)</option>
+              <option value="asc">오름차순</option>
+            </select>
+          </label>
+
+          <label class="field" style="min-width:200px;">
+            표시
+            <select id="selMode">
+              <option value="deposit" selected>입금 내역만</option>
+              <option value="all">입출금 전체</option>
+            </select>
+          </label>
+
+          <p class="muted" style="margin:0;">
+            출금만 있는 일자는 기본 접기 / 입금이 1건이라도 있으면 기본 펼침
+          </p>
+        </div>
+      </div>
+
+      <!-- 패널 1 -->
+      <div class="card">
+        <h3 class="local-h3 local-tight">패널 1: 거래 발생 일자 목록</h3>
+        <p class="muted" style="margin-top:6px;">입금이 있는 날짜는 파스텔 하늘색으로 강조됩니다. 클릭하면 아래로 이동합니다.</p>
+        <div id="dateList" class="date-list"></div>
+      </div>
+
+      <!-- 패널 2 -->
+      <div class="card">
+        <h3 class="local-h3 local-tight">패널 2: 일자별 상세 표</h3>
+        <p class="muted" style="margin-top:6px;">헤더 + (구분/거래일자) 틀 고정. 표는 엑셀처럼 가로 스크롤됩니다.</p>
+        <div id="detailPanel" class="detail-panel"></div>
+      </div>
+    </section>
+
+    <!-- 4. 다운로드 -->
+    <section class="section dl-section" id="secDownload" hidden>
+      <h2>4. 집계 내역 다운로드</h2>
+      <p class="dl-desc muted">
+        엑셀 파일(시트 3개)을 생성합니다: (1) 원본, (2) 입출금 + 일자 합계, (3) 입금만 + 일자 합계
+      </p>
+
+      <div class="row gap" style="flex-wrap:wrap; align-items:flex-start;">
+        <button class="btn primary" id="btnDownloadXlsx" type="button" disabled>집계 내역 엑셀 다운로드</button>
+
+        <details class="shot-details" style="min-width:260px; flex:1;">
+          <summary class="shot-summary">선택: CSV 다운로드</summary>
+          <div class="row gap" style="margin-top:10px;">
+            <button class="btn" id="btnDownloadCsvAll" type="button" disabled>CSV(입출금)</button>
+            <button class="btn" id="btnDownloadCsvDeposit" type="button" disabled>CSV(입금)</button>
+          </div>
+          <p class="muted" style="margin-top:8px;">
+            CSV는 열 너비/병합이 없어 간단 백업용으로 추천합니다.
+          </p>
+        </details>
+      </div>
+    </section>
+
+    <!-- 맨 위로 -->
+    <button id="btnToTop" class="btn btn-lightgrey" type="button" title="맨위로">▲</button>
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell">
+      <p>정적 웹(서버 없이 동작) / HTML + CSS + Vanilla JS / XLSX.js 사용</p>
+      <p class="muted">※ 개인정보 마스킹 없음. 업로드 파일은 브라우저 메모리에서만 처리됩니다.</p>
+    </div>
+  </footer>
+
+  <!-- =========================================================
+       스크립트 로더: /static 우선 → 실패 시 CDN 폴백
+       (XLSX 로드 완료 후 script.js 로드)
+       ========================================================= -->
+  <script>
+    (async () => {
+      const libStatus = document.getElementById('libStatus');
+
+      const loadScript = (src) => new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src;
+        s.async = true;
+        s.onload = () => resolve(src);
+        s.onerror = () => reject(new Error('failed: ' + src));
+        document.head.appendChild(s);
+      });
+
+      try {
+        await loadScript('/static/xlsx.full.min.js');
+        libStatus.textContent = 'xlsx.full.min.js (로컬) 로드 완료';
+      } catch (e1) {
+        try {
+          await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+          libStatus.textContent = 'xlsx.full.min.js (CDN) 로드 완료';
+        } catch (e2) {
+          libStatus.textContent = '오류: XLSX 라이브러리 로드 실패. /static/xlsx.full.min.js 경로를 확인하세요.';
+          libStatus.classList.add('err');
+          return;
+        }
+      }
+
+      try {
+        await loadScript('./script.js');
+      } catch (e) {
+        libStatus.textContent = '오류: script.js 로드 실패. 파일 경로를 확인하세요.';
+        libStatus.classList.add('err');
+      }
+    })();
+  </script>
+</body>
+</html>
