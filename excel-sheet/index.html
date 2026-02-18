@@ -1,0 +1,2286 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>엑셀 시트 웹에서 간간편하게 쓰기</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    /* ===============================
+       Excel-like sheet (page-local)
+       - 공통 UI는 /static/style.css 사용
+       =============================== */
+
+    .toolbar .field { min-width: 0; }
+    .toolbar .field.grow { flex: 1; }
+
+    .sheet-wrap {
+      max-height: 70vh;
+      border: 1px solid #e5e5e5;
+      border-radius: 12px;
+      background: #fff;
+      padding-bottom: 0;
+    }
+
+    /* table은 공통 .sheetlike 스타일 기반 */
+    .excel-grid { min-width: max(800px, 100%); }
+
+    /* sticky headers */
+    .excel-grid thead th {
+      position: sticky;
+      top: 0;
+      z-index: 3;
+      background: #f9fafb;
+      text-align: center;
+      user-select: none;
+    }
+
+    .excel-grid th.corner {
+      position: sticky;
+      top: 0;
+      left: 0;
+      z-index: 5;
+      background: #f9fafb;
+    }
+
+    .excel-grid tbody th.row-header {
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      background: #f9fafb;
+      text-align: right;
+      user-select: none;
+      width: 56px;
+      min-width: 56px;
+      max-width: 56px;
+      padding-right: 8px;
+    }
+
+    .excel-grid thead th.col-header {
+      min-width: 110px;
+      max-width: 240px;
+    }
+
+    .excel-grid td.cell {
+      min-width: 110px;
+      max-width: 240px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      background: #fff;
+      cursor: cell;
+      user-select: none;
+    }
+
+    .excel-grid td.cell.sel {
+      background: rgba(59, 130, 246, 0.12);
+    }
+
+    .excel-grid td.cell.active {
+      outline: 2px solid #2563eb;
+      outline-offset: -2px;
+      user-select: none;
+    }
+
+    .excel-grid td.cell.editing {
+      background: #fff7ed;
+      outline: 2px solid #f97316;
+      outline-offset: -2px;
+      user-select: text;
+    }
+
+    .status-bar {
+      margin-top: 10px;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .status-bar .muted {
+      font-size: 0.95rem;
+    }
+
+    .kbd {
+      border: 1px solid #d1d5db;
+      border-bottom-width: 2px;
+      border-radius: 6px;
+      padding: 0 6px;
+      font-size: 0.9rem;
+      background: #f9fafb;
+      display: inline-block;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 640px) {
+      .excel-grid td.cell { min-width: 92px; }
+      .excel-grid thead th.col-header { min-width: 92px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="shell row between">
+      <div>
+        <div style="font-weight: 800; color:#111;">엑셀 시트 웹페이지 버전</div>
+        <div class="sub">숫자 입력/수식 계산 중심의 웹 스프레드시트</div>
+      </div>
+      <div class="row gap">
+        <a class="btn btn-home" href="/">메인</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <h1>엑셀 시트</h1>
+    <p class="subtitle">Microsoft 365 Excel 전체 기능을 1:1로 “그대로” 구현하긴 현실적으로 너무 거대해서, <b>업무에서 자주 쓰는 계산/수식</b> 중심으로 만든 미니 스프레드시트입니다.</p>
+
+    <section class="section toolbar" aria-label="도구 모음">
+      <div class="row gap" style="align-items: flex-end;">
+        <label class="field" style="width: 120px;">
+          <div class="muted">이름</div>
+          <input id="nameBox" type="text" value="A1" autocomplete="off" />
+        </label>
+
+        <label class="field grow">
+          <div class="muted">수식</div>
+          <input id="formulaInput" type="text" placeholder="예: =SUM(A1:A10)" autocomplete="off" />
+        </label>
+
+        <div class="row gap" style="flex-wrap: wrap; justify-content: flex-end;">
+          <button class="btn ghost" id="newBtn" type="button">새로</button>
+          <button class="btn ghost" id="undoBtn" type="button" title="Ctrl+Z">실행취소</button>
+          <button class="btn ghost" id="redoBtn" type="button" title="Ctrl+Y">다시실행</button>
+        </div>
+      </div>
+
+      <hr />
+
+      <div class="row gap" style="flex-wrap: wrap;">
+        <div class="row gap" aria-label="글꼴">
+          <button class="btn btn-lightgrey" id="boldBtn" type="button" title="Ctrl+B"><b>B</b></button>
+          <button class="btn btn-lightgrey" id="italicBtn" type="button" title="Ctrl+I"><i>I</i></button>
+          <button class="btn btn-lightgrey" id="underlineBtn" type="button" title="Ctrl+U"><u>U</u></button>
+        </div>
+
+        <div class="row gap" aria-label="정렬">
+          <button class="btn btn-lightgrey" data-align="left" type="button">왼쪽</button>
+          <button class="btn btn-lightgrey" data-align="center" type="button">가운데</button>
+          <button class="btn btn-lightgrey" data-align="right" type="button">오른쪽</button>
+        </div>
+
+        <label class="field" style="min-width: 220px;">
+          <div class="muted">표시 형식</div>
+          <select id="formatSelect" aria-label="표시 형식">
+            <option value="general">일반</option>
+            <option value="number">숫자(구분기호)</option>
+            <option value="currency">통화(KRW)</option>
+            <option value="percent">퍼센트</option>
+            <option value="date">날짜</option>
+            <option value="datetime">날짜+시간</option>
+            <option value="text">텍스트</option>
+          </select>
+        </label>
+
+        <div class="row gap" style="flex-wrap: wrap; margin-left: auto;">
+          <button class="btn ghost" id="addRowBtn" type="button">행 +50</button>
+          <button class="btn ghost" id="addColBtn" type="button">열 +10</button>
+          <button class="btn ghost" id="csvExportValuesBtn" type="button">CSV 내보내기(값)</button>
+          <button class="btn ghost" id="csvExportRawBtn" type="button">CSV 내보내기(원본)</button>
+          <button class="btn ghost" id="importBtn" type="button">불러오기(JSON/CSV)</button>
+          <button class="btn primary" id="jsonExportBtn" type="button">저장(JSON)</button>
+        </div>
+      </div>
+
+      <p class="note muted" style="margin: 12px 0 0;">
+        키보드: <span class="kbd">F2</span> 편집 · <span class="kbd">Enter</span>/<span class="kbd">Tab</span> 이동 · <span class="kbd">Ctrl</span>+<span class="kbd">C</span>/<span class="kbd">V</span> 복사/붙여넣기 · <span class="kbd">Ctrl</span>+<span class="kbd">Z</span> 실행취소
+      </p>
+    </section>
+
+    <section class="section" aria-label="시트">
+      <div class="table-wrap sheet-wrap" id="sheetWrap">
+        <table class="sheetlike excel-grid" id="grid" aria-label="스프레드시트"></table>
+      </div>
+
+      <div class="row between status-bar" aria-label="상태 표시줄">
+        <div id="statusLeft" class="muted">준비</div>
+        <div id="statusRight" class="muted">선택: 1</div>
+      </div>
+
+      <p class="note muted">
+        지원 함수(일부): <code>SUM</code>, <code>AVERAGE</code>, <code>MIN</code>, <code>MAX</code>, <code>COUNT</code>, <code>COUNTA</code>, <code>ROUND</code>, <code>IF</code>, <code>AND</code>, <code>OR</code>, <code>NOT</code>, <code>ABS</code>, <code>SQRT</code>, <code>POWER</code>, <code>TODAY</code>, <code>NOW</code> …
+      </p>
+    </section>
+
+    <input id="fileInput" type="file" accept=".json,.csv,text/csv,application/json" style="display:none;" />
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell">
+      <p>자동 저장: 브라우저 로컬 저장소(localStorage). 필요하면 JSON으로 내보내서 백업하세요.</p>
+    </div>
+  </footer>
+
+  <script>
+  'use strict';
+
+  (() => {
+    // ===============================
+    // State & Constants
+    // ===============================
+
+    const STORAGE_KEY = 'excel-sheet/autosave/v1';
+    const FILE_MAGIC = 'excel-sheet-json';
+    const APP_VERSION = 1;
+    const DEFAULT_ROWS = 100;
+    const DEFAULT_COLS = 26;
+
+    // Excel-ish blank sentinel (empty cell)
+    const BLANK = Symbol('BLANK');
+
+    const dom = {
+      grid: document.getElementById('grid'),
+      sheetWrap: document.getElementById('sheetWrap'),
+      nameBox: document.getElementById('nameBox'),
+      formulaInput: document.getElementById('formulaInput'),
+      newBtn: document.getElementById('newBtn'),
+      undoBtn: document.getElementById('undoBtn'),
+      redoBtn: document.getElementById('redoBtn'),
+      boldBtn: document.getElementById('boldBtn'),
+      italicBtn: document.getElementById('italicBtn'),
+      underlineBtn: document.getElementById('underlineBtn'),
+      formatSelect: document.getElementById('formatSelect'),
+      addRowBtn: document.getElementById('addRowBtn'),
+      addColBtn: document.getElementById('addColBtn'),
+      csvExportValuesBtn: document.getElementById('csvExportValuesBtn'),
+      csvExportRawBtn: document.getElementById('csvExportRawBtn'),
+      jsonExportBtn: document.getElementById('jsonExportBtn'),
+      importBtn: document.getElementById('importBtn'),
+      fileInput: document.getElementById('fileInput'),
+      statusLeft: document.getElementById('statusLeft'),
+      statusRight: document.getElementById('statusRight'),
+    };
+
+    /**
+     * state.cells: { [addr: string]: { raw: string, style?: object, format?: string } }
+     */
+    let state = {
+      version: APP_VERSION,
+      rows: DEFAULT_ROWS,
+      cols: DEFAULT_COLS,
+      cells: {},
+      active: { r: 0, c: 0 },
+      selection: { r1: 0, c1: 0, r2: 0, c2: 0, anchorR: 0, anchorC: 0 },
+    };
+
+    let cellEls = []; // 2D array of td elements
+
+    // Undo/Redo
+    let undoStack = [];
+    let redoStack = [];
+
+    // Calculation caches (recreated each recalculation)
+    let calcCache = new Map();
+    let astCache = new Map();
+
+    let autosaveTimer = null;
+
+    // Edit mode
+    let edit = {
+      active: false,
+      addr: null,
+      el: null,
+      beforeRaw: '',
+      keydownHandler: null,
+    };
+
+    // Mouse selection
+    let mouseSelecting = false;
+
+    // ===============================
+    // Utilities
+    // ===============================
+
+    function deepClone(obj) {
+      return obj ? JSON.parse(JSON.stringify(obj)) : obj;
+    }
+
+    function isError(v) {
+      return v && typeof v === 'object' && v.__err === true;
+    }
+
+    function err(code) {
+      return { __err: true, code };
+    }
+
+    function isEmptyObj(o) {
+      return !o || Object.keys(o).length === 0;
+    }
+
+    function colToName(col) {
+      // 0 -> A, 25 -> Z, 26 -> AA
+      let n = col + 1;
+      let s = '';
+      while (n > 0) {
+        const r = (n - 1) % 26;
+        s = String.fromCharCode(65 + r) + s;
+        n = Math.floor((n - 1) / 26);
+      }
+      return s;
+    }
+
+    function nameToCol(name) {
+      let s = String(name || '').toUpperCase();
+      let col = 0;
+      for (let i = 0; i < s.length; i++) {
+        const code = s.charCodeAt(i);
+        if (code < 65 || code > 90) return null;
+        col = col * 26 + (code - 64);
+      }
+      return col - 1;
+    }
+
+    function addrFromRC(r, c) {
+      return colToName(c) + String(r + 1);
+    }
+
+    function normalizeAddr(addr) {
+      return String(addr || '').replace(/\$/g, '').toUpperCase();
+    }
+
+    function rcFromAddr(addr) {
+      const a = normalizeAddr(addr);
+      const m = a.match(/^([A-Z]{1,3})(\d+)$/);
+      if (!m) return null;
+      const c = nameToCol(m[1]);
+      const r = Number(m[2]) - 1;
+      if (c === null || !Number.isFinite(r) || r < 0) return null;
+      return { r, c };
+    }
+
+    function clamp(n, min, max) {
+      return Math.min(max, Math.max(min, n));
+    }
+
+    function normalizeRange(r1, c1, r2, c2) {
+      const nr1 = Math.min(r1, r2);
+      const nc1 = Math.min(c1, c2);
+      const nr2 = Math.max(r1, r2);
+      const nc2 = Math.max(c1, c2);
+      return { r1: nr1, c1: nc1, r2: nr2, c2: nc2 };
+    }
+
+    function getSelection() {
+      const s = state.selection;
+      return normalizeRange(s.r1, s.c1, s.r2, s.c2);
+    }
+
+    function getActiveAddr() {
+      return addrFromRC(state.active.r, state.active.c);
+    }
+
+    function getCell(addr) {
+      return state.cells[addr];
+    }
+
+    function getCellRaw(addr) {
+      return state.cells[addr]?.raw ?? '';
+    }
+
+    function getCellFormat(addr) {
+      return state.cells[addr]?.format ?? 'general';
+    }
+
+    function getCellStyle(addr) {
+      return state.cells[addr]?.style ?? {};
+    }
+
+    function setCell(addr, nextCellOrNull) {
+      if (!nextCellOrNull) {
+        delete state.cells[addr];
+        return;
+      }
+      const cell = {
+        raw: String(nextCellOrNull.raw ?? ''),
+        format: String(nextCellOrNull.format ?? 'general'),
+        style: nextCellOrNull.style ? deepClone(nextCellOrNull.style) : {},
+      };
+      if (cell.raw === '' && cell.format === 'general' && isEmptyObj(cell.style)) {
+        delete state.cells[addr];
+      } else {
+        state.cells[addr] = cell;
+      }
+    }
+
+    function snapshotCell(addr) {
+      const cell = state.cells[addr];
+      return cell ? deepClone(cell) : null;
+    }
+
+    function commitAction(label, patches) {
+      if (!patches || patches.length === 0) return;
+      undoStack.push({ label, patches });
+      if (undoStack.length > 200) undoStack.shift();
+      redoStack = [];
+      scheduleAutosave();
+      updateUndoRedoButtons();
+    }
+
+    function applyPatches(patches, mode /* 'before'|'after' */) {
+      for (const p of patches) {
+        const next = mode === 'before' ? p.before : p.after;
+        setCell(p.addr, next);
+      }
+      invalidateCalc();
+      renderAll();
+      scheduleAutosave();
+      updateUndoRedoButtons();
+    }
+
+    function invalidateCalc() {
+      calcCache = new Map();
+      astCache = new Map();
+    }
+
+    function scheduleAutosave() {
+      if (autosaveTimer) clearTimeout(autosaveTimer);
+      autosaveTimer = setTimeout(() => {
+        autosaveTimer = null;
+        try {
+          const payload = {
+            magic: FILE_MAGIC,
+            version: APP_VERSION,
+            rows: state.rows,
+            cols: state.cols,
+            cells: state.cells,
+          };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+          setStatusLeft('자동 저장됨');
+        } catch (e) {
+          // ignore
+          setStatusLeft('자동 저장 실패(저장공간 부족?)');
+        }
+      }, 500);
+    }
+
+    function loadAutosave() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        const payload = JSON.parse(raw);
+        if (!payload || payload.magic !== FILE_MAGIC) return null;
+        return payload;
+      } catch {
+        return null;
+      }
+    }
+
+    function setStatusLeft(text) {
+      dom.statusLeft.textContent = text;
+    }
+
+    function setStatusRight(text) {
+      dom.statusRight.textContent = text;
+    }
+
+    function downloadTextFile(filename, text, mime) {
+      const blob = new Blob([text], { type: mime || 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    // ===============================
+    // Formula Engine (mini)
+    // ===============================
+
+    function isCellAddr(word) {
+      const w = normalizeAddr(word);
+      return /^([A-Z]{1,3})(\d+)$/.test(w);
+    }
+
+    function tokenize(expr) {
+      const tokens = [];
+      let i = 0;
+
+      const push = (t) => tokens.push(t);
+
+      while (i < expr.length) {
+        const ch = expr[i];
+        if (/\s/.test(ch)) {
+          i += 1;
+          continue;
+        }
+
+        // "string" (Excel: "" escapes a quote)
+        if (ch === '"') {
+          let j = i + 1;
+          let out = '';
+          while (j < expr.length) {
+            const c = expr[j];
+            if (c === '"') {
+              if (expr[j + 1] === '"') {
+                out += '"';
+                j += 2;
+                continue;
+              }
+              break;
+            }
+            out += c;
+            j += 1;
+          }
+          if (j >= expr.length) return { tokens, error: err('#ERROR!') };
+          push({ type: 'string', value: out });
+          i = j + 1;
+          continue;
+        }
+
+        // number
+        if (/[0-9.]/.test(ch)) {
+          const m = expr
+            .slice(i)
+            .match(/^\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|^\.\d+(?:[eE][+-]?\d+)?/);
+          if (m) {
+            push({ type: 'number', value: Number(m[0]) });
+            i += m[0].length;
+            continue;
+          }
+        }
+
+        // identifier / cell / range
+        if (/[A-Za-z_$]/.test(ch)) {
+          let j = i;
+          while (j < expr.length && /[A-Za-z0-9_$]/.test(expr[j])) j += 1;
+          const word = expr.slice(i, j);
+          const upper = normalizeAddr(word);
+
+          // range: A1:B3
+          if (isCellAddr(word) && expr[j] === ':') {
+            let k = j + 1;
+            while (k < expr.length && /\s/.test(expr[k])) k += 1;
+            let l = k;
+            while (l < expr.length && /[A-Za-z0-9_$]/.test(expr[l])) l += 1;
+            const word2 = expr.slice(k, l);
+            if (!isCellAddr(word2)) return { tokens, error: err('#REF!') };
+            push({ type: 'range', start: normalizeAddr(word), end: normalizeAddr(word2) });
+            i = l;
+            continue;
+          }
+
+          if (isCellAddr(word)) {
+            push({ type: 'cell', value: upper });
+          } else if (upper === 'TRUE' || upper === 'FALSE') {
+            push({ type: 'boolean', value: upper === 'TRUE' });
+          } else {
+            push({ type: 'ident', value: upper });
+          }
+          i = j;
+          continue;
+        }
+
+        // operators / punctuation
+        const two = expr.slice(i, i + 2);
+        if (['<=', '>=', '<>'].includes(two)) {
+          push({ type: 'op', value: two });
+          i += 2;
+          continue;
+        }
+        if (['+', '-', '*', '/', '^', '&', '=', '<', '>'].includes(ch)) {
+          push({ type: 'op', value: ch });
+          i += 1;
+          continue;
+        }
+        if (ch === '(') {
+          push({ type: 'lparen' });
+          i += 1;
+          continue;
+        }
+        if (ch === ')') {
+          push({ type: 'rparen' });
+          i += 1;
+          continue;
+        }
+        if (ch === ',' || ch === ';') {
+          push({ type: 'comma' });
+          i += 1;
+          continue;
+        }
+        if (ch === '%') {
+          push({ type: 'percent' });
+          i += 1;
+          continue;
+        }
+
+        return { tokens, error: err('#ERROR!') };
+      }
+
+      return { tokens, error: null };
+    }
+
+    class Parser {
+      constructor(tokens) {
+        this.t = tokens;
+        this.i = 0;
+      }
+      peek() {
+        return this.t[this.i] || null;
+      }
+      consume() {
+        return this.t[this.i++] || null;
+      }
+      match(type, value) {
+        const tk = this.peek();
+        if (!tk) return false;
+        if (tk.type !== type) return false;
+        if (value !== undefined && tk.value !== value) return false;
+        return true;
+      }
+      expect(type, value) {
+        if (!this.match(type, value)) throw new Error('parse');
+        return this.consume();
+      }
+
+      parse() {
+        const node = this.parseComparison();
+        if (this.peek()) throw new Error('extra');
+        return node;
+      }
+
+      parseComparison() {
+        let node = this.parseConcat();
+        while (
+          this.match('op') &&
+          ['=', '<>', '<', '<=', '>', '>='].includes(this.peek().value)
+        ) {
+          const op = this.consume().value;
+          const right = this.parseConcat();
+          node = { type: 'binary', op, left: node, right };
+        }
+        return node;
+      }
+
+      parseConcat() {
+        let node = this.parseTerm();
+        while (this.match('op', '&')) {
+          this.consume();
+          const right = this.parseTerm();
+          node = { type: 'binary', op: '&', left: node, right };
+        }
+        return node;
+      }
+
+      parseTerm() {
+        let node = this.parseFactor();
+        while (this.match('op') && ['+', '-'].includes(this.peek().value)) {
+          const op = this.consume().value;
+          const right = this.parseFactor();
+          node = { type: 'binary', op, left: node, right };
+        }
+        return node;
+      }
+
+      parseFactor() {
+        let node = this.parsePower();
+        while (this.match('op') && ['*', '/'].includes(this.peek().value)) {
+          const op = this.consume().value;
+          const right = this.parsePower();
+          node = { type: 'binary', op, left: node, right };
+        }
+        return node;
+      }
+
+      parsePower() {
+        let node = this.parseUnary();
+        // right associative
+        if (this.match('op', '^')) {
+          this.consume();
+          const right = this.parsePower();
+          node = { type: 'binary', op: '^', left: node, right };
+        }
+        return node;
+      }
+
+      parseUnary() {
+        if (this.match('op') && ['+', '-'].includes(this.peek().value)) {
+          const op = this.consume().value;
+          const expr = this.parseUnary();
+          return { type: 'unary', op, expr };
+        }
+
+        let node = this.parsePrimary();
+        while (this.match('percent')) {
+          this.consume();
+          node = { type: 'percent', expr: node };
+        }
+        return node;
+      }
+
+      parsePrimary() {
+        const tk = this.peek();
+        if (!tk) throw new Error('eof');
+
+        if (tk.type === 'number') {
+          this.consume();
+          return { type: 'number', value: tk.value };
+        }
+        if (tk.type === 'string') {
+          this.consume();
+          return { type: 'string', value: tk.value };
+        }
+        if (tk.type === 'boolean') {
+          this.consume();
+          return { type: 'boolean', value: tk.value };
+        }
+        if (tk.type === 'cell') {
+          this.consume();
+          return { type: 'cell', addr: tk.value };
+        }
+        if (tk.type === 'range') {
+          this.consume();
+          return { type: 'range', start: tk.start, end: tk.end };
+        }
+
+        if (tk.type === 'ident') {
+          const name = this.consume().value;
+          if (this.match('lparen')) {
+            this.consume();
+            const args = [];
+            if (!this.match('rparen')) {
+              while (true) {
+                args.push(this.parseComparison());
+                if (this.match('comma')) {
+                  this.consume();
+                  continue;
+                }
+                break;
+              }
+            }
+            this.expect('rparen');
+            return { type: 'func', name, args };
+          }
+          // bare identifier (named range) not supported
+          return { type: 'name', name };
+        }
+
+        if (tk.type === 'lparen') {
+          this.consume();
+          const node = this.parseComparison();
+          this.expect('rparen');
+          return node;
+        }
+
+        throw new Error('primary');
+      }
+    }
+
+    function toNumber(v) {
+      if (v === BLANK) return 0;
+      if (isError(v)) return v;
+      if (v === null || v === undefined) return 0;
+      if (typeof v === 'number') return v;
+      if (typeof v === 'boolean') return v ? 1 : 0;
+      if (v instanceof Date) return v.getTime();
+      if (typeof v === 'string') {
+        const t = v.trim();
+        if (t === '') return 0;
+        const cleaned = t.replace(/,/g, '');
+        if (
+          /^[-+]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(cleaned) ||
+          /^[-+]?\.\d+(?:[eE][+-]?\d+)?$/.test(cleaned)
+        ) {
+          const n = Number(cleaned);
+          return Number.isFinite(n) ? n : err('#VALUE!');
+        }
+        return err('#VALUE!');
+      }
+      return err('#VALUE!');
+    }
+
+    function toText(v) {
+      if (v === BLANK) return '';
+      if (isError(v)) return v.code;
+      if (v === null || v === undefined) return '';
+      if (v instanceof Date) return v.toISOString();
+      return String(v);
+    }
+
+    function toBool(v) {
+      if (v === BLANK) return false;
+      if (isError(v)) return v;
+      if (typeof v === 'boolean') return v;
+      if (typeof v === 'number') return v !== 0;
+      if (typeof v === 'string') {
+        const t = v.trim().toUpperCase();
+        if (t === '') return false;
+        if (t === 'TRUE') return true;
+        if (t === 'FALSE') return false;
+        const n = toNumber(v);
+        if (!isError(n)) return n !== 0;
+        return true;
+      }
+      return Boolean(v);
+    }
+
+    function flatten(values) {
+      const out = [];
+      for (const v of values) {
+        if (Array.isArray(v)) out.push(...flatten(v));
+        else out.push(v);
+      }
+      return out;
+    }
+
+    function evalAst(node, ctx, visiting) {
+      switch (node.type) {
+        case 'number':
+          return node.value;
+        case 'string':
+          return node.value;
+        case 'boolean':
+          return node.value;
+        case 'cell':
+          return ctx.getCell(node.addr, visiting);
+        case 'range':
+          return ctx.getRange(node.start, node.end, visiting);
+        case 'percent': {
+          const v = evalAst(node.expr, ctx, visiting);
+          if (isError(v)) return v;
+          const n = toNumber(v);
+          if (isError(n)) return n;
+          return n / 100;
+        }
+        case 'unary': {
+          const v = evalAst(node.expr, ctx, visiting);
+          if (isError(v)) return v;
+          const n = toNumber(v);
+          if (isError(n)) return n;
+          return node.op === '-' ? -n : n;
+        }
+        case 'binary': {
+          const op = node.op;
+
+          // string concatenation
+          if (op === '&') {
+            const a = evalAst(node.left, ctx, visiting);
+            if (isError(a)) return a;
+            const b = evalAst(node.right, ctx, visiting);
+            if (isError(b)) return b;
+            return toText(a) + toText(b);
+          }
+
+          const a = evalAst(node.left, ctx, visiting);
+          if (isError(a)) return a;
+          const b = evalAst(node.right, ctx, visiting);
+          if (isError(b)) return b;
+
+          // arithmetic
+          if (['+', '-', '*', '/', '^'].includes(op)) {
+            const na = toNumber(a);
+            if (isError(na)) return na;
+            const nb = toNumber(b);
+            if (isError(nb)) return nb;
+
+            if (op === '+') return na + nb;
+            if (op === '-') return na - nb;
+            if (op === '*') return na * nb;
+            if (op === '/') return nb === 0 ? err('#DIV/0!') : na / nb;
+            if (op === '^') return Math.pow(na, nb);
+          }
+
+          // comparisons
+          if (['=', '<>', '<', '<=', '>', '>='].includes(op)) {
+            const na = toNumber(a);
+            const nb = toNumber(b);
+            const bothNumeric = !isError(na) && !isError(nb);
+            let res = false;
+
+            if (bothNumeric) {
+              if (op === '=') res = na === nb;
+              else if (op === '<>') res = na !== nb;
+              else if (op === '<') res = na < nb;
+              else if (op === '<=') res = na <= nb;
+              else if (op === '>') res = na > nb;
+              else if (op === '>=') res = na >= nb;
+            } else {
+              const sa = toText(a);
+              const sb = toText(b);
+              if (op === '=') res = sa === sb;
+              else if (op === '<>') res = sa !== sb;
+              else if (op === '<') res = sa < sb;
+              else if (op === '<=') res = sa <= sb;
+              else if (op === '>') res = sa > sb;
+              else if (op === '>=') res = sa >= sb;
+            }
+
+            return res;
+          }
+
+          return err('#ERROR!');
+        }
+        case 'name':
+          return err('#NAME?');
+        case 'func': {
+          const name = node.name.toUpperCase();
+
+          // IF: short-circuit
+          if (name === 'IF') {
+            if (node.args.length < 2) return err('#VALUE!');
+            const condV = evalAst(node.args[0], ctx, visiting);
+            if (isError(condV)) return condV;
+            const cond = toBool(condV);
+            if (isError(cond)) return cond;
+            if (cond) return evalAst(node.args[1], ctx, visiting);
+            return node.args.length >= 3 ? evalAst(node.args[2], ctx, visiting) : false;
+          }
+
+          // zero-arg date/time
+          if (name === 'TODAY') {
+            const d = new Date();
+            d.setHours(0, 0, 0, 0);
+            return d;
+          }
+          if (name === 'NOW') {
+            return new Date();
+          }
+
+          const argsEvaluated = node.args.map((a) => evalAst(a, ctx, visiting));
+          for (const v of argsEvaluated) {
+            if (isError(v)) return v;
+          }
+          const flat = flatten(argsEvaluated);
+
+          function numsOnly(list) {
+            const out = [];
+            for (const v of list) {
+              const n = toNumber(v);
+              if (isError(n)) continue; // ignore text
+              out.push(n);
+            }
+            return out;
+          }
+
+          switch (name) {
+            case 'SUM': {
+              let s = 0;
+              for (const v of flat) {
+                const n = toNumber(v);
+                if (isError(n)) continue;
+                s += n;
+              }
+              return s;
+            }
+            case 'AVERAGE': {
+              let s = 0;
+              let cnt = 0;
+              for (const v of flat) {
+                const n = toNumber(v);
+                if (isError(n)) continue;
+                s += n;
+                cnt += 1;
+              }
+              return cnt === 0 ? err('#DIV/0!') : s / cnt;
+            }
+            case 'MIN': {
+              const ns = numsOnly(flat);
+              return ns.length ? Math.min(...ns) : 0;
+            }
+            case 'MAX': {
+              const ns = numsOnly(flat);
+              return ns.length ? Math.max(...ns) : 0;
+            }
+            case 'COUNT': {
+              let cnt = 0;
+              for (const v of flat) {
+                const n = toNumber(v);
+                if (!isError(n)) cnt += 1;
+              }
+              return cnt;
+            }
+            case 'COUNTA': {
+              let cnt = 0;
+              for (const v of flat) {
+                if (v === BLANK) continue;
+                if (v === null || v === undefined) continue;
+                if (typeof v === 'string' && v.trim() === '') continue;
+                cnt += 1;
+              }
+              return cnt;
+            }
+            case 'ROUND': {
+              const n = toNumber(flat[0]);
+              if (isError(n)) return n;
+              const digits = flat.length >= 2 ? toNumber(flat[1]) : 0;
+              if (isError(digits)) return digits;
+              const p = Math.pow(10, Math.trunc(digits));
+              return Math.round(n * p) / p;
+            }
+            case 'ABS': {
+              const n = toNumber(flat[0]);
+              if (isError(n)) return n;
+              return Math.abs(n);
+            }
+            case 'SQRT': {
+              const n = toNumber(flat[0]);
+              if (isError(n)) return n;
+              return n < 0 ? err('#NUM!') : Math.sqrt(n);
+            }
+            case 'POWER': {
+              const a = toNumber(flat[0]);
+              if (isError(a)) return a;
+              const b = toNumber(flat[1]);
+              if (isError(b)) return b;
+              return Math.pow(a, b);
+            }
+            case 'AND': {
+              for (const v of flat) {
+                const b = toBool(v);
+                if (isError(b)) return b;
+                if (!b) return false;
+              }
+              return true;
+            }
+            case 'OR': {
+              for (const v of flat) {
+                const b = toBool(v);
+                if (isError(b)) return b;
+                if (b) return true;
+              }
+              return false;
+            }
+            case 'NOT': {
+              const b = toBool(flat[0]);
+              if (isError(b)) return b;
+              return !b;
+            }
+            default:
+              return err('#NAME?');
+          }
+        }
+        default:
+          return err('#ERROR!');
+      }
+    }
+
+    // ===============================
+    // Calculation over sheet
+    // ===============================
+
+    function parseFormulaToAst(formulaExpr) {
+      const key = String(formulaExpr || '');
+      if (astCache.has(key)) return astCache.get(key);
+      const { tokens, error } = tokenize(key);
+      if (error) {
+        astCache.set(key, { ast: null, error });
+        return { ast: null, error };
+      }
+      try {
+        const ast = new Parser(tokens).parse();
+        const out = { ast, error: null };
+        astCache.set(key, out);
+        return out;
+      } catch {
+        const out = { ast: null, error: err('#ERROR!') };
+        astCache.set(key, out);
+        return out;
+      }
+    }
+
+    function computeCellValue(addr, visiting) {
+      const a = normalizeAddr(addr);
+      if (calcCache.has(a)) return calcCache.get(a);
+      if (visiting.has(a)) {
+        const e = err('#CYCLE!');
+        calcCache.set(a, e);
+        return e;
+      }
+
+      visiting.add(a);
+
+      const raw = getCellRaw(a);
+      let value;
+
+      if (!raw) {
+        value = BLANK;
+      } else if (raw.startsWith("'")) {
+        value = raw.slice(1);
+      } else if (raw.trim().startsWith('=')) {
+        const expr = raw.trim().slice(1);
+        const { ast, error } = parseFormulaToAst(expr);
+        if (error) {
+          value = error;
+        } else {
+          const ctx = {
+            getCell: (addr2, visiting2) => computeCellValue(addr2, visiting2),
+            getRange: (start, end, visiting2) => getRangeValues(start, end, visiting2),
+          };
+          value = evalAst(ast, ctx, visiting);
+        }
+      } else {
+        const t = raw.trim();
+        const upper = t.toUpperCase();
+        if (upper === 'TRUE') value = true;
+        else if (upper === 'FALSE') value = false;
+        else {
+          const cleaned = t.replace(/,/g, '');
+          const isNum =
+            /^[-+]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(cleaned) ||
+            /^[-+]?\.\d+(?:[eE][+-]?\d+)?$/.test(cleaned);
+          value = isNum ? Number(cleaned) : t;
+        }
+      }
+
+      visiting.delete(a);
+      calcCache.set(a, value);
+      return value;
+    }
+
+    function getRangeValues(start, end, visiting) {
+      const s = rcFromAddr(start);
+      const e = rcFromAddr(end);
+      if (!s || !e) return err('#REF!');
+      const rr = normalizeRange(s.r, s.c, e.r, e.c);
+      const out = [];
+      for (let r = rr.r1; r <= rr.r2; r += 1) {
+        for (let c = rr.c1; c <= rr.c2; c += 1) {
+          const addr = addrFromRC(r, c);
+          out.push(computeCellValue(addr, visiting));
+        }
+      }
+      return out;
+    }
+
+    function isFormulaCell(addr) {
+      const raw = getCellRaw(addr).trim();
+      return raw.startsWith('=');
+    }
+
+    function formatValue(value, format, formulaCell) {
+      if (isError(value)) return value.code;
+
+      // BLANK cell: shown empty normally, but formula-result blank often shows 0
+      if (value === BLANK) {
+        return formulaCell ? '0' : '';
+      }
+
+      if (value === null || value === undefined) return '';
+
+      if (typeof value === 'boolean') {
+        return value ? 'TRUE' : 'FALSE';
+      }
+
+      if (value instanceof Date) {
+        if (format === 'datetime') {
+          // YYYY-MM-DD HH:mm:ss
+          const pad = (n) => String(n).padStart(2, '0');
+          return (
+            value.getFullYear() +
+            '-' +
+            pad(value.getMonth() + 1) +
+            '-' +
+            pad(value.getDate()) +
+            ' ' +
+            pad(value.getHours()) +
+            ':' +
+            pad(value.getMinutes()) +
+            ':' +
+            pad(value.getSeconds())
+          );
+        }
+        // date only
+        const pad = (n) => String(n).padStart(2, '0');
+        return (
+          value.getFullYear() +
+          '-' +
+          pad(value.getMonth() + 1) +
+          '-' +
+          pad(value.getDate())
+        );
+      }
+
+      if (format === 'text') {
+        return toText(value);
+      }
+
+      if (typeof value === 'number') {
+        if (!Number.isFinite(value)) return String(value);
+
+        if (format === 'currency') {
+          return new Intl.NumberFormat('ko-KR', {
+            style: 'currency',
+            currency: 'KRW',
+            maximumFractionDigits: 4,
+          }).format(value);
+        }
+        if (format === 'percent') {
+          return new Intl.NumberFormat('ko-KR', {
+            style: 'percent',
+            maximumFractionDigits: 4,
+          }).format(value);
+        }
+        // general/number/date/datetime
+        return new Intl.NumberFormat('ko-KR', {
+          maximumFractionDigits: 10,
+        }).format(value);
+      }
+
+      // strings
+      return String(value);
+    }
+
+    // ===============================
+    // UI: Build Grid
+    // ===============================
+
+    function buildGrid() {
+      dom.grid.innerHTML = '';
+      cellEls = Array.from({ length: state.rows }, () => Array(state.cols).fill(null));
+
+      const thead = document.createElement('thead');
+      const trHead = document.createElement('tr');
+
+      const corner = document.createElement('th');
+      corner.className = 'corner';
+      corner.textContent = '';
+      trHead.appendChild(corner);
+
+      for (let c = 0; c < state.cols; c += 1) {
+        const th = document.createElement('th');
+        th.className = 'col-header';
+        th.textContent = colToName(c);
+        trHead.appendChild(th);
+      }
+
+      thead.appendChild(trHead);
+      dom.grid.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+
+      for (let r = 0; r < state.rows; r += 1) {
+        const tr = document.createElement('tr');
+
+        const th = document.createElement('th');
+        th.className = 'row-header';
+        th.textContent = String(r + 1);
+        tr.appendChild(th);
+
+        for (let c = 0; c < state.cols; c += 1) {
+          const td = document.createElement('td');
+          td.className = 'cell';
+          td.dataset.r = String(r);
+          td.dataset.c = String(c);
+          td.dataset.addr = addrFromRC(r, c);
+          td.contentEditable = 'false';
+          td.spellcheck = false;
+          td.tabIndex = -1;
+          tr.appendChild(td);
+          cellEls[r][c] = td;
+        }
+
+        tbody.appendChild(tr);
+      }
+
+      dom.grid.appendChild(tbody);
+    }
+
+    function addRows(n) {
+      const inc = Math.max(1, Number(n) || 0);
+      state.rows += inc;
+      invalidateCalc();
+      buildGrid();
+      // keep current selection/anchor
+      setActiveCell(state.active.r, state.active.c, true);
+      renderAll();
+      setStatusLeft(`행 +${inc}`);
+    }
+
+    function addCols(n) {
+      const inc = Math.max(1, Number(n) || 0);
+      state.cols += inc;
+      invalidateCalc();
+      buildGrid();
+      setActiveCell(state.active.r, state.active.c, true);
+      renderAll();
+      setStatusLeft(`열 +${inc}`);
+    }
+
+    // ===============================
+    // UI: Selection & Rendering
+    // ===============================
+
+    let prevSelection = null;
+
+    function setActiveCell(r, c, keepAnchor) {
+      const rr = clamp(r, 0, state.rows - 1);
+      const cc = clamp(c, 0, state.cols - 1);
+      state.active = { r: rr, c: cc };
+
+      if (!keepAnchor) {
+        state.selection.anchorR = rr;
+        state.selection.anchorC = cc;
+        state.selection.r1 = rr;
+        state.selection.c1 = cc;
+        state.selection.r2 = rr;
+        state.selection.c2 = cc;
+      }
+
+      updateFormulaBarFromSelection();
+      updateToolbarFromActive();
+      updateSelectionUI();
+      updateStatusBar();
+      scrollActiveCellIntoView();
+    }
+
+    function setSelectionTo(r1, c1, r2, c2) {
+      state.selection.r1 = clamp(r1, 0, state.rows - 1);
+      state.selection.c1 = clamp(c1, 0, state.cols - 1);
+      state.selection.r2 = clamp(r2, 0, state.rows - 1);
+      state.selection.c2 = clamp(c2, 0, state.cols - 1);
+      updateSelectionUI();
+      updateStatusBar();
+    }
+
+    function updateSelectionUI() {
+      const sel = getSelection();
+
+      // clear previous range
+      if (prevSelection) {
+        for (let r = prevSelection.r1; r <= prevSelection.r2; r += 1) {
+          for (let c = prevSelection.c1; c <= prevSelection.c2; c += 1) {
+            const el = cellEls[r]?.[c];
+            if (!el) continue;
+            el.classList.remove('sel');
+          }
+        }
+      }
+
+      // set new
+      for (let r = sel.r1; r <= sel.r2; r += 1) {
+        for (let c = sel.c1; c <= sel.c2; c += 1) {
+          const el = cellEls[r]?.[c];
+          if (!el) continue;
+          el.classList.add('sel');
+        }
+      }
+
+      // active cell outline
+      for (const row of cellEls) {
+        for (const el of row) el.classList.remove('active');
+      }
+      const a = cellEls[state.active.r]?.[state.active.c];
+      if (a) a.classList.add('active');
+
+      prevSelection = sel;
+    }
+
+    function renderAll() {
+      // render cell display values & styles
+      for (let r = 0; r < state.rows; r += 1) {
+        for (let c = 0; c < state.cols; c += 1) {
+          const addr = addrFromRC(r, c);
+          const el = cellEls[r][c];
+          if (!el) continue;
+
+          // don't overwrite while editing
+          if (edit.active && edit.addr === addr) continue;
+
+          const cell = getCell(addr);
+          const fmt = cell?.format ?? 'general';
+          const sty = cell?.style ?? {};
+
+          const value = computeCellValue(addr, new Set());
+          el.textContent = formatValue(value, fmt, isFormulaCell(addr));
+
+          // style reset
+          el.style.fontWeight = sty.bold ? '700' : '';
+          el.style.fontStyle = sty.italic ? 'italic' : '';
+          el.style.textDecoration = sty.underline ? 'underline' : '';
+          el.style.textAlign = sty.align ? sty.align : '';
+        }
+      }
+
+      updateSelectionUI();
+      updateFormulaBarFromSelection();
+      updateToolbarFromActive();
+      updateStatusBar();
+    }
+
+    function scrollActiveCellIntoView() {
+      const el = cellEls[state.active.r]?.[state.active.c];
+      if (!el) return;
+      // gentle scroll into view
+      try {
+        el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      } catch {
+        // ignore
+      }
+    }
+
+    function updateFormulaBarFromSelection() {
+      const addr = getActiveAddr();
+      if (document.activeElement !== dom.nameBox) {
+        dom.nameBox.value = addr;
+      }
+      dom.formulaInput.value = getCellRaw(addr);
+    }
+
+    function updateToolbarFromActive() {
+      const addr = getActiveAddr();
+      const sty = getCellStyle(addr);
+      const fmt = getCellFormat(addr);
+
+      // Keep select in sync (but don't fight user while it's open)
+      dom.formatSelect.value = fmt;
+
+      // visually hint (button border)
+      dom.boldBtn.style.outline = sty.bold ? '2px solid #111' : '';
+      dom.italicBtn.style.outline = sty.italic ? '2px solid #111' : '';
+      dom.underlineBtn.style.outline = sty.underline ? '2px solid #111' : '';
+    }
+
+    function updateUndoRedoButtons() {
+      dom.undoBtn.disabled = undoStack.length === 0;
+      dom.redoBtn.disabled = redoStack.length === 0;
+    }
+
+    function updateStatusBar() {
+      const sel = getSelection();
+      const count = (sel.r2 - sel.r1 + 1) * (sel.c2 - sel.c1 + 1);
+
+      let numericCount = 0;
+      let sum = 0;
+
+      for (let r = sel.r1; r <= sel.r2; r += 1) {
+        for (let c = sel.c1; c <= sel.c2; c += 1) {
+          const addr = addrFromRC(r, c);
+          const v = computeCellValue(addr, new Set());
+          if (isError(v)) continue;
+          const n = toNumber(v);
+          if (isError(n)) continue;
+          if (!Number.isFinite(n)) continue;
+          numericCount += 1;
+          sum += n;
+        }
+      }
+
+      const avg = numericCount ? sum / numericCount : 0;
+      const fmt = (n) => new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 10 }).format(n);
+
+      setStatusRight(
+        `선택: ${count}  |  숫자: ${numericCount}  |  합계: ${fmt(sum)}  |  평균: ${fmt(avg)}`
+      );
+    }
+
+    // ===============================
+    // Editing
+    // ===============================
+
+    function enterEditMode(initialText) {
+      const addr = getActiveAddr();
+      const el = cellEls[state.active.r]?.[state.active.c];
+      if (!el) return;
+
+      if (edit.active) exitEditMode(true);
+
+      edit.active = true;
+      edit.addr = addr;
+      edit.el = el;
+      edit.beforeRaw = getCellRaw(addr);
+
+      el.classList.add('editing');
+      el.contentEditable = 'true';
+      el.textContent = initialText !== undefined ? String(initialText) : edit.beforeRaw;
+      el.focus();
+
+      // place caret at end
+      placeCaretAtEnd(el);
+
+      // show raw in formula bar too
+      dom.formulaInput.value = el.textContent;
+
+      edit.keydownHandler = (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          exitEditMode(true);
+          moveActive(1, 0, false);
+        } else if (e.key === 'Tab') {
+          e.preventDefault();
+          exitEditMode(true);
+          moveActive(0, 1, false);
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          exitEditMode(false);
+        }
+      };
+
+      el.addEventListener('keydown', edit.keydownHandler);
+    }
+
+    function exitEditMode(commit) {
+      if (!edit.active) return;
+      const addr = edit.addr;
+      const el = edit.el;
+
+      if (edit.keydownHandler) {
+        el.removeEventListener('keydown', edit.keydownHandler);
+      }
+
+      const newRaw = commit ? String(el.textContent ?? '') : edit.beforeRaw;
+
+      el.classList.remove('editing');
+      el.contentEditable = 'false';
+
+      edit.active = false;
+      edit.addr = null;
+      edit.el = null;
+      edit.beforeRaw = '';
+      edit.keydownHandler = null;
+
+      if (commit) {
+        if (newRaw !== getCellRaw(addr)) {
+          const before = snapshotCell(addr);
+          setCell(addr, {
+            raw: newRaw,
+            style: getCellStyle(addr),
+            format: getCellFormat(addr),
+          });
+          const after = snapshotCell(addr);
+          commitAction('셀 편집', [{ addr, before, after }]);
+        }
+      }
+
+      invalidateCalc();
+      renderAll();
+      updateFormulaBarFromSelection();
+    }
+
+    function placeCaretAtEnd(el) {
+      try {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        range.collapse(false);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      } catch {
+        // ignore
+      }
+    }
+
+    // ===============================
+    // Formatting actions
+    // ===============================
+
+    function toggleStyleKey(key) {
+      const addr = getActiveAddr();
+      const base = getCellStyle(addr);
+      const nextValue = !base[key];
+
+      const sel = getSelection();
+      const patches = [];
+
+      for (let r = sel.r1; r <= sel.r2; r += 1) {
+        for (let c = sel.c1; c <= sel.c2; c += 1) {
+          const a = addrFromRC(r, c);
+          const before = snapshotCell(a);
+          const style = deepClone(getCellStyle(a));
+          style[key] = nextValue;
+          setCell(a, {
+            raw: getCellRaw(a),
+            style,
+            format: getCellFormat(a),
+          });
+          const after = snapshotCell(a);
+          patches.push({ addr: a, before, after });
+        }
+      }
+
+      commitAction('서식 변경', patches);
+      renderAll();
+    }
+
+    function setAlignment(align) {
+      const sel = getSelection();
+      const patches = [];
+
+      for (let r = sel.r1; r <= sel.r2; r += 1) {
+        for (let c = sel.c1; c <= sel.c2; c += 1) {
+          const a = addrFromRC(r, c);
+          const before = snapshotCell(a);
+          const style = deepClone(getCellStyle(a));
+          style.align = align;
+          setCell(a, {
+            raw: getCellRaw(a),
+            style,
+            format: getCellFormat(a),
+          });
+          const after = snapshotCell(a);
+          patches.push({ addr: a, before, after });
+        }
+      }
+
+      commitAction('정렬 변경', patches);
+      renderAll();
+    }
+
+    function setFormat(fmt) {
+      const sel = getSelection();
+      const patches = [];
+
+      for (let r = sel.r1; r <= sel.r2; r += 1) {
+        for (let c = sel.c1; c <= sel.c2; c += 1) {
+          const a = addrFromRC(r, c);
+          const before = snapshotCell(a);
+          setCell(a, {
+            raw: getCellRaw(a),
+            style: getCellStyle(a),
+            format: fmt,
+          });
+          const after = snapshotCell(a);
+          patches.push({ addr: a, before, after });
+        }
+      }
+
+      commitAction('표시 형식 변경', patches);
+      renderAll();
+    }
+
+    // ===============================
+    // Clipboard: Copy/Paste (TSV)
+    // ===============================
+
+    function selectionToTSV(mode /* 'values'|'raw' */) {
+      const sel = getSelection();
+      const rows = [];
+      for (let r = sel.r1; r <= sel.r2; r += 1) {
+        const cols = [];
+        for (let c = sel.c1; c <= sel.c2; c += 1) {
+          const addr = addrFromRC(r, c);
+          if (mode === 'raw') {
+            cols.push(getCellRaw(addr));
+          } else {
+            const v = computeCellValue(addr, new Set());
+            cols.push(formatValue(v, getCellFormat(addr), isFormulaCell(addr)));
+          }
+        }
+        rows.push(cols.join('\t'));
+      }
+      return rows.join('\n');
+    }
+
+    function pasteFromTSV(text) {
+      const sel = getSelection();
+      const startR = sel.r1;
+      const startC = sel.c1;
+
+      const lines = String(text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+      const grid = lines.map((line) => line.split('\t'));
+
+      const patches = [];
+
+      for (let r = 0; r < grid.length; r += 1) {
+        const row = grid[r];
+        for (let c = 0; c < row.length; c += 1) {
+          const rr = startR + r;
+          const cc = startC + c;
+          if (rr >= state.rows || cc >= state.cols) continue;
+          const addr = addrFromRC(rr, cc);
+          const before = snapshotCell(addr);
+          setCell(addr, {
+            raw: row[c],
+            style: getCellStyle(addr),
+            format: getCellFormat(addr),
+          });
+          const after = snapshotCell(addr);
+          patches.push({ addr, before, after });
+        }
+      }
+
+      commitAction('붙여넣기', patches);
+      invalidateCalc();
+      renderAll();
+    }
+
+    function clearSelection() {
+      const sel = getSelection();
+      const patches = [];
+
+      for (let r = sel.r1; r <= sel.r2; r += 1) {
+        for (let c = sel.c1; c <= sel.c2; c += 1) {
+          const addr = addrFromRC(r, c);
+          const before = snapshotCell(addr);
+          setCell(addr, {
+            raw: '',
+            style: getCellStyle(addr),
+            format: getCellFormat(addr),
+          });
+          const after = snapshotCell(addr);
+          patches.push({ addr, before, after });
+        }
+      }
+
+      commitAction('지우기', patches);
+      invalidateCalc();
+      renderAll();
+    }
+
+    // ===============================
+    // CSV Import/Export
+    // ===============================
+
+    function csvEscape(value) {
+      const s = String(value ?? '');
+      if (/[",\n]/.test(s)) {
+        return '"' + s.replace(/"/g, '""') + '"';
+      }
+      return s;
+    }
+
+    function exportCSV(mode /* 'values'|'raw' */) {
+      // determine bounds (last used row/col)
+      let maxR = 0;
+      let maxC = 0;
+      for (const addr of Object.keys(state.cells)) {
+        const rc = rcFromAddr(addr);
+        if (!rc) continue;
+        maxR = Math.max(maxR, rc.r);
+        maxC = Math.max(maxC, rc.c);
+      }
+      maxR = clamp(maxR, 0, state.rows - 1);
+      maxC = clamp(maxC, 0, state.cols - 1);
+
+      const rows = [];
+      for (let r = 0; r <= maxR; r += 1) {
+        const cols = [];
+        for (let c = 0; c <= maxC; c += 1) {
+          const addr = addrFromRC(r, c);
+          if (mode === 'raw') {
+            cols.push(csvEscape(getCellRaw(addr)));
+          } else {
+            const v = computeCellValue(addr, new Set());
+            cols.push(csvEscape(formatValue(v, getCellFormat(addr), isFormulaCell(addr))));
+          }
+        }
+        rows.push(cols.join(','));
+      }
+      return rows.join('\n');
+    }
+
+    function parseCSV(text) {
+      const rows = [];
+      let row = [];
+      let cur = '';
+      let i = 0;
+      let inQuotes = false;
+
+      const s = String(text || '');
+
+      while (i < s.length) {
+        const ch = s[i];
+
+        if (inQuotes) {
+          if (ch === '"') {
+            if (s[i + 1] === '"') {
+              cur += '"';
+              i += 2;
+              continue;
+            }
+            inQuotes = false;
+            i += 1;
+            continue;
+          }
+          cur += ch;
+          i += 1;
+          continue;
+        }
+
+        if (ch === '"') {
+          inQuotes = true;
+          i += 1;
+          continue;
+        }
+
+        if (ch === ',') {
+          row.push(cur);
+          cur = '';
+          i += 1;
+          continue;
+        }
+
+        if (ch === '\n') {
+          row.push(cur);
+          rows.push(row);
+          row = [];
+          cur = '';
+          i += 1;
+          continue;
+        }
+
+        if (ch === '\r') {
+          i += 1;
+          continue;
+        }
+
+        cur += ch;
+        i += 1;
+      }
+
+      row.push(cur);
+      rows.push(row);
+
+      return rows;
+    }
+
+    function importCSVIntoSheet(csvText) {
+      const data = parseCSV(csvText);
+      const neededRows = Math.max(DEFAULT_ROWS, data.length);
+      const neededCols = Math.max(DEFAULT_COLS, ...data.map((r) => r.length));
+
+      state.rows = neededRows;
+      state.cols = neededCols;
+      state.cells = {};
+      undoStack = [];
+      redoStack = [];
+
+      for (let r = 0; r < data.length; r += 1) {
+        for (let c = 0; c < data[r].length; c += 1) {
+          const addr = addrFromRC(r, c);
+          const raw = data[r][c];
+          if (raw !== '') {
+            state.cells[addr] = { raw, format: 'general', style: {} };
+          }
+        }
+      }
+
+      invalidateCalc();
+      buildGrid();
+      setActiveCell(0, 0, false);
+      renderAll();
+      scheduleAutosave();
+      setStatusLeft('CSV 불러옴');
+    }
+
+    // ===============================
+    // Keyboard navigation
+    // ===============================
+
+    function moveActive(dr, dc, extend) {
+      const nr = clamp(state.active.r + dr, 0, state.rows - 1);
+      const nc = clamp(state.active.c + dc, 0, state.cols - 1);
+      state.active = { r: nr, c: nc };
+
+      if (extend) {
+        setSelectionTo(state.selection.anchorR, state.selection.anchorC, nr, nc);
+      } else {
+        setActiveCell(nr, nc, false);
+      }
+
+      updateFormulaBarFromSelection();
+      updateToolbarFromActive();
+      updateSelectionUI();
+      updateStatusBar();
+      scrollActiveCellIntoView();
+    }
+
+    // ===============================
+    // Event Wiring
+    // ===============================
+
+    function wireEvents() {
+      // Mouse selection (event delegation)
+      dom.grid.addEventListener('mousedown', (e) => {
+        const td = e.target.closest('td.cell');
+        if (!td) return;
+
+        if (edit.active) exitEditMode(true);
+
+        const r = Number(td.dataset.r);
+        const c = Number(td.dataset.c);
+
+        if (e.shiftKey) {
+          // extend selection from anchor
+          state.active = { r, c };
+          setSelectionTo(state.selection.anchorR, state.selection.anchorC, r, c);
+        } else {
+          setActiveCell(r, c, false);
+        }
+
+        mouseSelecting = true;
+        e.preventDefault();
+      });
+
+      dom.grid.addEventListener('mouseover', (e) => {
+        if (!mouseSelecting) return;
+        const td = e.target.closest('td.cell');
+        if (!td) return;
+        const r = Number(td.dataset.r);
+        const c = Number(td.dataset.c);
+        state.active = { r, c };
+        setSelectionTo(state.selection.anchorR, state.selection.anchorC, r, c);
+      });
+
+      document.addEventListener('mouseup', () => {
+        mouseSelecting = false;
+      });
+
+      dom.grid.addEventListener('dblclick', (e) => {
+        const td = e.target.closest('td.cell');
+        if (!td) return;
+        const r = Number(td.dataset.r);
+        const c = Number(td.dataset.c);
+        setActiveCell(r, c, false);
+        enterEditMode();
+      });
+
+      // Formula bar
+      dom.formulaInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const addr = getActiveAddr();
+          const before = snapshotCell(addr);
+          setCell(addr, {
+            raw: dom.formulaInput.value,
+            style: getCellStyle(addr),
+            format: getCellFormat(addr),
+          });
+          const after = snapshotCell(addr);
+          commitAction('수식 입력', [{ addr, before, after }]);
+          invalidateCalc();
+          renderAll();
+          scrollActiveCellIntoView();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          updateFormulaBarFromSelection();
+          dom.formulaInput.blur();
+        }
+      });
+
+      dom.formulaInput.addEventListener('input', () => {
+        // live preview in cell while typing? (optional)
+      });
+
+      // Name box: jump to cell address (예: C12)
+      dom.nameBox.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const target = String(dom.nameBox.value || '').trim();
+          if (!target) {
+            dom.nameBox.value = getActiveAddr();
+            dom.nameBox.blur();
+            return;
+          }
+          const rc = rcFromAddr(target);
+          if (!rc) {
+            alert('셀 주소 형식이 올바르지 않습니다. 예: A1, C12, AA3');
+            dom.nameBox.value = getActiveAddr();
+            dom.nameBox.select();
+            return;
+          }
+          // auto expand
+          const needRows = rc.r + 1;
+          const needCols = rc.c + 1;
+          let rebuilt = false;
+          if (needRows > state.rows) {
+            state.rows = needRows;
+            rebuilt = true;
+          }
+          if (needCols > state.cols) {
+            state.cols = needCols;
+            rebuilt = true;
+          }
+          if (rebuilt) {
+            invalidateCalc();
+            buildGrid();
+          }
+          setActiveCell(rc.r, rc.c, false);
+          renderAll();
+          dom.nameBox.blur();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          dom.nameBox.value = getActiveAddr();
+          dom.nameBox.blur();
+        }
+      });
+
+      dom.nameBox.addEventListener('blur', () => {
+        dom.nameBox.value = getActiveAddr();
+      });
+
+      // Toolbar buttons
+      dom.newBtn.addEventListener('click', () => {
+        if (!confirm('현재 내용을 지우고 새 시트를 만들까요?')) return;
+        state = {
+          version: APP_VERSION,
+          rows: DEFAULT_ROWS,
+          cols: DEFAULT_COLS,
+          cells: {},
+          active: { r: 0, c: 0 },
+          selection: { r1: 0, c1: 0, r2: 0, c2: 0, anchorR: 0, anchorC: 0 },
+        };
+        undoStack = [];
+        redoStack = [];
+        invalidateCalc();
+        buildGrid();
+        setActiveCell(0, 0, false);
+        renderAll();
+        scheduleAutosave();
+        setStatusLeft('새 시트');
+      });
+
+      dom.undoBtn.addEventListener('click', () => {
+        const action = undoStack.pop();
+        if (!action) return;
+        redoStack.push(action);
+        applyPatches(action.patches, 'before');
+        setStatusLeft(`실행취소: ${action.label}`);
+      });
+
+      dom.redoBtn.addEventListener('click', () => {
+        const action = redoStack.pop();
+        if (!action) return;
+        undoStack.push(action);
+        applyPatches(action.patches, 'after');
+        setStatusLeft(`다시실행: ${action.label}`);
+      });
+
+      dom.boldBtn.addEventListener('click', () => toggleStyleKey('bold'));
+      dom.italicBtn.addEventListener('click', () => toggleStyleKey('italic'));
+      dom.underlineBtn.addEventListener('click', () => toggleStyleKey('underline'));
+
+      document.querySelectorAll('[data-align]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          setAlignment(btn.dataset.align);
+        });
+      });
+
+      dom.formatSelect.addEventListener('change', () => {
+        setFormat(dom.formatSelect.value);
+      });
+
+      dom.csvExportValuesBtn.addEventListener('click', () => {
+        const csv = exportCSV('values');
+        downloadTextFile('sheet-values.csv', csv, 'text/csv;charset=utf-8');
+      });
+
+      dom.csvExportRawBtn.addEventListener('click', () => {
+        const csv = exportCSV('raw');
+        downloadTextFile('sheet-raw.csv', csv, 'text/csv;charset=utf-8');
+      });
+
+      dom.addRowBtn.addEventListener('click', () => addRows(50));
+      dom.addColBtn.addEventListener('click', () => addCols(10));
+
+      dom.jsonExportBtn.addEventListener('click', () => {
+        const payload = {
+          magic: FILE_MAGIC,
+          version: APP_VERSION,
+          rows: state.rows,
+          cols: state.cols,
+          cells: state.cells,
+        };
+        downloadTextFile('sheet.json', JSON.stringify(payload, null, 2), 'application/json;charset=utf-8');
+      });
+
+      dom.importBtn.addEventListener('click', () => {
+        dom.fileInput.value = '';
+        dom.fileInput.click();
+      });
+
+      dom.fileInput.addEventListener('change', async () => {
+        const file = dom.fileInput.files && dom.fileInput.files[0];
+        if (!file) return;
+        const text = await file.text();
+        const name = file.name.toLowerCase();
+
+        if (name.endsWith('.csv')) {
+          importCSVIntoSheet(text);
+          return;
+        }
+
+        // JSON
+        try {
+          const payload = JSON.parse(text);
+          if (!payload || payload.magic !== FILE_MAGIC) {
+            alert('지원하지 않는 JSON 형식입니다.');
+            return;
+          }
+          state.rows = payload.rows || DEFAULT_ROWS;
+          state.cols = payload.cols || DEFAULT_COLS;
+          state.cells = payload.cells || {};
+          undoStack = [];
+          redoStack = [];
+          invalidateCalc();
+          buildGrid();
+          setActiveCell(0, 0, false);
+          renderAll();
+          scheduleAutosave();
+          setStatusLeft('JSON 불러옴');
+        } catch {
+          alert('파일을 불러오는 데 실패했습니다.');
+        }
+      });
+
+      // Global keyboard
+      document.addEventListener('keydown', (e) => {
+        if (edit.active) return;
+
+        const isInInput =
+          document.activeElement === dom.formulaInput ||
+          document.activeElement === dom.nameBox ||
+          (document.activeElement && document.activeElement.tagName === 'INPUT') ||
+          (document.activeElement && document.activeElement.tagName === 'TEXTAREA') ||
+          (document.activeElement && document.activeElement.isContentEditable);
+
+        // We still want Ctrl shortcuts even when formula bar focused
+        const ctrlOrMeta = e.ctrlKey || e.metaKey;
+
+        if (ctrlOrMeta) {
+          const k = e.key.toLowerCase();
+          if (k === 'z') {
+            e.preventDefault();
+            dom.undoBtn.click();
+            return;
+          }
+          if (k === 'y') {
+            e.preventDefault();
+            dom.redoBtn.click();
+            return;
+          }
+          if (k === 'b') {
+            e.preventDefault();
+            dom.boldBtn.click();
+            return;
+          }
+          if (k === 'i') {
+            e.preventDefault();
+            dom.italicBtn.click();
+            return;
+          }
+          if (k === 'u') {
+            e.preventDefault();
+            dom.underlineBtn.click();
+            return;
+          }
+        }
+
+        if (isInInput) return;
+
+        // navigation
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          moveActive(-1, 0, e.shiftKey);
+          return;
+        }
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          moveActive(1, 0, e.shiftKey);
+          return;
+        }
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          moveActive(0, -1, e.shiftKey);
+          return;
+        }
+        if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          moveActive(0, 1, e.shiftKey);
+          return;
+        }
+
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          moveActive(1, 0, false);
+          return;
+        }
+
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          moveActive(0, 1, false);
+          return;
+        }
+
+        if (e.key === 'F2') {
+          e.preventDefault();
+          enterEditMode();
+          return;
+        }
+
+        if (e.key === 'Backspace' || e.key === 'Delete') {
+          e.preventDefault();
+          clearSelection();
+          return;
+        }
+
+        // start typing to edit
+        const printable = e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey;
+        if (printable) {
+          e.preventDefault();
+          enterEditMode(e.key);
+        }
+      });
+
+      // Clipboard events (TSV)
+      document.addEventListener('copy', (e) => {
+        if (edit.active) return;
+        const tsv = selectionToTSV('raw');
+        e.clipboardData.setData('text/plain', tsv);
+        e.preventDefault();
+        setStatusLeft('복사됨');
+      });
+
+      document.addEventListener('cut', (e) => {
+        if (edit.active) return;
+        const tsv = selectionToTSV('raw');
+        e.clipboardData.setData('text/plain', tsv);
+        e.preventDefault();
+        clearSelection();
+        setStatusLeft('잘라내기');
+      });
+
+      document.addEventListener('paste', (e) => {
+        if (edit.active) return;
+        const text = e.clipboardData.getData('text/plain');
+        if (!text) return;
+        e.preventDefault();
+        pasteFromTSV(text);
+        setStatusLeft('붙여넣기');
+      });
+
+      // commit edit on blur (click outside)
+      document.addEventListener('click', (e) => {
+        if (!edit.active) return;
+        if (edit.el && (e.target === edit.el || edit.el.contains(e.target))) return;
+        // if click on formula input, commit edit
+        exitEditMode(true);
+      });
+    }
+
+    // ===============================
+    // Init
+    // ===============================
+
+    function init() {
+      const saved = loadAutosave();
+      if (saved) {
+        state.rows = saved.rows || DEFAULT_ROWS;
+        state.cols = saved.cols || DEFAULT_COLS;
+        state.cells = saved.cells || {};
+        setStatusLeft('자동 저장 불러옴');
+      } else {
+        setStatusLeft('준비');
+      }
+
+      buildGrid();
+      wireEvents();
+      setActiveCell(0, 0, false);
+      updateUndoRedoButtons();
+      renderAll();
+    }
+
+    init();
+  })();
+  </script>
+</body>
+</html>
