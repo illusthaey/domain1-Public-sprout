@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pure JS Pivot Table (CSV Drag & Drop)</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px; }
+    h1 { margin: 0 0 12px; font-size: 20px; }
+    .muted { color: #666; font-size: 13px; line-height: 1.5; }
+    .row { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; margin: 16px 0; }
+    .card { border: 1px solid #ddd; border-radius: 10px; padding: 14px; }
+    #dropzone {
+      border: 2px dashed #aaa;
+      border-radius: 12px;
+      padding: 22px;
+      text-align: center;
+      cursor: pointer;
+      user-select: none;
+      background: #fafafa;
+    }
+    #dropzone.dragover { border-color: #333; background: #f0f0f0; }
+    select, button {
+      padding: 8px 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: white;
+      font-size: 14px;
+    }
+    button { cursor: pointer; }
+    table { border-collapse: collapse; width: 100%; margin-top: 14px; }
+    th, td { border: 1px solid #ddd; padding: 8px 10px; font-size: 13px; }
+    th { background: #f6f6f6; text-align: left; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    tfoot td, tfoot th { font-weight: 700; background: #fbfbfb; }
+    .error { color: #b00020; white-space: pre-wrap; }
+    .ok { color: #0b6; }
+    .spacer { height: 8px; }
+    .pill { display: inline-block; padding: 2px 8px; border: 1px solid #ddd; border-radius: 999px; font-size: 12px; background: #fff; }
+  </style>
+</head>
+<body>
+  <h1>Pure JS Pivot Table</h1>
+  <div class="muted">
+    CSV 파일을 드래그 앤 드롭하면, 행/열/값/집계(개수·합계·평균)를 선택해서 피벗 테이블을 만듭니다.<br/>
+    엑셀 파일이면 “다른 이름으로 저장 → CSV”로 저장해서 넣는 게 가장 간단합니다.
+  </div>
+
+  <div class="spacer"></div>
+
+  <div id="dropzone" class="card">
+    여기에 CSV 파일을 드래그 앤 드롭<br/>
+    <span class="muted">(또는 클릭해서 파일 선택)</span>
+  </div>
+  <input id="fileInput" type="file" accept=".csv,text/csv" style="display:none;" />
+
+  <div id="status" class="spacer muted"></div>
+  <div id="error" class="error"></div>
+
+  <div id="controls" class="card" style="display:none;">
+    <div class="row">
+      <span class="pill">행(ROWS)</span>
+      <select id="rowField"></select>
+
+      <span class="pill">열(COLS)</span>
+      <select id="colField"></select>
+
+      <span class="pill">값(VALUES)</span>
+      <select id="valueField"></select>
+
+      <span class="pill">집계(AGG)</span>
+      <select id="agg">
+        <option value="count">개수(count)</option>
+        <option value="sum">합계(sum)</option>
+        <option value="avg">평균(avg)</option>
+        <option value="min">최소(min)</option>
+        <option value="max">최대(max)</option>
+      </select>
+
+      <button id="run">피벗 다시 계산</button>
+    </div>
+    <div id="meta" class="muted"></div>
+  </div>
+
+  <div id="tableWrap"></div>
+
+<script>
+(() => {
+  const $ = (sel) => document.querySelector(sel);
+
+  const dropzone = $("#dropzone");
+  const fileInput = $("#fileInput");
+  const status = $("#status");
+  const errorBox = $("#error");
+  const controls = $("#controls");
+
+  const rowFieldSel = $("#rowField");
+  const colFieldSel = $("#colField");
+  const valueFieldSel = $("#valueField");
+  const aggSel = $("#agg");
+  const runBtn = $("#run");
+  const metaBox = $("#meta");
+  const tableWrap = $("#tableWrap");
+
+  let parsedRows = [];
+  let headers = [];
+
+  // ---------- CSV parsing (handles quotes) ----------
+  function parseCSVToGrid(text, delimiter = ",") {
+    // Remove UTF-8 BOM if present
+    if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+
+    const grid = [];
+    let row = [];
+    let field = "";
+    let inQuotes = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+
+      if (inQuotes) {
+        if (ch === '"') {
+          const next = text[i + 1];
+          if (next === '"') { // escaped quote
+            field += '"';
+            i++;
+          } else {
+            inQuotes = false;
+          }
+        } else {
+          field += ch;
+        }
+        continue;
+      }
+
+      if (ch === '"') {
+        inQuotes = true;
+        continue;
+      }
+
+      if (ch === delimiter) {
+        row.push(field);
+        field = "";
+        continue;
+      }
+
+      if (ch === "\n") {
+        row.push(field);
+        field = "";
+        grid.push(row);
+        row = [];
+        continue;
+      }
+
+      if (ch === "\r") {
+        // ignore CR (handles CRLF)
+        continue;
+      }
+
+      field += ch;
+    }
+
+    // last field
+    row.push(field);
+    grid.push(row);
+
+    // trim trailing empty rows
+    while (grid.length > 0) {
+      const last = grid[grid.length - 1];
+      const allEmpty = last.every(v => String(v ?? "").trim() === "");
+      if (!allEmpty) break;
+      grid.pop();
+    }
+    return grid;
+  }
+
+  function makeUniqueHeaders(rawHeaders) {
+    const seen = new Map();
+    return rawHeaders.map((h, idx) => {
+      const base = (h ?? "").trim() || `컬럼${idx+1}`;
+      const count = (seen.get(base) ?? 0) + 1;
+      seen.set(base, count);
+      return count === 1 ? base : `${base}_${count}`;
+    });
+  }
+
+  function gridToObjects(grid) {
+    if (!grid || grid.length < 1) return { headers: [], rows: [] };
+    const rawHeaders = grid[0];
+    const headers = makeUniqueHeaders(rawHeaders);
+
+    const rows = [];
+    for (let i = 1; i < grid.length; i++) {
+      const cells = grid[i];
+      // skip fully empty line
+      const isEmpty = cells.every(v => String(v ?? "").trim() === "");
+      if (isEmpty) continue;
+
+      const obj = {};
+      for (let c = 0; c < headers.length; c++) {
+        obj[headers[c]] = (cells[c] ?? "").trim();
+      }
+      rows.push(obj);
+    }
+    return { headers, rows };
+  }
+
+  function detectNumericField(headers, rows, threshold = 0.8) {
+    let best = null;
+    for (const h of headers) {
+      let nonEmpty = 0;
+      let numeric = 0;
+      for (const r of rows) {
+        const v = String(r[h] ?? "").trim();
+        if (!v) continue;
+        nonEmpty++;
+        const n = Number(v.replaceAll(",", ""));
+        if (Number.isFinite(n)) numeric++;
+      }
+      if (nonEmpty === 0) continue;
+      if (numeric / nonEmpty >= threshold) {
+        best = h;
+        break;
+      }
+    }
+    return best;
+  }
+
+  // ---------- Pivot engine ----------
+  const SEP = "\u001F";   // for composite keys
+  const CELL_SEP = "\u001E";
+
+  function buildKey(obj, fields) {
+    return fields.map(f => String(obj[f] ?? "")).join(SEP);
+  }
+
+  function buildLabel(obj, fields) {
+    return fields.map(f => String(obj[f] ?? "")).join(" / ");
+  }
+
+  function initAggState(agg) {
+    switch (agg) {
+      case "sum": return 0;
+      case "count": return 0;
+      case "avg": return { sum: 0, count: 0 };
+      case "min": return null;
+      case "max": return null;
+      default: return 0;
+    }
+  }
+
+  function toNumberMaybe(v) {
+    const s = String(v ?? "").trim();
+    if (!s) return NaN;
+    return Number(s.replaceAll(",", ""));
+  }
+
+  function addAgg(state, agg, rawValue) {
+    switch (agg) {
+      case "count":
+        return state + 1;
+
+      case "sum": {
+        const n = toNumberMaybe(rawValue);
+        return state + (Number.isFinite(n) ? n : 0);
+      }
+
+      case "avg": {
+        const n = toNumberMaybe(rawValue);
+        if (!Number.isFinite(n)) return state;
+        state.sum += n;
+        state.count += 1;
+        return state;
+      }
+
+      case "min": {
+        const n = toNumberMaybe(rawValue);
+        if (!Number.isFinite(n)) return state;
+        if (state === null) return n;
+        return Math.min(state, n);
+      }
+
+      case "max": {
+        const n = toNumberMaybe(rawValue);
+        if (!Number.isFinite(n)) return state;
+        if (state === null) return n;
+        return Math.max(state, n);
+      }
+
+      default:
+        return state;
+    }
+  }
+
+  function finalizeAgg(state, agg) {
+    switch (agg) {
+      case "avg":
+        return state.count ? state.sum / state.count : null;
+      default:
+        return state;
+    }
+  }
+
+  function pivotTable(rows, config) {
+    const {
+      rowFields,
+      colFields,
+      valueField,  // optional for count
+      agg
+    } = config;
+
+    const rowKeyToLabel = new Map();
+    const colKeyToLabel = new Map();
+
+    const cellState = new Map();      // "rk␞ck" -> state
+    const rowTotalState = new Map();  // rk -> state
+    const colTotalState = new Map();  // ck -> state
+    let grandState = initAggState(agg);
+
+    for (const r of rows) {
+      const rk = buildKey(r, rowFields);
+      const ck = buildKey(r, colFields);
+
+      if (!rowKeyToLabel.has(rk)) rowKeyToLabel.set(rk, buildLabel(r, rowFields));
+      if (!colKeyToLabel.has(ck)) colKeyToLabel.set(ck, buildLabel(r, colFields));
+
+      const cellKey = rk + CELL_SEP + ck;
+
+      if (!cellState.has(cellKey)) cellState.set(cellKey, initAggState(agg));
+      if (!rowTotalState.has(rk)) rowTotalState.set(rk, initAggState(agg));
+      if (!colTotalState.has(ck)) colTotalState.set(ck, initAggState(agg));
+
+      const rawValue = valueField ? r[valueField] : undefined;
+
+      cellState.set(cellKey, addAgg(cellState.get(cellKey), agg, rawValue));
+      rowTotalState.set(rk, addAgg(rowTotalState.get(rk), agg, rawValue));
+      colTotalState.set(ck, addAgg(colTotalState.get(ck), agg, rawValue));
+      grandState = addAgg(grandState, agg, rawValue);
+    }
+
+    const rowKeys = Array.from(rowKeyToLabel.keys());
+    const colKeys = Array.from(colKeyToLabel.keys());
+
+    const rowLabels = rowKeys.map(k => rowKeyToLabel.get(k));
+    const colLabels = colKeys.map(k => colKeyToLabel.get(k));
+
+    const matrix = rowKeys.map(rk => {
+      return colKeys.map(ck => {
+        const key = rk + CELL_SEP + ck;
+        const state = cellState.get(key);
+        return state === undefined ? null : finalizeAgg(state, agg);
+      });
+    });
+
+    const rowTotals = rowKeys.map(rk => finalizeAgg(rowTotalState.get(rk) ?? initAggState(agg), agg));
+    const colTotals = colKeys.map(ck => finalizeAgg(colTotalState.get(ck) ?? initAggState(agg), agg));
+    const grandTotal = finalizeAgg(grandState, agg);
+
+    return {
+      rowFields, colFields, valueField, agg,
+      rowKeys, colKeys,
+      rowLabels, colLabels,
+      matrix,
+      rowTotals, colTotals, grandTotal
+    };
+  }
+
+  // ---------- Rendering ----------
+  const nf = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 6 });
+
+  function formatCell(v) {
+    if (v === null || v === undefined) return "";
+    if (typeof v === "number") return nf.format(v);
+    return String(v);
+  }
+
+  function renderPivot(result) {
+    tableWrap.innerHTML = "";
+
+    const table = document.createElement("table");
+
+    // THEAD
+    const thead = document.createElement("thead");
+    const trh = document.createElement("tr");
+
+    const th0 = document.createElement("th");
+    th0.textContent = result.rowFields.join(" / ");
+    trh.appendChild(th0);
+
+    for (const label of result.colLabels) {
+      const th = document.createElement("th");
+      th.textContent = label || "(빈값)";
+      trh.appendChild(th);
+    }
+
+    const thT = document.createElement("th");
+    thT.textContent = "합계";
+    trh.appendChild(thT);
+
+    thead.appendChild(trh);
+    table.appendChild(thead);
+
+    // TBODY
+    const tbody = document.createElement("tbody");
+    for (let i = 0; i < result.rowLabels.length; i++) {
+      const tr = document.createElement("tr");
+
+      const th = document.createElement("th");
+      th.textContent = result.rowLabels[i] || "(빈값)";
+      tr.appendChild(th);
+
+      for (let j = 0; j < result.colLabels.length; j++) {
+        const td = document.createElement("td");
+        const v = result.matrix[i][j];
+        td.textContent = formatCell(v);
+        td.className = "num";
+        tr.appendChild(td);
+      }
+
+      const tdTotal = document.createElement("td");
+      tdTotal.textContent = formatCell(result.rowTotals[i]);
+      tdTotal.className = "num";
+      tr.appendChild(tdTotal);
+
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+
+    // TFOOT
+    const tfoot = document.createElement("tfoot");
+    const trf = document.createElement("tr");
+
+    const thSum = document.createElement("th");
+    thSum.textContent = "합계";
+    trf.appendChild(thSum);
+
+    for (let j = 0; j < result.colTotals.length; j++) {
+      const td = document.createElement("td");
+      td.textContent = formatCell(result.colTotals[j]);
+      td.className = "num";
+      trf.appendChild(td);
+    }
+
+    const tdGrand = document.createElement("td");
+    tdGrand.textContent = formatCell(result.grandTotal);
+    tdGrand.className = "num";
+    trf.appendChild(tdGrand);
+
+    tfoot.appendChild(trf);
+    table.appendChild(tfoot);
+
+    tableWrap.appendChild(table);
+  }
+
+  function setStatus(msg, ok = true) {
+    status.innerHTML = ok ? `<span class="ok">${msg}</span>` : msg;
+  }
+
+  function setError(msg) {
+    errorBox.textContent = msg || "";
+  }
+
+  function fillSelect(selectEl, options, selected) {
+    selectEl.innerHTML = "";
+    for (const opt of options) {
+      const o = document.createElement("option");
+      o.value = opt.value;
+      o.textContent = opt.label;
+      if (opt.value === selected) o.selected = true;
+      selectEl.appendChild(o);
+    }
+  }
+
+  function updatePivot() {
+    setError("");
+
+    if (!parsedRows.length || !headers.length) {
+      setError("데이터가 없습니다. CSV를 먼저 업로드하세요.");
+      return;
+    }
+
+    const rowField = rowFieldSel.value;
+    const colField = colFieldSel.value;
+    const valueField = valueFieldSel.value === "__none__" ? null : valueFieldSel.value;
+    let agg = aggSel.value;
+
+    // Guard: sum/avg/min/max need a valueField
+    if ((agg !== "count") && !valueField) {
+      agg = "count";
+      aggSel.value = "count";
+    }
+
+    const result = pivotTable(parsedRows, {
+      rowFields: [rowField],
+      colFields: [colField],
+      valueField,
+      agg
+    });
+
+    renderPivot(result);
+
+    const valueText = valueField ? valueField : "(없음)";
+    metaBox.textContent =
+      `원본 행 수: ${parsedRows.length.toLocaleString("ko-KR")} | ` +
+      `행: ${rowField} | 열: ${colField} | 값: ${valueText} | 집계: ${agg}`;
+
+    setStatus("피벗 계산 완료");
+  }
+
+  function loadCSVText(file, text) {
+    setError("");
+    tableWrap.innerHTML = "";
+
+    const grid = parseCSVToGrid(text);
+    const converted = gridToObjects(grid);
+    headers = converted.headers;
+    parsedRows = converted.rows;
+
+    if (!headers.length || !parsedRows.length) {
+      setError("CSV를 읽었지만 유효한 데이터가 없습니다. (헤더/내용을 확인하세요)");
+      controls.style.display = "none";
+      return;
+    }
+
+    // Populate selects
+    const headerOpts = headers.map(h => ({ value: h, label: h }));
+
+    const suggestedRow = headers[0];
+    const suggestedCol = headers[1] ?? headers[0];
+    const numericField = detectNumericField(headers, parsedRows);
+
+    fillSelect(rowFieldSel, headerOpts, suggestedRow);
+    fillSelect(colFieldSel, headerOpts, suggestedCol);
+
+    const valueOpts = [{ value: "__none__", label: "(없음) - count용" }].concat(headerOpts);
+    fillSelect(valueFieldSel, valueOpts, numericField ?? "__none__");
+
+    // Default agg: if numeric field exists -> sum, else count
+    if (numericField) {
+      aggSel.value = "sum";
+    } else {
+      aggSel.value = "count";
+    }
+
+    controls.style.display = "block";
+    setStatus(`로드 완료: ${file.name} (컬럼 ${headers.length}개, 행 ${parsedRows.length}개)`);
+
+    updatePivot();
+  }
+
+  function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(reader.error);
+      reader.onload = () => resolve(String(reader.result ?? ""));
+      reader.readAsText(file, "utf-8");
+    });
+  }
+
+  async function handleFile(file) {
+    try {
+      setStatus("파일 읽는 중...");
+      const text = await readFileAsText(file);
+      loadCSVText(file, text);
+    } catch (e) {
+      setError("파일을 읽는 중 오류가 발생했습니다.\n" + (e?.message ?? String(e)));
+    }
+  }
+
+  // ---------- Drag & Drop + click ----------
+  dropzone.addEventListener("click", () => fileInput.click());
+
+  dropzone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropzone.classList.add("dragover");
+  });
+
+  dropzone.addEventListener("dragleave", () => {
+    dropzone.classList.remove("dragover");
+  });
+
+  dropzone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropzone.classList.remove("dragover");
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".csv")) {
+      setError("CSV 파일만 지원합니다. 엑셀이라면 CSV로 저장해서 넣어주세요.");
+      return;
+    }
+    handleFile(file);
+  });
+
+  fileInput.addEventListener("change", () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".csv")) {
+      setError("CSV 파일만 지원합니다. 엑셀이라면 CSV로 저장해서 넣어주세요.");
+      return;
+    }
+    handleFile(file);
+  });
+
+  runBtn.addEventListener("click", updatePivot);
+  rowFieldSel.addEventListener("change", updatePivot);
+  colFieldSel.addEventListener("change", updatePivot);
+  valueFieldSel.addEventListener("change", updatePivot);
+  aggSel.addEventListener("change", updatePivot);
+
+  setStatus("CSV 파일을 넣어주세요.");
+})();
+</script>
+</body>
+</html>
