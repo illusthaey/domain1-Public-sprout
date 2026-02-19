@@ -753,7 +753,7 @@ body h2 + hr {
 }
 
 
-#btnToTop{
+.btnToTop{
       position: fixed;
       right: 16px;
       bottom: 16px;
