@@ -3,8 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+
+  <link rel="icon" href="/static/favicon.ico" />
   <link rel="stylesheet" href="/static/style.css" />
-  <title>원본대조필 도장 찍기 (실측 6.1×2.5cm)</title>
+  <title>원본대조필 도장 자동 찍어줌</title>
 
   <!-- pdf-lib (PDF 편집/저장) -->
   <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
@@ -12,6 +15,9 @@
   <!-- PDF.js (미리보기 렌더링) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
+
+
+  
   <style>
     /* 추가 CSS 파일은 금지이므로, 필수 UI(드롭존/오버레이)만 최소 인라인 스타일 */
     .dropzone {
@@ -140,40 +146,31 @@
 </head>
 
 <body>
-  <header class="site-header">
-    <div class="shell">
-      <div class="row between">
-        <div style="font-weight:700;">업무보조</div>
-        <a class="btn btn-home" href="/">홈</a>
-      </div>
-    </div>
-  </header>
 
   <main>
     <div class="container">
-      <h1>원본대조필 도장 찍기</h1>
-      <p class="subtitle">
-        도장 실측: <b>가로 6.1cm × 세로 2.5cm</b> (PDF 포인트로 고정 삽입).<br/>
-        인쇄 시 “페이지에 맞춤”을 끄고 <b>실제 크기(100%)</b>로 출력해야 실측이 맞습니다.
+      <h1>원본대조필 도장 자동 찍기</h1>
+      <p class="muted">
+        ·도장 실제 크기(가로6.1cm *세로2.5cm)에 맞게 pdf에 일괄 삽입됩니다. A4용지 기준. <br/>
+        ·인쇄할 때 페이지에 맞춤으로 하면 크기 변할 수 있음.
       </p>
 
       <section class="section">
         <div class="grid two">
           <div class="card">
             <div class="dropzone" id="pdfDrop">
-              <div class="dz-title">PDF 드래그&드롭</div>
-              <div class="dz-sub">여기에 PDF를 놓거나 클릭해서 선택</div>
-              <div class="dz-file" id="pdfFileName">선택된 파일 없음</div>
+              <div class="dz-title">드래그하여 PDF파일을 업로드</div>
+              <div class="dz-sub">여기에 PDF를 드래그하거나 클릭해서 선택</div>
+              <div class="dz-file" id="pdfFileName">(선택된 파일 없음)</div>
               <input id="pdfInput" type="file" accept="application/pdf" />
             </div>
           </div>
 
           <div class="card">
             <div class="dropzone" id="stampDrop">
-              <div class="dz-title">도장 업로드(선택)</div>
+              <div class="dz-title">도장 업로드 (기본제공 있음)</div>
               <div class="dz-sub">
-                기본 도장: <code>/stamp-true-copy/stamp_copy.png</code><br/>
-                업로드하면 기본 도장 대신 사용됩니다.
+                직접 찍은 원본대조필 배경 투명화해서 기본 내장해뒀음. 새로 올리고 싶으시면 png파일 투명화해서 올리십시오.
               </div>
               <div class="dz-file" id="stampFileName">기본 도장 로딩 중…</div>
               <input id="stampInput" type="file" accept="image/png,image/webp,image/jpeg" />
@@ -186,24 +183,25 @@
         <div class="card">
           <div class="grid three">
             <div>
-              <div class="local-small muted" style="margin-bottom:6px;">회전 각도(도) — <b>+는 시계방향</b></div>
+              <div class="local-small muted" style="margin-bottom:6px;">회전 각도 설정 (+는 시계방향)</b></div>
+              <div class="muted local-small" style="margin-top:6px;">미리보기와 동일</div>
               <input id="angleDeg" type="number" min="-180" max="180" step="1" value="0" />
-              <div class="muted local-small" style="margin-top:6px;">미리보기/출력 동일</div>
+
             </div>
 
             <div>
               <div class="local-small muted" style="margin-bottom:6px;">불투명도</div>
-              <input id="opacity" type="number" min="0.1" max="1" step="0.05" value="0.45" />
               <div class="muted local-small" style="margin-top:6px;">0.35~0.6 추천</div>
+              <input id="opacity" type="number" min="0.1" max="1" step="0.05" value="0.50" />
+
             </div>
 
             <div>
-              <div class="local-small muted" style="margin-bottom:6px;">기본 위치(전체 적용) 빠른 이동</div>
+              <div class="local-small muted" style="margin-bottom:6px;">기본 위치 설정</div>
               <div class="row gap">
-                <button id="resetBR" class="btn ghost" type="button">우하단</button>
-                <button id="resetCenter" class="btn ghost" type="button">가운데</button>
+                <button id="resetCenter" class="btn ghost" type="button">가운데에 찍기</button>
+                <button id="resetBR" class="btn ghost" type="button">우측 하단에 찍기</button>
               </div>
-              <div class="muted local-small" style="margin-top:6px;">기본 위치는 오버라이드 없는 페이지에 적용</div>
             </div>
           </div>
 
