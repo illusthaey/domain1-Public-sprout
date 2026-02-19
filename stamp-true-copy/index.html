@@ -6,7 +6,7 @@
   <link rel="stylesheet" href="/static/style.css" />
   <title>원본대조필 도장 찍기</title>
 
-  <!-- pdf-lib (CDN) : 오프라인이 필요하면 이 파일을 내려받아 로컬로 바꿔 끼우면 됩니다 -->
+  <!-- pdf-lib (CDN) -->
   <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 </head>
 
@@ -34,13 +34,16 @@
               <div>
                 <div class="local-small muted" style="margin-bottom:6px;">PDF 파일 (필수)</div>
                 <input id="pdfInput" type="file" accept="application/pdf" required />
+                <div class="muted local-small" style="margin-top:6px;">
+                  최대 30MB 권장
+                </div>
               </div>
 
               <div>
                 <div class="local-small muted" style="margin-bottom:6px;">도장 시트 이미지 (선택)</div>
                 <input id="sheetInput" type="file" accept="image/png,image/jpeg,image/webp" />
-                <div class="muted local-small" style="margin-top:8px;">
-                  미선택 시 기본 경로에서 불러옵니다: <code>/stamp-true-copy/stamp_sheet.png</code>
+                <div class="muted local-small" style="margin-top:6px;">
+                  미선택 시: <code>/stamp-true-copy/stamp_sheet.png</code> 사용
                 </div>
               </div>
             </div>
@@ -52,17 +55,47 @@
                 <div class="local-small muted" style="margin-bottom:6px;">도장 불투명도</div>
                 <input id="opacity" type="number" min="0.1" max="1" step="0.05" value="0.45" />
                 <div class="muted local-small" style="margin-top:6px;">
-                  0.35~0.6 추천 (원문 가독성 유지)
+                  0.35~0.6 추천
                 </div>
               </div>
+
               <div>
-                <div class="local-small muted" style="margin-bottom:6px;">처리 옵션</div>
+                <div class="local-small muted" style="margin-bottom:6px;">디버그</div>
                 <label class="row" style="align-items:flex-start;">
                   <input id="debugPreview" type="checkbox" />
-                  <span class="local-small">도장 추출 미리보기(디버그)</span>
+                  <span class="local-small">도장 추출 미리보기 표시</span>
                 </label>
               </div>
             </div>
+
+            <details class="shot-details" style="margin-top:12px;">
+              <summary class="shot-summary">고급 설정(문제 생길 때만)</summary>
+              <div class="card" style="margin-top:10px;">
+                <div class="grid three">
+                  <div>
+                    <div class="local-small muted" style="margin-bottom:6px;">배경 임계값(자동 권장)</div>
+                    <input id="bgThreshold" type="number" min="220" max="253" step="1" placeholder="auto" />
+                    <div class="muted local-small" style="margin-top:6px;">
+                      빈칸이면 자동 추정
+                    </div>
+                  </div>
+                  <div>
+                    <div class="local-small muted" style="margin-bottom:6px;">팽창(dilation)</div>
+                    <input id="dilation" type="number" min="0" max="6" step="1" value="2" />
+                    <div class="muted local-small" style="margin-top:6px;">
+                      선이 끊기면 3~4
+                    </div>
+                  </div>
+                  <div>
+                    <div class="local-small muted" style="margin-bottom:6px;">크롭 여백(px)</div>
+                    <input id="pad" type="number" min="0" max="40" step="1" value="14" />
+                    <div class="muted local-small" style="margin-top:6px;">
+                      너무 바짝이면 늘리기
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </details>
 
             <div class="row between" style="margin-top:14px;">
               <button id="submitBtn" class="btn primary" type="submit">도장 찍고 다운로드</button>
@@ -75,14 +108,14 @@
           <div style="font-weight:700; margin-bottom:8px;">도장 추출 미리보기</div>
           <div id="preview" class="row" style="flex-wrap:wrap; gap:10px;"></div>
           <div class="muted local-small" style="margin-top:8px;">
-            5개 도장이 잘 분리되어 보이면 성공입니다.
+            5개 도장이 각각 잘 보이면 성공입니다.
           </div>
         </div>
       </section>
 
       <section class="section">
         <div class="card">
-          <h3 class="local-h3">파일 배치</h3>
+          <h3 class="local-h3">필수 파일 배치</h3>
           <ul class="tool-list">
             <li><code>/static/style.css</code> : 공통 CSS</li>
             <li><code>/stamp-true-copy/index.html</code> : 이 페이지</li>
@@ -100,9 +133,18 @@
   </footer>
 
   <script>
-    // ==========
-    // 유틸
-    // ==========
+    "use strict";
+
+    // =========================
+    // 설정 상수
+    // =========================
+    const DEFAULT_SHEET_URL = "./stamp_sheet.png";
+    const STAMP_COUNT = 5;
+    const MAX_PDF_BYTES = 30 * 1024 * 1024; // 30MB
+
+    // =========================
+    // DOM / 유틸
+    // =========================
     const $ = (sel) => document.querySelector(sel);
 
     function setStatus(msg) {
@@ -114,7 +156,7 @@
     }
 
     function randInt(max) {
-      // crypto가 있으면 더 나은 랜덤
+      // 가능한 경우 crypto 기반
       if (window.crypto && crypto.getRandomValues) {
         const buf = new Uint32Array(1);
         crypto.getRandomValues(buf);
@@ -143,44 +185,93 @@
       });
     }
 
-    async function blobToImage(blob) {
-      const url = URL.createObjectURL(blob);
-      try {
-        const img = new Image();
-        img.decoding = "async";
-        img.src = url;
-        await img.decode();
-        return img;
-      } finally {
-        URL.revokeObjectURL(url);
-      }
-    }
-
     async function fetchStampSheetBlob() {
-      const res = await fetch("./stamp_sheet.png", { cache: "no-store" });
+      const res = await fetch(DEFAULT_SHEET_URL, { cache: "no-store" });
       if (!res.ok) {
         throw new Error("stamp_sheet.png를 /stamp-true-copy/ 폴더에 넣어주세요.");
       }
       return await res.blob();
     }
 
+    function loadImageFromBlob(blob) {
+      return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.decoding = "async";
+        img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("도장 시트 이미지 로드 실패")); };
+        img.src = url;
+      });
+    }
+
     function canvasFromImage(img) {
       const canvas = document.createElement("canvas");
-      canvas.width = img.naturalWidth || img.width;
-      canvas.height = img.naturalHeight || img.height;
+      const w = img.naturalWidth || img.width;
+      const h = img.naturalHeight || img.height;
+      canvas.width = w;
+      canvas.height = h;
       const ctx = canvas.getContext("2d", { willReadFrequently: true });
       ctx.drawImage(img, 0, 0);
       return canvas;
     }
 
-    // ==========
-    // 도장 시트에서 5개 도장 자동 추출
-    //  - “대충 잘 돌아가는” 실전형 뼈대 + 튜닝 포인트 주석
-    // ==========
-    function createForegroundMask(imageData, {
-      threshold = 250, // r,g,b 모두 threshold 이상이면 배경으로 간주
-      step = 2         // 다운샘플링 (성능용)
-    } = {}) {
+    async function canvasToPngBytes(canvas) {
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+      const ab = await blob.arrayBuffer();
+      return new Uint8Array(ab);
+    }
+
+    function revokeAll(urls) {
+      for (const u of urls) {
+        try { URL.revokeObjectURL(u); } catch (_) {}
+      }
+    }
+
+    // =========================
+    // 도장 추출 로직 (Canvas + CCL)
+    // =========================
+
+    function chooseDownsampleStep(srcW, srcH, forcedStep) {
+      if (forcedStep && Number.isFinite(forcedStep)) {
+        return clamp(Math.floor(forcedStep), 1, 8);
+      }
+      const px = srcW * srcH;
+      if (px > 16_000_000) return 4;
+      if (px > 9_000_000) return 3;
+      return 2;
+    }
+
+    function autoBackgroundThreshold(imageData) {
+      // 배경이 대부분 흰색이라는 가정 하에, min(R,G,B)의 90퍼센타일을 배경 밝기로 추정
+      const { data, width, height } = imageData;
+      const samples = [];
+      const target = 5000;
+
+      // 균등 샘플링
+      const stride = Math.max(1, Math.floor(Math.sqrt((width * height) / target)));
+      for (let y = 0; y < height; y += stride) {
+        for (let x = 0; x < width; x += stride) {
+          const i = (y * width + x) * 4;
+          const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
+          if (a === 0) continue;
+          const m = Math.min(r, g, b);
+          samples.push(m);
+          if (samples.length >= target) break;
+        }
+        if (samples.length >= target) break;
+      }
+
+      if (samples.length < 50) return 250;
+
+      samples.sort((a, b) => a - b);
+      const idx = Math.floor(samples.length * 0.90);
+      const p90 = samples[clamp(idx, 0, samples.length - 1)];
+
+      // 너무 타이트하면 도장 가장자리가 날아갈 수 있어 약간 보수적으로 낮춤
+      return clamp(p90 - 2, 220, 253);
+    }
+
+    function createForegroundMask(imageData, step, bgThreshold) {
       const { data, width, height } = imageData;
       const w2 = Math.floor(width / step);
       const h2 = Math.floor(height / step);
@@ -192,24 +283,23 @@
           const x = x2 * step;
           const i = (y * width + x) * 4;
           const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
-
-          // 배경(흰색) vs 전경(도장 잉크)
-          const isBg = (a === 0) || (r >= threshold && g >= threshold && b >= threshold);
+          // 배경(거의 흰색) 판단
+          const isBg = (a === 0) || (r >= bgThreshold && g >= bgThreshold && b >= bgThreshold);
           mask[y2 * w2 + x2] = isBg ? 0 : 1;
         }
       }
 
-      return { mask, w: w2, h: h2, step, srcW: width, srcH: height };
+      return { mask, w: w2, h: h2 };
     }
 
-    function dilateMask(mask, w, h, iterations = 1) {
-      // 간단한 8방향 dilation: 얇은 선 끊김 보정
+    function dilateMask(mask, w, h, iterations) {
       let cur = mask;
       for (let it = 0; it < iterations; it++) {
         const out = new Uint8Array(cur.length);
         for (let y = 0; y < h; y++) {
+          const row = y * w;
           for (let x = 0; x < w; x++) {
-            const idx = y * w + x;
+            const idx = row + x;
             if (cur[idx]) { out[idx] = 1; continue; }
 
             let on = 0;
@@ -217,10 +307,11 @@
             for (let dy = -1; dy <= 1 && !on; dy++) {
               const ny = y + dy;
               if (ny < 0 || ny >= h) continue;
+              const nrow = ny * w;
               for (let dx = -1; dx <= 1; dx++) {
                 const nx = x + dx;
                 if (nx < 0 || nx >= w) continue;
-                if (cur[ny * w + nx]) { on = 1; break; }
+                if (cur[nrow + nx]) { on = 1; break; }
               }
             }
             out[idx] = on;
@@ -231,11 +322,9 @@
       return cur;
     }
 
-    function findConnectedComponents(mask, w, h, {
-      minPixels = 600 // 다운샘플된 픽셀 기준. 시트 해상도에 따라 조정 가능.
-    } = {}) {
+    function findConnectedComponents(mask, w, h, minPixels) {
       const visited = new Uint8Array(mask.length);
-      const stack = new Int32Array(mask.length); // 최악 케이스 대비(성능 안정)
+      const stack = new Int32Array(mask.length); // 최대치 확보 (안전)
       const comps = [];
 
       for (let i = 0; i < mask.length; i++) {
@@ -264,12 +353,14 @@
           for (let dy = -1; dy <= 1; dy++) {
             const ny = y + dy;
             if (ny < 0 || ny >= h) continue;
+            const nrow = ny * w;
+
             for (let dx = -1; dx <= 1; dx++) {
               const nx = x + dx;
               if (nx < 0 || nx >= w) continue;
               if (dx === 0 && dy === 0) continue;
 
-              const nidx = ny * w + nx;
+              const nidx = nrow + nx;
               if (!mask[nidx] || visited[nidx]) continue;
               visited[nidx] = 1;
               stack[top++] = nidx;
@@ -278,132 +369,160 @@
         }
 
         if (count >= minPixels) {
-          comps.push({ minX, minY, maxX, maxY, count });
+          const bw = (maxX - minX + 1);
+          const bh = (maxY - minY + 1);
+          const bboxArea = bw * bh;
+          comps.push({ minX, minY, maxX, maxY, count, bw, bh, bboxArea });
         }
       }
 
       return comps;
     }
 
-    function pickTopStampBoxes(comps, count = 5) {
-      if (comps.length < count) return null;
+    function filterAndPickStampBoxes(comps, w, h, wantCount) {
+      const totalArea = w * h;
 
-      // 보통 “도장 테두리” 컴포넌트가 가장 큼 → 상위 5개가 도장일 확률이 높음
-      const top = comps
+      // 너무 큰(배경 노이즈가 뭉친) 컴포넌트 제거 + 말도 안 되는 밀도 제거
+      const filtered = comps.filter(c => {
+        const areaRatio = c.bboxArea / totalArea;
+        if (areaRatio > 0.40) return false;          // 화면 절반 가까이 차지하면 도장일 확률 낮음
+        if (c.bw > w * 0.98 && c.bh > h * 0.98) return false; // 전체 덮는 경우
+        const fill = c.count / c.bboxArea;
+        if (fill > 0.60) return false;              // 너무 빽빽한 덩어리(거의 꽉 찬)는 보통 오류
+        if (fill < 0.002) return false;             // 너무 희박하면 잡음일 가능성
+        const ar = c.bw / c.bh;
+        if (ar < 0.5 || ar > 8.0) return false;     // 극단적 종횡비 제거
+        return true;
+      });
+
+      if (filtered.length < wantCount) return null;
+
+      // 도장은 bboxArea가 상대적으로 안정적이라 bboxArea 기준 상위 선택
+      const top = filtered
         .slice()
-        .sort((a, b) => b.count - a.count)
-        .slice(0, count)
-        // 위->아래, 왼->오 안정 정렬
-        .sort((a, b) => (a.minY - b.minY) || (a.minX - b.minX));
+        .sort((a, b) => b.bboxArea - a.bboxArea)
+        .slice(0, wantCount)
+        .sort((a, b) => (a.minY - b.minY) || (a.minX - b.minX)); // 위->아래, 왼->오
 
       return top;
     }
 
-    function upscaleBox(box, step, pad, srcW, srcH) {
+    function upscaleBox(box, step, padPx, srcW, srcH) {
       let x = box.minX * step;
       let y = box.minY * step;
       let w = (box.maxX - box.minX + 1) * step;
       let h = (box.maxY - box.minY + 1) * step;
 
-      x = Math.max(0, x - pad);
-      y = Math.max(0, y - pad);
-      w = Math.min(srcW - x, w + pad * 2);
-      h = Math.min(srcH - y, h + pad * 2);
+      x = Math.max(0, x - padPx);
+      y = Math.max(0, y - padPx);
+      w = Math.min(srcW - x, w + padPx * 2);
+      h = Math.min(srcH - y, h + padPx * 2);
 
       return { x, y, w, h };
     }
 
-    async function canvasToPngBytes(canvas) {
-      const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
-      const ab = await blob.arrayBuffer();
-      return new Uint8Array(ab);
-    }
-
     async function extractStampsFromSheet(sheetBlob, {
-      bgThreshold = 250,
-      alphaScale = 0.9,     // PNG 자체 알파를 조금만 줄이고, 실제 찍기는 opacity로 제어 추천
-      step = 2,
+      bgThreshold = null, // null이면 자동
       dilation = 2,
-      pad = 14,
-      debug = false,
+      padPx = 14,
+      forcedStep = null,
     } = {}) {
-      const img = await blobToImage(sheetBlob);
+      const img = await loadImageFromBlob(sheetBlob);
       const sheetCanvas = canvasFromImage(img);
       const ctx = sheetCanvas.getContext("2d", { willReadFrequently: true });
-
       const imgData = ctx.getImageData(0, 0, sheetCanvas.width, sheetCanvas.height);
 
-      // 1) 마스크 생성
-      const maskInfo = createForegroundMask(imgData, { threshold: bgThreshold, step });
-      // 2) dilation로 끊김 보정
-      const dilated = dilateMask(maskInfo.mask, maskInfo.w, maskInfo.h, dilation);
+      const realBgThreshold = (bgThreshold == null)
+        ? autoBackgroundThreshold(imgData)
+        : clamp(Math.floor(bgThreshold), 220, 253);
+
+      const step = chooseDownsampleStep(sheetCanvas.width, sheetCanvas.height, forcedStep);
+
+      // 1) 이진 마스크
+      const { mask, w, h } = createForegroundMask(imgData, step, realBgThreshold);
+
+      // 2) dilation
+      const dil = clamp(Math.floor(dilation), 0, 6);
+      const dilated = (dil > 0) ? dilateMask(mask, w, h, dil) : mask;
+
       // 3) 연결요소 탐색
-      const comps = findConnectedComponents(dilated, maskInfo.w, maskInfo.h, { minPixels: 600 });
-      // 4) 상위 5개 bbox 선택
-      const top = pickTopStampBoxes(comps, 5);
+      // minPixels는 마스크 크기에 비례하도록 설정
+      const minPixels = Math.max(250, Math.floor((w * h) * 0.0006));
+      const comps = findConnectedComponents(dilated, w, h, minPixels);
+
+      // 4) 필터링 후 상위 5개 선택
+      const top = filterAndPickStampBoxes(comps, w, h, STAMP_COUNT);
       if (!top) {
-        throw new Error("도장 5개를 찾지 못했습니다. 이미지 품질/배경을 확인해주세요.");
+        throw new Error("도장 5개를 찾지 못했습니다. (고급 설정에서 팽창/임계값을 조절해보세요)");
       }
 
-      const boxes = top.map(b => upscaleBox(b, maskInfo.step, pad, maskInfo.srcW, maskInfo.srcH));
-
-      // 5) crop + 배경 투명화 → PNG bytes 5개
+      // 5) 원본 해상도로 bbox 복원 후 crop + 배경 투명화
       const stamps = [];
-      for (const box of boxes) {
+      for (const b of top) {
+        const box = upscaleBox(b, step, padPx, sheetCanvas.width, sheetCanvas.height);
+
         const c = document.createElement("canvas");
         c.width = box.w;
         c.height = box.h;
         const cctx = c.getContext("2d", { willReadFrequently: true });
-
         cctx.drawImage(sheetCanvas, box.x, box.y, box.w, box.h, 0, 0, box.w, box.h);
 
         const d = cctx.getImageData(0, 0, c.width, c.height);
         const p = d.data;
 
+        // 배경 투명 처리
+        const t = realBgThreshold;
         for (let i = 0; i < p.length; i += 4) {
-          const r = p[i], g = p[i + 1], b = p[i + 2];
-          const isBg = (r >= bgThreshold && g >= bgThreshold && b >= bgThreshold);
-
-          if (isBg) {
-            p[i + 3] = 0; // 배경 투명
-          } else {
-            // 잉크 픽셀은 살짝만 알파 조정(필요 없으면 1.0)
-            p[i + 3] = Math.round(p[i + 3] * alphaScale);
-          }
+          const r = p[i], g = p[i + 1], b2 = p[i + 2];
+          const isBg = (r >= t && g >= t && b2 >= t);
+          if (isBg) p[i + 3] = 0;
         }
 
         cctx.putImageData(d, 0, 0);
-        stamps.push({
-          pngBytes: await canvasToPngBytes(c),
-          debugCanvas: debug ? c : null
-        });
+        stamps.push(await canvasToPngBytes(c));
       }
 
-      return { stamps, boxes };
+      if (stamps.length !== STAMP_COUNT) {
+        throw new Error("도장 추출 결과가 5개가 아닙니다. 이미지를 확인해주세요.");
+      }
+
+      return stamps;
     }
 
-    function renderStampPreview(stamps) {
+    // =========================
+    // 미리보기
+    // =========================
+    let previewUrls = [];
+
+    function renderStampPreviewFromBytes(pngBytesList) {
+      revokeAll(previewUrls);
+      previewUrls = [];
+
       const wrap = $("#previewWrap");
       const holder = $("#preview");
       holder.innerHTML = "";
 
-      for (const s of stamps) {
+      for (const bytes of pngBytesList) {
+        const blob = new Blob([bytes], { type: "image/png" });
+        const url = URL.createObjectURL(blob);
+        previewUrls.push(url);
+
         const img = document.createElement("img");
         img.style.width = "160px";
         img.style.height = "auto";
         img.style.border = "1px solid #e5e5e5";
         img.style.borderRadius = "10px";
         img.style.background = "#fff";
-        img.src = s.debugCanvas.toDataURL("image/png");
+        img.src = url;
         holder.appendChild(img);
       }
 
       wrap.style.display = "block";
     }
 
-    // ==========
-    // PDF에 도장 찍기 (pdf-lib)
-    // ==========
+    // =========================
+    // PDF 도장 찍기 (pdf-lib)
+    // =========================
     async function stampPdfInBrowser(pdfArrayBuffer, stampPngBytesList, {
       opacity = 0.45,
       margin = 36,
@@ -412,14 +531,17 @@
       maxWidth = 200,
       onProgress = null,
     } = {}) {
-      const { PDFDocument } = PDFLib;
+      if (!window.PDFLib) {
+        throw new Error("pdf-lib 로드 실패(CDN 차단 여부 확인).");
+      }
 
+      const { PDFDocument } = PDFLib;
       const pdfDoc = await PDFDocument.load(pdfArrayBuffer);
 
-      // 도장 5개를 문서에 1회 임베드 후 재사용
-      const embeddedStamps = [];
-      for (const pngBytes of stampPngBytesList) {
-        embeddedStamps.push(await pdfDoc.embedPng(pngBytes));
+      // embed PNG 5개 (한 번만)
+      const embedded = [];
+      for (const bytes of stampPngBytesList) {
+        embedded.push(await pdfDoc.embedPng(bytes));
       }
 
       const pages = pdfDoc.getPages();
@@ -429,13 +551,13 @@
         const page = pages[i];
         const { width: pageW, height: pageH } = page.getSize();
 
-        const stampImg = embeddedStamps[randInt(embeddedStamps.length)];
+        const stampImg = embedded[randInt(embedded.length)];
 
         const stampW = clamp(pageW * widthRatio, minWidth, maxWidth);
         const scale = stampW / stampImg.width;
         const stampH = stampImg.height * scale;
 
-        // pdf-lib 좌표계: (0,0) = bottom-left
+        // pdf-lib 좌표계: (0,0)=bottom-left
         const x = pageW - margin - stampW;
         const y = margin;
 
@@ -443,13 +565,12 @@
           x, y,
           width: stampW,
           height: stampH,
-          opacity: opacity
+          opacity: clamp(opacity, 0.1, 1.0),
         });
 
-        if (onProgress && (i % 3 === 0 || i === total - 1)) {
+        if (onProgress && (i === total - 1 || i % 2 === 0)) {
           onProgress(i + 1, total);
-          // UI 업데이트를 브라우저에 양보
-          await new Promise(r => setTimeout(r, 0));
+          await new Promise(r => setTimeout(r, 0)); // UI 업데이트 양보
         }
       }
 
@@ -457,35 +578,34 @@
       return outBytes;
     }
 
-    // ==========
-    // 이벤트 핸들러
-    // ==========
-    let cachedStamps = null;
+    // =========================
+    // 캐시 (같은 시트면 추출 재사용)
+    // =========================
     let cachedKey = null;
+    let cachedStampBytes = null;
 
-    async function getStamps({ sheetFile, debug }) {
-      const key = sheetFile
-        ? `${sheetFile.name}_${sheetFile.size}_${sheetFile.lastModified}`
-        : "DEFAULT_SHEET";
-
-      if (cachedStamps && cachedKey === key) return cachedStamps;
-
-      const sheetBlob = sheetFile ? sheetFile : await fetchStampSheetBlob();
-      const { stamps } = await extractStampsFromSheet(sheetBlob, {
-        debug,
-        // 필요하면 튜닝:
-        bgThreshold: 250,
-        alphaScale: 1.0,
-        step: 2,
-        dilation: 2,
-        pad: 14,
-      });
-
-      cachedStamps = stamps;
-      cachedKey = key;
-      return cachedStamps;
+    function makeCacheKey(sheetFile, params) {
+      const base = sheetFile
+        ? `${sheetFile.name}|${sheetFile.size}|${sheetFile.lastModified}`
+        : `DEFAULT|${DEFAULT_SHEET_URL}`;
+      return base + `|bg=${params.bgThreshold ?? "auto"}|dil=${params.dilation}|pad=${params.padPx}`;
     }
 
+    async function getStamps(sheetFile, params) {
+      const key = makeCacheKey(sheetFile, params);
+      if (cachedStampBytes && cachedKey === key) return cachedStampBytes;
+
+      const sheetBlob = sheetFile ? sheetFile : await fetchStampSheetBlob();
+      const stamps = await extractStampsFromSheet(sheetBlob, params);
+
+      cachedStampBytes = stamps;
+      cachedKey = key;
+      return stamps;
+    }
+
+    // =========================
+    // 핸들러
+    // =========================
     $("#form").addEventListener("submit", async (e) => {
       e.preventDefault();
 
@@ -498,6 +618,10 @@
         setStatus("PDF 파일만 업로드할 수 있습니다.");
         return;
       }
+      if (pdfFile.size > MAX_PDF_BYTES) {
+        setStatus("PDF 파일이 너무 큽니다(30MB 이하 권장).");
+        return;
+      }
 
       const sheetFile = $("#sheetInput").files[0] || null;
       const debug = $("#debugPreview").checked;
@@ -506,24 +630,38 @@
       submitBtn.disabled = true;
 
       try {
+        // 고급 설정 읽기
+        const bgRaw = $("#bgThreshold").value.trim();
+        const bgThreshold = bgRaw === "" ? null : clamp(parseInt(bgRaw, 10), 220, 253);
+        const dilation = clamp(parseInt($("#dilation").value || "2", 10), 0, 6);
+        const padPx = clamp(parseInt($("#pad").value || "14", 10), 0, 40);
+
         setStatus("도장 이미지 분석 중…");
-        const stamps = await getStamps({ sheetFile, debug });
+        const stamps = await getStamps(sheetFile, { bgThreshold, dilation, padPx });
 
         if (debug) {
-          // debugCanvas가 들어있게 추출됨
-          renderStampPreview(stamps);
+          renderStampPreviewFromBytes(stamps);
         } else {
           $("#previewWrap").style.display = "none";
+          revokeAll(previewUrls);
+          previewUrls = [];
         }
 
         setStatus("PDF 로딩 중…");
         const pdfAb = await readFileAsArrayBuffer(pdfFile);
 
+        // PDF 매직 헤더 간단 체크(완벽하진 않지만 UX용)
+        const head = new TextDecoder("ascii").decode(new Uint8Array(pdfAb).slice(0, 1024));
+        if (!head.includes("%PDF-")) {
+          throw new Error("PDF로 보이지 않습니다. 파일을 확인해주세요.");
+        }
+
         setStatus("페이지 처리 중…");
-        const opacity = parseFloat($("#opacity").value || "0.45");
-        const stampedBytes = await stampPdfInBrowser(pdfAb, stamps.map(s => s.pngBytes), {
-          opacity: clamp(opacity, 0.1, 1.0),
-          onProgress: (done, total) => setStatus(`페이지 처리 중… (${done}/${total})`)
+        const opacity = clamp(parseFloat($("#opacity").value || "0.45"), 0.1, 1.0);
+
+        const stampedBytes = await stampPdfInBrowser(pdfAb, stamps, {
+          opacity,
+          onProgress: (done, total) => setStatus(`페이지 처리 중… (${done}/${total})`),
         });
 
         const outBlob = new Blob([stampedBytes], { type: "application/pdf" });
@@ -539,7 +677,8 @@
     });
   </script>
 
-
-
+  <script src="/static/disable-copy.js"></script>
+<script src="/static/footer.js"></script>
+<script src="/static/global-loader.js?v=1"></script>
 </body>
 </html>
