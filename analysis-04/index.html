@@ -1,2388 +1,2140 @@
 <!doctype html>
+
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>강원도교육청 인사발령 집계/분류</title>
-
-  <!-- 공통 CSS 유지 -->
-  <link rel="stylesheet" href="/static/style.css" />
-
+  <title>강원도교육청 인사발령 집계/분류</title>  <link rel="stylesheet" href="/static/style.css" />
   <style>
-    /* ===== 이 페이지 전용 최소 보강 ===== */
-    .section { scroll-margin-top: 18px; }
-    .hint { font-size: 0.95rem; color:#666; margin: 8px 0 0; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-    .badge { display:inline-block; padding:2px 8px; border:1px solid #e5e7eb; border-radius:999px; background:#fafafa; font-size:0.9rem; color:#444; }
-    .pill { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border:1px solid #e5e7eb; border-radius:999px; background:#fff; font-size:0.95rem; }
-    .pill b { color:#111; }
-
-    .dropzone {
-      border: 2px dashed #d1d5db;
-      border-radius: 14px;
-      padding: 18px;
-      background: #fafafa;
-      transition: background-color .15s ease, border-color .15s ease;
+    :root{
+      --bg:#0b1020;
+      --panel:#111a33;
+      --panel2:#0f1730;
+      --text:#e9ecff;
+      --muted:#b7c0ff;
+      --line:rgba(255,255,255,.12);
+      --line2:rgba(255,255,255,.08);
+      --good:#28c76f;
+      --warn:#ff9f43;
+      --bad:#ea5455;
+      --accent:#7367f0;
+      --accent2:#00cfe8;
+      --chip:rgba(115,103,240,.16);
+      --shadow:0 10px 28px rgba(0,0,0,.35);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", Arial, sans-serif;
     }
-    .dropzone.dragover {
-      background: #eef2ff;
-      border-color: #93c5fd;
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:var(--sans);
+      background: radial-gradient(900px 600px at 15% 0%, rgba(0,207,232,.15), transparent 60%),
+                  radial-gradient(900px 600px at 85% 0%, rgba(115,103,240,.18), transparent 55%),
+                  linear-gradient(180deg, #070a14 0%, var(--bg) 100%);
+      color:var(--text);
     }
-    .dropzone .row { gap: 10px; }
-    .file-input { display:none; }
-
-    .progress-wrap { margin: 10px 0 14px; }
-    .progress-line {
-      width: 100%;
-      height: 10px;
-      border-radius: 999px;
-      background: #eef2f7;
-      border: 1px solid #e5e7eb;
+    a{color:inherit}
+    .wrap{max-width:1240px;margin:0 auto;padding:18px 16px 72px}
+    header{
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+      padding:14px 14px;border:1px solid var(--line);border-radius:14px;
+      background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      box-shadow:var(--shadow);
+      position:sticky;top:10px;z-index:30;
+      backdrop-filter: blur(8px);
+    }
+    header .title{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+    header h1{margin:0;font-size:18px;letter-spacing:-.2px}
+    header .sub{color:rgba(233,236,255,.72);font-size:12px}
+    header nav{display:flex;gap:10px;flex-wrap:wrap}
+    header nav a{
+      text-decoration:none;border:1px solid var(--line2);padding:8px 10px;border-radius:10px;
+      background:rgba(255,255,255,.03);
+    }
+    header nav a:hover{border-color:rgba(255,255,255,.2)}
+    .grid{display:grid;grid-template-columns:1fr;gap:16px;margin-top:16px}
+    section{
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015));
+      box-shadow:var(--shadow);
       overflow:hidden;
     }
-    .progress-bar {
-      height: 100%;
-      width: 0%;
-      background: #111;
-      transition: width .15s ease;
+    section .hd{
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
+      padding:14px 14px;border-bottom:1px solid var(--line2);
+      background:linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,0));
     }
-    .progress-meta { display:flex; justify-content:space-between; gap:10px; margin: 6px 0 0; }
-    .progress-meta .muted { margin:0; }
-    .progress-meta .mono { font-size:0.95rem; color:#444; }
-
-    .file-list {
-      margin: 10px 0 0;
-      padding: 0;
-      list-style: none;
+    section .hd h2{margin:0;font-size:15px}
+    section .bd{padding:14px}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+    .row > * {flex:1 1 auto}
+    .card-row{display:grid;grid-template-columns:repeat(4, minmax(180px,1fr));gap:10px}
+    @media (max-width: 980px){ .card-row{grid-template-columns:repeat(2, minmax(180px,1fr))}}
+    @media (max-width: 520px){ .card-row{grid-template-columns:1fr}}
+    .stat{
+      border:1px solid var(--line2);
+      border-radius:12px;padding:12px 12px;background:rgba(0,0,0,.12);
     }
-    .file-item {
-      display:flex; align-items:center; justify-content:space-between;
-      gap:10px;
-      padding: 8px 10px;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      background: #fff;
-      margin: 8px 0;
+    .stat .k{color:rgba(233,236,255,.78);font-size:12px;margin-bottom:6px}
+    .stat .v{font-size:20px;font-weight:800;letter-spacing:-.3px}
+    .stat .s{color:rgba(233,236,255,.7);font-size:12px;margin-top:6px}
+    label{display:block;font-size:12px;color:rgba(233,236,255,.8);margin:0 0 6px}
+    input[type="file"], input[type="text"], select, textarea, button{
+      font-family:var(--sans);
     }
-    .file-item .name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width: 560px; }
-    @media (max-width: 640px) { .file-item .name { max-width: 240px; } }
-
-    .kpi-grid { display:grid; gap:12px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
-    .kpi {
-      border: 1px solid #e5e5e5;
-      border-radius: 14px;
-      padding: 14px 14px;
-      background: #fff;
-      cursor: default;
+    input[type="text"], select, textarea{
+      width:100%;
+      border-radius:12px;
+      border:1px solid var(--line2);
+      background:rgba(0,0,0,.2);
+      color:var(--text);
+      padding:10px 10px;
+      outline:none;
     }
-    .kpi.clickable { cursor:pointer; }
-    .kpi:hover.clickable { background:#f9fafb; }
-    .kpi .label { font-size:0.95rem; color:#666; margin:0 0 8px; }
-    .kpi .value { font-size:1.7rem; font-weight:800; color:#111; margin:0; }
-    .kpi .sub { font-size:0.95rem; color:#555; margin:6px 0 0; }
-
-    .toolbar {
-      display:flex; gap:10px; align-items:center; justify-content:space-between;
-      flex-wrap:wrap;
+    select:disabled, input:disabled{opacity:.55; cursor:not-allowed}
+    textarea{
+      min-height:120px; resize:vertical; font-family:var(--mono); font-size:12px; line-height:1.4;
     }
-    .toolbar .left, .toolbar .right { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-
-    .field { display:flex; flex-direction:column; gap:6px; min-width: 180px; }
-    .field label { font-size:0.95rem; color:#444; }
-    .filters { display:grid; gap:12px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin-top: 10px; }
-
-    .panel {
-      border: 1px solid #e5e5e5;
-      border-radius: 14px;
-      background: #fff;
-      padding: 14px 14px;
-      margin-top: 14px;
+    button{
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.16);
+      background:linear-gradient(180deg, rgba(115,103,240,.98), rgba(115,103,240,.78));
+      color:white;
+      padding:10px 12px;
+      cursor:pointer;
+      font-weight:700;
+      box-shadow:0 10px 24px rgba(115,103,240,.25);
     }
-    .panel h4 { margin: 0 0 8px; }
-    .panel .meta { margin: 0 0 10px; color:#666; font-size:0.95rem; }
-
-    /* 헤더 틀고정 */
-    table.sheetlike.sticky thead th {
-      position: sticky;
-      top: 0;
-      z-index: 2;
-      background: #f9fafb;
+    button.secondary{
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.16);
+      box-shadow:none;
+      color:var(--text);
     }
-
-    /* 스크롤 따라다니는 상단 이동 버튼(왼쪽 하단) */
-    #toTopBtn {
-      position: fixed;
-      left: 18px;
-      bottom: 18px;
-      z-index: 999;
-      width: 46px;
-      height: 46px;
-      border-radius: 999px;
-      border: 1px solid #d1d5db;
-      background: rgba(255,255,255,0.92);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    button.danger{
+      background:linear-gradient(180deg, rgba(234,84,85,.95), rgba(234,84,85,.75));
+      border-color:rgba(234,84,85,.5);
+      box-shadow:0 10px 24px rgba(234,84,85,.18);
+    }
+    .btns{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+    .note{font-size:12px;color:rgba(233,236,255,.72);line-height:1.5}
+    .pill{
+      display:inline-flex;align-items:center;gap:7px;
+      padding:6px 10px;border-radius:999px;
+      background:rgba(255,255,255,.06);border:1px solid var(--line2);
+      font-size:12px;color:rgba(233,236,255,.78);
+      white-space:nowrap;
+    }
+    .pill .dot{width:9px;height:9px;border-radius:50%}
+    .dot.good{background:var(--good)}
+    .dot.warn{background:var(--warn)}
+    .dot.bad{background:var(--bad)}
+    .progress{
+      width:100%;height:10px;border-radius:999px;
+      background:rgba(255,255,255,.07);
+      border:1px solid rgba(255,255,255,.09);
+      overflow:hidden;
+    }
+    .progress > i{
+      display:block;height:100%;
+      width:0%;
+      background:linear-gradient(90deg, var(--accent2), var(--accent));
+      border-radius:999px;
+      transition:width .15s ease;
+    }
+    .table-wrap{
+      border:1px solid var(--line2);
+      border-radius:12px;
+      overflow:auto;
+      background:rgba(0,0,0,.18);
+      max-height:520px;
+    }
+    table{width:100%;border-collapse:separate;border-spacing:0;min-width:920px}
+    thead th{
+      position:sticky;top:0;z-index:2;
+      background:linear-gradient(180deg, rgba(17,26,51,.98), rgba(17,26,51,.86));
+      border-bottom:1px solid rgba(255,255,255,.12);
+    }
+    th,td{
+      text-align:left;
+      padding:10px 10px;
+      border-bottom:1px solid rgba(255,255,255,.07);
+      font-size:12px;
+      vertical-align:top;
+    }
+    tbody tr:hover td{background:rgba(255,255,255,.03)}
+    .muted{color:rgba(233,236,255,.65)}
+    .mono{font-family:var(--mono)}
+    .chip{
+      display:inline-block;padding:4px 8px;border-radius:999px;
+      background:var(--chip);border:1px solid rgba(115,103,240,.25);
+      font-size:12px; white-space:nowrap;
+    }
+    .chip2{
+      display:inline-block;padding:4px 8px;border-radius:999px;
+      background:rgba(0,207,232,.12);border:1px solid rgba(0,207,232,.22);
+      font-size:12px; white-space:nowrap;
+    }
+    .split{
+      display:grid;grid-template-columns:1fr 1fr;gap:12px;
+    }
+    @media (max-width: 980px){ .split{grid-template-columns:1fr}}
+    .tri{
+      display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;
+    }
+    @media (max-width: 1150px){ .tri{grid-template-columns:1fr}}
+    .danger-box{
+      border:1px dashed rgba(234,84,85,.45);
+      background:rgba(234,84,85,.08);
+      border-radius:12px;padding:10px 12px;
+      color:rgba(233,236,255,.82);
+      font-size:12px;
+    }
+    .ok-box{
+      border:1px dashed rgba(40,199,111,.45);
+      background:rgba(40,199,111,.08);
+      border-radius:12px;padding:10px 12px;
+      color:rgba(233,236,255,.82);
+      font-size:12px;
+    }
+    .float-top{
+      position:fixed;right:14px;bottom:14px;z-index:40;
+      width:46px;height:46px;border-radius:14px;
+      display:grid;place-items:center;
+      border:1px solid rgba(255,255,255,.18);
+      background:rgba(17,26,51,.75);
+      backdrop-filter: blur(10px);
+      cursor:pointer;
+      box-shadow:var(--shadow);
+      color:var(--text);
       user-select:none;
     }
-    #toTopBtn:hover { background: #eef2ff; }
-    #toTopBtn span { font-size: 20px; line-height: 1; color:#111; }
-
-    details.compact {
-      border: 1px solid #e5e5e5;
-      border-radius: 12px;
-      background: #fafafa;
-      padding: 10px 12px;
-      margin-top: 12px;
+    .float-top:hover{border-color:rgba(255,255,255,.28)}
+    .kbd{
+      font-family:var(--mono);font-size:11px;
+      border:1px solid rgba(255,255,255,.15);
+      background:rgba(255,255,255,.06);
+      border-bottom-color:rgba(255,255,255,.26);
+      padding:2px 6px;border-radius:8px;
+      color:rgba(233,236,255,.85);
     }
-    details.compact > summary {
-      cursor:pointer;
-      font-weight: 800;
-      color:#111;
-      list-style:none;
+    .hr{height:1px;background:rgba(255,255,255,.08);margin:12px 0}
+    .inline{
+      display:flex;gap:10px;flex-wrap:wrap;align-items:center;
     }
-    details.compact > summary::-webkit-details-marker { display:none; }
-    details.compact > summary::before { content:"▸ "; }
-    details.compact[open] > summary::before { content:"▾ "; }
-    .warn {
-      border: 1px solid #fca5a5;
-      background: #fff1f2;
-      color:#7f1d1d;
-      border-radius: 12px;
-      padding: 10px 12px;
-      margin: 10px 0 0;
-      font-size: 0.98rem;
-    }
-    .ok {
-      border: 1px solid #86efac;
-      background: #f0fdf4;
-      color:#14532d;
-      border-radius: 12px;
-      padding: 10px 12px;
-      margin: 10px 0 0;
-      font-size: 0.98rem;
-    }
-    .small { font-size: 0.95rem; color:#555; }
+    .inline .spacer{flex:1 1 auto}
+    .small{font-size:12px}
+    .hidden{display:none!important}
   </style>
-</head>
-
-<body>
-  <header class="site-header">
-    <div class="shell">
+</head><body>
+<div class="wrap">
+  <header>
+    <div class="title">
       <h1>강원도교육청 인사발령 집계/분류</h1>
-      <p class="subtitle">도단위 + 관내 인사발령 엑셀(또는 ZIP) 업로드 → 전체 집계 + 학교/기관별 + 시군구별 상세 조회</p>
+      <span class="sub">브라우저에서만 동작 · 누적 업로드 · 중복 제거 · 집계/상세/다운로드</span>
     </div>
-  </header>
-
-  <main class="container">
-    <!-- 1. 업로드 -->
-    <section class="section" id="sec-upload">
-      <div class="toolbar">
-        <div class="left">
-          <h2 style="margin:0;">1) 인사발령 엑셀파일 업로드</h2>
-          <span class="badge" id="libBadge">라이브러리 로딩중…</span>
+    <nav>
+      <a href="#sec-upload">업로드</a>
+      <a href="#sec-summary">요약</a>
+      <a href="#sec-entity">학교/기관</a>
+      <a href="#sec-region">시군구</a>
+    </nav>
+  </header>  <div class="grid">
+    <!-- 섹션1: 업로드 -->
+    <section id="sec-upload">
+      <div class="hd">
+        <h2>1) 파일 업로드</h2>
+        <div class="inline">
+          <span class="pill"><span class="dot warn" id="xlsxDot"></span><span id="xlsxStatus">SheetJS 로딩 대기</span></span>
+          <span class="pill"><span class="dot good"></span><span class="mono" id="appClock">--:--:--</span></span>
         </div>
       </div>
-      <hr />
-
-      <div class="progress-wrap">
-        <div class="progress-line" aria-label="진행률">
-          <div class="progress-bar" id="progressBar"></div>
-        </div>
-        <div class="progress-meta">
-          <p class="muted" id="progressText">라이브러리(XLSX) 불러오는 중…</p>
-          <div class="mono" id="progressPct">0%</div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="파일 업로드 드래그 앤 드롭">
-          <div class="row between">
-            <div>
-              <p style="margin:0; font-weight:800; color:#111;">여기로 파일을 드래그해서 업로드</p>
-              <p class="hint">
-                .xlsx / .xls / .zip 지원 (ZIP 안에 엑셀 여러 개 들어있어도 자동 분석)
-              </p>
-            </div>
-            <div class="row">
-              <button class="btn ghost" id="pickFilesBtn" type="button">파일 선택</button>
-              <input class="file-input" id="fileInput" type="file" multiple
-                     accept=".xlsx,.xls,.zip,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/zip" />
+      <div class="bd">
+        <div class="row">
+          <div style="flex:2 1 520px">
+            <label>엑셀 파일(.xlsx/.xls) 누적 업로드</label>
+            <input id="fileInput" type="file" multiple accept=".xlsx,.xls" />
+            <div class="note" style="margin-top:8px">
+              중복 파일은 자동 스킵됩니다. (키: <span class="kbd">파일명+크기+수정시간</span>)<br/>
+              파싱 중에는 진행률이 표시됩니다.
             </div>
           </div>
-        </div>
-
-        <div class="row between" style="margin-top:12px;">
-          <div class="row gap">
-            <button class="btn primary" id="analyzeBtn" type="button" disabled>인사정보 집계하기</button>
-            <button class="btn" id="resetBtn" type="button">초기화</button>
-          </div>
-          <div class="pill" title="현재 업로드된 파일 수">
-            <span>업로드</span>
-            <b id="fileCount">0</b>
-            <span>개</span>
-          </div>
-        </div>
-
-        <details class="compact" id="filesDetails">
-          <summary>업로드한 파일 목록 보기</summary>
-          <ul class="file-list" id="fileList"></ul>
-          <p class="small" style="margin:10px 0 0;">
-            ※ 파일은 계속 추가 업로드 가능하며, 분석은 <b>“인사정보 집계하기”</b> 버튼을 눌러야 시작됩니다.
-          </p>
-        </details>
-
-        <div id="schoolMasterStatus" class="warn" style="display:none;"></div>
-      </div>
-    </section>
-
-    <!-- 2. 전체 집계 -->
-    <section class="section" id="sec-dashboard">
-      <div class="toolbar">
-        <div class="left">
-          <h2 style="margin:0;">2) 전체 집계 결과 조회</h2>
-        </div>
-      </div>
-      <hr />
-
-      <div id="dashboardEmpty" class="card">
-        <p style="margin:0;">
-          먼저 <b>엑셀/ZIP</b>을 업로드하고 <b>인사정보 집계하기</b>를 눌러주세요.
-        </p>
-        <p class="hint">집계 결과는 도단위/관내 파일이 섞여도 중복(특히 “교육장이 지정하는 부서…”)을 최대한 제거하도록 설계했습니다.</p>
-      </div>
-
-      <div id="dashboardWrap" style="display:none;">
-        <div class="kpi-grid" id="kpiGrid"></div>
-
-        <div class="card" style="margin-top:12px;">
-          <div class="row between">
-            <h3 style="margin:0;">시군구 지역별 집계 (오름차순)</h3>
-            <div class="row">
-              <button class="btn pastel-blue" type="button" id="jumpSchoolOrg">학교/기관별 상세로</button>
-              <button class="btn pastel-yellow" type="button" id="jumpRegion">지역별 상세로</button>
+          <div style="flex:1 1 260px">
+            <div class="btns">
+              <button id="btnParse" class="secondary" disabled>선택 파일 파싱</button>
+              <button id="btnClear" class="danger" disabled>전체 초기화</button>
+            </div>
+            <div style="margin-top:10px">
+              <div class="progress" title="전체 진행률">
+                <i id="globalProgress"></i>
+              </div>
+              <div class="inline small muted" style="margin-top:6px">
+                <span id="globalProgressText">대기</span>
+                <span class="spacer"></span>
+                <span id="globalCounts" class="mono">files:0 rec:0</span>
+              </div>
             </div>
           </div>
-          <div class="table-wrap">
-            <table class="sheetlike sticky" id="regionSummaryTable">
-              <thead>
-                <tr>
-                  <th>지역</th>
-                  <th class="numeric">전입</th>
-                  <th class="numeric">전출</th>
-                  <th class="numeric">지역변동없음</th>
-                  <th class="numeric">퇴직/면직</th>
-                  <th class="numeric">신규/임용</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-          <p class="hint">행(지역)을 클릭하면 4번 “시군구별 조회”로 이동하며 해당 지역을 자동 선택합니다.</p>
-        </div>
-      </div>
-    </section>
+        </div><div class="hr"></div>
 
-    <!-- 3. 학교/기관별 상세 -->
-    <section class="section" id="sec-org">
-      <div class="toolbar">
-        <div class="left">
-          <h2 style="margin:0;">3) 상세 내역 조회 (학교 및 기관별)</h2>
+    <div class="split">
+      <div>
+        <div class="inline">
+          <div class="pill"><span class="dot good"></span><span>파일 목록</span></div>
+          <span class="spacer"></span>
+          <span class="note">드래그&드롭 지원</span>
         </div>
-        <div class="right">
-          <button class="btn" id="downloadOrgBtn" type="button" disabled>조회 결과 엑셀로 다운로드</button>
-        </div>
-      </div>
-      <hr />
-
-      <div class="card">
-        <div class="filters">
-          <div class="field">
-            <label for="orgKindSel">구분</label>
-            <select id="orgKindSel" disabled>
-              <option value="">(선택)</option>
-              <option value="학교">학교</option>
-              <option value="기관">기관</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="orgNameSel">학교/기관</label>
-            <select id="orgNameSel" disabled></select>
-          </div>
-          <div class="field">
-            <label for="orgTypeSel">직군</label>
-            <select id="orgTypeSel" disabled>
-              <option value="전체">전체</option>
-              <option value="지방공무원">지방공무원</option>
-              <option value="교육공무원">교육공무원</option>
-              <option value="교육공무직">교육공무직</option>
-              <option value="미분류">미분류</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="orgJobSel">직렬/직급/직종</label>
-            <select id="orgJobSel" disabled></select>
-          </div>
-        </div>
-
-        <div id="orgResultNote" class="hint" style="margin-top:10px;">
-          집계 후 드롭박스를 선택하면 자동으로 아래 패널이 갱신됩니다.
+        <div class="table-wrap" style="max-height:300px;margin-top:10px">
+          <table id="fileTable">
+            <thead>
+              <tr>
+                <th style="min-width:240px">파일</th>
+                <th style="min-width:90px">크기</th>
+                <th style="min-width:120px">상태</th>
+                <th style="min-width:90px">레코드</th>
+                <th style="min-width:160px">키</th>
+              </tr>
+            </thead>
+            <tbody id="fileTbody">
+              <tr><td colspan="5" class="muted">아직 업로드된 파일이 없습니다.</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <div id="orgPanels" style="display:none;">
-        <div class="panel">
-          <h4>패널 1) 전출자 / 퇴직자</h4>
-          <p class="meta" id="orgPanel1Meta"></p>
-          <div class="table-wrap">
-            <table class="sheetlike sticky" id="orgPanel1Table">
-              <thead>
-                <tr>
-                  <th>성명</th>
-                  <th>직군</th>
-                  <th>직렬/직급/직종</th>
-                  <th>현소속(발령 전)</th>
-                  <th>발령(임용) 후</th>
-                  <th>전지역</th>
-                  <th>후지역</th>
-                  <th>비고</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
+      <div>
+        <div class="inline">
+          <div class="pill"><span class="dot warn"></span><span>로그</span></div>
+          <span class="spacer"></span>
+          <button id="btnCopyLog" class="secondary" title="로그 복사">로그 복사</button>
+          <button id="btnClearLog" class="secondary" title="로그 비우기">비우기</button>
         </div>
-
-        <div class="panel">
-          <h4>패널 2) 전입자 / 신규 발령자 / 파견 근무자</h4>
-          <p class="meta" id="orgPanel2Meta"></p>
-          <div class="table-wrap">
-            <table class="sheetlike sticky" id="orgPanel2Table">
-              <thead>
-                <tr>
-                  <th>성명</th>
-                  <th>직군</th>
-                  <th>직렬/직급/직종</th>
-                  <th>현소속(발령 전)</th>
-                  <th>발령(임용) 후</th>
-                  <th>전지역</th>
-                  <th>후지역</th>
-                  <th>비고</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-
-        <details class="compact">
-          <summary>미분류/기타(접기 기본) 보기</summary>
-          <div class="panel" style="margin-top:10px;">
-            <h4 style="margin:0 0 8px;">미분류/기타</h4>
-            <p class="meta" id="orgPanel3Meta"></p>
-            <div class="table-wrap">
-              <table class="sheetlike sticky" id="orgPanel3Table">
-                <thead>
-                  <tr>
-                    <th>성명</th>
-                    <th>직군</th>
-                    <th>직렬/직급/직종</th>
-                    <th>현소속(발령 전)</th>
-                    <th>발령(임용) 후</th>
-                    <th>전지역</th>
-                    <th>후지역</th>
-                    <th>비고</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </div>
-        </details>
+        <textarea id="logBox" spellcheck="false" placeholder="여기에 처리 로그가 표시됩니다."></textarea>
       </div>
-    </section>
+    </div>
+  </div>
+</section>
 
-    <!-- 4. 시군구별 상세 -->
-    <section class="section" id="sec-region">
-      <div class="toolbar">
-        <div class="left">
-          <h2 style="margin:0;">4) 상세 발령 내역 (시군구별 조회)</h2>
-        </div>
-        <div class="right">
-          <button class="btn" id="downloadRegionBtn" type="button" disabled>조회 결과 엑셀로 다운로드</button>
-        </div>
+<!-- 섹션2: 요약 -->
+<section id="sec-summary">
+  <div class="hd">
+    <h2>2) 요약 집계</h2>
+    <div class="inline">
+      <span class="pill"><span class="dot good"></span><span id="dataStatus">데이터 없음</span></span>
+      <span class="pill"><span class="dot warn"></span><span class="mono" id="dedupStatus">dedup:0</span></span>
+    </div>
+  </div>
+  <div class="bd">
+    <div class="card-row">
+      <div class="stat">
+        <div class="k">업로드 파일</div>
+        <div class="v mono" id="statFiles">0</div>
+        <div class="s muted">누적 업로드 기준</div>
       </div>
-      <hr />
+      <div class="stat">
+        <div class="k">원본 레코드</div>
+        <div class="v mono" id="statRaw">0</div>
+        <div class="s muted">시트/행 기반 추출</div>
+      </div>
+      <div class="stat">
+        <div class="k">중복 제거 후</div>
+        <div class="v mono" id="statUniq">0</div>
+        <div class="s muted">품질 점수 기반 유지</div>
+      </div>
+      <div class="stat">
+        <div class="k">학교/기관 매핑</div>
+        <div class="v mono" id="statMapped">0%</div>
+        <div class="s muted">학교 마스터 기반</div>
+      </div>
+    </div>
 
-      <div class="card">
-        <div class="filters">
-          <div class="field">
-            <label for="regionModeSel">강원도교육청 처리</label>
-            <select id="regionModeSel" disabled>
-              <option value="">(선택)</option>
-              <option value="분리">강원도교육청을 시군구와 분리</option>
-              <option value="합산">강원도교육청을 춘천에 합산</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="regionSel">지역</label>
-            <select id="regionSel" disabled></select>
-          </div>
-          <div class="field">
-            <label for="regionTypeSel">직군</label>
-            <select id="regionTypeSel" disabled>
-              <option value="전체">전체</option>
-              <option value="지방공무원">지방공무원</option>
-              <option value="교육공무원">교육공무원</option>
-              <option value="교육공무직">교육공무직</option>
-              <option value="미분류">미분류</option>
-            </select>
-          </div>
+    <div class="hr"></div>
+
+    <div class="split">
+      <div>
+        <div class="inline">
+          <div class="pill"><span class="dot good"></span><span>인사구분별</span></div>
+          <span class="spacer"></span>
+          <button class="secondary" id="btnDlSummaryByType">다운로드</button>
         </div>
-
-        <div class="hint" style="margin-top:10px;">
-          ※ “속초/양양”은 <b>속초양양</b>으로 합산 집계합니다. “강원특별자치도동해/원주/태백/홍천/화천” 등도 해당 시군구로 통합합니다.
+        <div class="table-wrap" style="max-height:320px;margin-top:10px">
+          <table>
+            <thead>
+              <tr>
+                <th>인사구분</th>
+                <th>건수</th>
+                <th>비율</th>
+              </tr>
+            </thead>
+            <tbody id="summaryByTypeTbody">
+              <tr><td colspan="3" class="muted">데이터 없음</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <div id="regionPanels" style="display:none;">
-        <div class="panel">
-          <h4>패널 1) 전출자 / 퇴직자</h4>
-          <p class="meta" id="regionPanel1Meta"></p>
-          <div class="table-wrap">
-            <table class="sheetlike sticky" id="regionPanel1Table">
-              <thead>
-                <tr>
-                  <th>성명</th>
-                  <th>직군</th>
-                  <th>직렬/직급/직종</th>
-                  <th>현소속(발령 전)</th>
-                  <th>발령(임용) 후</th>
-                  <th>전지역</th>
-                  <th>후지역</th>
-                  <th>비고</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
+      <div>
+        <div class="inline">
+          <div class="pill"><span class="dot good"></span><span>시군구별(관련 지역)</span></div>
+          <span class="spacer"></span>
+          <button class="secondary" id="btnDlSummaryByRegion">다운로드</button>
         </div>
-
-        <div class="panel">
-          <h4>패널 2) 전입자 / 신규 발령자</h4>
-          <p class="meta" id="regionPanel2Meta"></p>
-          <div class="table-wrap">
-            <table class="sheetlike sticky" id="regionPanel2Table">
-              <thead>
-                <tr>
-                  <th>성명</th>
-                  <th>직군</th>
-                  <th>직렬/직급/직종</th>
-                  <th>현소속(발령 전)</th>
-                  <th>발령(임용) 후</th>
-                  <th>전지역</th>
-                  <th>후지역</th>
-                  <th>비고</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
+        <div class="table-wrap" style="max-height:320px;margin-top:10px">
+          <table>
+            <thead>
+              <tr>
+                <th>시군구</th>
+                <th>건수</th>
+                <th>비율</th>
+              </tr>
+            </thead>
+            <tbody id="summaryByRegionTbody">
+              <tr><td colspan="3" class="muted">데이터 없음</td></tr>
+            </tbody>
+          </table>
         </div>
-
-        <div class="panel">
-          <h4>패널 3) 지역변동 없는 사람들(관내 이동/제자리/부서간 이동/휴·복직/파견 연장 등)</h4>
-          <p class="meta" id="regionPanel3Meta"></p>
-          <div class="table-wrap">
-            <table class="sheetlike sticky" id="regionPanel3Table">
-              <thead>
-                <tr>
-                  <th>성명</th>
-                  <th>직군</th>
-                  <th>직렬/직급/직종</th>
-                  <th>현소속(발령 전)</th>
-                  <th>발령(임용) 후</th>
-                  <th>전지역</th>
-                  <th>후지역</th>
-                  <th>비고</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-
-        <details class="compact">
-          <summary>미분류/기타(접기 기본) 보기</summary>
-          <div class="panel" style="margin-top:10px;">
-            <h4 style="margin:0 0 8px;">미분류/기타</h4>
-            <p class="meta" id="regionPanel4Meta"></p>
-            <div class="table-wrap">
-              <table class="sheetlike sticky" id="regionPanel4Table">
-                <thead>
-                  <tr>
-                    <th>성명</th>
-                    <th>직군</th>
-                    <th>직렬/직급/직종</th>
-                    <th>현소속(발령 전)</th>
-                    <th>발령(임용) 후</th>
-                    <th>전지역</th>
-                    <th>후지역</th>
-                    <th>비고</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </div>
-        </details>
       </div>
-    </section>
+    </div>
+  </div>
+</section>
 
-    <footer class="site-footer">
-      <div class="shell">
-        <p>※ 이름/발령지/근무지 등은 마스킹 없이 표시되도록 구성되었습니다.</p>
-        <p>※ 셀 병합/줄바꿈/특수문자에 최대한 강인하게 처리하지만, 극단적으로 깨진 양식은 “미분류”로 떨어질 수 있습니다.</p>
+<!-- 섹션3: 학교/기관별 상세 조회 -->
+<section id="sec-entity">
+  <div class="hd">
+    <h2>3) 학교/기관별 상세 조회</h2>
+    <div class="inline">
+      <span class="pill"><span class="dot good"></span><span id="entityStatus">대기</span></span>
+      <span class="spacer"></span>
+      <button id="btnDlEntity" class="secondary" disabled>현재 보기 다운로드</button>
+    </div>
+  </div>
+  <div class="bd">
+    <div class="row">
+      <div style="flex:1 1 220px">
+        <label>1) 보기 기준</label>
+        <select id="entityViewMode">
+          <option value="both">전출+전입(기본)</option>
+          <option value="out">전출(종전기관 기준)</option>
+          <option value="in">전입(신규기관 기준)</option>
+          <option value="any">관련(둘 중 하나)</option>
+        </select>
       </div>
-    </footer>
-  </main>
+      <div style="flex:2 1 420px">
+        <label>2) 학교/기관 선택</label>
+        <select id="entityPick" disabled>
+          <option value="">(데이터를 업로드하면 목록이 생성됩니다)</option>
+        </select>
+      </div>
+      <div style="flex:1 1 240px">
+        <label>3) 검색(학교/기관/직렬/직급/비고)</label>
+        <input id="jobKeyword" type="text" placeholder="예: 교육행정, 전산, 주사보, 교무, 행정실..." />
+      </div>
+      <div style="flex:1 1 200px">
+        <label>4) 인사구분</label>
+        <select id="personnelType" disabled>
+          <option value="전체">전체</option>
+          <option value="교육공무원">교육공무원</option>
+          <option value="지방공무원">지방공무원</option>
+          <option value="교육공무직">교육공무직</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+      <div style="flex:1 1 220px">
+        <label>5) 지방공무원 직급</label>
+        <select id="govGradeFilter" disabled>
+          <!-- initEntityFilters()에서 GOV_GRADE_ENDINGS로 옵션 구성 -->
+        </select>
+      </div>
+    </div>
 
-  <button id="toTopBtn" type="button" title="맨 위로">
-    <span>↑</span>
-  </button>
+    <div class="note" style="margin-top:10px">
+      <span class="chip">중요</span>
+      <span class="muted">
+        “지방공무원 직급” 필터는 인사구분이 <span class="kbd">지방공무원</span>일 때만 활성화됩니다.
+        직급 판정은 (발령직급 → 현직급 → 원문 직렬/직급) 순서로 토큰을 탐색해 <span class="kbd">지방*</span> + 특정 끝단(서기보~사무관) 매칭으로 추출합니다.
+      </span>
+    </div>
 
-  <script>
-    /**********************************************************************
-     * 0) 라이브러리 로더 (XLSX + JSZip) + 상태바 표시
-     *********************************************************************/
-    const ui = {
-      libBadge: document.getElementById('libBadge'),
-      progressBar: document.getElementById('progressBar'),
-      progressText: document.getElementById('progressText'),
-      progressPct: document.getElementById('progressPct'),
-      analyzeBtn: document.getElementById('analyzeBtn'),
-      resetBtn: document.getElementById('resetBtn'),
-      fileCount: document.getElementById('fileCount'),
-      fileList: document.getElementById('fileList'),
-      filesDetails: document.getElementById('filesDetails'),
-      schoolMasterStatus: document.getElementById('schoolMasterStatus'),
+    <div class="hr"></div>
 
-      dashboardEmpty: document.getElementById('dashboardEmpty'),
-      dashboardWrap: document.getElementById('dashboardWrap'),
-      kpiGrid: document.getElementById('kpiGrid'),
-      regionSummaryTable: document.getElementById('regionSummaryTable').querySelector('tbody'),
-      jumpSchoolOrg: document.getElementById('jumpSchoolOrg'),
-      jumpRegion: document.getElementById('jumpRegion'),
+    <div class="tri">
+      <div>
+        <div class="inline">
+          <div class="pill"><span class="dot warn"></span><span>전출(종전기관)</span></div>
+          <span class="spacer"></span>
+          <span class="mono muted" id="outCount">0</span>
+        </div>
+        <div class="table-wrap" style="margin-top:10px">
+          <table id="outTable">
+            <thead>
+              <tr>
+                <th style="min-width:90px">인사구분</th>
+                <th style="min-width:70px">직급</th>
+                <th style="min-width:90px">성명</th>
+                <th style="min-width:220px">종전기관</th>
+                <th style="min-width:120px">종전지역</th>
+                <th style="min-width:220px">신규기관</th>
+                <th style="min-width:120px">신규지역</th>
+                <th style="min-width:180px">직렬/직종(원문)</th>
+                <th style="min-width:160px">출처</th>
+              </tr>
+            </thead>
+            <tbody id="outTbody">
+              <tr><td colspan="9" class="muted">대기</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-      orgKindSel: document.getElementById('orgKindSel'),
-      orgNameSel: document.getElementById('orgNameSel'),
-      orgTypeSel: document.getElementById('orgTypeSel'),
-      orgJobSel: document.getElementById('orgJobSel'),
-      downloadOrgBtn: document.getElementById('downloadOrgBtn'),
-      orgPanels: document.getElementById('orgPanels'),
-      orgPanel1Meta: document.getElementById('orgPanel1Meta'),
-      orgPanel2Meta: document.getElementById('orgPanel2Meta'),
-      orgPanel3Meta: document.getElementById('orgPanel3Meta'),
-      orgPanel1Table: document.getElementById('orgPanel1Table').querySelector('tbody'),
-      orgPanel2Table: document.getElementById('orgPanel2Table').querySelector('tbody'),
-      orgPanel3Table: document.getElementById('orgPanel3Table').querySelector('tbody'),
+      <div>
+        <div class="inline">
+          <div class="pill"><span class="dot good"></span><span>전입(신규기관)</span></div>
+          <span class="spacer"></span>
+          <span class="mono muted" id="inCount">0</span>
+        </div>
+        <div class="table-wrap" style="margin-top:10px">
+          <table id="inTable">
+            <thead>
+              <tr>
+                <th style="min-width:90px">인사구분</th>
+                <th style="min-width:70px">직급</th>
+                <th style="min-width:90px">성명</th>
+                <th style="min-width:220px">신규기관</th>
+                <th style="min-width:120px">신규지역</th>
+                <th style="min-width:220px">종전기관</th>
+                <th style="min-width:120px">종전지역</th>
+                <th style="min-width:180px">직렬/직종(원문)</th>
+                <th style="min-width:160px">출처</th>
+              </tr>
+            </thead>
+            <tbody id="inTbody">
+              <tr><td colspan="9" class="muted">대기</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-      regionModeSel: document.getElementById('regionModeSel'),
-      regionSel: document.getElementById('regionSel'),
-      regionTypeSel: document.getElementById('regionTypeSel'),
-      downloadRegionBtn: document.getElementById('downloadRegionBtn'),
-      regionPanels: document.getElementById('regionPanels'),
-      regionPanel1Meta: document.getElementById('regionPanel1Meta'),
-      regionPanel2Meta: document.getElementById('regionPanel2Meta'),
-      regionPanel3Meta: document.getElementById('regionPanel3Meta'),
-      regionPanel4Meta: document.getElementById('regionPanel4Meta'),
-      regionPanel1Table: document.getElementById('regionPanel1Table').querySelector('tbody'),
-      regionPanel2Table: document.getElementById('regionPanel2Table').querySelector('tbody'),
-      regionPanel3Table: document.getElementById('regionPanel3Table').querySelector('tbody'),
-      regionPanel4Table: document.getElementById('regionPanel4Table').querySelector('tbody'),
+      <div>
+        <div class="inline">
+          <div class="pill"><span class="dot bad"></span><span>미분류/기타</span></div>
+          <span class="spacer"></span>
+          <span class="mono muted" id="unkCount">0</span>
+        </div>
+        <div class="table-wrap" style="margin-top:10px">
+          <table id="unkTable">
+            <thead>
+              <tr>
+                <th style="min-width:90px">인사구분</th>
+                <th style="min-width:70px">직급</th>
+                <th style="min-width:90px">성명</th>
+                <th style="min-width:240px">기관(원문)</th>
+                <th style="min-width:120px">지역</th>
+                <th style="min-width:220px">직렬/직종(원문)</th>
+                <th style="min-width:220px">비고</th>
+                <th style="min-width:160px">출처</th>
+              </tr>
+            </thead>
+            <tbody id="unkTbody">
+              <tr><td colspan="8" class="muted">대기</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- 섹션4: 시군구별 상세 조회 -->
+<section id="sec-region">
+  <div class="hd">
+    <h2>4) 시군구별 상세 조회</h2>
+    <div class="inline">
+      <span class="pill"><span class="dot good"></span><span id="regionStatus">대기</span></span>
+      <span class="spacer"></span>
+      <button id="btnDlRegion" class="secondary" disabled>현재 보기 다운로드</button>
+    </div>
+  </div>
+  <div class="bd">
+    <div class="row">
+      <div style="flex:1 1 240px">
+        <label>1) 기준(지역)</label>
+        <select id="regionOfficeMode" disabled>
+          <option value="related">관련 지역(둘 중 하나)</option>
+          <option value="from">전출 기준(종전지역)</option>
+          <option value="to">전입 기준(신규지역)</option>
+        </select>
+      </div>
+      <div style="flex:1 1 240px">
+        <label>2) 시군구 선택</label>
+        <select id="regionPick" disabled>
+          <option value="">(데이터 업로드 후 선택)</option>
+        </select>
+      </div>
+      <div style="flex:1 1 240px">
+        <label>3) 인사구분</label>
+        <select id="regionPersonnelType" disabled>
+          <option value="전체">전체</option>
+          <option value="교육공무원">교육공무원</option>
+          <option value="지방공무원">지방공무원</option>
+          <option value="교육공무직">교육공무직</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+      <div style="flex:1 1 240px">
+        <label>4) 지방공무원 직급</label>
+        <select id="regionGovGradeFilter" disabled></select>
+      </div>
+      <div style="flex:1 1 240px">
+        <label>5) 검색(기관/직렬/직급/비고)</label>
+        <input id="regionKeyword" type="text" placeholder="예: 행정, 전산, 조리, 사무관..." disabled />
+      </div>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="split">
+      <div>
+        <div class="inline">
+          <div class="pill"><span class="dot good"></span><span>레코드 목록</span></div>
+          <span class="spacer"></span>
+          <span class="mono muted" id="regionCount">0</span>
+        </div>
+        <div class="table-wrap" style="margin-top:10px">
+          <table id="regionTable">
+            <thead>
+              <tr>
+                <th style="min-width:90px">인사구분</th>
+                <th style="min-width:70px">직급</th>
+                <th style="min-width:90px">성명</th>
+                <th style="min-width:220px">종전기관</th>
+                <th style="min-width:110px">종전지역</th>
+                <th style="min-width:220px">신규기관</th>
+                <th style="min-width:110px">신규지역</th>
+                <th style="min-width:180px">직렬/직종(원문)</th>
+                <th style="min-width:220px">비고</th>
+                <th style="min-width:160px">출처</th>
+              </tr>
+            </thead>
+            <tbody id="regionTbody">
+              <tr><td colspan="10" class="muted">대기</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div>
+        <div class="pill"><span class="dot warn"></span><span>필터/모드 안내</span></div>
+        <div class="note" style="margin-top:10px;line-height:1.6">
+          <div class="ok-box">
+            <div><b>속초양양 통합</b>: 속초/양양은 <span class="kbd">속초양양</span>으로 집계됩니다.</div>
+            <div style="margin-top:6px"><b>병설유치원 합산</b>: “병설유치원” 표기는 기준 학교명으로 정규화됩니다.</div>
+          </div>
+          <div class="danger-box" style="margin-top:10px">
+            <div><b>주의</b>: 엑셀 양식/헤더가 다양한 경우 일부 열은 추정 매핑됩니다. 누락/오인식 레코드는 “미분류/기타”로 남을 수 있습니다.</div>
+          </div>
+          <div class="hr"></div>
+          <div class="pill"><span class="dot good"></span><span>다운로드</span></div>
+          <div class="note" style="margin-top:8px">
+            “현재 보기 다운로드”는 <span class="kbd">현재 필터</span> 결과만 내보냅니다.<br/>
+            파일명에는 인사구분/지역/직급 조건이 반영됩니다.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+  </div>
+</div><div class="float-top" id="btnTop" title="맨위로">↑</div><script>
+/* ============================
+   내장 학교 마스터
+   ============================ */
+const GW_SCHOOL_MASTER_ROWS = [{"n":"강원온라인학교","k":"강원온라인학교","r":"원주"},{"n":"가곡고등학교","k":"가곡고등학교","r":"삼척"},{"n":"한국항공고등학교","k":"한국항공고등학교","r":"태백"},{"n":"소양고등학교","k":"소양고등학교","r":"춘천"},{"n":"가곡중학교","k":"가곡중학교","r":"삼척"},{"n":"한국주얼리고등학교","k":"한국주얼리고등학교","r":"원주"},{"n":"한내초등학교","k":"한내초등학교","r":"춘천"},{"n":"가곡초등학교","k":"가곡초등학교","r":"삼척"},{"n":"한국학교(교도소)","k":"한국학교교도소","r":"원주"},{"n":"한림초등학교","k":"한림초등학교","r":"춘천"},{"n":"삼척여자고등학교","k":"삼척여자고등학교","r":"삼척"},{"n":"한림중학교","k":"한림중학교","r":"춘천"},{"n":"삼척고등학교","k":"삼척고등학교","r":"삼척"},{"n":"한림중학교병설유치원","k":"한림중학교병설유치원","r":"춘천"},{"n":"삼척초등학교","k":"삼척초등학교","r":"삼척"},{"n":"한림초병설유치원","k":"한림초병설유치원","r":"춘천"},{"n":"삼척중학교","k":"삼척중학교","r":"삼척"},{"n":"한빛초등학교","k":"한빛초등학교","r":"춘천"},{"n":"삼척중앙초등학교","k":"삼척중앙초등학교","r":"삼척"},{"n":"한빛유치원","k":"한빛유치원","r":"춘천"},{"n":"삼척중앙초병설유치원","k":"삼척중앙초병설유치원","r":"삼척"},{"n":"한빛초병설유치원","k":"한빛초병설유치원","r":"춘천"},{"n":"삼척해양초등학교","k":"삼척해양초등학교","r":"삼척"},{"n":"한사랑유치원","k":"한사랑유치원","r":"춘천"},{"n":"삼척해양초병설유치원","k":"삼척해양초병설유치원","r":"삼척"},{"n":"한샘유치원","k":"한샘유치원","r":"춘천"},{"n":"삼척해양중학교","k":"삼척해양중학교","r":"삼척"},{"n":"한울유치원","k":"한울유치원","r":"춘천"},{"n":"삼척해양고등학교","k":"삼척해양고등학교","r":"삼척"},{"n":"한울초등학교","k":"한울초등학교","r":"춘천"},{"n":"삼척해양고등학교부설방송통신고등학교","k":"삼척해양고등학교부설방송통신고등학교","r":"삼척"},{"n":"한울초병설유치원","k":"한울초병설유치원","r":"춘천"},{"n":"삼척해양고부설방송통신고등학교","k":"삼척해양고부설방송통신고등학교","r":"삼척"},{"n":"한울중학교","k":"한울중학교","r":"춘천"},{"n":"삼척해양고등학교부설방송통신중학교","k":"삼척해양고등학교부설방송통신중학교","r":"삼척"},{"n":"한울중학교병설유치원","k":"한울중학교병설유치원","r":"춘천"},{"n":"삼척해양고부설방송통신중학교","k":"삼척해양고부설방송통신중학교","r":"삼척"},{"n":"한울초등학교병설유치원","k":"한울초등학교병설유치원","r":"춘천"},{"n":"삼척해양고등학교병설유치원","k":"삼척해양고등학교병설유치원","r":"삼척"},{"n":"한울초병설유치원(신동초병설유치원)","k":"한울초병설유치원신동초병설유치원","r":"춘천"},{"n":"삼척해양유치원","k":"삼척해양유치원","r":"삼척"},{"n":"한울초병설유치원(청량초병설유치원)","k":"한울초병설유치원청량초병설유치원","r":"춘천"},{"n":"삼척해양초등학교병설유치원","k":"삼척해양초등학교병설유치원","r":"삼척"},{"n":"한울초병설유치원(창촌초병설유치원)","k":"한울초병설유치원창촌초병설유치원","r":"춘천"},{"n":"삼척해양중학교병설유치원","k":"삼척해양중학교병설유치원","r":"삼척"},{"n":"한울초병설유치원(신북초병설유치원)","k":"한울초병설유치원신북초병설유치원","r":"춘천"},{"n":"삼척해양초등학교부설방송통신중학교","k":"삼척해양초등학교부설방송통신중학교","r":"삼척"},{"n":"한울초병설유치원(신북초등학교병설유치원)","k":"한울초병설유치원신북초등학교병설유치원","r":"춘천"},{"n":"삼척해양초부설방송통신중학교","k":"삼척해양초부설방송통신중학교","r":"삼척"},{"n":"한울초병설유치원(신북중학교병설유치원)","k":"한울초병설유치원신북중학교병설유치원","r":"춘천"},{"n":"삼척해양중학교부설방송통신중학교","k":"삼척해양중학교부설방송통신중학교","r":"삼척"},{"n":"한울초병설유치원(신북중학교)","k":"한울초병설유치원신북중학교","r":"춘천"},{"n":"삼척해양중부설방송통신중학교","k":"삼척해양중부설방송통신중학교","r":"삼척"},{"n":"한울초병설유치원(서면초병설유치원)","k":"한울초병설유치원서면초병설유치원","r":"춘천"},{"n":"삼척해양중학교부설방송통신고등학교","k":"삼척해양중학교부설방송통신고등학교","r":"삼척"},{"n":"한울초병설유치원(서상초병설유치원)","k":"한울초병설유치원서상초병설유치원","r":"춘천"},{"n":"삼척해양중부설방송통신고등학교","k":"삼척해양중부설방송통신고등학교","r":"삼척"},{"n":"한울초병설유치원(서상초등학교병설유치원)","k":"한울초병설유치원서상초등학교병설유치원","r":"춘천"},{"n":"삼척해양고등학교부설유치원","k":"삼척해양고등학교부설유치원","r":"삼척"},{"n":"한울초병설유치원(서상초등학교)","k":"한울초병설유치원서상초등학교","r":"춘천"},{"n":"삼척해양고부설유치원","k":"삼척해양고부설유치원","r":"삼척"},{"n":"한울초병설유치원(서상중학교병설유치원)","k":"한울초병설유치원서상중학교병설유치원","r":"춘천"},{"n":"삼척해양중학교부설유치원","k":"삼척해양중학교부설유치원","r":"삼척"},{"n":"한울초병설유치원(서상중학교)","k":"한울초병설유치원서상중학교","r":"춘천"},{"n":"삼척해양중부설유치원","k":"삼척해양중부설유치원","r":"삼척"},{"n":"한울초병설유치원(강촌초병설유치원)","k":"한울초병설유치원강촌초병설유치원","r":"춘천"},{"n":"삼척해양초등학교부설유치원","k":"삼척해양초등학교부설유치원","r":"삼척"},{"n":"한울초병설유치원(강촌초등학교병설유치원)","k":"한울초병설유치원강촌초등학교병설유치원","r":"춘천"},{"n":"삼척해양초부설유치원","k":"삼척해양초부설유치원","r":"삼척"},{"n":"한울초병설유치원(강촌초등학교)","k":"한울초병설유치원강촌초등학교","r":"춘천"},{"n":"삼척해양고등학교부설방송통신중학교부설유치원","k":"삼척해양고등학교부설방송통신중학교부설유치원","r":"삼척"},{"n":"한울초병설유치원(강촌중학교병설유치원)","k":"한울초병설유치원강촌중학교병설유치원","r":"춘천"},{"n":"삼척해양고부설방송통신중학교부설유치원","k":"삼척해양고부설방송통신중학교부설유치원","r":"삼척"},{"n":"한울초병설유치원(강촌중학교)","k":"한울초병설유치원강촌중학교","r":"춘천"},{"n":"삼척해양중학교부설방송통신중학교부설유치원","k":"삼척해양중학교부설방송통신중학교부설유치원","r":"삼척"},{"n":"한울초등학교병설유치원(남산초병설유치원)","k":"한울초등학교병설유치원남산초병설유치원","r":"춘천"},{"n":"삼척해양중부설방송통신중학교부설유치원","k":"삼척해양중부설방송통신중학교부설유치원","r":"삼척"},{"n":"한울초등학교병설유치원(남산초등학교병설유치원)","k":"한울초등학교병설유치원남산초등학교병설유치원","r":"춘천"},{"n":"삼척해양중학교부설방송통신고등학교부설유치원","k":"삼척해양중학교부설방송통신고등학교부설유치원","r":"삼척"},{"n":"한울초등학교병설유치원(남산초등학교)","k":"한울초등학교병설유치원남산초등학교","r":"춘천"},{"n":"삼척해양중부설방송통신고등학교부설유치원","k":"삼척해양중부설방송통신고등학교부설유치원","r":"삼척"},{"n":"한울초등학교병설유치원(남산중학교병설유치원)","k":"한울초등학교병설유치원남산중학교병설유치원","r":"춘천"},{"n":"삼척해양유치원(삼척해양초등학교병설유치원)","k":"삼척해양유치원삼척해양초등학교병설유치원","r":"삼척"},{"n":"한울초등학교병설유치원(남산중학교)","k":"한울초등학교병설유치원남산중학교","r":"춘천"},{"n":"삼척해양유치원(삼척해양초병설유치원)","k":"삼척해양유치원삼척해양초병설유치원","r":"삼척"},{"n":"한울초등학교병설유치원(남산고등학교병설유치원)","k":"한울초등학교병설유치원남산고등학교병설유치원","r":"춘천"},{"n":"삼척해양유치원(삼척해양중학교병설유치원)","k":"삼척해양유치원삼척해양중학교병설유치원","r":"삼척"},{"n":"한울초등학교병설유치원(남산고등학교)","k":"한울초등학교병설유치원남산고등학교","r":"춘천"},{"n":"삼척해양유치원(삼척해양중병설유치원)","k":"삼척해양유치원삼척해양중병설유치원","r":"삼척"},{"n":"한울초등학교병설유치원(남산중학교)","k":"한울초등학교병설유치원남산중학교","r":"춘천"},{"n":"삼척해양유치원(삼척해양고등학교부설유치원)","k":"삼척해양유치원삼척해양고등학교부설유치원","r":"삼척"},{"n":"한울초등학교병설유치원(남산초등학교)","k":"한울초등학교병설유치원남산초등학교","r":"춘천"},{"n":"삼척해양유치원(삼척해양고부설유치원)","k":"삼척해양유치원삼척해양고부설유치원","r":"삼척"},{"n":"한울초등학교병설유치원(남산중학교병설유치원)","k":"한울초등학교병설유치원남산중학교병설유치원","r":"춘천"},{"n":"삼척해양유치원(삼척해양고등학교병설유치원)","k":"삼척해양유치원삼척해양고등학교병설유치원","r":"삼척"},{"n":"한울초등학교병설유치원(남산중학교병설유치원-남산초병설유치원)","k":"한울초등학교병설유치원남산중학교병설유치원남산초병설유치원","r":"춘천"},{"n":"삼척해양유치원(삼척해양고병설유치원)","k":"삼척해양유치원삼척해양고병설유치원","r":"삼척"},{"n":"한울초등학교병설유치원(남산중학교병설유치원-남산초등학교병설유치원)","k":"한울초등학교병설유치원남산중학교병설유치원남산초등학교병설유치원","r":"춘천"},{"n":"삼척해양유치원(삼척해양고등학교부설방송통신중학교부설유치원)","k":"삼척해양유치원삼척해양고등학교부설방송통신중학교부설유치원","r":"삼척"},{"n":"한울초등학교병설유치원(남산중학교병설유치원-남산초등학교)","k":"한울초등학교병설유치원남산중학교병설유치원남산초등학교","r":"춘천"},{"n":"삼척해양유치원(삼척해양고부설방송통신중학교부설유치원)","k":"삼척해양유치원삼척해양고부설방송통신중학교부설유치원","r":"삼척"},{"n":"한울초등학교병설유치원(남산중학교병설유치원-남산중학교)","k":"한울초등학교병설유치원남산중학교병설유치원남산중학교","r":"춘천"},{"n":"삼척해양유치원(삼척해양중학교부설방송통신중학교부설유치원)","k":"삼척해양유치원삼척해양중학교부설방송통신중학교부설유치원","r":"삼척"},{"n":"한울초등학교병설유치원(남산중학교병설유치원-남산고등학교병설유치원)","k":"한울초등학교병설유치원남산중학교병설유치원남산고등학교병설유치원","r":"춘천"},{"n":"삼척해양유치원(삼척해양중부설방송통신중학교부설유치원)","k":"삼척해양유치원삼척해양중부설방송통신중학교부설유치원","r":"삼척"},{"n":"한울초등학교병설유치원(남산중학교병설유치원-남산고등학교)","k":"한울초등학교병설유치원남산중학교병설유치원남산고등학교","r":"춘천"},{"n":"삼척해양유치원(삼척해양중학교부설방송통신고등학교부설유치원)","k":"삼척해양유치원삼척해양중학교부설방송통신고등학교부설유치원","r":"삼척"},{"n":"한울초등학교병설유치원(남산중학교병설유치원-남산고등학교병설유치원)","k":"한울초등학교병설유치원남산중학교병설유치원남산고등학교병설유치원","r":"춘천"},{"n":"삼척해양유치원(삼척해양중부설방송통신고등학교부설유치원)","k":"삼척해양유치원삼척해양중부설방송통신고등학교부설유치원","r":"삼척"},{"n":"한울초등학교병설유치원(남산중학교병설유치원-남산고등학교)","k":"한울초등학교병설유치원남산중학교병설유치원남산고등학교","r":"춘천"},{"n":"삼척해양유치원(삼척해양초등학교부설유치원)","k":"삼척해양유치원삼척해양초등학교부설유치원","r":"삼척"},{"n":"한울초등학교병설유치원(남산중학교병설유치원-남산고등학교병설유치원)","k":"한울초등학교병설유치원남산중학교병설유치원남산고등학교병설유치원","r":"춘천"},{"n":"삼척해양유치원(삼척해양초부설유치원)","k":"삼척해양유치원삼척해양초부설유치원","r":"삼척"},{"n":"한울초등학교병설유치원(남산중학교병설유치원-남산고등학교)","k":"한울초등학교병설유치원남산중학교병설유치원남산고등학교","r":"춘천"},{"n":"삼척해양유치원(삼척해양고등학교부설방송통신중학교)","k":"삼척해양유치원삼척해양고등학교부설방송통신중학교","r":"삼척"},{"n":"한울초등학교병설유치원(남산중학교병설유치원-남산고등학교병설유치원)","k":"한울초등학교병설유치원남산중학교병설유치원남산고등학교병설유치원","r":"춘천"},{"n":"삼척해양유치원(삼척해양고부설방송통신중학교)","k":"삼척해양유치원삼척해양고부설방송통신중학교","r":"삼척"},{"n":"한울초등학교병설유치원(남산중학교병설유치원-남산고등학교)","k":"한울초등학교병설유치원남산중학교병설유치원남산고등학교","r":"춘천"},{"n":"삼척해양유치원(삼척해양중학교부설방송통신중학교)","k":"삼척해양유치원삼척해양중학교부설방송통신중학교","r":"삼척"},{"n":"한울초등학교병설유치원(남산중학교병설유치원-남산고등학교병설유치원)","k":"한울초등학교병설유치원남산중학교병설유치원남산고등학교병설유치원","r":"춘천"},{"n":"삼척해양유치원(삼척해양중부설방송통신중학교)","k":"삼척해양유치원삼척해양중부설방송통신중학교","r":"삼척"},{"n":"한울초등학교병설유치원(남산중학교병설유치원-남산고등학교)","k":"한울초등학교병설유치원남산중학교병설유치원남산고등학교","r":"춘천"},{"n":"삼척해양유치원(삼척해양중학교부설방송통신고등학교)","k":"삼척해양유치원삼척해양중학교부설방송통신고등학교","r":"삼척"},{"n":"한울초등학교병설유치원(남산중학교병설유치원-남산고등학교병설유치원)","k":"한울초등학교병설유치원남산중학교병설유치원남산고등학교병설유치원","r":"춘천"},{"n":"삼척해양유치원(삼척해양중부설방송통신고등학교)","k":"삼척해양유치원삼척해양중부설방송통신고등학교","r":"삼척"},{"n":"한울초등학교병설유치원(남산중학교병설유치원-남산고등학교)","k":"한울초등학교병설유치원남산중학교병설유치원남산고등학교","r":"춘천"},{"n":"삼척해양유치원(삼척해양초등학교부설방송통신중학교)","k":"삼척해양유치원삼척해양초등학교부설방송통신중학교","r":"삼척"},{"n":"한울초등학교병설유치원(남산중학교병설유치원-남산고등학교병설유치원)","k":"한울초등학교병설유치원남산중학교병설유치원남산고등학교병설유치원","r":"춘천"},{"n":"삼척해양유치원(삼척해양초부설방송통신중학교)","k":"삼척해양유치원삼척해양초부설방송통신중학교","r":"삼척"},{"n":"한울초등학교병설유치원(남산중학교병설유치원-남산고등학교)","k":"한울초등학교병설유치원남산중학교병설유치원남산고등학교","r":"춘천"},{"n":"삼척해양유치원(삼척해양중학교부설방송통신중학교)","k":"삼척해양유치원삼척해양중학교부설방송통신중학교","r":"삼척"},{"n":"한울초등학교병설유치원(남산중학교병설유치원-남산고등학교병설유치원)","k":"한울초등학교병설유치원남산중학교병설유치원남산고등학교병설유치원","r":"춘천"},{"n":"삼척해양유치원(삼척해양중부설방송통신중학교)","k":"삼척해양유치원삼척해양중부설방송통신중학교","r":"삼척"},{"n":"한울초등학교병설유치원(남산중학교병설유치원-남산고등학교)","k":"한울초등학교병설유치원남산중학교병설유치원남산고등학교","r":"춘천"},{"n":"삼척해양유치원(삼척해양중학교부설방송통신고등학교)","k":"삼척해양유치원삼척해양중학교부설방송통신고등학교","r":"삼척"},{"n":"한울초등학교병설유치원(남산중학교병설유치원-남산고등학교병설유치원)","k":"한울초등학교병설유치원남산중학교병설유치원남산고등학교병설유치원","r":"춘천"},{"n":"삼척해양유치원(삼척해양중부설방송통신고등학교)","k":"삼척해양유치원삼척해양중부설방송통신고등학교","r":"삼척"},{"n":"한울초등학교병설유치원(남산중학교병설유치원-남산고등학교)","k":"한울초등학교병설유치원남산중학교병설유치원남산고등학교","r":"춘천"},{"n":"섬강고등학교","k":"섬강고등학교","r":"원주"},{"n":"강릉여자고등학교","k":"강릉여자고등학교","r":"강릉"},{"n":"비두초병설유치원","k":"비두초병설유치원","r":"원주"},{"n":"비봉초등학교","k":"비봉초등학교","r":"양구"},{"n":"다인유치원","k":"다인유치원","r":"강릉"}];
+/* NOTE: 위 배열은 내장 마스터 일부 예시로 시작됩니다.
+   실제 운영에서는 GW_SCHOOL_MASTER_ROWS 전체 목록(강원도 내 전체 학교 목록)을 포함해야 합니다. */
+
+/* ============================
+   전역 상수 / 상태
+   ============================ */
+const GOV_GRADE_ENDINGS = ["서기보시보","서기보","서기","주사보","주사","서기관","사무관"];
+
+const REGIONS_ORDER = [
+  "춘천","원주","강릉","동해","태백","삼척",
+  "홍천","횡성","영월","평창","정선",
+  "철원","화천","양구","인제","고성","속초양양"
+];
+
+const state = {
+  files: [],                 // {file, key, status, recCount, err}
+  fileKeySet: new Set(),
+  rawRecords: [],
+  records: [],               // deduped
+  dedupRemoved: 0,
+  stats: {
+    mappedOrg: 0,
+    mappedOrgTotal: 0,
+  },
+  indexes: {
+    byEntity: new Map(),     // entity -> [recIds]
+    byRegion: new Map(),     // region -> [recIds]
+  },
+  currentExport: { title: "export", rows: [], sheetName: "data" },
+};
+
+const el = {
+  xlsxDot: null,
+  xlsxStatus: null,
+  appClock: null,
+  fileInput: null,
+  btnParse: null,
+  btnClear: null,
+  globalProgress: null,
+  globalProgressText: null,
+  globalCounts: null,
+  fileTbody: null,
+  logBox: null,
+  btnCopyLog: null,
+  btnClearLog: null,
+
+  dataStatus: null,
+  dedupStatus: null,
+  statFiles: null,
+  statRaw: null,
+  statUniq: null,
+  statMapped: null,
+  summaryByTypeTbody: null,
+  summaryByRegionTbody: null,
+  btnDlSummaryByType: null,
+  btnDlSummaryByRegion: null,
+
+  entityStatus: null,
+  btnDlEntity: null,
+  entityViewMode: null,
+  entityPick: null,
+  jobKeyword: null,
+  personnelType: null,
+  govGradeFilter: null,
+  outTbody: null,
+  inTbody: null,
+  unkTbody: null,
+  outCount: null,
+  inCount: null,
+  unkCount: null,
+
+  regionStatus: null,
+  btnDlRegion: null,
+  regionOfficeMode: null,
+  regionPick: null,
+  regionPersonnelType: null,
+  regionGovGradeFilter: null,
+  regionKeyword: null,
+  regionTbody: null,
+  regionCount: null,
+
+  btnTop: null,
+};
+
+function $(id){ return document.getElementById(id); }
+
+function nowStr(){
+  const d=new Date();
+  const pad=n=>String(n).padStart(2,'0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function log(line, level="info"){
+  const t = new Date();
+  const pad=n=>String(n).padStart(2,'0');
+  const stamp = `${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())} ${pad(t.getHours())}:${pad(t.getMinutes())}:${pad(t.getSeconds())}`;
+  const prefix = level==="error"?"[ERR]":level==="warn"?"[WRN]":"[INF]";
+  el.logBox.value += `${stamp} ${prefix} ${line}\n`;
+  el.logBox.scrollTop = el.logBox.scrollHeight;
+  try{ console[level==="info"?"log":level](line); } catch(e){}
+}
+
+function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+function fmtBytes(b){
+  if (b==null) return "-";
+  const u=["B","KB","MB","GB"];
+  let i=0; let v=b;
+  while(v>=1024 && i<u.length-1){ v/=1024; i++; }
+  return `${v.toFixed(i?1:0)} ${u[i]}`;
+}
+
+function safeText(v){
+  if (v==null) return "";
+  if (typeof v==="string") return v.trim();
+  if (typeof v==="number") return String(v);
+  if (v instanceof Date) return v.toISOString().slice(0,10);
+  return String(v).trim();
+}
+
+/* ============================
+   SheetJS 로더 (CDN + 로컬 fallback + 진행률 UI)
+   ============================ */
+async function loadSheetJS(){
+  if (window.XLSX) return true;
+
+  el.xlsxDot.className = "dot warn";
+  el.xlsxStatus.textContent = "SheetJS 로딩 중(CDN)…";
+  let p = 0;
+  let timer = setInterval(() => {
+    p = clamp(p + 3, 0, 92);
+    setGlobalProgress(p, `라이브러리 로드 중… ${p}%`);
+  }, 60);
+
+  const cdn = "https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.full.min.js";
+  const local = "/static/xlsx.full.min.js";
+
+  const loadScript = (src) => new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = src;
+    s.async = true;
+    s.onload = () => resolve(true);
+    s.onerror = () => reject(new Error(`load fail: ${src}`));
+    document.head.appendChild(s);
+  });
+
+  try{
+    await loadScript(cdn);
+    clearInterval(timer);
+    setGlobalProgress(100, "라이브러리 로드 완료");
+    el.xlsxDot.className = "dot good";
+    el.xlsxStatus.textContent = "SheetJS 준비 완료(CDN)";
+    log("SheetJS CDN 로드 완료");
+    return true;
+  }catch(e1){
+    log("SheetJS CDN 로드 실패 → 로컬 fallback 시도", "warn");
+    el.xlsxStatus.textContent = "SheetJS 로딩 중(로컬)…";
+    try{
+      await loadScript(local);
+      clearInterval(timer);
+      setGlobalProgress(100, "라이브러리 로드 완료");
+      el.xlsxDot.className = "dot good";
+      el.xlsxStatus.textContent = "SheetJS 준비 완료(로컬)";
+      log("SheetJS 로컬 fallback 로드 완료");
+      return true;
+    }catch(e2){
+      clearInterval(timer);
+      setGlobalProgress(0, "라이브러리 로드 실패");
+      el.xlsxDot.className = "dot bad";
+      el.xlsxStatus.textContent = "SheetJS 로드 실패";
+      log("SheetJS 로드 실패: /static/xlsx.full.min.js 존재 여부 확인 필요", "error");
+      return false;
+    }
+  }
+}
+
+function setGlobalProgress(percent, text){
+  el.globalProgress.style.width = `${clamp(percent,0,100)}%`;
+  if (text) el.globalProgressText.textContent = text;
+}
+
+/* ============================
+   학교 마스터 인덱스 / 정규화
+   ============================ */
+const masterIndex = (() => {
+  const byKey = new Map();
+  const byName = new Map();
+  for (const row of GW_SCHOOL_MASTER_ROWS){
+    if (!row || !row.k) continue;
+    byKey.set(row.k, row);
+    byName.set(row.n, row);
+  }
+  return { byKey, byName };
+})();
+
+function normOrgKey(s){
+  let t = safeText(s);
+  if (!t) return "";
+  t = t.replace(/\u00A0/g, " "); // NBSP
+  t = t.replace(/\s+/g, "");
+  t = t.replace(/[\/·\-\–\—_.,:;"'`~!@#$%^&*+=|\\?<>{}\[\]（）()]/g, "");
+  return t;
+}
+
+function normalizeOrgName(raw){
+  const orig = safeText(raw);
+  if (!orig) return { name:"", region:"", matched:false, key:"" };
+
+  // 병설유치원 합산: "OO초병설유치원" -> "OO초"
+  let s = orig.replace(/\s+/g, " ").trim();
+  let s2 = s.replace(/병설유치원/g, "").replace(/\s+/g," ").trim();
+
+  // 흔한 표기 정리
+  s2 = s2.replace(/강원특별자치도교육청|강원도교육청/g, "강원도교육청");
+  s2 = s2.replace(/교육지원청/g, "교육지원청"); // 유지
+
+  const key = normOrgKey(s2);
+
+  let hit = masterIndex.byKey.get(key);
+  if (!hit && s2 !== s) hit = masterIndex.byKey.get(normOrgKey(s));
+  if (!hit && masterIndex.byName.has(s2)) hit = masterIndex.byName.get(s2);
+
+  if (hit){
+    return { name: hit.n, region: normalizeRegion(hit.r), matched:true, key: hit.k };
+  }
+
+  // 교육지원청 / 직속기관 등 추정 지역
+  const region = inferRegionFromOrgName(s2);
+  return { name: s2, region, matched:false, key };
+}
+
+function normalizeRegion(r){
+  let s = safeText(r);
+  if (!s) return "";
+  s = s.replace(/(특별자치도|광역시|특별시|도|시|군)$/g, "");
+  if (s === "속초" || s === "양양") return "속초양양";
+  return s;
+}
+
+function inferRegionFromOrgName(orgName){
+  const s = safeText(orgName);
+  if (!s) return "";
+  // 정규식으로 지역 토큰 찾기
+  for (const r of REGIONS_ORDER){
+    if (s.includes(r)) return r;
+  }
+  // 주소처럼 "원주시", "양구군"
+  const m = s.match(/([가-힣]+?)(시|군)/);
+  if (m) return normalizeRegion(m[0]);
+  return "";
+}
+
+/* ============================
+   지방공무원 직급 추출 (요구사항 정확 적용)
+   ============================ */
+function extractLocalGovGrade(text){
+  if (!text) return "";
+  const src = String(text);
+
+  // "/" 등으로 합쳐진 값은 토큰 분리 후 탐색
+  const tokens = src.split(/[\/\n,;|]+/g);
+
+  for (let tok of tokens){
+    if (!tok) continue;
+
+    // 공백/슬래시 등을 제거한 값
+    const cleaned = tok
+      .replace(/\u00A0/g, "")
+      .replace(/[\/\s]+/g, "")
+      .replace(/[·\-\–\—_.,:;"'`~!@#$%^&*+=|\\?<>{}（）()]/g, "");
+
+    if (!cleaned) continue;
+    if (!cleaned.startsWith("지방")) continue;
+
+    for (const ending of GOV_GRADE_ENDINGS){
+      if (cleaned.endsWith(ending)){
+        return ending;
+      }
+    }
+  }
+  return "";
+}
+
+function extractLocalGovGradeFromRec(rec){
+  // 우선순위: (발령직급 newRank) → (현직급 curRank) → (jobRaw) 순
+  const v1 = extractLocalGovGrade(rec?.newRank);
+  if (v1) return v1;
+  const v2 = extractLocalGovGrade(rec?.curRank);
+  if (v2) return v2;
+  const v3 = extractLocalGovGrade(rec?.jobRaw);
+  if (v3) return v3;
+  return "";
+}
+
+/* ============================
+   엑셀 파싱(헤더 추정 + 레코드 생성)
+   ============================ */
+const HEADER_SYNONYMS = {
+  name: ["성명","이름","성 명","성명(한글)","성명(한)","성명(국문)","성명(성)"],
+  fromOrg: ["종전기관","전출기관","발령전","이전기관","현기관","현근무지","전임기관","전임학교","종전학교","전출학교","기존기관","전근전","원소속"],
+  toOrg: ["신규기관","전입기관","발령후","변경기관","신임기관","전입학교","신규학교","전보후","전근후","발령기관","현소속","이동후"],
+  curRank: ["현직급","현직","현직위","현직급(계급)","현 직급","현재직급","현임","현직급/직"],
+  newRank: ["발령직급","직급","발령직급(계급)","발령 직급","신규직급","임용직급","전보직급"],
+  jobRaw: ["직렬","직종","직명","담당","담당업무","직위","직렬/직종","직종(직렬)","직종/직급","직렬(직종)","직렬(직급)","직종(직급)"],
+  type: ["구분","인사구분","직종구분","직군","분류","대상","직종(구분)","공무원구분"],
+  remark: ["비고","참고","특기사항","메모","기타","설명"],
+};
+
+function hnorm(s){
+  return safeText(s).replace(/\s+/g,"").replace(/[·\-\–\—_.,:;"'`~!@#$%^&*+=|\\?<>{}\[\]（）()]/g, "");
+}
+function buildHeaderMap(headerRow){
+  const map = new Map();
+  for (let i=0;i<headerRow.length;i++){
+    const h = hnorm(headerRow[i]);
+    if (!h) continue;
+    map.set(h, i);
+  }
+  return map;
+}
+function pickColIdx(hmap, synonyms){
+  for (const syn of synonyms){
+    const k = hnorm(syn);
+    if (hmap.has(k)) return hmap.get(k);
+  }
+  // 느슨한 매칭(부분 포함)
+  for (const [hk, idx] of hmap.entries()){
+    for (const syn of synonyms){
+      const k = hnorm(syn);
+      if (hk.includes(k) || k.includes(hk)) return idx;
+    }
+  }
+  return -1;
+}
+
+function isLikelyHeaderRow(row){
+  const cells = row.map(hnorm).filter(Boolean);
+  if (cells.length < 3) return false;
+  const hasName = cells.some(c => HEADER_SYNONYMS.name.some(s => c.includes(hnorm(s))));
+  const hasOrg = cells.some(c => HEADER_SYNONYMS.fromOrg.some(s => c.includes(hnorm(s))) || HEADER_SYNONYMS.toOrg.some(s => c.includes(hnorm(s))));
+  return hasName && hasOrg;
+}
+
+function detectPersonnelType(rawType, jobRaw, curRank, newRank){
+  const t = (safeText(rawType)+" "+safeText(jobRaw)+" "+safeText(curRank)+" "+safeText(newRank)).replace(/\s+/g,"");
+  if (!t) return "기타";
+  if (t.includes("교육공무직") || t.includes("공무직") || t.includes("조리실무사") || t.includes("행정실무사") || t.includes("특수교육실무사")) return "교육공무직";
+  if (t.includes("지방공무원") || t.includes("지방") && GOV_GRADE_ENDINGS.some(e => t.includes(e))) return "지방공무원";
+  if (t.includes("교원") || t.includes("교사") || t.includes("교감") || t.includes("교장") || t.includes("장학") || t.includes("교육공무원")) return "교육공무원";
+  return "기타";
+}
+
+function placeholderRow(name, fromOrg, toOrg){
+  const n = safeText(name);
+  const f = safeText(fromOrg);
+  const t = safeText(toOrg);
+  if (!n && !f && !t) return true;
+  if (/^(합계|계|총계)$/i.test(n)) return true;
+  if (n && (n.includes("합계") || n.includes("총계"))) return true;
+  return false;
+}
+
+function computeQualityScore(rec){
+  let s=0;
+  if (rec.name) s+=4;
+  if (rec.fromOrg) s+=2;
+  if (rec.toOrg) s+=2;
+  if (rec.newRank) s+=1;
+  if (rec.curRank) s+=1;
+  if (rec.jobRaw) s+=1;
+  if (rec.personnelType) s+=1;
+  if (rec.fromRegion || rec.toRegion) s+=1;
+  if (rec.govGrade) s+=1;
+  return s;
+}
+
+function recordKey(rec){
+  // 중복 제거 키(양식 다양성 고려: 핵심 필드)
+  const parts = [
+    rec.personnelType || "",
+    rec.name || "",
+    rec.fromOrgNorm || rec.fromOrg || "",
+    rec.toOrgNorm || rec.toOrg || "",
+    rec.newRank || "",
+    rec.curRank || "",
+    rec.jobRaw || "",
+    rec.remark || ""
+  ].map(x => safeText(x).replace(/\s+/g,""));
+  return parts.join("|");
+}
+
+function splitRecordsByEntity(recs, entityName, viewMode){
+  const out=[], inn=[], unk=[];
+  const en = safeText(entityName);
+  for (const rec of recs){
+    const f = rec.fromOrgNorm || rec.fromOrg;
+    const t = rec.toOrgNorm || rec.toOrg;
+
+    const isFrom = f && (f === en);
+    const isTo = t && (t === en);
+
+    if (viewMode === "out"){
+      if (isFrom) out.push(rec);
+      continue;
+    }
+    if (viewMode === "in"){
+      if (isTo) inn.push(rec);
+      continue;
+    }
+    if (viewMode === "both"){
+      if (isFrom) out.push(rec);
+      if (isTo) inn.push(rec);
+      if (!isFrom && !isTo && (rec.orgAnyNorm===en || rec.orgAny===en)) unk.push(rec);
+      continue;
+    }
+    // any: 관련(둘 중 하나)
+    if (isFrom) out.push(rec);
+    else if (isTo) inn.push(rec);
+    else if ((rec.orgAnyNorm===en || rec.orgAny===en)) unk.push(rec);
+  }
+  return { out, inn, unk };
+}
+
+function keywordPass(rec, kw){
+  const k = safeText(kw);
+  if (!k) return true;
+  const hay = [
+    rec.name, rec.fromOrg, rec.toOrg, rec.fromOrgNorm, rec.toOrgNorm,
+    rec.jobRaw, rec.newRank, rec.curRank, rec.remark, rec.sourceFile, rec.sheetName,
+    rec.fromRegion, rec.toRegion, rec.govGrade
+  ].map(safeText).join(" ").toLowerCase();
+  return hay.includes(k.toLowerCase());
+}
+
+/* ============================
+   요구사항: filterByPersonnelAndJob()에 govGrade 조건 추가
+   ============================ */
+function filterByPersonnelAndJob(recs, personnelType, kw, govGradeOpt){
+  const pt = personnelType || "전체";
+  const gg = govGradeOpt || "전체";
+  return recs.filter(rec => {
+    // 인사구분
+    if (pt !== "전체" && rec.personnelType !== pt) return false;
+
+    // 직급 필터(지방공무원일 때만)
+    if (pt === "지방공무원" && gg !== "전체"){
+      if (!(rec.personnelType === "지방공무원" && rec.govGrade === gg)) return false;
+    }
+
+    // 키워드
+    if (!keywordPass(rec, kw)) return false;
+
+    return true;
+  });
+}
+
+/* ============================
+   UI 초기화 / 이벤트
+   ============================ */
+function cacheDom(){
+  el.xlsxDot = $("xlsxDot");
+  el.xlsxStatus = $("xlsxStatus");
+  el.appClock = $("appClock");
+  el.fileInput = $("fileInput");
+  el.btnParse = $("btnParse");
+  el.btnClear = $("btnClear");
+  el.globalProgress = $("globalProgress");
+  el.globalProgressText = $("globalProgressText");
+  el.globalCounts = $("globalCounts");
+  el.fileTbody = $("fileTbody");
+  el.logBox = $("logBox");
+  el.btnCopyLog = $("btnCopyLog");
+  el.btnClearLog = $("btnClearLog");
+
+  el.dataStatus = $("dataStatus");
+  el.dedupStatus = $("dedupStatus");
+  el.statFiles = $("statFiles");
+  el.statRaw = $("statRaw");
+  el.statUniq = $("statUniq");
+  el.statMapped = $("statMapped");
+  el.summaryByTypeTbody = $("summaryByTypeTbody");
+  el.summaryByRegionTbody = $("summaryByRegionTbody");
+  el.btnDlSummaryByType = $("btnDlSummaryByType");
+  el.btnDlSummaryByRegion = $("btnDlSummaryByRegion");
+
+  el.entityStatus = $("entityStatus");
+  el.btnDlEntity = $("btnDlEntity");
+  el.entityViewMode = $("entityViewMode");
+  el.entityPick = $("entityPick");
+  el.jobKeyword = $("jobKeyword");
+  el.personnelType = $("personnelType");
+  el.govGradeFilter = $("govGradeFilter");
+  el.outTbody = $("outTbody");
+  el.inTbody = $("inTbody");
+  el.unkTbody = $("unkTbody");
+  el.outCount = $("outCount");
+  el.inCount = $("inCount");
+  el.unkCount = $("unkCount");
+
+  el.regionStatus = $("regionStatus");
+  el.btnDlRegion = $("btnDlRegion");
+  el.regionOfficeMode = $("regionOfficeMode");
+  el.regionPick = $("regionPick");
+  el.regionPersonnelType = $("regionPersonnelType");
+  el.regionGovGradeFilter = $("regionGovGradeFilter");
+  el.regionKeyword = $("regionKeyword");
+  el.regionTbody = $("regionTbody");
+  el.regionCount = $("regionCount");
+
+  el.btnTop = $("btnTop");
+}
+
+function initClock(){
+  el.appClock.textContent = nowStr();
+  setInterval(()=>el.appClock.textContent = nowStr(), 1000);
+}
+
+function initDnd(){
+  const zone = $("sec-upload");
+  zone.addEventListener("dragover", (e)=>{ e.preventDefault(); zone.style.outline = "2px dashed rgba(0,207,232,.65)"; zone.style.outlineOffset="6px"; });
+  zone.addEventListener("dragleave", ()=>{ zone.style.outline=""; zone.style.outlineOffset=""; });
+  zone.addEventListener("drop", (e)=>{
+    e.preventDefault();
+    zone.style.outline=""; zone.style.outlineOffset="";
+    if (e.dataTransfer?.files?.length){
+      addFiles(e.dataTransfer.files);
+    }
+  });
+}
+
+function initButtons(){
+  el.btnTop.addEventListener("click", ()=> window.scrollTo({top:0, behavior:"smooth"}));
+  el.btnCopyLog.addEventListener("click", async ()=>{
+    try{
+      await navigator.clipboard.writeText(el.logBox.value || "");
+      log("로그를 클립보드에 복사했습니다.");
+    }catch(e){
+      log("로그 복사 실패(브라우저 권한/HTTPS 확인)", "warn");
+    }
+  });
+  el.btnClearLog.addEventListener("click", ()=>{
+    el.logBox.value = "";
+  });
+
+  el.btnClear.addEventListener("click", resetAll);
+
+  el.btnParse.addEventListener("click", async ()=>{
+    const ok = await loadSheetJS();
+    if (!ok) return;
+    await parseAllQueuedFiles();
+  });
+
+  el.fileInput.addEventListener("change", ()=>{
+    if (el.fileInput.files?.length){
+      addFiles(el.fileInput.files);
+      el.fileInput.value = "";
+    }
+  });
+
+  el.btnDlSummaryByType.addEventListener("click", ()=>{
+    const rows = buildSummaryByTypeRows();
+    downloadAsXlsxOrCsv("summary_by_type", rows, "summary_by_type");
+  });
+  el.btnDlSummaryByRegion.addEventListener("click", ()=>{
+    const rows = buildSummaryByRegionRows();
+    downloadAsXlsxOrCsv("summary_by_region", rows, "summary_by_region");
+  });
+}
+
+function initEntityFilters(){
+  // GOV_GRADE_ENDINGS 기반 옵션 구성(중복 하드코딩 금지)
+  const makeGovGradeOptions = (sel) => {
+    sel.innerHTML = "";
+    const opts = ["전체", ...GOV_GRADE_ENDINGS];
+    for (const o of opts){
+      const op = document.createElement("option");
+      op.value = o;
+      op.textContent = o;
+      sel.appendChild(op);
+    }
+    sel.value = "전체";
+  };
+  makeGovGradeOptions(el.govGradeFilter);
+
+  const toggleGovGrade = () => {
+    const pt = el.personnelType.value;
+    if (pt === "지방공무원"){
+      el.govGradeFilter.disabled = false;
+    }else{
+      el.govGradeFilter.disabled = true;
+      el.govGradeFilter.value = "전체";
+    }
+  };
+
+  el.entityViewMode.addEventListener("change", renderEntityView);
+  el.entityPick.addEventListener("change", renderEntityView);
+  el.jobKeyword.addEventListener("input", debounce(renderEntityView, 120));
+  el.personnelType.addEventListener("change", ()=>{
+    toggleGovGrade();
+    renderEntityView();
+  });
+  el.govGradeFilter.addEventListener("change", renderEntityView);
+
+  toggleGovGrade();
+}
+
+function initRegionFilters(){
+  const makeGovGradeOptions = (sel) => {
+    sel.innerHTML = "";
+    const opts = ["전체", ...GOV_GRADE_ENDINGS];
+    for (const o of opts){
+      const op = document.createElement("option");
+      op.value = o;
+      op.textContent = o;
+      sel.appendChild(op);
+    }
+    sel.value = "전체";
+  };
+  makeGovGradeOptions(el.regionGovGradeFilter);
+
+  const toggleGovGrade = () => {
+    const pt = el.regionPersonnelType.value;
+    if (pt === "지방공무원"){
+      el.regionGovGradeFilter.disabled = false;
+    }else{
+      el.regionGovGradeFilter.disabled = true;
+      el.regionGovGradeFilter.value = "전체";
+    }
+  };
+
+  el.regionOfficeMode.addEventListener("change", renderRegionView);
+  el.regionPick.addEventListener("change", renderRegionView);
+  el.regionPersonnelType.addEventListener("change", ()=>{
+    toggleGovGrade();
+    renderRegionView();
+  });
+  el.regionGovGradeFilter.addEventListener("change", renderRegionView);
+  el.regionKeyword.addEventListener("input", debounce(renderRegionView, 120));
+
+  toggleGovGrade();
+}
+
+function debounce(fn, ms){
+  let t=null;
+  return function(...args){
+    clearTimeout(t);
+    t=setTimeout(()=>fn.apply(this,args), ms);
+  };
+}
+
+/* ============================
+   파일 누적 업로드 / 중복스킵 / 목록
+   ============================ */
+function fileKeyOf(file){
+  return `${file.name}__${file.size}__${file.lastModified}`;
+}
+
+function addFiles(fileList){
+  const arr = Array.from(fileList || []);
+  let added=0, skipped=0;
+
+  for (const file of arr){
+    const key = fileKeyOf(file);
+    if (state.fileKeySet.has(key)){
+      skipped++;
+      continue;
+    }
+    state.fileKeySet.add(key);
+    state.files.push({ file, key, status:"대기", recCount:0, err:"" });
+    added++;
+  }
+
+  if (added){
+    log(`파일 추가: ${added}개 (중복 스킵: ${skipped}개)`);
+  }else{
+    log(`추가된 파일 없음 (중복 스킵: ${skipped}개)`, "warn");
+  }
+
+  renderFileTable();
+  updateButtons();
+  setGlobalProgress(0, "대기");
+}
+
+function renderFileTable(){
+  if (!state.files.length){
+    el.fileTbody.innerHTML = `<tr><td colspan="5" class="muted">아직 업로드된 파일이 없습니다.</td></tr>`;
+    el.globalCounts.textContent = `files:0 rec:${state.rawRecords.length}`;
+    return;
+  }
+  const rows = state.files.map(f => {
+    const statusChip = f.status === "완료"
+      ? `<span class="chip2">${escapeHtml(f.status)}</span>`
+      : f.status === "오류"
+        ? `<span class="chip" style="background:rgba(234,84,85,.12);border-color:rgba(234,84,85,.25)">${escapeHtml(f.status)}</span>`
+        : `<span class="chip">${escapeHtml(f.status)}</span>`;
+
+    const err = f.err ? `<div class="muted" style="margin-top:4px">${escapeHtml(f.err)}</div>` : "";
+    return `<tr>
+      <td>
+        <div><b>${escapeHtml(f.file.name)}</b></div>
+        <div class="muted mono">${new Date(f.file.lastModified).toISOString().slice(0,19).replace("T"," ")}</div>
+        ${err}
+      </td>
+      <td class="mono">${fmtBytes(f.file.size)}</td>
+      <td>${statusChip}</td>
+      <td class="mono">${f.recCount || 0}</td>
+      <td class="mono">${escapeHtml(f.key)}</td>
+    </tr>`;
+  }).join("");
+  el.fileTbody.innerHTML = rows;
+  el.globalCounts.textContent = `files:${state.files.length} rec:${state.rawRecords.length}`;
+}
+
+function updateButtons(){
+  const hasFiles = state.files.length > 0;
+  const anyPending = state.files.some(f => f.status === "대기");
+  el.btnParse.disabled = !(hasFiles && anyPending);
+  el.btnClear.disabled = !hasFiles && state.rawRecords.length===0;
+}
+
+/* ============================
+   파싱 / 중복제거 / 인덱싱
+   ============================ */
+async function parseAllQueuedFiles(){
+  if (!window.XLSX){
+    log("SheetJS가 준비되지 않았습니다.", "error");
+    return;
+  }
+  const pending = state.files.filter(f => f.status === "대기");
+  if (!pending.length){
+    log("파싱할 대기 파일이 없습니다.", "warn");
+    return;
+  }
+
+  el.btnParse.disabled = true;
+  el.btnClear.disabled = true;
+
+  let done=0;
+  const total = pending.length;
+
+  for (const f of pending){
+    f.status = "파싱중";
+    f.err = "";
+    renderFileTable();
+
+    try{
+      const recs = await parseOneFile(f.file, (p, msg) => {
+        const base = (done/total)*100;
+        const local = (p/100)*(100/total);
+        setGlobalProgress(clamp(base+local,0,99), `${msg}`);
+      });
+      f.recCount = recs.length;
+      f.status = "완료";
+      state.rawRecords.push(...recs);
+      log(`파싱 완료: ${f.file.name} → ${recs.length}건`);
+    }catch(e){
+      f.status = "오류";
+      f.err = e?.message ? String(e.message) : "unknown error";
+      log(`파싱 오류: ${f.file.name} (${f.err})`, "error");
+    }
+    done++;
+    renderFileTable();
+  }
+
+  setGlobalProgress(100, "파싱 완료. 집계 중…");
+  await new Promise(r=>setTimeout(r, 10));
+
+  dedupAndReindex();
+  refreshAllViews();
+
+  setGlobalProgress(0, "대기");
+  el.btnClear.disabled = false;
+  updateButtons();
+}
+
+async function parseOneFile(file, onProgress){
+  const buf = await file.arrayBuffer();
+  onProgress?.(8, "엑셀 로드 중…");
+  await new Promise(r=>setTimeout(r,0));
+
+  const wb = XLSX.read(buf, { type:"array", cellDates:true, dense:false });
+  const recs = [];
+  const sheetNames = wb.SheetNames || [];
+  const totalSheets = sheetNames.length || 1;
+
+  for (let si=0; si<sheetNames.length; si++){
+    const sn = sheetNames[si];
+    const sheet = wb.Sheets[sn];
+    if (!sheet) continue;
+
+    onProgress?.(10 + (si/totalSheets)*70, `시트 파싱: ${sn}…`);
+    const aoa = XLSX.utils.sheet_to_json(sheet, { header:1, defval:"", raw:false, blankrows:false });
+    if (!aoa || !aoa.length) continue;
+
+    // 헤더 탐색
+    let headerRowIdx = -1;
+    const scanMax = Math.min(aoa.length, 30);
+    for (let i=0;i<scanMax;i++){
+      if (isLikelyHeaderRow(aoa[i])){
+        headerRowIdx = i;
+        break;
+      }
+    }
+    if (headerRowIdx < 0){
+      // fallback: 첫 행을 헤더로 취급
+      headerRowIdx = 0;
+    }
+    const header = aoa[headerRowIdx] || [];
+    const hmap = buildHeaderMap(header);
+
+    const idx = {
+      name: pickColIdx(hmap, HEADER_SYNONYMS.name),
+      fromOrg: pickColIdx(hmap, HEADER_SYNONYMS.fromOrg),
+      toOrg: pickColIdx(hmap, HEADER_SYNONYMS.toOrg),
+      curRank: pickColIdx(hmap, HEADER_SYNONYMS.curRank),
+      newRank: pickColIdx(hmap, HEADER_SYNONYMS.newRank),
+      jobRaw: pickColIdx(hmap, HEADER_SYNONYMS.jobRaw),
+      type: pickColIdx(hmap, HEADER_SYNONYMS.type),
+      remark: pickColIdx(hmap, HEADER_SYNONYMS.remark),
     };
 
-    function setProgress(pct, text) {
-      const p = Math.max(0, Math.min(100, pct));
-      ui.progressBar.style.width = p + '%';
-      ui.progressPct.textContent = Math.round(p) + '%';
-      if (text) ui.progressText.textContent = text;
-    }
+    const start = headerRowIdx + 1;
+    for (let r = start; r < aoa.length; r++){
+      const row = aoa[r];
+      if (!row || !row.length) continue;
 
-    function loadScript(src) {
-      return new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = src;
-        s.async = true;
-        s.onload = () => resolve();
-        s.onerror = () => reject(new Error('스크립트 로드 실패: ' + src));
-        document.head.appendChild(s);
-      });
-    }
+      const name = idx.name>=0 ? safeText(row[idx.name]) : "";
+      const fromOrg = idx.fromOrg>=0 ? safeText(row[idx.fromOrg]) : "";
+      const toOrg = idx.toOrg>=0 ? safeText(row[idx.toOrg]) : "";
+      const curRank = idx.curRank>=0 ? safeText(row[idx.curRank]) : "";
+      const newRank = idx.newRank>=0 ? safeText(row[idx.newRank]) : "";
+      const jobRaw = idx.jobRaw>=0 ? safeText(row[idx.jobRaw]) : "";
+      const rawType = idx.type>=0 ? safeText(row[idx.type]) : "";
+      const remark = idx.remark>=0 ? safeText(row[idx.remark]) : "";
 
-    async function loadLibs() {
-      ui.libBadge.textContent = '라이브러리 로딩중…';
-      setProgress(2, '라이브러리(XLSX) 불러오는 중…');
+      if (placeholderRow(name, fromOrg, toOrg)) continue;
 
-      // “초반 %” 느낌을 주기 위한 약한 가짜 진행
-      let fake = 2;
-      const timer = setInterval(() => {
-        fake = Math.min(fake + 3, 18);
-        setProgress(fake);
-      }, 120);
+      const fromN = normalizeOrgName(fromOrg);
+      const toN = normalizeOrgName(toOrg);
 
-      try {
-        await loadScript('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
-        await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+      // 기관/지역 매핑 통계
+      if (fromOrg){ state.stats.mappedOrgTotal++; if (fromN.matched) state.stats.mappedOrg++; }
+      if (toOrg){ state.stats.mappedOrgTotal++; if (toN.matched) state.stats.mappedOrg++; }
 
-        clearInterval(timer);
-        setProgress(100, '라이브러리 로드 완료');
-        ui.libBadge.textContent = '라이브러리 로드 완료';
-        ui.libBadge.classList.add('badge');
-        enableAnalyzeIfReady();
-      } catch (e) {
-        clearInterval(timer);
-        setProgress(100, '라이브러리 로드 실패 (네트워크/차단 확인 필요)');
-        ui.libBadge.textContent = '라이브러리 로드 실패';
-        ui.schoolMasterStatus.style.display = 'block';
-        ui.schoolMasterStatus.textContent =
-          '라이브러리(XLSX/JSZip) 로드에 실패했습니다. 사내망/보안정책으로 CDN이 차단된 경우, 로컬에 라이브러리를 호스팅해야 합니다.';
-        console.error(e);
-      }
-    }
+      const personnelType = detectPersonnelType(rawType, jobRaw, curRank, newRank);
 
-    /**********************************************************************
-     * 1) 업로드 UI + 상태
-     *********************************************************************/
-    const dropzone = document.getElementById('dropzone');
-    const pickFilesBtn = document.getElementById('pickFilesBtn');
-    const fileInput = document.getElementById('fileInput');
-    const toTopBtn = document.getElementById('toTopBtn');
+      const rec = {
+        sourceFile: file.name,
+        sheetName: sn,
+        rowNumber: r+1,
 
-    // 파일 저장소
-    /** @type {{file: File, id: string}[]} */
-    let fileStore = [];
-    let storeSeq = 0;
+        // 원문
+        rawType,
+        name,
+        fromOrg,
+        toOrg,
+        curRank,
+        newRank,
+        jobRaw,
+        remark,
 
-    function addFiles(files) {
-      const arr = Array.from(files || []);
-      if (!arr.length) return;
+        // 정규화
+        personnelType,
+        fromOrgNorm: fromN.name,
+        toOrgNorm: toN.name,
+        fromRegion: fromN.region,
+        toRegion: toN.region,
 
-      for (const f of arr) {
-        const id = 'f_' + (++storeSeq);
-        fileStore.push({ file: f, id });
-      }
-      renderFileList();
-      enableAnalyzeIfReady();
-    }
+        // (미분류용) 단일 기관/지역 보조
+        orgAny: fromOrg || toOrg,
+        orgAnyNorm: fromN.name || toN.name,
+        regionAny: fromN.region || toN.region,
 
-    function removeFile(id) {
-      fileStore = fileStore.filter(x => x.id !== id);
-      renderFileList();
-      enableAnalyzeIfReady();
-    }
+        // 품질 점수
+        q: 0,
 
-    function resetAll() {
-      fileStore = [];
-      storeSeq = 0;
-
-      state = makeEmptyState();
-      renderFileList();
-
-      // 결과 UI 초기화
-      ui.dashboardEmpty.style.display = 'block';
-      ui.dashboardWrap.style.display = 'none';
-
-      ui.orgPanels.style.display = 'none';
-      ui.downloadOrgBtn.disabled = true;
-      ui.orgKindSel.disabled = true;
-      ui.orgNameSel.disabled = true;
-      ui.orgTypeSel.disabled = true;
-      ui.orgJobSel.disabled = true;
-
-      ui.regionPanels.style.display = 'none';
-      ui.downloadRegionBtn.disabled = true;
-      ui.regionModeSel.disabled = true;
-      ui.regionSel.disabled = true;
-      ui.regionTypeSel.disabled = true;
-
-      ui.schoolMasterStatus.style.display = 'none';
-      ui.schoolMasterStatus.textContent = '';
-
-      setProgress(100, '라이브러리 로드 완료');
-    }
-
-    function renderFileList() {
-      ui.fileCount.textContent = String(fileStore.length);
-      ui.fileList.innerHTML = '';
-
-      // 기본 접힘
-      ui.filesDetails.open = false;
-
-      const sorted = [...fileStore].sort((a,b) => (a.file.name||'').localeCompare(b.file.name||'', 'ko'));
-      for (const item of sorted) {
-        const li = document.createElement('li');
-        li.className = 'file-item';
-
-        const left = document.createElement('div');
-        left.style.display = 'flex';
-        left.style.flexDirection = 'column';
-        left.style.gap = '2px';
-
-        const name = document.createElement('div');
-        name.className = 'name';
-        name.textContent = item.file.name;
-
-        const meta = document.createElement('div');
-        meta.className = 'muted';
-        meta.style.fontSize = '0.9rem';
-        meta.textContent = `${formatBytes(item.file.size)} · ${guessExt(item.file.name).toUpperCase()}`;
-
-        left.appendChild(name);
-        left.appendChild(meta);
-
-        const right = document.createElement('div');
-        right.className = 'row';
-        const btn = document.createElement('button');
-        btn.className = 'btn btn-lightgrey';
-        btn.type = 'button';
-        btn.textContent = '삭제';
-        btn.onclick = () => removeFile(item.id);
-        right.appendChild(btn);
-
-        li.appendChild(left);
-        li.appendChild(right);
-        ui.fileList.appendChild(li);
-      }
-    }
-
-    function enableAnalyzeIfReady() {
-      const libsOk = (typeof XLSX !== 'undefined') && (typeof JSZip !== 'undefined');
-      ui.analyzeBtn.disabled = !(libsOk && fileStore.length > 0);
-    }
-
-    function formatBytes(bytes) {
-      if (!bytes && bytes !== 0) return '';
-      const units = ['B','KB','MB','GB'];
-      let b = bytes, i = 0;
-      while (b >= 1024 && i < units.length - 1) { b /= 1024; i++; }
-      return `${b.toFixed(i ? 1 : 0)} ${units[i]}`;
-    }
-
-    function guessExt(name) {
-      const m = (name || '').toLowerCase().match(/\.(xlsx|xls|zip)$/);
-      return m ? m[1] : 'file';
-    }
-
-    // drag/drop
-    dropzone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      dropzone.classList.add('dragover');
-    });
-    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
-    dropzone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      dropzone.classList.remove('dragover');
-      addFiles(e.dataTransfer.files);
-    });
-    dropzone.addEventListener('click', () => fileInput.click());
-    dropzone.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') fileInput.click();
-    });
-
-    pickFilesBtn.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', (e) => {
-      addFiles(e.target.files);
-      fileInput.value = '';
-    });
-
-    ui.resetBtn.addEventListener('click', resetAll);
-
-    // toTop
-    window.addEventListener('scroll', () => {
-      const y = window.scrollY || document.documentElement.scrollTop;
-      toTopBtn.style.display = (y > 400) ? 'flex' : 'none';
-    });
-    toTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-
-    ui.jumpSchoolOrg.addEventListener('click', () => document.getElementById('sec-org').scrollIntoView({behavior:'smooth'}));
-    ui.jumpRegion.addEventListener('click', () => document.getElementById('sec-region').scrollIntoView({behavior:'smooth'}));
-
-    /**********************************************************************
-     * 2) 도메인 규칙(직군/직렬/직종/기관/지역)
-     *********************************************************************/
-    const REGION_LIST_18 = [
-      '강원도교육청',
-      '강릉','고성','동해','삼척','속초양양','양구','영월','원주','인제','정선','철원','춘천','태백','평창','홍천','화천','횡성',
-    ];
-    const REGION_LIST_17 = [
-      '강릉','고성','동해','삼척','속초양양','양구','영월','원주','인제','정선','철원','춘천','태백','평창','홍천','화천','횡성',
-    ];
-
-    const LOCAL_RANK_SUFFIX = ['서기보시보','서기보','서기','주사보','주사','서기관','사무관'];
-    const LOCAL_SERIES = [
-      '지방교육행정','지방시설관리','지방시설','지방전산','지방사무운영','지방운전','지방식품위생','지방조리','지방사서','지방공업'
-    ];
-
-    const EDU_WORKER_JOBS = Array.from(new Set([
-      '치료사','장애영아지도사','장애유아지도사','직업지도사','유치원방과후교육사','학교도서관사서','기숙사생활지도원','전문상담사','영양사','교육복지사',
-      '평생교육사','사회복지사','진로교육사','학교도서관실무사','특수교육지도사','건강실무사','조리사','조리실무사','교무행정사','발명실무원','통학차량운전원',
-      '통학지도원','늘봄학교전담사','초등돌봄전담사','방과후전담사','임상심리사','대안교육전문가','학습클리닉전문가','학부모지원전문가','진학전문지원관',
-      '학교운동부지도자','교육지도사','방과후학교지원가','구육성회직원'
-    ]));
-
-    const EDU_TEACHER_KEYWORDS = [
-      '유치원교사','초등학교교사','중등학교교사','특수학교교사','실기교사','보건교사','사서교사','전문상담교사','영양교사',
-      '초등학교 교사','중학교 교사','고등학교 교사','특수학교 교사','교사','교감','교장'
-    ];
-
-    const GWEO_DEPT_KEYWORDS = [
-      '감사관','공보담당관','정책국','교육국','행정국',
-      '정책기획과','미래교육과','안전복지과','교육지원과',
-      '유초등교육과','중등교육과','인성생활교육과','문화체육특수교육과',
-      '총무과','예산과','행정과','시설과','학교지원과',
-    ];
-
-    const DIRECT_INSTITUTES = [
-      '강원특별자치도교육청 교육연구원','강원특별자치도교육청 교육연수원','강원특별자치도교육청 교육과학정보원','강원특별자치도교육청 진로교육원',
-      '강원특별자치도교육청 국제교육원','강원특별자치도교육청 유아교육원','강원특별자치도교육청 사임당교육원','강원특별자치도교육청 학생교육원',
-      '강원특별자치도교육청 통일교육원','강원특별자치도교육청 교직원수련원','강원특별자치도교육청 춘천교육문화관','강원특별자치도교육청 원주교육문화관',
-      '강원특별자치도교육청 강릉교육문화관','강원특별자치도교육청 속초교육문화관','강원특별자치도교육청 삼척교육문화관'
-    ];
-    const DIRECT_INSTITUTE_REGION = new Map([
-      ['강원특별자치도교육청 교육연구원','춘천'],
-      ['강원특별자치도교육청 유아교육원','춘천'],
-      ['강원특별자치도교육청 학생교육원','춘천'],
-      ['강원특별자치도교육청 춘천교육문화관','춘천'],
-
-      ['강원특별자치도교육청 교육연수원','강릉'],
-      ['강원특별자치도교육청 사임당교육원','강릉'],
-      ['강원특별자치도교육청 교직원수련원','강릉'],
-      ['강원특별자치도교육청 강릉교육문화관','강릉'],
-
-      ['강원특별자치도교육청 교육과학정보원','원주'],
-      ['강원특별자치도교육청 원주교육문화관','원주'],
-
-      ['강원특별자치도교육청 진로교육원','속초양양'],
-      ['강원특별자치도교육청 속초교육문화관','속초양양'],
-
-      // 사용자 메모: 국제교육원: 철원 / 통일교육원: 양양
-      ['강원특별자치도교육청 국제교육원','철원'],
-      ['강원특별자치도교육청 통일교육원','속초양양'],
-
-      ['강원특별자치도교육청 삼척교육문화관','삼척'],
-    ]);
-
-    /**********************************************************************
-     * 3) 상태(집계 데이터)
-     *********************************************************************/
-    function makeEmptyState() {
-      return {
-        schoolMasterLoaded: false,
-        schoolNameToRegion: new Map(),  // canonical school name -> region
-        schoolCanonToFull: new Map(),   // canonical key -> full original name
-        schoolFullSet: new Set(),       // full school names
-
-        records: [],                    // 최종 레코드
-        aggregates: null,               // 대시보드/지역 집계
-        orgIndex: null,                 // 학교/기관 리스트
+        // 추가 필드(요구사항)
+        govGrade: "",
       };
-    }
-    let state = makeEmptyState();
 
-    /**********************************************************************
-     * 4) 문자열/정규화 유틸
-     *********************************************************************/
-    function cleanText(v) {
-      if (v === null || v === undefined) return '';
-      let s = String(v);
-      // 줄바꿈/탭 → 공백
-      s = s.replace(/[\r\n\t]+/g, ' ');
-      // 특수한 공백 다듬기
-      s = s.replace(/\u00A0/g, ' ');
-      // 다중 공백 축소
-      s = s.replace(/\s{2,}/g, ' ');
-      return s.trim();
-    }
-
-    function stripAllSpaces(s) {
-      return cleanText(s).replace(/\s+/g, '');
-    }
-
-    function isKoreanName(s) {
-      const t = cleanText(s);
-      if (!t) return false;
-
-      // 숫자/특수문자 포함 시 제외
-      if (/[^가-힣]/.test(t)) return false;
-
-      // 2~5자 한글 이름만 통과(보수적으로)
-      if (!/^[가-힣]{2,5}$/.test(t)) return false;
-
-      // 아래 단어가 이름 칸에 들어가면 무시(셀병합 과집계 방지)
-      const banWords = ['강원특별자치도','강원도','교육장', ...REGION_LIST_18];
-      if (banWords.some(w => t.includes(w))) return false;
-
-      return true;
-    }
-
-    function normalizeRegionText(s) {
-      let t = stripAllSpaces(s);
-      t = t.replace(/^강원특별자치도/,'').replace(/^강원도/,'');
-      // "속초", "양양"은 합산
-      if (t === '속초' || t === '양양') return '속초양양';
-      // "강원특별자치도동해" 같은 것 처리
-      if (t.startsWith('속초양양')) return '속초양양';
-      // 18개 지역 매칭
-      for (const r of REGION_LIST_18) {
-        if (t === stripAllSpaces(r)) return r;
-      }
-      return '';
-    }
-
-    function looksLikeOrg(s) {
-      const t = cleanText(s);
-      if (!t) return false;
-      // 지역명 단독은 제외(조합일 수도 있으니 완전 배제는 X, 점수로 처리)
-      // 기관/학교 흔한 패턴
-      if (/(유치원|초등학교|중학교|고등학교|학교|교육지원청|교육청|교육문화관|교육연구원|교육연수원|교육과학정보원|진로교육원|국제교육원|유아교육원|사임당교육원|학생교육원|통일교육원|교직원수련원)/.test(t)) return true;
-      // 축약형(…초/…중/…고)도 허용
-      if (/[가-힣]{2,}(초|중|고)$/.test(t)) return true;
-      if (/병설유치원/.test(t)) return true;
-      return false;
-    }
-
-    function normalizeSchoolShortName(s) {
-      // "남호초" -> "남호초등학교", "북원중" -> "북원중학교", "가곡고" -> "가곡고등학교"
-      const t = cleanText(s);
-      if (!t) return '';
-      if (t.includes('교육지원청') || t.includes('교육청')) return t;
-
-      // 이미 완전표기
-      if (/(유치원|초등학교|중학교|고등학교|학교)/.test(t)) return t;
-
-      // "동내초 및 병설유치원" 유형 처리(아래에서 다시 한번)
-      // 축약형
-      const m1 = t.match(/^(.+?)(초|중|고)$/);
-      if (m1) {
-        const base = m1[1];
-        const tail = m1[2];
-        if (tail === '초') return base + '초등학교';
-        if (tail === '중') return base + '중학교';
-        if (tail === '고') return base + '고등학교';
-      }
-      return t;
-    }
-
-    function normalizeOfficeDeptToOne(org) {
-      const t = cleanText(org);
-      if (!t) return '';
-      // 강원특별자치도교육청/강원도교육청 표기 통일
-      const compact = stripAllSpaces(t);
-      if (compact.includes('강원특별자치도교육청') || compact.includes('강원도교육청')) {
-        // 부서 키워드가 있으면 본청으로 통합
-        if (GWEO_DEPT_KEYWORDS.some(k => compact.includes(stripAllSpaces(k)))) return '강원도교육청';
-        // "강원특별자치도교육청" 자체도 통합
-        return '강원도교육청';
-      }
-      // 부서명만 찍힌 경우도 통합
-      if (GWEO_DEPT_KEYWORDS.some(k => stripAllSpaces(t).includes(stripAllSpaces(k)))) return '강원도교육청';
-      return t;
-    }
-
-    function normalizeOrgName(raw) {
-      let t = cleanText(raw);
-      if (!t) return '';
-
-      // 흔한 접두/불필요 구분
-      t = t.replace(/^\[|\]$/g,'');
-      t = t.replace(/\(.*?\)/g, (m) => m); // 괄호는 유지(단, 필요시 추후 조정)
-      t = t.replace(/강원특별자치도\s*/g, '강원특별자치도'); // 붙여쓰기/띄어쓰기 흔들림 안정
-
-      // 본청 통합
-      t = normalizeOfficeDeptToOne(t);
-
-      // 직속기관 이름도 공백 흔들림 보정
-      for (const inst of DIRECT_INSTITUTES) {
-        if (stripAllSpaces(t) === stripAllSpaces(inst)) return inst;
+      // rec.personnelType 판별 이후 rec.govGrade 할당 (요구사항)
+      if (rec.personnelType === "지방공무원"){
+        rec.govGrade = extractLocalGovGradeFromRec(rec);
       }
 
-      // "동내초 및 병설유치원" 류
-      const annexPattern = /^(.+?)(초등학교|초)\s*및\s*병설유치원$/;
-      const m = t.match(annexPattern);
-      if (m) {
-        const base = m[1] + '초등학교';
-        return base + ' 및 병설유치원';
-      }
-
-      // 병설유치원 자체명/초등학교 축약 보정
-      t = normalizeSchoolShortName(t);
-
-      // "…초병설유치원" 같이 붙어있으면 공백 보정 없이도 인식 가능
-      // (표시는 그룹 단계에서 합산 처리)
-
-      return t;
-    }
-
-    function isAnnexKindergarten(org) {
-      const t = cleanText(org);
-      return /병설유치원/.test(t) || /및\s*병설유치원/.test(t);
-    }
-
-    function annexBaseSchool(org) {
-      // "문막초병설유치원" -> "문막초등학교"
-      // "문막초등학교 및 병설유치원" -> "문막초등학교"
-      const t = cleanText(org);
-      if (!t) return '';
-      if (/및\s*병설유치원/.test(t)) return cleanText(t.replace(/\s*및\s*병설유치원/g,''));
-      if (/병설유치원/.test(t)) {
-        const base = t.replace(/병설유치원/g,'');
-        return normalizeSchoolShortName(base);
-      }
-      return '';
-    }
-
-    function normalizeCombinedAnnexLabel(baseSchool) {
-      // baseSchool는 "…초등학교"라고 가정
-      const b = cleanText(baseSchool);
-      if (!b) return '';
-      if (b.includes('및 병설유치원')) return b;
-      if (/초등학교$/.test(b)) return b + ' 및 병설유치원';
-      // 혹시 base가 축약이면 확장
-      return normalizeSchoolShortName(b) + ' 및 병설유치원';
-    }
-
-    function detectEmployeeType(texts) {
-      const t = stripAllSpaces(texts.join(' '));
-
-      // 지방공무원 판별: "지방" 시작 or 특정 직급 suffix
-      if (t.includes('지방')) return '지방공무원';
-      for (const suf of LOCAL_RANK_SUFFIX) {
-        if (t.endsWith(suf) || t.includes(suf)) return '지방공무원';
-      }
-
-      // 교육공무직: 직종 목록 포함
-      for (const job of EDU_WORKER_JOBS) {
-        if (t.includes(stripAllSpaces(job))) return '교육공무직';
-      }
-
-      // 교육공무원: 교사/교감/교장 등 키워드
-      for (const kw of EDU_TEACHER_KEYWORDS) {
-        if (t.includes(stripAllSpaces(kw))) return '교육공무원';
-      }
-
-      return '미분류';
-    }
-
-    function detectLocalSeries(texts) {
-      const t = stripAllSpaces(texts.join(' '));
-      for (const s of LOCAL_SERIES) {
-        if (t.includes(stripAllSpaces(s))) return s;
-      }
-      // "지방교육행정주사" 등: "지방교육행정" 포함으로 잡히는 편
-      return '';
-    }
-
-    function detectEduWorkerJob(texts) {
-      const t = stripAllSpaces(texts.join(' '));
-      for (const job of EDU_WORKER_JOBS) {
-        if (t.includes(stripAllSpaces(job))) return job;
-      }
-      return '';
-    }
-
-    function detectTeacherRole(texts) {
-      // 교과목이 들어오는 경우(예: "국어", "수학")까지 완벽히 커버는 어렵지만,
-      // 표에 있는 키워드를 최대한 보존해서 jobLabel로 사용
-      const joined = cleanText(texts.join(' '));
-      for (const kw of EDU_TEACHER_KEYWORDS) {
-        if (joined.includes(kw)) return kw;
-      }
-      // "초등학교 교사" 같은 형태
-      const m = joined.match(/(유치원|초등학교|중학교|고등학교|특수학교)\s*교사/);
-      if (m) return m[0].replace(/\s{2,}/g,' ').trim();
-      // "보건교사" 등
-      const m2 = joined.match(/(보건교사|영양교사|사서교사|전문상담교사)/);
-      if (m2) return m2[0];
-      return '';
-    }
-
-    function detectFlags(texts) {
-      const t = stripAllSpaces(texts.join(' '));
-      const flags = {
-        isRetire: /퇴직|면직|정년|명예퇴직|의원면직|사직|해임/.test(t),
-        isNew: /신규|신규임용|신규발령|임용/.test(t),
-        isDispatch: /파견/.test(t),
-        isLeave: /휴직/.test(t),
-        isReturn: /복직/.test(t),
-        isExtend: /연장/.test(t),
-        hasOrdinanceRule: /조례|시행규칙/.test(t),
-        isPlaceholder: /교육장[이가]지정|교육장이 지정|교육장지정/.test(t),
-      };
-      return flags;
-    }
-
-    function scoreOrgCandidate(v, schoolMap) {
-      const s = cleanText(v);
-      if (!s) return -999;
-      let score = 0;
-
-      const r = normalizeRegionText(s);
-      if (r) score -= 6;
-
-      if (looksLikeOrg(s)) score += 6;
-      if (schoolMap && schoolMap.has(canonSchoolKey(s))) score += 4;
-
-      // 너무 짧으면 감점
-      if (stripAllSpaces(s).length <= 1) score -= 5;
-
-      return score;
-    }
-
-    function canonSchoolKey(name) {
-      // 마스터 매칭을 위한 canonical key
-      let t = normalizeOrgName(name);
-      t = t.replace(/\s+/g,'');
-      // 통일된 교육청 표기
-      t = t.replace(/강원특별자치도교육청/g,'강원도교육청');
-      // 병설유치원은 base로도 키 생성 가능하지만, 일단 원문 유지
-      return t;
-    }
-
-    function isLikelySchoolName(org) {
-      const t = cleanText(org);
-      if (!t) return false;
-      if (/교육지원청|교육청|교육문화관|교육연구원|교육연수원|교육과학정보원|진로교육원|국제교육원|유아교육원|사임당교육원|학생교육원|통일교육원|교직원수련원/.test(t)) return false;
-      return /(유치원|초등학교|중학교|고등학교|학교|병설유치원)/.test(t) || /[가-힣]{2,}(초|중|고)$/.test(t) || /및\s*병설유치원/.test(t);
-    }
-
-    function isLikelyInstitution(org) {
-      const t = cleanText(org);
-      if (!t) return false;
-      if (/교육지원청|교육청/.test(t)) return true;
-      for (const inst of DIRECT_INSTITUTES) {
-        if (stripAllSpaces(t) === stripAllSpaces(inst)) return true;
-      }
-      if (t === '강원도교육청') return true;
-      // 기타 기관명 패턴
-      if (/(교육문화관|교육연구원|교육연수원|교육과학정보원|진로교육원|국제교육원|유아교육원|사임당교육원|학생교육원|통일교육원|교직원수련원)/.test(t)) return true;
-      return false;
-    }
-
-    function inferRegionFromOrg(org, schoolMap) {
-      const t = cleanText(org);
-      if (!t) return '';
-
-      // 본청
-      if (t === '강원도교육청') return '강원도교육청';
-
-      // 직속기관
-      for (const inst of DIRECT_INSTITUTES) {
-        if (stripAllSpaces(t) === stripAllSpaces(inst)) return DIRECT_INSTITUTE_REGION.get(inst) || '';
-      }
-
-      // 교육지원청은 앞 지역에서 추론
-      for (const r of REGION_LIST_17) {
-        if (stripAllSpaces(t).includes(stripAllSpaces(r) + '교육지원청')) return r;
-      }
-
-      // "강원특별자치도동해" 같은 꼴
-      const r0 = normalizeRegionText(t);
-      if (r0) return r0;
-
-      // 학교 마스터로 매칭
-      const key = canonSchoolKey(t);
-      if (schoolMap && schoolMap.has(key)) return schoolMap.get(key);
-
-      // 이름에 지역이 노골적으로 포함된 경우
-      for (const r of REGION_LIST_17) {
-        if (stripAllSpaces(t).includes(stripAllSpaces(r))) return r;
-      }
-
-      return '';
-    }
-
-    /**********************************************************************
-     * 5) XLSX 시트 -> 2D Array 확장(셀병합 반영)
-     *********************************************************************/
-    function sheetToArray(ws) {
-      const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', blankrows: false, raw: false });
-      // merges 반영
-      const merges = ws['!merges'] || [];
-      for (const m of merges) {
-        const r1 = m.s.r, c1 = m.s.c, r2 = m.e.r, c2 = m.e.c;
-        const topLeft = (raw[r1] && raw[r1][c1] !== undefined) ? raw[r1][c1] : '';
-        for (let r = r1; r <= r2; r++) {
-          raw[r] = raw[r] || [];
-          for (let c = c1; c <= c2; c++) {
-            if (raw[r][c] === undefined || raw[r][c] === '') raw[r][c] = topLeft;
-          }
-        }
-      }
-      // 공백 채우기
-      const maxLen = raw.reduce((m, row) => Math.max(m, row.length), 0);
-      for (const row of raw) {
-        while (row.length < maxLen) row.push('');
-      }
-      return raw;
-    }
-
-    function findHeaderRow(data) {
-      // 첫 60줄 정도에서 헤더 후보 탐색
-      const limit = Math.min(60, data.length);
-      let best = { idx: -1, score: -1 };
-      for (let i = 0; i < limit; i++) {
-        const row = data[i].map(cleanText);
-        const joined = row.join(' ');
-        let score = 0;
-
-        const keys = ['성명','이름','임용','발령','현','근무','소속','직급','직종','직렬','학교명','부서','구분','비고','임용일자','발령일자'];
-        for (const k of keys) if (joined.includes(k)) score += 2;
-
-        // 너무 짧은 행은 감점
-        const nonEmpty = row.filter(x => x).length;
-        if (nonEmpty < 3) score -= 2;
-
-        // 숫자만 잔뜩이면 감점
-        if (row.every(x => !x || /^[0-9]+$/.test(x))) score -= 3;
-
-        if (score > best.score) best = { idx: i, score };
-      }
-      // 최소 점수 미달이면 -1
-      if (best.score < 4) return -1;
-      return best.idx;
-    }
-
-    function buildColLabels(mainRow, subRow) {
-      const labels = [];
-      let carry = '';
-      for (let c = 0; c < mainRow.length; c++) {
-        let main = cleanText(mainRow[c]);
-        const sub = cleanText(subRow ? subRow[c] : '');
-        // merged header carry
-        if (!main) main = carry;
-        else carry = main;
-
-        let label = main;
-        if (sub && sub !== main) label = (main ? (main + ' ' + sub) : sub);
-
-        labels.push(cleanText(label));
-      }
-      return labels;
-    }
-
-    function pickNameFromRow(row, nameCol) {
-      // 1) 헤더 기반 nameCol 우선
-      if (nameCol >= 0) {
-        const v = cleanText(row[nameCol]);
-        if (isKoreanName(v)) return v;
-      }
-      // 2) 전체 셀에서 이름 후보 탐색(첫번째 한글 이름)
-      for (const cell of row) {
-        const v = cleanText(cell);
-        if (isKoreanName(v)) return v;
-      }
-      return '';
-    }
-
-    function pickOrgNearCols(row, cols, preferRight, schoolMap) {
-      // cols 주변(-1, 0, +1)도 같이 스캔
-      const cand = [];
-      const set = new Set();
-      for (const c0 of cols) {
-        for (const dc of [-1,0,1]) {
-          const c = c0 + dc;
-          if (c < 0 || c >= row.length) continue;
-          if (set.has(c)) continue;
-          set.add(c);
-          cand.push(c);
-        }
-      }
-      // 후보가 없으면 전체에서 org 패턴 스캔
-      const scanCols = cand.length ? cand : Array.from({length: row.length}, (_,i) => i);
-
-      let best = { col: -1, score: -999, val: '' };
-      for (const c of scanCols) {
-        const v = cleanText(row[c]);
-        if (!v) continue;
-        const sc = scoreOrgCandidate(v, schoolMap);
-        if (sc > best.score || (sc === best.score && best.col !== -1 && (preferRight ? c > best.col : c < best.col))) {
-          best = { col: c, score: sc, val: v };
-        }
-      }
-      if (best.score < 0) return '';
-
-      // 만약 region 단독이면, 인접에 학교/기관명이 있으면 그쪽을 우선
-      const asRegion = normalizeRegionText(best.val);
-      if (asRegion) {
-        const neigh = preferRight ? [best.col+1, best.col-1] : [best.col-1, best.col+1];
-        for (const n of neigh) {
-          if (n < 0 || n >= row.length) continue;
-          const v2 = cleanText(row[n]);
-          if (!v2) continue;
-          const r2 = normalizeRegionText(v2);
-          if (r2) continue; // 둘 다 지역이면 패스
-          if (looksLikeOrg(v2) || (schoolMap && schoolMap.has(canonSchoolKey(v2)))) return v2;
-        }
-      }
-
-      return best.val;
-    }
-
-    function findColsByLabel(labels, predicates) {
-      const cols = [];
-      for (let i = 0; i < labels.length; i++) {
-        const L = labels[i] || '';
-        if (predicates.every(fn => fn(L))) cols.push(i);
-      }
-      return cols;
-    }
-
-    function includesAny(label, arr) {
-      return arr.some(k => label.includes(k));
-    }
-
-    function extractRecordsFromSheet(ws, sheetName, fileName, schoolMap) {
-      const data = sheetToArray(ws).map(row => row.map(cleanText));
-
-      const headerIdx = findHeaderRow(data);
-      let mainRow = null, subRow = null, dataStart = 0;
-
-      if (headerIdx >= 0) {
-        mainRow = data[headerIdx];
-        // 바로 아래 줄이 "직급/학교명/부서/근무처..." 같은 서브헤더일 확률이 높음
-        const next = data[headerIdx + 1] || [];
-        const nextJoined = next.join(' ');
-        const hasSub = /(직급|직종|직렬|학교명|부서|근무처|근무지|호봉)/.test(nextJoined) && !/(성명|이름)/.test(nextJoined);
-        subRow = hasSub ? next : null;
-        dataStart = headerIdx + (hasSub ? 2 : 1);
-      } else {
-        // 헤더 못 찾으면 처음부터 스캔(보수적으로)
-        mainRow = data[0] || [];
-        subRow = null;
-        dataStart = 1;
-      }
-
-      const labels = buildColLabels(mainRow, subRow);
-
-      const nameCols = findColsByLabel(labels, [
-        L => includesAny(L, ['성명','성 명','이름'])
-      ]);
-      const nameCol = nameCols.length ? nameCols[0] : -1;
-
-      // 임용/발령쪽 (왼쪽) org 후보
-      const toOrgCols = findColsByLabel(labels, [
-        L => includesAny(L, ['임용','발령','임용사항','발령사항']),
-        L => includesAny(L, ['근무','근무지','근무처','부서','학교명'])
-      ]);
-      // 현소속(오른쪽) org 후보
-      const fromOrgCols = findColsByLabel(labels, [
-        L => includesAny(L, ['현','현소속','현근무','현 직','현직','종전','전 소속','전근무']),
-        L => includesAny(L, ['근무','근무지','근무처','부서','학교명'])
-      ]);
-
-      // 직급/직종/직렬
-      const toPosCols = findColsByLabel(labels, [
-        L => includesAny(L, ['임용','발령','임용사항','발령사항']),
-        L => includesAny(L, ['직급','직종','직렬','직위'])
-      ]);
-      const fromPosCols = findColsByLabel(labels, [
-        L => includesAny(L, ['현','현소속','현근무','현 직','현직','종전','전 소속','전근무']),
-        L => includesAny(L, ['직급','직종','직렬','직위'])
-      ]);
-
-      // 구분/비고/발령사항 텍스트
-      const noteCols = findColsByLabel(labels, [
-        L => includesAny(L, ['구분','비고','발령','임용','전보','전입','전출'])
-      ]);
-
-      const dateCols = findColsByLabel(labels, [
-        L => includesAny(L, ['일자','임용일자','발령일자'])
-      ]);
-
-      /** @type {any[]} */
-      const out = [];
-
-      for (let r = dataStart; r < data.length; r++) {
-        const row = data[r];
-        if (!row || !row.length) continue;
-
-        // 빈 행 제외
-        const nonEmpty = row.filter(v => cleanText(v)).length;
-        if (nonEmpty < 2) continue;
-
-        const name = pickNameFromRow(row, nameCol);
-        if (!name) continue;
-
-        // 집계 제외 조건: 성명 칸에 지역/교육장 등 들어간 경우는 isKoreanName에서 걸러짐
-
-        const toOrgRaw = pickOrgNearCols(row, toOrgCols.length ? toOrgCols : [Math.floor(row.length/3)], false, schoolMap);
-        const fromOrgRaw = pickOrgNearCols(row, fromOrgCols.length ? fromOrgCols : [Math.floor(row.length*2/3)], true, schoolMap);
-
-        const toPos = toPosCols.length ? cleanText(row[toPosCols[0]]) : '';
-        const fromPos = fromPosCols.length ? cleanText(row[fromPosCols[fromPosCols.length-1]]) : '';
-
-        // notes는 가능한 많이 합치되, 너무 장황해지지 않게 중요한 col만
-        const noteParts = [];
-        for (const c of noteCols) {
-          const v = cleanText(row[c]);
-          if (v) noteParts.push(v);
-        }
-        // 날짜 (있으면)
-        let date = '';
-        for (const c of dateCols) {
-          const v = cleanText(row[c]);
-          if (v && /[0-9]{4}\.?/.test(v)) { date = v; break; }
-        }
-
-        const allTexts = [
-          name, toOrgRaw, fromOrgRaw, toPos, fromPos, date,
-          ...noteParts,
-          ...row.filter(v => v && v.length <= 30) // 짧은 셀만 약간 추가(키워드 잡기)
-        ];
-
-        const flags = detectFlags(allTexts);
-
-        // 조례/시행규칙 포함이면 "발령받는 학교/기관명"을 현근무지로 써라 → toOrg를 fromOrg로 대체
-        let toOrg = normalizeOrgName(toOrgRaw);
-        let fromOrg = normalizeOrgName(fromOrgRaw);
-
-        if (flags.hasOrdinanceRule && fromOrg) toOrg = fromOrg;
-
-        // 둘 다 비면 스킵
-        if (!toOrg && !fromOrg) continue;
-
-        // 직군
-        const empType = detectEmployeeType([toPos, fromPos, ...noteParts, toOrg, fromOrg]);
-
-        // 직렬/직종/직급 라벨(드롭박스 4용)
-        let jobLabel = '';
-        if (empType === '지방공무원') {
-          jobLabel = detectLocalSeries([toPos, fromPos, ...noteParts]) || '기타(지방)';
-        } else if (empType === '교육공무직') {
-          jobLabel = detectEduWorkerJob([toPos, fromPos, ...noteParts]) || (toPos || fromPos || '기타(공무직)');
-        } else if (empType === '교육공무원') {
-          jobLabel = detectTeacherRole([toPos, fromPos, ...noteParts]) || (toPos || fromPos || '기타(교원)');
-        } else {
-          jobLabel = toPos || fromPos || '미상';
-        }
-
-        // 비고/구분 텍스트는 너무 길면 조금 줄이기
-        const note = cleanText(noteParts.join(' / ')).slice(0, 160);
-
-        out.push({
-          name,
-          empType,
-          jobLabel: cleanText(jobLabel),
-          toOrgRaw: toOrgRaw,
-          fromOrgRaw: fromOrgRaw,
-          toOrg,
-          fromOrg,
-          date,
-          note,
-          flags,
-          sheetName,
-          fileName,
-        });
-      }
-
-      return out;
-    }
-
-    /**********************************************************************
-     * 6) 학교 마스터(강원도 내 전체 학교 목록.xlsx) 파싱
-     *********************************************************************/
-    function inferRegionFromAddress(addr) {
-      const a = cleanText(addr);
-      if (!a) return '';
-      // 시/군 기반 매칭(속초/양양 합산)
-      const candidates = [
-        ['강릉','강릉시'], ['고성','고성군'], ['동해','동해시'], ['삼척','삼척시'],
-        ['속초양양','속초시'], ['속초양양','양양군'],
-        ['양구','양구군'], ['영월','영월군'], ['원주','원주시'], ['인제','인제군'],
-        ['정선','정선군'], ['철원','철원군'], ['춘천','춘천시'], ['태백','태백시'],
-        ['평창','평창군'], ['홍천','홍천군'], ['화천','화천군'], ['횡성','횡성군'],
-      ];
-      const compact = stripAllSpaces(a.replace(/^강원특별자치도/,'').replace(/^강원도/,''));
-      for (const [region, token] of candidates) {
-        if (compact.includes(stripAllSpaces(token))) return region;
-      }
-      // 혹시 "양구"가 "양"으로 잘리는 문제 방지: 단일 '양'은 매칭 금지
-      for (const r of REGION_LIST_17) {
-        if (compact.includes(stripAllSpaces(r))) return r; // fallback (풀네임만)
-      }
-      return '';
-    }
-
-    function parseSchoolMasterWorkbook(wb) {
-      // 어떤 시트든 첫 시트에서 "학교이름" 컬럼 기반으로 파싱
-      const sn = wb.SheetNames[0];
-      const ws = wb.Sheets[sn];
-      const arr = sheetToArray(ws).map(row => row.map(cleanText));
-      if (!arr.length) return { loaded:false };
-
-      // 헤더 탐색: "학교이름" 포함된 행
-      let header = -1;
-      for (let i = 0; i < Math.min(20, arr.length); i++) {
-        const j = arr[i].join(' ');
-        if (j.includes('학교이름') || j.includes('학교명')) { header = i; break; }
-      }
-      if (header < 0) header = 0;
-
-      const headRow = arr[header];
-      const nameIdx = headRow.findIndex(x => x.includes('학교이름') || x.includes('학교명'));
-      const addrIdx = headRow.findIndex(x => x.includes('주소'));
-      if (nameIdx < 0) return { loaded:false };
-
-      const schoolNameToRegion = new Map();
-      const schoolCanonToFull = new Map();
-      const schoolFullSet = new Set();
-
-      for (let r = header + 1; r < arr.length; r++) {
-        const row = arr[r];
-        const name = cleanText(row[nameIdx]);
-        if (!name) continue;
-        const addr = addrIdx >= 0 ? cleanText(row[addrIdx]) : '';
-
-        const fullName = normalizeOrgName(name);
-        const canon = canonSchoolKey(fullName);
-        const region = inferRegionFromAddress(addr);
-
-        schoolNameToRegion.set(canon, region || '');
-        schoolCanonToFull.set(canon, fullName);
-        schoolFullSet.add(fullName);
-
-        // 축약키도 같이 등록: "...초등학교" -> "...초", "...중학교" -> "...중", "...고등학교" -> "...고"
-        if (fullName.endsWith('초등학교')) {
-          schoolNameToRegion.set(canonSchoolKey(fullName.replace(/초등학교$/, '초')), region || '');
-        } else if (fullName.endsWith('중학교')) {
-          schoolNameToRegion.set(canonSchoolKey(fullName.replace(/중학교$/, '중')), region || '');
-        } else if (fullName.endsWith('고등학교')) {
-          schoolNameToRegion.set(canonSchoolKey(fullName.replace(/고등학교$/, '고')), region || '');
-        }
-      }
-
-      return { loaded:true, schoolNameToRegion, schoolCanonToFull, schoolFullSet };
-    }
-
-    /**********************************************************************
-     * 7) 레코드 후처리: 병설유치원 합산/지역 추론/중복 제거/기관-학교 분류
-     *********************************************************************/
-    function postProcessRecords(rawRecords) {
-      // 1) 병설유치원 존재 기반: base 학교들 표시
-      const baseWithAnnex = new Set();
-      for (const rec of rawRecords) {
-        const t1 = rec.toOrg, t2 = rec.fromOrg;
-        for (const org of [t1, t2]) {
-          if (!org) continue;
-          if (isAnnexKindergarten(org)) {
-            const base = annexBaseSchool(org);
-            if (base) baseWithAnnex.add(base);
-          }
-        }
-      }
-
-      // 2) org 그룹 라벨 반영
-      for (const rec of rawRecords) {
-        rec.toOrg = normalizeOrgName(rec.toOrg);
-        rec.fromOrg = normalizeOrgName(rec.fromOrg);
-
-        // 병설유치원은 base로 합산
-        if (isAnnexKindergarten(rec.toOrg)) {
-          const base = annexBaseSchool(rec.toOrg);
-          if (base) rec.toOrg = normalizeCombinedAnnexLabel(base);
-        } else {
-          // base 학교도 annex가 하나라도 있으면 라벨을 "… 및 병설유치원"로 통일
-          const base = annexBaseSchool(rec.toOrg);
-          // base가 아닌 경우는 baseWithAnnex에서 바로 확인
-          if (baseWithAnnex.has(rec.toOrg)) rec.toOrg = normalizeCombinedAnnexLabel(rec.toOrg);
-        }
-
-        if (isAnnexKindergarten(rec.fromOrg)) {
-          const base = annexBaseSchool(rec.fromOrg);
-          if (base) rec.fromOrg = normalizeCombinedAnnexLabel(base);
-        } else {
-          if (baseWithAnnex.has(rec.fromOrg)) rec.fromOrg = normalizeCombinedAnnexLabel(rec.fromOrg);
-        }
-      }
-
-      // 3) 지역 추론 + 조직 타입
-      for (const rec of rawRecords) {
-        const schoolMap = state.schoolNameToRegion;
-        rec.toRegion = inferRegionFromOrg(rec.toOrg, schoolMap);
-        rec.fromRegion = inferRegionFromOrg(rec.fromOrg, schoolMap);
-
-        // 발령/임용 후가 비었는데 전이 있으면 후를 전으로 채우기(보수적으로)
-        if (!rec.toOrg && rec.fromOrg) rec.toOrg = rec.fromOrg;
-        if (!rec.toRegion && rec.toOrg) rec.toRegion = inferRegionFromOrg(rec.toOrg, schoolMap);
-        if (!rec.fromRegion && rec.fromOrg) rec.fromRegion = inferRegionFromOrg(rec.fromOrg, schoolMap);
-
-        rec.toKind = isLikelySchoolName(rec.toOrg) ? '학교' : (isLikelyInstitution(rec.toOrg) ? '기관' : (rec.toOrg ? '기관' : ''));
-        rec.fromKind = isLikelySchoolName(rec.fromOrg) ? '학교' : (isLikelyInstitution(rec.fromOrg) ? '기관' : (rec.fromOrg ? '기관' : ''));
-      }
-
-      // 4) 중복 제거:
-      //    - 교육장이 지정… placeholder는 같은 이름에서 "더 구체적인" 레코드가 있으면 제거
-      const byName = new Map();
-      for (const rec of rawRecords) {
-        if (!byName.has(rec.name)) byName.set(rec.name, []);
-        byName.get(rec.name).push(rec);
-      }
-      const filtered = [];
-      for (const [name, list] of byName.entries()) {
-        const hasNonPlaceholder = list.some(r => !r.flags.isPlaceholder);
-        for (const r of list) {
-          if (hasNonPlaceholder && r.flags.isPlaceholder) continue;
-          filtered.push(r);
-        }
-      }
-
-      //    - 최종 키 기반 de-dup (셀병합/중복시트 등 방지)
-      const seen = new Set();
-      const unique = [];
-      for (const r of filtered) {
-        const key = [
-          r.name,
-          r.empType,
-          stripAllSpaces(r.fromOrg || ''),
-          stripAllSpaces(r.toOrg || ''),
-          stripAllSpaces(r.jobLabel || ''),
-          // retire/new/dispatch 같은 큰 성격도 포함
-          r.flags.isRetire ? 'R' : '',
-          r.flags.isNew ? 'N' : '',
-          r.flags.isDispatch ? 'D' : '',
-          r.flags.isLeave ? 'L' : '',
-          r.flags.isReturn ? 'B' : '',
-        ].join('|');
-        if (seen.has(key)) continue;
-        seen.add(key);
-        unique.push(r);
-      }
-
-      // 5) 이동 분류
-      for (const r of unique) {
-        // 지역 비교 기반 기본
-        const fr = r.fromRegion || '';
-        const tr = r.toRegion || '';
-        if (r.flags.isRetire) r.moveType = '퇴직/면직';
-        else if (r.flags.isNew && (!fr || fr === '')) r.moveType = '신규/임용';
-        else if (fr && tr && fr !== tr) r.moveType = '지역이동';
-        else if (fr && tr && fr === tr) r.moveType = '지역변동없음';
-        else r.moveType = '미분류';
-      }
-
-      // 6) 오름차순 정렬(기본)
-      unique.sort((a,b) => {
-        const ak = (a.name||'').localeCompare(b.name||'', 'ko');
-        if (ak !== 0) return ak;
-        const ok = (a.toOrg||'').localeCompare(b.toOrg||'', 'ko');
-        if (ok !== 0) return ok;
-        return (a.fromOrg||'').localeCompare(b.fromOrg||'', 'ko');
-      });
-
-      return unique;
-    }
-
-    /**********************************************************************
-     * 8) 집계(대시보드/지역표/조직 목록)
-     *********************************************************************/
-    function buildAggregates(records) {
-      const total = records.length;
-
-      const countsByMove = { in:0, out:0, stay:0, retire:0, newly:0, unknown:0 };
-
-      // 지역별
-      /** @type {Map<string, {in:number,out:number,stay:number,retire:number,newly:number}>} */
-      const regionMap = new Map();
-      function ensureRegion(r) {
-        if (!regionMap.has(r)) regionMap.set(r, {in:0,out:0,stay:0,retire:0,newly:0});
-        return regionMap.get(r);
-      }
-
-      // “전입/전출”을 지역 기준으로 계산
-      for (const r of records) {
-        const fr = r.fromRegion || '';
-        const tr = r.toRegion || '';
-
-        // retire
-        if (r.flags.isRetire) {
-          countsByMove.retire++;
-          if (fr) ensureRegion(fr).retire++;
-          continue;
-        }
-
-        // new
-        if (r.moveType === '신규/임용') {
-          countsByMove.newly++;
-          if (tr) ensureRegion(tr).newly++;
-          // 신규는 전입으로도 볼 수 있지만, 표에는 별도 칸이 있으니 in은 추가로 올리지 않음(원하면 아래 줄 켜기)
-          // if (tr) ensureRegion(tr).in++;
-          continue;
-        }
-
-        if (fr && tr && fr !== tr) {
-          countsByMove.in++;
-          countsByMove.out++;
-          ensureRegion(fr).out++;
-          ensureRegion(tr).in++;
-        } else if (fr && tr && fr === tr) {
-          countsByMove.stay++;
-          ensureRegion(fr).stay++;
-        } else {
-          countsByMove.unknown++;
-        }
-      }
-
-      // 조직 목록(학교/기관)
-      const orgSetSchool = new Set();
-      const orgSetInst = new Set();
-
-      for (const r of records) {
-        if (r.toOrg) {
-          if (isLikelySchoolName(r.toOrg)) orgSetSchool.add(r.toOrg);
-          else orgSetInst.add(r.toOrg);
-        }
-        if (r.fromOrg) {
-          if (isLikelySchoolName(r.fromOrg)) orgSetSchool.add(r.fromOrg);
-          else orgSetInst.add(r.fromOrg);
-        }
-      }
-
-      const schools = Array.from(orgSetSchool).sort((a,b) => a.localeCompare(b,'ko'));
-      const insts = Array.from(orgSetInst).sort((a,b) => a.localeCompare(b,'ko'));
-
-      return {
-        total,
-        countsByMove,
-        regionMap,
-        orgIndex: { schools, insts }
-      };
-    }
-
-    /**********************************************************************
-     * 9) UI 렌더: 대시보드 / 지역표 / 드롭박스 / 패널
-     *********************************************************************/
-    function renderDashboard() {
-      ui.dashboardEmpty.style.display = 'none';
-      ui.dashboardWrap.style.display = 'block';
-
-      const agg = state.aggregates;
-      ui.kpiGrid.innerHTML = '';
-
-      const kpis = [
-        { label: '전체 인사발령자(중복 제거 후)', value: agg.total, sub: '도단위+관내 파일 합산' },
-        { label: '전입(지역 기준)', value: agg.countsByMove.in, sub: 'from≠to (to 지역)' },
-        { label: '전출(지역 기준)', value: agg.countsByMove.out, sub: 'from≠to (from 지역)' },
-        { label: '지역변동 없음', value: agg.countsByMove.stay, sub: 'from=to' },
-        { label: '퇴직/면직', value: agg.countsByMove.retire, sub: '키워드 기반' },
-        { label: '신규/임용', value: agg.countsByMove.newly, sub: '키워드 기반' },
-      ];
-
-      for (const k of kpis) {
-        const div = document.createElement('div');
-        div.className = 'kpi';
-        div.innerHTML = `
-          <p class="label">${escapeHtml(k.label)}</p>
-          <p class="value">${escapeHtml(String(k.value))}</p>
-          <p class="sub">${escapeHtml(k.sub)}</p>
-        `;
-        ui.kpiGrid.appendChild(div);
-      }
-
-      // 지역표(오름차순)
-      const rows = Array.from(agg.regionMap.entries())
-        .filter(([r,_]) => r) // 빈 지역 제외
-        .sort((a,b) => a[0].localeCompare(b[0],'ko'));
-
-      ui.regionSummaryTable.innerHTML = '';
-      for (const [region, c] of rows) {
-        const tr = document.createElement('tr');
-        tr.style.cursor = 'pointer';
-        tr.innerHTML = `
-          <td>${escapeHtml(region)}</td>
-          <td class="numeric">${c.in}</td>
-          <td class="numeric">${c.out}</td>
-          <td class="numeric">${c.stay}</td>
-          <td class="numeric">${c.retire}</td>
-          <td class="numeric">${c.newly}</td>
-        `;
-        tr.addEventListener('click', () => {
-          // 4번으로 이동 + 지역 자동 선택
-          ui.regionModeSel.value = ui.regionModeSel.value || '분리';
-          populateRegionDropdown();
-          ui.regionSel.value = region;
-          updateRegionPanels();
-          document.getElementById('sec-region').scrollIntoView({behavior:'smooth'});
-        });
-        ui.regionSummaryTable.appendChild(tr);
+      rec.q = computeQualityScore(rec);
+      recs.push(rec);
+
+      if (r % 250 === 0){
+        const frac = (r / aoa.length) * 100;
+        onProgress?.(10 + (si/totalSheets)*70 + (frac/100)*(70/totalSheets), `행 처리: ${sn} (${r}/${aoa.length})…`);
+        await new Promise(res=>setTimeout(res, 0));
       }
     }
+  }
 
-    function enableFilters() {
-      // 3번
-      ui.orgKindSel.disabled = false;
-      ui.orgTypeSel.disabled = false;
-      ui.orgJobSel.disabled = false;
+  onProgress?.(95, "마무리…");
+  await new Promise(r=>setTimeout(r,0));
+  return recs;
+}
 
-      // 기본값
-      ui.orgKindSel.value = '';
-      ui.orgNameSel.innerHTML = '<option value="">(구분을 먼저 선택)</option>';
-      ui.orgNameSel.disabled = true;
+function dedupAndReindex(){
+  const m = new Map();
+  let removed = 0;
 
-      ui.orgTypeSel.value = '전체';
-      ui.orgJobSel.innerHTML = '<option value="전체">전체</option>';
-      ui.orgJobSel.value = '전체';
+  for (const rec of state.rawRecords){
+    const k = recordKey(rec);
+    const prev = m.get(k);
+    if (!prev){
+      m.set(k, rec);
+    }else{
+      // 품질 점수 방식 그대로(높은 점수 유지)
+      if ((rec.q||0) > (prev.q||0)){
+        m.set(k, rec);
+      }
+      removed++;
+    }
+  }
 
-      // 4번
-      ui.regionModeSel.disabled = false;
-      ui.regionSel.disabled = false;
-      ui.regionTypeSel.disabled = false;
+  state.records = Array.from(m.values());
+  state.dedupRemoved = removed;
 
-      ui.regionModeSel.value = '';
-      ui.regionSel.innerHTML = '<option value="">(강원도교육청 처리 먼저 선택)</option>';
-      ui.regionTypeSel.value = '전체';
+  // 인덱스 구성
+  state.indexes.byEntity.clear();
+  state.indexes.byRegion.clear();
 
-      ui.downloadOrgBtn.disabled = false;
-      ui.downloadRegionBtn.disabled = false;
+  for (let i=0;i<state.records.length;i++){
+    const rec = state.records[i];
+
+    // entity index(종전/신규/기타 모두 포함)
+    const entities = new Set();
+    if (rec.fromOrgNorm) entities.add(rec.fromOrgNorm);
+    if (rec.toOrgNorm) entities.add(rec.toOrgNorm);
+    if (!entities.size && rec.orgAnyNorm) entities.add(rec.orgAnyNorm);
+
+    for (const e of entities){
+      if (!state.indexes.byEntity.has(e)) state.indexes.byEntity.set(e, []);
+      state.indexes.byEntity.get(e).push(i);
     }
 
-    function populateOrgDropdowns() {
-      const idx = state.orgIndex;
-      const kind = ui.orgKindSel.value;
-
-      ui.orgNameSel.disabled = !kind;
-      ui.orgNameSel.innerHTML = '';
-
-      if (!kind) {
-        ui.orgNameSel.innerHTML = '<option value="">(구분을 먼저 선택)</option>';
-        return;
-      }
-
-      const list = (kind === '학교') ? idx.schools : idx.insts;
-
-      ui.orgNameSel.appendChild(new Option('전체', '전체'));
-      for (const org of list) {
-        ui.orgNameSel.appendChild(new Option(org, org));
-      }
-      ui.orgNameSel.value = '전체';
+    // region index(관련 지역)
+    const regions = new Set();
+    if (rec.fromRegion) regions.add(rec.fromRegion);
+    if (rec.toRegion) regions.add(rec.toRegion);
+    if (!regions.size && rec.regionAny) regions.add(rec.regionAny);
+    for (const r of regions){
+      if (!state.indexes.byRegion.has(r)) state.indexes.byRegion.set(r, []);
+      state.indexes.byRegion.get(r).push(i);
     }
+  }
 
-    function populateOrgJobDropdown() {
-      // 4번째 드롭박스: 직렬/직급/직종
-      const kind = ui.orgKindSel.value;
-      const org = ui.orgNameSel.value;
-      const type = ui.orgTypeSel.value;
+  log(`중복 제거 완료: 원본 ${state.rawRecords.length} → 유니크 ${state.records.length} (제거 ${removed})`);
+}
 
-      // 필터 후보집합 만들기
-      let pool = state.records;
+/* ============================
+   렌더링: 요약/상세
+   ============================ */
+function refreshAllViews(){
+  // 요약
+  renderSummary();
 
-      if (kind === '학교') pool = pool.filter(r => isLikelySchoolName(r.toOrg) || isLikelySchoolName(r.fromOrg));
-      if (kind === '기관') pool = pool.filter(r => !isLikelySchoolName(r.toOrg) || !isLikelySchoolName(r.fromOrg) || isLikelyInstitution(r.toOrg) || isLikelyInstitution(r.fromOrg)); // 대충 기관쪽 포함
+  // 필터 활성화 및 옵션 구성
+  populateEntityPick();
+  populateRegionPick();
 
-      if (org && org !== '전체') pool = pool.filter(r => r.toOrg === org || r.fromOrg === org);
-      if (type && type !== '전체') pool = pool.filter(r => r.empType === type);
+  el.entityPick.disabled = state.records.length===0;
+  el.personnelType.disabled = state.records.length===0;
+  el.btnDlEntity.disabled = state.records.length===0;
+  el.regionOfficeMode.disabled = state.records.length===0;
+  el.regionPick.disabled = state.records.length===0;
+  el.regionPersonnelType.disabled = state.records.length===0;
+  el.regionKeyword.disabled = state.records.length===0;
+  el.btnDlRegion.disabled = state.records.length===0;
 
-      ui.orgJobSel.disabled = false;
-      ui.orgJobSel.innerHTML = '';
-      ui.orgJobSel.appendChild(new Option('전체', '전체'));
+  // 상세 뷰
+  renderEntityView();
+  renderRegionView();
 
-      // 지방공무원 선택이면 직렬 고정 리스트
-      if (type === '지방공무원') {
-        for (const s of LOCAL_SERIES) ui.orgJobSel.appendChild(new Option(s, s));
-        ui.orgJobSel.appendChild(new Option('기타(지방)', '기타(지방)'));
-        ui.orgJobSel.value = '전체';
-        return;
-      }
+  // 상태 표시
+  el.dataStatus.textContent = state.records.length ? "데이터 준비됨" : "데이터 없음";
+  el.dedupStatus.textContent = `dedup:${state.dedupRemoved}`;
+}
 
-      // 그 외는 pool에서 고유 jobLabel 수집
-      const set = new Set();
-      for (const r of pool) {
-        const jl = cleanText(r.jobLabel);
-        if (jl) set.add(jl);
-      }
-      const items = Array.from(set).sort((a,b) => a.localeCompare(b,'ko'));
-      for (const it of items) ui.orgJobSel.appendChild(new Option(it, it));
-      ui.orgJobSel.value = '전체';
+function renderSummary(){
+  el.statFiles.textContent = String(state.files.length);
+  el.statRaw.textContent = String(state.rawRecords.length);
+  el.statUniq.textContent = String(state.records.length);
+
+  const mappedPct = state.stats.mappedOrgTotal ? Math.round((state.stats.mappedOrg / state.stats.mappedOrgTotal) * 100) : 0;
+  el.statMapped.textContent = `${mappedPct}%`;
+
+  // by type
+  const rowsType = buildSummaryByTypeRows();
+  if (!rowsType.length){
+    el.summaryByTypeTbody.innerHTML = `<tr><td colspan="3" class="muted">데이터 없음</td></tr>`;
+  }else{
+    const total = rowsType.reduce((a,b)=>a+(b.count||0),0) || 1;
+    el.summaryByTypeTbody.innerHTML = rowsType.map(r=>{
+      const pct = ((r.count/total)*100).toFixed(1) + "%";
+      return `<tr><td><b>${escapeHtml(r.personnelType)}</b></td><td class="mono">${r.count}</td><td class="mono">${pct}</td></tr>`;
+    }).join("");
+  }
+
+  // by region
+  const rowsRegion = buildSummaryByRegionRows();
+  if (!rowsRegion.length){
+    el.summaryByRegionTbody.innerHTML = `<tr><td colspan="3" class="muted">데이터 없음</td></tr>`;
+  }else{
+    const total = rowsRegion.reduce((a,b)=>a+(b.count||0),0) || 1;
+    el.summaryByRegionTbody.innerHTML = rowsRegion.map(r=>{
+      const pct = ((r.count/total)*100).toFixed(1) + "%";
+      return `<tr><td><b>${escapeHtml(r.region)}</b></td><td class="mono">${r.count}</td><td class="mono">${pct}</td></tr>`;
+    }).join("");
+  }
+}
+
+function buildSummaryByTypeRows(){
+  if (!state.records.length) return [];
+  const c = new Map();
+  for (const rec of state.records){
+    const k = rec.personnelType || "기타";
+    c.set(k, (c.get(k)||0)+1);
+  }
+  const order = ["교육공무원","지방공무원","교육공무직","기타"];
+  const rows = Array.from(c.entries()).map(([k,v])=>({ personnelType:k, count:v }));
+  rows.sort((a,b)=> (order.indexOf(a.personnelType)-order.indexOf(b.personnelType)) || (b.count-a.count));
+  return rows;
+}
+
+function buildSummaryByRegionRows(){
+  if (!state.records.length) return [];
+  const c = new Map();
+  for (const rec of state.records){
+    const set = new Set();
+    if (rec.fromRegion) set.add(rec.fromRegion);
+    if (rec.toRegion) set.add(rec.toRegion);
+    if (!set.size && rec.regionAny) set.add(rec.regionAny);
+    for (const r of set){
+      const rr = r || "미상";
+      c.set(rr, (c.get(rr)||0)+1);
     }
+  }
+  const rows = Array.from(c.entries()).map(([k,v])=>({ region:k, count:v }));
+  rows.sort((a,b)=> (REGIONS_ORDER.indexOf(a.region)-REGIONS_ORDER.indexOf(b.region)) || (b.count-a.count));
+  return rows;
+}
 
-    function populateRegionDropdown() {
-      const mode = ui.regionModeSel.value;
-      ui.regionSel.innerHTML = '';
-      if (!mode) {
-        ui.regionSel.appendChild(new Option('(강원도교육청 처리 먼저 선택)', ''));
-        ui.regionSel.disabled = true;
-        return;
-      }
-      ui.regionSel.disabled = false;
+function populateEntityPick(){
+  const prev = el.entityPick.value;
+  el.entityPick.innerHTML = "";
+  const names = Array.from(state.indexes.byEntity.keys()).filter(Boolean);
+  names.sort((a,b)=> a.localeCompare(b, "ko"));
 
-      const list = (mode === '분리') ? REGION_LIST_18 : REGION_LIST_17;
+  const op0 = document.createElement("option");
+  op0.value = "";
+  op0.textContent = "(선택)";
+  el.entityPick.appendChild(op0);
 
-      ui.regionSel.appendChild(new Option('전체', '전체'));
-      // 사용자가 명시한 순서를 유지(드롭다운 자체는 순서 고정)
-      for (const r of list) ui.regionSel.appendChild(new Option(r, r));
-      ui.regionSel.value = '전체';
+  for (const n of names){
+    const op = document.createElement("option");
+    op.value = n;
+    op.textContent = n;
+    el.entityPick.appendChild(op);
+  }
+  el.entityPick.value = names.includes(prev) ? prev : "";
+  el.entityStatus.textContent = state.records.length ? `기관 ${names.length}개` : "대기";
+}
+
+function populateRegionPick(){
+  const prev = el.regionPick.value;
+  el.regionPick.innerHTML = "";
+
+  const regions = Array.from(state.indexes.byRegion.keys()).filter(Boolean);
+  regions.sort((a,b)=> {
+    const ia = REGIONS_ORDER.indexOf(a);
+    const ib = REGIONS_ORDER.indexOf(b);
+    if (ia>=0 && ib>=0) return ia-ib;
+    if (ia>=0) return -1;
+    if (ib>=0) return 1;
+    return a.localeCompare(b,"ko");
+  });
+
+  const op0 = document.createElement("option");
+  op0.value = "";
+  op0.textContent = "(선택)";
+  el.regionPick.appendChild(op0);
+
+  for (const r of regions){
+    const op = document.createElement("option");
+    op.value = r;
+    op.textContent = r;
+    el.regionPick.appendChild(op);
+  }
+  el.regionPick.value = regions.includes(prev) ? prev : "";
+  el.regionStatus.textContent = state.records.length ? `시군구 ${regions.length}개` : "대기";
+}
+
+function renderEntityView(){
+  if (!state.records.length){
+    el.outTbody.innerHTML = `<tr><td colspan="9" class="muted">대기</td></tr>`;
+    el.inTbody.innerHTML = `<tr><td colspan="9" class="muted">대기</td></tr>`;
+    el.unkTbody.innerHTML = `<tr><td colspan="8" class="muted">대기</td></tr>`;
+    el.outCount.textContent = "0";
+    el.inCount.textContent = "0";
+    el.unkCount.textContent = "0";
+    el.btnDlEntity.disabled = true;
+    return;
+  }
+
+  const entity = el.entityPick.value;
+  const viewMode = el.entityViewMode.value;
+  const pt = el.personnelType.value;
+  const kw = el.jobKeyword.value;
+  const gg = el.govGradeFilter.value;
+
+  let recs = state.records;
+
+  // (선택된 기관 필터)
+  if (entity){
+    const ids = state.indexes.byEntity.get(entity) || [];
+    recs = ids.map(i => state.records[i]);
+  }else{
+    // 기관 미선택 시, 키워드/인사구분만으로 표가 의미없으므로 빈 처리
+    el.outTbody.innerHTML = `<tr><td colspan="9" class="muted">기관을 선택하세요.</td></tr>`;
+    el.inTbody.innerHTML = `<tr><td colspan="9" class="muted">기관을 선택하세요.</td></tr>`;
+    el.unkTbody.innerHTML = `<tr><td colspan="8" class="muted">기관을 선택하세요.</td></tr>`;
+    el.outCount.textContent = "0";
+    el.inCount.textContent = "0";
+    el.unkCount.textContent = "0";
+    el.btnDlEntity.disabled = true;
+    el.entityStatus.textContent = "기관 미선택";
+    return;
+  }
+
+  // (요구사항) filterByPersonnelAndJob에서 govGrade 조건 포함
+  recs = filterByPersonnelAndJob(recs, pt, kw, gg);
+
+  const parts = splitRecordsByEntity(recs, entity, viewMode);
+
+  renderEntityTables(parts);
+
+  // currentExport.title에 직급 조건 포함(요구사항)
+  const titleBits = [
+    "entity",
+    entity,
+    viewMode,
+    pt,
+    (pt==="지방공무원" ? `직급-${gg}` : null),
+    kw ? `kw-${kw}` : null
+  ].filter(Boolean).map(s => safeFileNamePart(s));
+  state.currentExport.title = titleBits.join("_");
+  state.currentExport.sheetName = "entity_view";
+  state.currentExport.rows = buildExportRowsFromEntityParts(parts);
+
+  el.btnDlEntity.disabled = false;
+  el.entityStatus.textContent = `${entity} · ${pt}${pt==="지방공무원" && gg!=="전체" ? ` · ${gg}`:""} · ${recs.length}건(관련)`;
+}
+
+function renderEntityTables({out, inn, unk}){
+  el.outCount.textContent = String(out.length);
+  el.inCount.textContent = String(inn.length);
+  el.unkCount.textContent = String(unk.length);
+
+  el.outTbody.innerHTML = out.length ? out.map(r=>entityRowHtml(r, "out")).join("") : `<tr><td colspan="9" class="muted">0건</td></tr>`;
+  el.inTbody.innerHTML  = inn.length ? inn.map(r=>entityRowHtml(r, "in")).join("") : `<tr><td colspan="9" class="muted">0건</td></tr>`;
+  el.unkTbody.innerHTML = unk.length ? unk.map(r=>entityRowHtml(r, "unk")).join("") : `<tr><td colspan="8" class="muted">0건</td></tr>`;
+}
+
+function entityRowHtml(rec, mode){
+  const pt = safeText(rec.personnelType);
+  const grade = pt==="지방공무원" ? (rec.govGrade || "") : "";
+  const src = `${safeText(rec.sourceFile)} / ${safeText(rec.sheetName)} #${rec.rowNumber}`;
+
+  if (mode==="out"){
+    return `<tr>
+      <td><span class="chip">${escapeHtml(pt||"")}</span></td>
+      <td class="mono">${escapeHtml(grade)}</td>
+      <td><b>${escapeHtml(rec.name)}</b></td>
+      <td>${escapeHtml(rec.fromOrgNorm||rec.fromOrg)}</td>
+      <td>${escapeHtml(rec.fromRegion)}</td>
+      <td>${escapeHtml(rec.toOrgNorm||rec.toOrg)}</td>
+      <td>${escapeHtml(rec.toRegion)}</td>
+      <td class="muted">${escapeHtml(rec.jobRaw)}<div class="mono muted">${escapeHtml(rec.newRank||rec.curRank)}</div></td>
+      <td class="mono muted">${escapeHtml(src)}</td>
+    </tr>`;
+  }
+  if (mode==="in"){
+    return `<tr>
+      <td><span class="chip">${escapeHtml(pt||"")}</span></td>
+      <td class="mono">${escapeHtml(grade)}</td>
+      <td><b>${escapeHtml(rec.name)}</b></td>
+      <td>${escapeHtml(rec.toOrgNorm||rec.toOrg)}</td>
+      <td>${escapeHtml(rec.toRegion)}</td>
+      <td>${escapeHtml(rec.fromOrgNorm||rec.fromOrg)}</td>
+      <td>${escapeHtml(rec.fromRegion)}</td>
+      <td class="muted">${escapeHtml(rec.jobRaw)}<div class="mono muted">${escapeHtml(rec.newRank||rec.curRank)}</div></td>
+      <td class="mono muted">${escapeHtml(src)}</td>
+    </tr>`;
+  }
+  // unk
+  return `<tr>
+    <td><span class="chip">${escapeHtml(pt||"")}</span></td>
+    <td class="mono">${escapeHtml(grade)}</td>
+    <td><b>${escapeHtml(rec.name)}</b></td>
+    <td>${escapeHtml(rec.orgAnyNorm||rec.orgAny||"")}</td>
+    <td>${escapeHtml(rec.regionAny||"")}</td>
+    <td class="muted">${escapeHtml(rec.jobRaw)}<div class="mono muted">${escapeHtml(rec.newRank||rec.curRank)}</div></td>
+    <td class="muted">${escapeHtml(rec.remark||"")}</td>
+    <td class="mono muted">${escapeHtml(src)}</td>
+  </tr>`;
+}
+
+function renderRegionView(){
+  if (!state.records.length){
+    el.regionTbody.innerHTML = `<tr><td colspan="10" class="muted">대기</td></tr>`;
+    el.regionCount.textContent = "0";
+    el.btnDlRegion.disabled = true;
+    return;
+  }
+
+  const region = el.regionPick.value;
+  const officeMode = el.regionOfficeMode.value;
+  const pt = el.regionPersonnelType.value;
+  const gg = el.regionGovGradeFilter.value;
+  const kw = el.regionKeyword.value;
+
+  if (!region){
+    el.regionTbody.innerHTML = `<tr><td colspan="10" class="muted">시군구를 선택하세요.</td></tr>`;
+    el.regionCount.textContent = "0";
+    el.btnDlRegion.disabled = true;
+    el.regionStatus.textContent = "시군구 미선택";
+    return;
+  }
+
+  let recs = (state.indexes.byRegion.get(region) || []).map(i=>state.records[i]);
+
+  // officeMode 유지 + 직급 필터 AND 추가(요구사항)
+  recs = recs.filter(rec => {
+    if (officeMode === "from") return rec.fromRegion === region;
+    if (officeMode === "to") return rec.toRegion === region;
+    // related
+    return rec.fromRegion === region || rec.toRegion === region || rec.regionAny === region;
+  });
+
+  // 인사구분 + 키워드 + (지방공무원 직급) 필터
+  recs = filterByPersonnelAndJob(recs, pt, kw, gg);
+
+  // render
+  el.regionCount.textContent = String(recs.length);
+  el.regionTbody.innerHTML = recs.length ? recs.map(regionRowHtml).join("") : `<tr><td colspan="10" class="muted">0건</td></tr>`;
+
+  // currentExport.title에 직급 조건 포함(요구사항)
+  const titleBits = [
+    "region",
+    region,
+    officeMode,
+    pt,
+    (pt==="지방공무원" ? `직급-${gg}` : null),
+    kw ? `kw-${kw}` : null
+  ].filter(Boolean).map(s => safeFileNamePart(s));
+  state.currentExport.title = titleBits.join("_");
+  state.currentExport.sheetName = "region_view";
+  state.currentExport.rows = buildExportRows(recs);
+
+  el.btnDlRegion.disabled = false;
+  el.regionStatus.textContent = `${region} · ${officeMode} · ${pt}${pt==="지방공무원" && gg!=="전체" ? ` · ${gg}`:""} · ${recs.length}건`;
+}
+
+function regionRowHtml(rec){
+  const pt = safeText(rec.personnelType);
+  const grade = pt==="지방공무원" ? (rec.govGrade || "") : "";
+  const src = `${safeText(rec.sourceFile)} / ${safeText(rec.sheetName)} #${rec.rowNumber}`;
+  return `<tr>
+    <td><span class="chip">${escapeHtml(pt||"")}</span></td>
+    <td class="mono">${escapeHtml(grade)}</td>
+    <td><b>${escapeHtml(rec.name)}</b></td>
+    <td>${escapeHtml(rec.fromOrgNorm||rec.fromOrg)}</td>
+    <td>${escapeHtml(rec.fromRegion)}</td>
+    <td>${escapeHtml(rec.toOrgNorm||rec.toOrg)}</td>
+    <td>${escapeHtml(rec.toRegion)}</td>
+    <td class="muted">${escapeHtml(rec.jobRaw)}<div class="mono muted">${escapeHtml(rec.newRank||rec.curRank)}</div></td>
+    <td class="muted">${escapeHtml(rec.remark||"")}</td>
+    <td class="mono muted">${escapeHtml(src)}</td>
+  </tr>`;
+}
+
+/* ============================
+   다운로드 (SheetJS)
+   ============================ */
+function safeFileNamePart(s){
+  return safeText(s)
+    .replace(/\s+/g,"")
+    .replace(/[\\/:*?"<>|]/g,"-")
+    .slice(0, 40);
+}
+
+function buildExportRows(recs){
+  return recs.map(rec => ({
+    personnelType: rec.personnelType || "",
+    govGrade: rec.personnelType==="지방공무원" ? (rec.govGrade||"") : "",
+    name: rec.name || "",
+    fromOrg: rec.fromOrgNorm || rec.fromOrg || "",
+    fromRegion: rec.fromRegion || "",
+    toOrg: rec.toOrgNorm || rec.toOrg || "",
+    toRegion: rec.toRegion || "",
+    curRank: rec.curRank || "",
+    newRank: rec.newRank || "",
+    jobRaw: rec.jobRaw || "",
+    remark: rec.remark || "",
+    sourceFile: rec.sourceFile || "",
+    sheetName: rec.sheetName || "",
+    rowNumber: rec.rowNumber || "",
+    quality: rec.q || 0,
+  }));
+}
+
+function buildExportRowsFromEntityParts({out, inn, unk}){
+  const tag = (arr, label) => arr.map(r => ({ view: label, ...buildExportRows([r])[0] }));
+  return [
+    ...tag(out, "전출"),
+    ...tag(inn, "전입"),
+    ...tag(unk, "미분류"),
+  ];
+}
+
+function downloadAsXlsxOrCsv(baseName, rows, sheetName="data"){
+  if (!window.XLSX){
+    log("다운로드 실패: SheetJS가 준비되지 않았습니다.", "error");
+    return;
+  }
+  const ts = new Date();
+  const pad=n=>String(n).padStart(2,'0');
+  const stamp = `${ts.getFullYear()}${pad(ts.getMonth()+1)}${pad(ts.getDate())}_${pad(ts.getHours())}${pad(ts.getMinutes())}`;
+  const fileBase = `${safeFileNamePart(baseName)}_${stamp}`;
+
+  // XLSX
+  try{
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, sheetName.slice(0, 31));
+    const wbout = XLSX.write(wb, { bookType:"xlsx", type:"array" });
+    const blob = new Blob([wbout], { type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    triggerDownload(blob, `${fileBase}.xlsx`);
+    log(`다운로드 생성: ${fileBase}.xlsx (${rows.length}행)`);
+  }catch(e){
+    log("XLSX 생성 실패 → CSV로 대체", "warn");
+    downloadCSV(fileBase, rows);
+  }
+}
+
+function downloadCSV(fileBase, rows){
+  const cols = rows.length ? Object.keys(rows[0]) : [];
+  const esc = (v) => {
+    const s = (v==null) ? "" : String(v);
+    if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
+    return s;
+  };
+  const lines = [];
+  lines.push(cols.join(","));
+  for (const r of rows){
+    lines.push(cols.map(c=>esc(r[c])).join(","));
+  }
+  const blob = new Blob(["\uFEFF"+lines.join("\n")], { type:"text/csv;charset=utf-8" });
+  triggerDownload(blob, `${fileBase}.csv`);
+  log(`다운로드 생성: ${fileBase}.csv (${rows.length}행)`);
+}
+
+function triggerDownload(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{
+    URL.revokeObjectURL(url);
+    a.remove();
+  }, 0);
+}
+
+/* ============================
+   기타 유틸
+   ============================ */
+function escapeHtml(s){
+  return safeText(s)
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
+
+function resetAll(){
+  state.files = [];
+  state.fileKeySet.clear();
+  state.rawRecords = [];
+  state.records = [];
+  state.dedupRemoved = 0;
+  state.stats.mappedOrg = 0;
+  state.stats.mappedOrgTotal = 0;
+  state.indexes.byEntity.clear();
+  state.indexes.byRegion.clear();
+  state.currentExport = { title:"export", rows:[], sheetName:"data" };
+
+  renderFileTable();
+  renderSummary();
+  refreshAllViews();
+  updateButtons();
+
+  el.entityPick.innerHTML = `<option value="">(데이터를 업로드하면 목록이 생성됩니다)</option>`;
+  el.regionPick.innerHTML = `<option value="">(데이터 업로드 후 선택)</option>`;
+  el.entityPick.disabled = true;
+  el.personnelType.disabled = true;
+  el.btnDlEntity.disabled = true;
+  el.regionOfficeMode.disabled = true;
+  el.regionPick.disabled = true;
+  el.regionPersonnelType.disabled = true;
+  el.regionGovGradeFilter.disabled = true;
+  el.regionKeyword.disabled = true;
+  el.btnDlRegion.disabled = true;
+
+  el.dataStatus.textContent = "데이터 없음";
+  el.dedupStatus.textContent = "dedup:0";
+  setGlobalProgress(0, "대기");
+  log("전체 초기화 완료");
+}
+
+function refreshAllViewsSoft(){
+  renderSummary();
+  renderEntityView();
+  renderRegionView();
+}
+
+function wireDownloads(){
+  el.btnDlEntity.addEventListener("click", ()=>{
+    const { title, rows, sheetName } = state.currentExport;
+    if (!rows?.length){
+      log("다운로드할 데이터가 없습니다.", "warn");
+      return;
     }
+    downloadAsXlsxOrCsv(title, rows, sheetName);
+  });
 
-    function adjustRegion(region, mode) {
-      if (!region) return '';
-      if (mode === '합산' && region === '강원도교육청') return '춘천';
-      return region;
+  el.btnDlRegion.addEventListener("click", ()=>{
+    const { title, rows, sheetName } = state.currentExport;
+    if (!rows?.length){
+      log("다운로드할 데이터가 없습니다.", "warn");
+      return;
     }
+    downloadAsXlsxOrCsv(title, rows, sheetName);
+  });
+}
 
-    function renderTableRows(tbody, rows) {
-      tbody.innerHTML = '';
-      for (const r of rows) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${escapeHtml(r.name)}</td>
-          <td>${escapeHtml(r.empType)}</td>
-          <td>${escapeHtml(r.jobLabel || '')}</td>
-          <td>${escapeHtml(r.fromOrg || '')}</td>
-          <td>${escapeHtml(r.toOrg || '')}</td>
-          <td>${escapeHtml(r.fromRegion || '')}</td>
-          <td>${escapeHtml(r.toRegion || '')}</td>
-          <td>${escapeHtml(r.note || '')}</td>
-        `;
-        tbody.appendChild(tr);
-      }
+/* ============================
+   앱 시작
+   ============================ */
+function init(){
+  cacheDom();
+  initClock();
+  initDnd();
+  initButtons();
+  initEntityFilters();
+  initRegionFilters();
+  wireDownloads();
+
+  renderFileTable();
+  renderSummary();
+  refreshAllViewsSoft();
+  updateButtons();
+
+  // 라이브러리 로드(사용자가 파싱 버튼 누르기 전에 미리 준비)
+  loadSheetJS().then(ok=>{
+    if (ok){
+      updateButtons();
+      log("준비 완료: 파일을 업로드한 뒤 ‘선택 파일 파싱’을 눌러주세요.");
     }
-
-    function sortRecordsAsc(rows) {
-      return rows.slice().sort((a,b) => {
-        // 오름차순: (발령후/현소속/성명) 기준
-        const aKey = `${a.toOrg||''} ${a.fromOrg||''} ${a.name||''}`.trim();
-        const bKey = `${b.toOrg||''} ${b.fromOrg||''} ${b.name||''}`.trim();
-        return aKey.localeCompare(bKey, 'ko');
-      });
-    }
-
-    function updateOrgPanels() {
-      const kind = ui.orgKindSel.value;
-      const org = ui.orgNameSel.value;
-      const type = ui.orgTypeSel.value;
-      const job = ui.orgJobSel.value;
-
-      let pool = state.records;
-
-      if (kind === '학교') {
-        pool = pool.filter(r => isLikelySchoolName(r.toOrg) || isLikelySchoolName(r.fromOrg));
-      } else if (kind === '기관') {
-        pool = pool.filter(r => isLikelyInstitution(r.toOrg) || isLikelyInstitution(r.fromOrg) || r.toOrg === '강원도교육청' || r.fromOrg === '강원도교육청');
-      } else {
-        ui.orgPanels.style.display = 'none';
-        return;
-      }
-
-      if (org && org !== '전체') pool = pool.filter(r => r.toOrg === org || r.fromOrg === org);
-      if (type && type !== '전체') pool = pool.filter(r => r.empType === type);
-      if (job && job !== '전체') pool = pool.filter(r => (r.jobLabel || '') === job);
-
-      // 패널 분류
-      const p1 = [], p2 = [], p3 = [];
-      for (const r of pool) {
-        const isOut = (org && org !== '전체') ? (r.fromOrg === org && r.toOrg !== org) : false;
-        const isIn  = (org && org !== '전체') ? (r.toOrg === org && r.fromOrg !== org) : false;
-        const isStay = (org && org !== '전체') ? (r.fromOrg === org && r.toOrg === org) : false;
-
-        if (r.flags.isRetire) {
-          // 퇴직자는 보통 현소속 기준
-          if (!org || org === '전체' || r.fromOrg === org) p1.push(r);
-          else p3.push(r);
-        } else if (r.flags.isDispatch) {
-          // 파견은 패널2로
-          p2.push(r);
-        } else if (r.moveType === '신규/임용') {
-          // 신규는 패널2로
-          p2.push(r);
-        } else if (org && org !== '전체') {
-          if (isOut) p1.push(r);
-          else if (isIn) p2.push(r);
-          else if (isStay) p3.push(r);
-          else p3.push(r);
-        } else {
-          // 전체 조회는 “전출/전입” 개념이 약하니, 퇴직 제외하고는 패널2 중심, 나머지 p3
-          if (r.flags.isLeave || r.flags.isReturn || r.flags.isExtend || r.moveType === '지역변동없음') p3.push(r);
-          else p2.push(r);
-        }
-      }
-
-      const p1s = sortRecordsAsc(p1);
-      const p2s = sortRecordsAsc(p2);
-      const p3s = sortRecordsAsc(p3);
-
-      ui.orgPanel1Meta.textContent = `건수: ${p1s.length} (오름차순 정렬)`;
-      ui.orgPanel2Meta.textContent = `건수: ${p2s.length} (오름차순 정렬)`;
-      ui.orgPanel3Meta.textContent = `건수: ${p3s.length} (오름차순 정렬)`;
-
-      renderTableRows(ui.orgPanel1Table, p1s);
-      renderTableRows(ui.orgPanel2Table, p2s);
-      renderTableRows(ui.orgPanel3Table, p3s);
-
-      ui.orgPanels.style.display = 'block';
-
-      // 다운로드용 캐시
-      state._lastOrgView = { kind, org, type, job, rows: sortRecordsAsc(pool) };
-    }
-
-    function updateRegionPanels() {
-      const mode = ui.regionModeSel.value;
-      const region = ui.regionSel.value;
-      const type = ui.regionTypeSel.value;
-
-      if (!mode || !region) {
-        ui.regionPanels.style.display = 'none';
-        return;
-      }
-
-      let pool = state.records;
-      if (type && type !== '전체') pool = pool.filter(r => r.empType === type);
-
-      // region 조정
-      const adj = (r) => ({
-        ...r,
-        adjFrom: adjustRegion(r.fromRegion || '', mode),
-        adjTo: adjustRegion(r.toRegion || '', mode),
-      });
-
-      const enriched = pool.map(adj);
-
-      let focus = enriched;
-      if (region !== '전체') {
-        focus = enriched.filter(r => r.adjFrom === region || r.adjTo === region || (r.adjFrom === region && r.adjTo === region));
-      }
-
-      const p1 = [], p2 = [], p3 = [], p4 = [];
-
-      for (const r of focus) {
-        const fr = r.adjFrom || '';
-        const tr = r.adjTo || '';
-
-        const inRegion = (region === '전체') ? true : (tr === region);
-        const outRegion = (region === '전체') ? true : (fr === region);
-
-        if (r.flags.isRetire) {
-          if (outRegion) p1.push(r);
-          else p4.push(r);
-          continue;
-        }
-
-        // 신규: 전입 패널로(요구사항에 따라)
-        if (r.moveType === '신규/임용') {
-          if (inRegion) p2.push(r);
-          else if (region === '전체') p2.push(r);
-          else p4.push(r);
-          continue;
-        }
-
-        // 전출: from=region, to!=region
-        if (region !== '전체' && fr === region && tr !== region) {
-          p1.push(r);
-          continue;
-        }
-        // 전입: to=region, from!=region
-        if (region !== '전체' && tr === region && fr !== region) {
-          p2.push(r);
-          continue;
-        }
-
-        // 지역변동 없음 + 기타(휴복직/파견연장/부서간 이동 등)
-        const stay = (fr && tr && fr === tr);
-        if (stay || r.flags.isLeave || r.flags.isReturn || r.flags.isExtend || r.flags.isDispatch) {
-          // region 전체면 여기에 묶기
-          if (region === '전체') p3.push(r);
-          else if (fr === region && tr === region) p3.push(r);
-          else p4.push(r);
-          continue;
-        }
-
-        // region 전체일 때 나머지
-        if (region === '전체') {
-          // fr != tr 케이스를 전입/전출로 굳이 나누기 어렵지만, 그래도 표시
-          if (fr && tr && fr !== tr) p2.push(r);
-          else p4.push(r);
-        } else {
-          p4.push(r);
-        }
-      }
-
-      const p1s = sortRecordsAsc(p1.map(r => ({...r, fromRegion: r.adjFrom, toRegion: r.adjTo})));
-      const p2s = sortRecordsAsc(p2.map(r => ({...r, fromRegion: r.adjFrom, toRegion: r.adjTo})));
-      const p3s = sortRecordsAsc(p3.map(r => ({...r, fromRegion: r.adjFrom, toRegion: r.adjTo})));
-      const p4s = sortRecordsAsc(p4.map(r => ({...r, fromRegion: r.adjFrom, toRegion: r.adjTo})));
-
-      ui.regionPanel1Meta.textContent = `건수: ${p1s.length} (오름차순 정렬)`;
-      ui.regionPanel2Meta.textContent = `건수: ${p2s.length} (오름차순 정렬)`;
-      ui.regionPanel3Meta.textContent = `건수: ${p3s.length} (오름차순 정렬)`;
-      ui.regionPanel4Meta.textContent = `건수: ${p4s.length} (오름차순 정렬)`;
-
-      renderTableRows(ui.regionPanel1Table, p1s);
-      renderTableRows(ui.regionPanel2Table, p2s);
-      renderTableRows(ui.regionPanel3Table, p3s);
-      renderTableRows(ui.regionPanel4Table, p4s);
-
-      ui.regionPanels.style.display = 'block';
-
-      // 다운로드용 캐시
-      state._lastRegionView = { mode, region, type, rows: sortRecordsAsc(focus.map(r => ({...r, fromRegion:r.adjFrom, toRegion:r.adjTo}))) };
-    }
-
-    function escapeHtml(s) {
-      return String(s ?? '')
-        .replaceAll('&','&amp;')
-        .replaceAll('<','&lt;')
-        .replaceAll('>','&gt;')
-        .replaceAll('"','&quot;')
-        .replaceAll("'","&#039;");
-    }
-
-    /**********************************************************************
-     * 10) 엑셀 다운로드(3번/4번)
-     *********************************************************************/
-    function downloadAsXlsx(rows, filenameBase) {
-      if (!rows || !rows.length) {
-        alert('다운로드할 데이터가 없습니다.');
-        return;
-      }
-      const header = ['성명','직군','직렬/직급/직종','현소속(발령 전)','발령(임용) 후','전지역','후지역','비고'];
-      const aoa = [header];
-
-      for (const r of rows) {
-        aoa.push([
-          r.name || '',
-          r.empType || '',
-          r.jobLabel || '',
-          r.fromOrg || '',
-          r.toOrg || '',
-          r.fromRegion || '',
-          r.toRegion || '',
-          r.note || '',
-        ]);
-      }
-
-      const ws = XLSX.utils.aoa_to_sheet(aoa);
-      // 간단 폭
-      ws['!cols'] = [
-        {wch:10},{wch:12},{wch:20},{wch:28},{wch:28},{wch:10},{wch:10},{wch:40},
-      ];
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, '결과');
-
-      const safe = filenameBase.replace(/[\\/:*?"<>|]/g,'_');
-      XLSX.writeFile(wb, safe + '.xlsx');
-    }
-
-    ui.downloadOrgBtn.addEventListener('click', () => {
-      const v = state._lastOrgView;
-      if (!v) return alert('먼저 조회 조건을 선택하세요.');
-      const name = `학교기관_조회결과_${v.kind || '미선택'}_${(v.org || '전체')}_${(v.type || '전체')}`;
-      downloadAsXlsx(v.rows, name);
-    });
-
-    ui.downloadRegionBtn.addEventListener('click', () => {
-      const v = state._lastRegionView;
-      if (!v) return alert('먼저 조회 조건을 선택하세요.');
-      const name = `지역_조회결과_${(v.mode || '미선택')}_${(v.region || '전체')}_${(v.type || '전체')}`;
-      downloadAsXlsx(v.rows, name);
-    });
-
-    /**********************************************************************
-     * 11) 이벤트 연결(드롭다운 자동 연동)
-     *********************************************************************/
-    ui.orgKindSel.addEventListener('change', () => {
-      populateOrgDropdowns();
-      // 구분 선택 후에야 2번 활성화
-      ui.orgNameSel.disabled = !ui.orgKindSel.value;
-      populateOrgJobDropdown();
-      updateOrgPanels();
-    });
-
-    ui.orgNameSel.addEventListener('change', () => {
-      populateOrgJobDropdown();
-      updateOrgPanels();
-    });
-
-    ui.orgTypeSel.addEventListener('change', () => {
-      populateOrgJobDropdown();
-      updateOrgPanels();
-    });
-
-    ui.orgJobSel.addEventListener('change', updateOrgPanels);
-
-    ui.regionModeSel.addEventListener('change', () => {
-      populateRegionDropdown();
-      updateRegionPanels();
-    });
-    ui.regionSel.addEventListener('change', updateRegionPanels);
-    ui.regionTypeSel.addEventListener('change', updateRegionPanels);
-
-    /**********************************************************************
-     * 12) 분석 실행: ZIP/엑셀 읽기 → 마스터 파싱 → 레코드 추출/후처리/집계/렌더
-     *********************************************************************/
-    ui.analyzeBtn.addEventListener('click', async () => {
-      if (typeof XLSX === 'undefined' || typeof JSZip === 'undefined') {
-        alert('라이브러리가 로드되지 않았습니다.');
-        return;
-      }
-      if (!fileStore.length) {
-        alert('업로드된 파일이 없습니다.');
-        return;
-      }
-
-      ui.analyzeBtn.disabled = true;
-      setProgress(0, '파일 분석 준비중…');
-
-      try {
-        // 1) 파일을 모두 ArrayBuffer로 읽되, ZIP은 내부 엑셀로 펼치기
-        const expanded = [];
-        let step = 0;
-        const totalFiles = fileStore.length;
-
-        // 먼저: 학교 마스터 후보 탐색(파일명 기준)
-        // - "강원도 내 전체 학교 목록.xlsx" 같이 업로드돼 있으면 최우선 파싱
-        let masterWb = null;
-
-        for (const item of fileStore) {
-          step++;
-          const pct = (step / totalFiles) * 25; // 0~25%는 파일 읽기
-          setProgress(pct, `파일 읽는 중… (${step}/${totalFiles})`);
-
-          const f = item.file;
-          const ext = guessExt(f.name);
-
-          const buf = await f.arrayBuffer();
-
-          if (ext === 'zip') {
-            const zip = await JSZip.loadAsync(buf);
-            const entries = Object.keys(zip.files)
-              .filter(p => !zip.files[p].dir)
-              .filter(p => /\.(xlsx|xls)$/i.test(p))
-              .sort((a,b) => a.localeCompare(b,'ko'));
-
-            for (const p of entries) {
-              const fileData = await zip.files[p].async('arraybuffer');
-              expanded.push({
-                name: `${f.name}::${p}`,
-                ext: (p.toLowerCase().endsWith('.xls') ? 'xls' : 'xlsx'),
-                buf: fileData,
-              });
-            }
-          } else if (ext === 'xlsx' || ext === 'xls') {
-            expanded.push({ name: f.name, ext, buf });
-          }
-          // UI breathing
-          await new Promise(r => setTimeout(r, 0));
-        }
-
-        // 2) 학교 마스터 찾기/파싱 (확장 목록 중 파일명에 "학교 목록" 포함)
-        //    없으면 경고만 띄우고 진행(단, 고등학교 지역 매칭이 일부 약해질 수 있음)
-        const masterCand = expanded.find(x => /학교\s*목록/.test(x.name) || /전체\s*학교/.test(x.name));
-        if (masterCand) {
-          setProgress(26, '학교 목록(마스터) 파싱 중…');
-          masterWb = XLSX.read(masterCand.buf, { type: 'array' });
-          const parsed = parseSchoolMasterWorkbook(masterWb);
-
-          if (parsed.loaded) {
-            state.schoolMasterLoaded = true;
-            state.schoolNameToRegion = parsed.schoolNameToRegion;
-            state.schoolCanonToFull = parsed.schoolCanonToFull;
-            state.schoolFullSet = parsed.schoolFullSet;
-
-            ui.schoolMasterStatus.style.display = 'block';
-            ui.schoolMasterStatus.className = 'ok';
-            ui.schoolMasterStatus.textContent =
-              `학교 목록 파일 인식됨: 학교 ${state.schoolFullSet.size}개 지역 매핑 로드 완료`;
-          } else {
-            ui.schoolMasterStatus.style.display = 'block';
-            ui.schoolMasterStatus.className = 'warn';
-            ui.schoolMasterStatus.textContent =
-              '학교 목록 파일을 업로드했지만 파싱에 실패했습니다. (헤더/형식 확인 필요) 그래도 분석은 진행합니다.';
-          }
-        } else {
-          ui.schoolMasterStatus.style.display = 'block';
-          ui.schoolMasterStatus.className = 'warn';
-          ui.schoolMasterStatus.textContent =
-            '학교 목록(강원도 내 전체 학교 목록.xlsx) 파일이 감지되지 않았습니다. 고등학교/직속기관 등 “지역 추론” 정확도가 일부 떨어질 수 있습니다.';
-        }
-
-        // 3) 본 분석: 모든 엑셀에서 레코드 추출
-        setProgress(30, `시트 분석 시작… (대상 엑셀 ${expanded.length}개)`);
-
-        const rawRecords = [];
-        let done = 0;
-        const totalExpanded = expanded.length;
-
-        for (const item of expanded) {
-          done++;
-          const pct = 30 + (done / totalExpanded) * 60; // 30~90% 분석
-          setProgress(pct, `엑셀 분석 중… (${done}/${totalExpanded})`);
-
-          // 학교마스터로 쓰인 파일은 레코드 추출에서 제외
-          if (masterCand && item.name === masterCand.name) continue;
-
-          let wb;
-          try {
-            wb = XLSX.read(item.buf, { type: 'array' });
-          } catch (e) {
-            console.warn('엑셀 읽기 실패:', item.name, e);
-            continue;
-          }
-
-          for (const sn of wb.SheetNames) {
-            const ws = wb.Sheets[sn];
-            if (!ws || !ws['!ref']) continue;
-            const recs = extractRecordsFromSheet(ws, sn, item.name, state.schoolNameToRegion);
-            rawRecords.push(...recs);
-          }
-
-          await new Promise(r => setTimeout(r, 0));
-        }
-
-        // 4) 후처리 + 최종 집계
-        setProgress(92, '후처리(중복 제거/병설유치원 합산/지역 추론) 중…');
-        const finalRecords = postProcessRecords(rawRecords);
-
-        state.records = finalRecords;
-        state.aggregates = buildAggregates(finalRecords);
-        state.orgIndex = state.aggregates.orgIndex;
-
-        // 5) UI 업데이트
-        setProgress(98, '화면 갱신 중…');
-        renderDashboard();
-        enableFilters();
-        populateRegionDropdown(); // mode 선택 전이라 (선택)만 보임
-        ui.orgPanels.style.display = 'none';
-        ui.regionPanels.style.display = 'none';
-
-        // 3번/4번 초기 드롭다운 활성만
-        ui.orgKindSel.value = '';
-        ui.orgNameSel.disabled = true;
-        ui.orgNameSel.innerHTML = '<option value="">(구분을 먼저 선택)</option>';
-        ui.orgTypeSel.value = '전체';
-        ui.orgJobSel.innerHTML = '<option value="전체">전체</option>';
-        ui.orgJobSel.value = '전체';
-
-        ui.regionModeSel.value = '';
-        ui.regionSel.innerHTML = '<option value="">(강원도교육청 처리 먼저 선택)</option>';
-        ui.regionSel.disabled = true;
-        ui.regionTypeSel.value = '전체';
-
-        setProgress(100, `완료! 최종 집계 ${finalRecords.length}건`);
-      } catch (e) {
-        console.error(e);
-        alert('분석 중 오류가 발생했습니다. 콘솔 로그를 확인해주세요.');
-        setProgress(100, '분석 실패');
-      } finally {
-        ui.analyzeBtn.disabled = false;
-        enableAnalyzeIfReady();
-      }
-    });
-
-    /**********************************************************************
-     * 시작: 라이브러리 로드
-     *********************************************************************/
-    loadLibs();
-  </script>
-</body>
+  });
+
+  // 엔티티/리전 필터: 지방공무원 아닐 때 직급 필터 disabled 유지 로직 보강
+  el.personnelType.addEventListener("change", refreshAllViewsSoft);
+  el.regionPersonnelType.addEventListener("change", refreshAllViewsSoft);
+}
+
+document.addEventListener("DOMContentLoaded", init);
+</script><!-- 유지 필수 스크립트 --><script src="/static/disable-copy.js"></script><script src="/static/footer.js"></script><script src="/static/global-loader.js?v=1"></script></body>
 </html>
