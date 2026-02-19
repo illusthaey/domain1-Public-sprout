@@ -211,8 +211,8 @@
             <div>
               <div class="local-small muted" style="margin-bottom:6px;">페이지 이동</div>
               <div class="row gap">
-                <button id="prevPage" class="btn ghost" type="button">이전</button>
-                <button id="nextPage" class="btn ghost" type="button">다음</button>
+                <button id="prevPage" class="btn ghost" type="button">←이전 페이지로</button>
+                <button id="nextPage" class="btn ghost" type="button">다음 페이지로→</button>
               </div>
               <div class="row gap" style="margin-top:10px;">
                 <input id="pageInput" class="small-input" type="number" min="1" step="1" placeholder="페이지 번호" />
@@ -224,36 +224,34 @@
             </div>
 
             <div>
-              <div class="local-small muted" style="margin-bottom:6px;">현재 페이지만 위치 변경(오버라이드)</div>
+              <div class="local-small muted" style="margin-bottom:6px;">현재 페이지만 위치 변경</div>
               <label class="row" style="align-items:flex-start;">
                 <input id="overrideToggle" type="checkbox" />
                 <span class="local-small">
-                  체크하면 <b>이 페이지만</b> 위치가 따로 저장됩니다.<br/>
-                  해제하면 오버라이드 삭제(기본 위치로 복귀).
+                  체크하면 해당 이 페이지만 도장 위치 따로 저장됨<br/>
+                  해제하면 기본 위치로 복귀.
                 </span>
               </label>
               <div class="row gap" style="margin-top:10px;">
-                <button id="deleteOverrideThis" class="btn ghost" type="button">이 페이지 오버라이드 삭제</button>
+                <button id="deleteOverrideThis" class="btn ghost" type="button">이 페이지 위치 초기화</button>
               </div>
             </div>
 
             <div>
-              <div class="local-small muted" style="margin-bottom:6px;">페이지 범위에 오버라이드 적용</div>
+              <div class="local-small muted" style="margin-bottom:6px;">페이지 범위는 변경 위치 적용</div>
               <input id="rangeInput" type="text" placeholder="예: 1,3,5-7" />
               <div class="row gap" style="margin-top:10px;">
                 <button id="applyRange" class="btn ghost" type="button">현재 위치를 범위에 적용</button>
-                <button id="clearOverrides" class="btn ghost" type="button">오버라이드 전체 삭제</button>
+                <button id="clearOverrides" class="btn ghost" type="button">전체 페이지 도장 위치 초기화</button>
               </div>
-              <div class="muted local-small" style="margin-top:6px;">
-                범위 페이지는 기본 위치 대신 개별 위치 사용
               </div>
             </div>
           </div>
 
           <div class="card" style="margin-top:14px;">
-            <div style="font-weight:800;">오버라이드된 페이지 목록</div>
+            <div style="font-weight:800;">도장 위치 변경한 페이지 목록</div>
             <div id="overrideList" class="chip-wrap"></div>
-            <div id="overrideEmpty" class="muted local-small" style="margin-top:8px;">없음</div>
+            <div id="overrideEmpty" class="muted local-small" style="margin-top:8px;">(없음)</div>
           </div>
         </div>
       </section>
@@ -261,7 +259,7 @@
       <section class="section">
         <div class="card">
           <div class="muted local-small" style="margin-bottom:8px;">
-            미리보기에서 도장 박스를 <b>드래그</b>하거나 캔버스를 <b>클릭</b>하면 위치가 변경됩니다.
+            미리보기에서 도장을 드래그해서 옮기거나, 옮기고 싶은 위치를 마우스로 클릭하면 도장 위치가 변경됩니다.
           </div>
 
           <div class="stage-wrap" id="stageWrap" style="display:none;">
@@ -288,11 +286,6 @@
     </div>
   </main>
 
-  <footer class="site-footer">
-    <div class="shell">
-      <p>© 업무보조</p>
-    </div>
-  </footer>
 
   <script>
     "use strict";
@@ -1348,7 +1341,7 @@
 
       const base = state.files.pdf.name.replace(/\.pdf$/i, "");
       downloadBlob(outBlob, `stamped_${base}.pdf`);
-      setStatus("완료! 다운로드가 시작되었습니다.");
+      setStatus("완료! 다운로드가 시작되었습니다. 고주무관 천재");
     }
 
     downloadBtn.addEventListener("click", async () => {
@@ -1379,5 +1372,9 @@
     // =========================
     loadDefaultStampIfExists();
   </script>
+
+  <script src="/static/disable-copy.js"></script>
+<script src="/static/footer.js"></script>
+<script src="/static/global-loader.js?v=1"></script>
 </body>
 </html>
