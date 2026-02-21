@@ -78,8 +78,22 @@
   
 
   <!-- ========================= 다운로드 섹션 ========================= -->
-  <section class="section dl-section">
-    <h2 class="local-h2">업무 시간 단축용 exe 프로그램 (다운로드)</h2>
+<section class="section dl-section" id="dlSection">
+  <h2 class="local-h2">업무 시간 단축용 exe 프로그램 (다운로드)</h2>
+
+  <!-- ✅ NEW: 펼치기/접기 버튼 (기본: 접힘) -->
+  <button
+    type="button"
+    class="btn btn-lightgrey"
+    id="dlToggleBtn"
+    aria-expanded="false"
+    aria-controls="dlSectionBody"
+  >
+    다운로드 목록 펼치기 ▸
+  </button>
+
+  <!-- ✅ NEW: 기본 접힘 상태 -->
+  <div id="dlSectionBody" hidden>
     <hr/>
 
     <div class="tool-grid">
@@ -136,7 +150,31 @@
       </article>
 
     </div>
-  </section>
+  </div>
+
+  <!-- ✅ NEW: 다운로드 섹션 펼치기/접기 JS -->
+  <script>
+    window.addEventListener("DOMContentLoaded", () => {
+      const btn = document.getElementById("dlToggleBtn");
+      const body = document.getElementById("dlSectionBody");
+      if (!btn || !body) return;
+
+      const setOpen = (open) => {
+        body.hidden = !open;
+        btn.setAttribute("aria-expanded", String(open));
+        btn.textContent = open ? "다운로드 목록 접기 ▾" : "다운로드 목록 펼치기 ▸";
+      };
+
+      // 기본: 접힘
+      setOpen(false);
+
+      btn.addEventListener("click", () => {
+        const isOpen = btn.getAttribute("aria-expanded") === "true";
+        setOpen(!isOpen);
+      });
+    });
+  </script>
+</section>
 
   <!-- ========================= 본문 계산기 섹션 ========================= -->
 
