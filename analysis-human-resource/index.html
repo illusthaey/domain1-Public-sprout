@@ -304,7 +304,10 @@
       <div class="shell">
         <h1>강원특별자치도교육청 인사발령자료 집계분석기</h1>
         <p class="muted">
-          ·도단위/관내 인사발령내역 엑셀을 업로드하면 학교/기관별 전입전출자 자동 집계합니다. 지방공무원·교육공무원·교육공무직 모두 분석 가능.
+          ·도단위/관내 인사발령내역 엑셀을 업로드하면 학교/기관별 전입전출자 자동 집계합니다. 지방공무원·교육공무원·교육공무직 모두 분석 가능. <br/>
+          ·에듀파인-업무지원-일반게시판에서 전체 엑셀파일 다운로드 가능 <br/>
+          ·업로드한 파일은 저장되지 않습니다. 서버 및 데이터베이스 없어서 기술적으로 아예 불가능함. <br/>          
+          
         </p>
       </div>
     </header>
@@ -316,8 +319,7 @@
        ========================= -->
   <section id="sec-upload" class="section">
     <div class="step-title">
-      <span class="step-badge">1</span>
-      <h2 style="margin: 0">인사발령 엑셀파일 업로드</h2>
+      <h2>1. 인사발령 엑셀파일 업로드</h2>
     </div>
 
     <p class="sub" style="margin-top: 6px">
@@ -394,20 +396,19 @@
        ========================= -->
   <section id="sec-summary" class="section">
     <div class="step-title" style="margin: 0">
-      <span class="step-badge">2</span>
-      <h2 style="margin: 0">전체 집계 결과 조회</h2>
+      <h2>2. 전체 집계 결과 조회</h2>
     </div>
 
     <div class="row between" style="margin-top: 8px; flex-wrap: wrap">
       <div></div>
       <div class="row gap">
-        <button class="btn pastel-blue" id="btnDownloadFiltered" type="button" disabled>상세내역 조회로 이동</button>
+        <button class="btn ghost" id="btnDownloadFiltered" type="button" disabled>상세내역 조회로 이동 ↓ </button>
         <button class="btn" id="btnDownloadAll" type="button" disabled>전체 명단 다운로드</button>
       </div>
     </div>
 
     <p class="sub" style="margin-top: 6px">
-      집계는 <b>도·관내 중복(“교육장이 지정하는 부서 근무를 명함” 등)</b>을 자동으로 제거한 결과 기준입니다.
+      집계는 도·관내 중복 항목을 자동으로 제거한 결과 기준입니다. (예시: 교육장이 지정하는 부서 근무를 명함 등)
     </p>
 
     <div class="kpi-grid" id="kpiGrid" aria-label="대시보드 KPI"></div>
@@ -489,22 +490,22 @@
        ========================= -->
   <section id="sec-entity" class="section">
     <div class="step-title">
-      <span class="step-badge">3</span>
-      <h2 style="margin: 0">상세 내역 조회 (학교 및 기관별)</h2>
+      <h2>3. 상세 내역 조회 (학교 및 기관별)</h2>
     </div>
 
     <p class="sub" style="margin-top: 6px">
-      드롭박스를 앞에서부터 선택할수록 상세 결과가 자동 갱신됩니다. (항상 오름차순 정렬)
+      ·드롭박스를 앞에서부터 선택할수록 상세 결과가 자동 갱신됩니다. <br/>
+      ·검색창에 검색하면 드롭박스 선택지가 변경됨. 화면이 자동으로 바뀌지는 않아요. 
     </p>
 
     <div style="margin-top: 10px">
-      <div class="field-label">드롭박스 항목 검색</div>
-      <input id="entitySelectSearch" type="text" placeholder="드롭박스 항목 검색" disabled />
+      <div class="field-label">검색창 (드롭박스 선택지 좁혀줌)</div>
+      <input id="entitySelectSearch" type="text" placeholder="입력하십시오" disabled />
     </div>
 
     <div class="grid four">
       <div class="field">
-        <div class="field-label">1) 구분</div>
+        <div class="field-label">1) 구분 (학교/기관)</div>
         <select id="entityKind" disabled>
           <option value="">선택</option>
           <option value="school">학교</option>
@@ -513,23 +514,23 @@
       </div>
 
       <div class="field">
-        <div class="field-label">2) 학교/기관</div>
+        <div class="field-label">2) 학교/기관명</div>
         <select id="entityName" disabled>
           <option value="">먼저 1) 구분을 선택하세요</option>
         </select>
       </div>
 
       <div class="field">
-        <div class="field-label">3) 인사 구분</div>
+        <div class="field-label">3) 직군 구분</div>
         <select id="personnelType" disabled>
-          <option value="">먼저 2) 학교/기관을 선택하세요</option>
+          <option value="">먼저 2) 학교/기관명을 선택하세요</option>
         </select>
       </div>
 
       <div class="field">
         <div class="field-label">4) 직렬/직급/직종</div>
         <select id="jobFilter" disabled>
-          <option value="">먼저 3) 인사 구분을 선택하세요</option>
+          <option value="">먼저 3) 직군 구분을 선택하세요</option>
         </select>
       </div>
 
@@ -544,11 +545,15 @@
     <div class="row between gap" style="margin-top: 12px; flex-wrap: wrap">
       <label class="checkline" style="user-select: none">
         <input type="checkbox" id="maskNameToggle" />
-        <span>이름 마스킹(2번째 글자 *)</span>
+        <span>이름 두번째 글자에 * 표시하기</span>
       </label>
       <button class="btn" id="btnExportEntityDetailXlsx" type="button" disabled>상세 명단 엑셀 다운로드</button>
     </div>
 
+        <div class="mini-note">
+      ※ 병설유치원은 원소속 학교에 합산되게 해뒀는데 그냥 초등학교라고만 나오는 곳도 있음
+    </div>
+    
     <!-- ✅ 전출/전입 패널: 위아래 배치 -->
     <div class="card" style="margin-top: 12px">
       <div class="panel-title-row">
@@ -560,7 +565,7 @@
 
     <div class="card">
       <div class="panel-title-row">
-        <h3 style="margin: 0">전입자 / 신규 / 파견</h3>
+        <h3 style="margin: 0">전입자 / 신규발령자 / 파견근무 등</h3>
         <div class="panel-count" id="entityInCount">0명</div>
       </div>
       <div id="entityInPanel" style="margin-top: 10px" class="muted">조회 조건을 선택하면 여기에 표시됩니다.</div>
@@ -571,9 +576,7 @@
       <div id="entityUnknownPanel" class="muted" style="margin-top: 10px">조회 조건을 선택하면 여기에 표시됩니다.</div>
     </details>
 
-    <div class="mini-note">
-      ※ 병설유치원은 원소속 학교로 자동 합산합니다. (예: “동내초등학교 및 병설유치원”)
-    </div>
+
   </section>
 
   <!-- =========================
@@ -590,23 +593,23 @@
     </div>
 
     <p class="sub" style="margin-top: 6px">
-      “속초/양양”은 <b>속초양양</b>으로 통합 집계합니다. “강원도교육청”은 분리/춘천합산을 선택할 수 있습니다.
+      ·속초랑 양양은 지원청 관할대로 "속초양양"으로 통합 집계함. 강원도교육청은 따로 도교육청 인사발령 내역 분리하거나 춘천 지역에 합산하기 중에 선택 가능
     </p>
 
     <div class="stack-fields" style="margin-top: 12px">
       <div class="field">
-        <div class="field-label">1) 강원도교육청 처리</div>
+        <div class="field-label">1) 강원도교육청 분리 여부</div>
         <select id="officeMode" disabled>
           <option value="">선택</option>
           <option value="separate">강원도교육청 분리</option>
-          <option value="merge">강원도교육청을 춘천에 합산</option>
+          <option value="merge">강원도교육청을 춘천 지역에 합산</option>
         </select>
       </div>
 
       <div class="field">
         <div class="field-label">2) 지역 선택</div>
         <select id="regionPick" disabled>
-          <option value="">먼저 1) 처리 방식을 선택하세요</option>
+          <option value="">먼저 1) 도교육청 분리리 방식을 선택하세요</option>
         </select>
       </div>
 
@@ -635,7 +638,7 @@
 
     <div class="card">
       <div class="panel-title-row">
-        <h3 style="margin: 0">전입자 / 신규</h3>
+        <h3 style="margin: 0">전입자 / 신규발령자</h3>
         <div class="panel-count" id="regionInCount">0명</div>
       </div>
       <div id="regionInPanel" style="margin-top: 10px" class="muted">조회 조건을 선택하면 여기에 표시됩니다.</div>
@@ -643,7 +646,7 @@
 
     <div class="card">
       <div class="panel-title-row">
-        <h3 style="margin: 0">지역변동 없음</h3>
+        <h3 style="margin: 0">지역변동 없음 (지역 내 휴복직 등) </h3>
         <div class="panel-count" id="regionStayCount">0명</div>
       </div>
       <div id="regionStayPanel" style="margin-top: 10px" class="muted">조회 조건을 선택하면 여기에 표시됩니다.</div>
