@@ -166,16 +166,18 @@
 </head>
 
 <body>
-  <main>
-    <div class="container">
+  <main class="container">
       <h1>원본대조필 도장 자동 찍기</h1>
       <p class="muted">
         ·도장 실제 크기로 PDF에 삽입됩니다. (A4 기준 가로 6.1cm × 세로 2.5cm) <br/>
         ·인쇄 시 페이지에 맞춤을 사용하면 크기가 달라질 수 있으니 미사용하는 걸 권장
       </p>
 
+      <hr/>
+
       <!-- 1) PDF 업로드 -->
       <section class="section">
+        <h2>1. PDF 파일 업로드</h2>
         <div class="card">
           <div class="dropzone" id="pdfDrop">
             <div class="dz-title">드래그하여 PDF파일을 업로드</div>
@@ -184,7 +186,7 @@
             <input id="pdfInput" type="file" accept="application/pdf" />
           </div>
           <div class="muted local-small" style="margin-top:10px;">
-            ·원본대조필 전용: 기본 내장 도장(stamp_copy.png)만 사용합니다(업로드 없음).
+            ·원본대조필 전용: 기본 내장해둔 도장만 사용합니다. 
           </div>
         </div>
       </section>
@@ -195,13 +197,13 @@
           <div class="grid three">
             <div>
               <div class="local-small muted" style="margin-bottom:6px;">시작 페이지</div>
-              <div class="muted local-small" style="margin-top:6px;">표지 제외하려면 2</div>
+              <div class="muted local-small" style="margin-top:6px;">(표지 제외하려면 2라고 쓰십시오.)</div>
               <input id="startPageInput" type="number" min="1" step="1" value="1" />
             </div>
 
             <div>
               <div class="local-small muted" style="margin-bottom:6px;">기준 설정 페이지</div>
-              <div class="muted local-small" style="margin-top:6px;">이 페이지에서 위치/회전 맞춘 뒤 전체 적용</div>
+              <div class="muted local-small" style="margin-top:6px;">(이 페이지 도장 위치 전체 적용됨)</div>
               <div class="row gap" style="margin-top:10px;">
                 <input id="basePageInput" class="page-input" type="number" min="1" step="1" value="1" />
                 <button id="goBasePage" class="btn ghost" type="button">기준 페이지로 이동</button>
@@ -302,8 +304,7 @@
           </div>
         </div>
       </section>
-    </div>
-  </main>
+    </main>
 
   <script>
     "use strict";
