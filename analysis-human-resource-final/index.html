@@ -593,16 +593,16 @@
     </div>
 
     <p class="sub" style="margin-top: 6px">
-      ·속초랑 양양은 지원청 관할대로 "속초양양"으로 통합 집계함. 강원도교육청은 따로 도교육청 인사발령 내역 분리하거나 춘천 지역에 합산하기 중에 선택 가능
+      ·속초랑 양양은 지원청 관할대로 "속초양양"으로 통합 집계함. 강원특별자치도교육청은 따로 도교육청 인사발령 내역 분리하거나 춘천 지역에 합산하기 중에 선택 가능
     </p>
 
     <div class="stack-fields" style="margin-top: 12px">
       <div class="field">
-        <div class="field-label">1) 강원도교육청 분리 여부</div>
+        <div class="field-label">1) 강원특별자치도교육청 분리 여부</div>
         <select id="officeMode" disabled>
           <option value="">선택</option>
-          <option value="separate">강원도교육청 분리</option>
-          <option value="merge">강원도교육청을 춘천 지역에 합산</option>
+          <option value="separate">강원특별자치도교육청 분리</option>
+          <option value="merge">강원특별자치도교육청을 춘천 지역에 합산</option>
         </select>
       </div>
 
@@ -670,7 +670,7 @@
 
 
 <!-- =========================
-     강원도 내 전체 학교 목록(내장)
+     강원특별자치도 내 전체 학교 목록(내장)
      - 업로드 없이 항상 사용 가능
      - 항목: { n: 학교이름, r: 시군구(속초/양양은 속초양양) }
      ========================= -->
@@ -716,7 +716,7 @@
        ========================= */
 
     const REGION_18 = [
-      "강원도교육청",
+      "강원특별자치도교육청",
       "강릉",
       "고성",
       "동해",
@@ -735,7 +735,7 @@
       "화천",
       "횡성",
     ];
-    const REGION_17 = REGION_18.filter((r) => r !== "강원도교육청");
+    const REGION_17 = REGION_18.filter((r) => r !== "강원특별자치도교육청");
 
     const LOCAL_GOV_SERIES = [
       "지방교육행정",
@@ -1046,7 +1046,7 @@
 
     function displayInstName(name) {
       if (!name) return "";
-      if (name === "강원도교육청") return "강원도교육청(본청)";
+      if (name === "강원특별자치도교육청") return "강원특별자치도교육청(본청)";
       return name;
     }
 
@@ -1257,9 +1257,9 @@
       // 2) 교육청/지원청
       if (org.includes("강원특별자치도교육청") || org.includes("강원도교육청") || org.includes("도교육청")) {
         // 본청 부서
-        if (isOfficeDept(org)) return { kind: "inst", name: "강원도교육청", region: "강원도교육청" };
+        if (isOfficeDept(org)) return { kind: "inst", name: "강원특별자치도교육청", region: "강원특별자치도교육청" };
         // 지원기관/직속기관은 위에서 캐논 처리
-        return { kind: "inst", name: "강원도교육청", region: "강원도교육청" };
+        return { kind: "inst", name: "강원특별자치도교육청", region: "강원특별자치도교육청" };
       }
 
       if (org.includes("교육지원청")) {
@@ -2642,7 +2642,7 @@
 
     function applyOfficeModeToRegion(region, mode) {
       if (!region) return "";
-      if (mode === "merge" && region === "강원도교육청") return "춘천";
+      if (mode === "merge" && region === "강원특별자치도교육청") return "춘천";
       return region;
     }
 
