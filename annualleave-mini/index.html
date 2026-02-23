@@ -3,7 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>연차미사용일수 미니 계산기 (여러 명)</title>
+  <title>연차 사용일수 및 수당 미니 계산기</title>
+
+  <link rel="icon" href="/static/favicon.ico" />
+  <link rel="stylesheet" href="/static/style.css" />
+
+  
   <style>
     * { box-sizing: border-box; }
     body{
@@ -117,16 +122,17 @@
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>연차미사용일수 미니 계산기 <span class="pill">여러 명 동시</span></h1>
+  <main class="container">
+    
+    <h1>연차 사용일수 및 수당 미니 계산기</h1>
     <p class="muted">
-      각 행이 1명입니다. 방향키로 셀 이동(엑셀처럼), Enter는 아래로 이동합니다. 수당은 원 단위 절삭(일의 자리 제거) 적용.
-    </p>
+      ·시간 환산 빠르게 하려고 만듦. 키보드 방향키로 셀 이동 가능. 엑셀처럼 Enter치면 아래로 이동. <br/>
+      ·일/시/분 단위 시간은 1일 소정근무시간에 따라 산출됨. <br/>
+    </div>
 
     <div class="rowbar">
       <button class="btn" id="addRowBtn" type="button">행 추가</button>
-      <button class="btn" id="clearAllBtn" type="button">전체 입력 초기화</button>
-      <span class="muted">팁: 분에 90 넣어도 자동 정규화됩니다.</span>
+      <button class="btn" id="clearAllBtn" type="button">전체 초기화</button>
     </div>
 
     <div class="sheet" aria-label="연차 계산 시트">
@@ -147,27 +153,23 @@
         <thead>
           <tr>
             <th>이름(선택)</th>
-            <th>1일 소정근무시간(시간)</th>
-            <th>연차일수(일)</th>
-            <th>사용(시간)</th>
-            <th>사용(분)</th>
-            <th>통상임금(시간당,원)</th>
-            <th>총 연차(일/시/분)</th>
-            <th>총 연차시간(10진수)</th>
-            <th>사용시간(10진수)</th>
-            <th>잔여시간(10진수)</th>
-            <th>미사용 수당(원)</th>
+            <th>1일 소정근무시간</th>
+            <th>연차 부여 일수</th>
+            <th>연차 사용 일수(시간단위)</th>
+            <th>연사 사용 일수(분단위)</th>
+            <th>통상임금</th>
+            <th>총 연차 부여 일수(일/시/분 단위)</th>
+            <th>총 연차 부여 일수(10진수)</th>
+            <th>연차 사용 시간(10진수)</th>
+            <th>잔여 시간(10진수)</th>
+            <th>연차 미사용 수당</th>
           </tr>
         </thead>
         <tbody id="gridBody"></tbody>
       </table>
     </div>
 
-    <div class="note">
-      계산식: 총 연차시간 = 연차일수 × 1일 소정근무시간, 잔여시간 = 총 연차시간 − 사용시간(음수면 0).<br/>
-      “일/시/분” 표시는 입력한 1일 소정근무시간을 1일 기준으로 삼아 정규화합니다.
-    </div>
-  </div>
+  </main>
 
   <script>
     // =========================
@@ -431,5 +433,10 @@
     const first = nav.map.get("1,1");
     if (first){ first.focus(); first.select?.(); }
   </script>
+
+  <script src="/static/disable-copy.js"></script>
+<script src="/static/footer.js"></script>
+<script src="/static/global-loader.js?v=1"></script>
+  
 </body>
 </html>
