@@ -300,20 +300,16 @@
   </head>
 
   <body>
-    <header class="site-header">
-      <div class="shell">
-        <h1>강원특별자치도교육청 인사발령자료 집계분석기</h1>
+    <main class="container">
+        <h1>강원특별자치도교육청 인사발령자료 집계·분석기</h1>
         <p class="muted">
           ·도단위/관내 인사발령내역 엑셀을 업로드하면 학교/기관별 전입전출자 자동 집계합니다. 지방공무원·교육공무원·교육공무직 모두 분석 가능. <br/>
           ·에듀파인-업무지원-일반게시판에서 전체 엑셀파일 다운로드 가능 <br/>
           ·업로드한 파일은 저장되지 않습니다. 서버 및 데이터베이스 없어서 기술적으로 아예 불가능함. <br/>          
-          
         </p>
-      </div>
-    </header>
 
-
-<main class="container">
+<hr/>
+      
   <!-- =========================
        1) 업로드 섹션
        ========================= -->
@@ -980,6 +976,16 @@
       return normalizeText(s).replace(/\s+/g, "").replace(/[·•◆□○●]/g, "").trim();
     }
 
+    function normalizeMatchKey(s) {
+      return normalizeText(s)
+        .replace(/[\s\u00A0]+/g, "")
+        .replace(/[·•◆□○●]/g, "")
+        .replace(/[()（）\[\]{}<>《》【】"']/g, "")
+        .replace(/[\/\\]/g, "")
+        .trim();
+    }
+
+
     function normalizeSchoolKey(s) {
       let t = normalizeText(s);
       if (!t) return "";
@@ -1408,13 +1414,13 @@
 
     function detectPersonnelType(rec) {
       const mix = `${rec.newRank} ${rec.curRank} ${rec.jobRaw} ${rec.fileName} ${rec.sheetName}`;
-      const mk = normalizeKey(mix);
+      const mk = normalizeMatchKey(mix);
 
       if (isLocalGovByRank(mix)) return "지방공무원";
 
-      if (mk.includes("교육공무직") || EDU_LABOR_JOBS.some((j) => mk.includes(normalizeKey(j)))) return "교육공무직";
+      if (mk.includes("교육공무직") || EDU_LABOR_JOBS.some((j) => mk.includes(normalizeMatchKey(j)))) return "교육공무직";
 
-      if (mk.includes("교육공무원") || mk.includes("교사") || mk.includes("교감") || mk.includes("교장") || mk.includes("원장") || mk.includes("원감"))
+      if (mk.includes("교육공무원") || mk.includes("교사") || mk.includes("교감") || mk.includes("교원감") || mk.includes("교장") || mk.includes("교원장") || mk.includes("원장") || mk.includes("원감"))
         return "교육공무원";
 
       // 교육전문직(장학/연구)도 교육공무원으로 분류
@@ -1442,16 +1448,27 @@
       }
 
       if (t === "교육공무원") {
-        const mix = normalizeKey(`${rec.newRank} ${rec.curRank} ${rec.jobRaw} ${rec.sheetName} ${rec.fileName}`);
+        const mix = normalizeMatchKey(`${rec.newRank} ${rec.curRank} ${rec.jobRaw} ${rec.sheetName} ${rec.fileName}`);
         if (mix.includes("유치원") && mix.includes("교사")) return "유치원교사";
         if (mix.includes("초등") && mix.includes("교사")) return "초등학교교사";
         if (mix.includes("중등") && mix.includes("교사")) return "중등학교교사";
         if (mix.includes("특수") && mix.includes("교사")) return "특수학교교사";
+        if (mix.includes("교육연구관")) return "교육연구관";
+        if (mix.includes("교육연구사")) return "교육연구사";
+        if (mix.includes("장학관")) return "장학관";
+        if (mix.includes("장학사")) return "장학사";
         if (mix.includes("실기")) return "실기교사";
         if (mix.includes("보건교사")) return "보건교사";
         if (mix.includes("사서교사")) return "사서교사";
         if (mix.includes("전문상담교사") || mix.includes("상담교사")) return "전문상담교사";
         if (mix.includes("영양교사")) return "영양교사";
+
+        // "교(원)장/교(원)감" 같이 괄호/줄바꿈/띄어쓰기 섞인 케이스 대응(교원장/교원감)
+        if (mix.includes("유치원") && (mix.includes("교원장") || mix.includes("원장"))) return "원장";
+        if (mix.includes("유치원") && (mix.includes("교원감") || mix.includes("원감"))) return "원감";
+        if (mix.includes("교원감")) return "교감";
+        if (mix.includes("교원장")) return "교장";
+
         if (mix.includes("교감")) return "교감";
         if (mix.includes("교장")) return "교장";
         if (mix.includes("원감")) return "원감";
