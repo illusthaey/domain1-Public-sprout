@@ -8,88 +8,92 @@
   <link rel="icon" href="/static/favicon.ico" />
   <link rel="stylesheet" href="/static/style.css" />
 
-  
   <style>
     * { box-sizing: border-box; }
     body{
-      margin:0; padding:24px;
-      background:#fff; color:#111;
+      margin:0;
+      padding:24px;
+      background:#fff;
+      color:#111;
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
         Arial, "Apple SD Gothic Neo", "Noto Sans KR", "맑은 고딕", sans-serif;
       line-height:1.5;
     }
-    .wrap{ max-width: 1200px; margin: 0 auto; }
-    h1{ font-size: 20px; margin: 0 0 10px; }
-    .muted{ color:#666; font-size: 13px; margin: 0 0 14px; }
+    .wrap{ max-width: 1100px; margin: 0 auto; }
+
+    h1{
+      font-size: 34px;
+      letter-spacing: -0.02em;
+      margin: 14px 0 6px;
+      text-align:center;
+    }
+    .muted{
+      color:#6b7280;
+      font-size: 13px;
+      margin: 0 0 18px;
+      text-align:center;
+    }
+    .muted .dot{ display:inline-block; margin-right:6px; }
 
     .rowbar{
       display:flex;
-      gap:10px;
+      gap:12px;
       align-items:center;
-      flex-wrap: wrap;
-      margin: 10px 0 14px;
+      justify-content:flex-start;
+      flex-wrap:wrap;
+      margin: 14px 0 14px;
     }
     .btn{
-      display:inline-block;
       border:1px solid #cbd5e1;
       background:#fff;
-      border-radius: 12px;
-      padding:10px 12px;
+      border-radius: 14px;
+      padding: 12px 14px;
       font-weight: 800;
       font-size: 13px;
       cursor:pointer;
       user-select:none;
     }
     .btn:active{ transform: translateY(1px); }
-    .pill{
-      display:inline-block;
-      padding: 2px 8px;
-      border-radius: 999px;
-      border:1px solid #e5e7eb;
-      background:#fff;
-      font-size:12px;
-      color:#475569;
-    }
 
     .sheet{
       border:1px solid #e5e7eb;
-      border-radius:14px;
-      overflow:auto;
+      border-radius:16px;
+      overflow:hidden;          /* 가로 스크롤 자체를 줄이는 구조 */
       box-shadow: 0 8px 22px rgba(0,0,0,.06);
       background:#fff;
     }
     table{
-      width: 1600px; /* 가로로 넉넉하게(엑셀 느낌) */
+      width:100%;
       border-collapse: collapse;
       table-layout: fixed;
     }
     th, td{
       border-bottom:1px solid #eef2f7;
       border-right:1px solid #eef2f7;
-      padding:8px 8px;
+      padding:10px 10px;
       vertical-align: middle;
       background:#fff;
       font-size: 13px;
     }
     th{
       background:#fafafa;
-      text-align:left;
-      color:#334155;
-      font-weight:900;
+      color:#0f172a;
+      font-weight: 900;
       position: sticky;
       top: 0;
       z-index: 2;
+      text-align:left;
     }
     td:last-child, th:last-child{ border-right:none; }
-    tr:last-child td{ border-bottom:none; }
+    tbody tr:last-child td{ border-bottom:none; }
 
     input{
       width:100%;
-      padding:9px 9px;
+      padding:11px 11px;
       border:1px solid #cbd5e1;
-      border-radius:10px;
+      border-radius:12px;
       outline:none;
-      font-size:13px;
+      font-size: 13px;
       background:#fff;
     }
     input:focus{
@@ -97,79 +101,144 @@
       box-shadow: 0 0 0 3px rgba(100,116,139,.15);
     }
 
-    .out{
+    .row-title{
+      font-weight:900;
+      color:#334155;
+      font-size: 12px;
+      margin-bottom: 4px;
+      display:flex;
+      gap:8px;
+      align-items:center;
+      white-space: nowrap;
+    }
+    .badge{
+      display:inline-block;
+      padding:2px 8px;
+      border-radius:999px;
+      border:1px solid #e5e7eb;
+      background:#fff;
+      color:#64748b;
+      font-weight:800;
+      font-size: 11px;
+    }
+
+    .outbox{
+      display:flex;
+      flex-direction: column;
+      gap:4px;
+      min-height: 44px;
+      justify-content:center;
+    }
+    .outlabel{
+      color:#64748b;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .outval{
       font-variant-numeric: tabular-nums;
       font-weight: 900;
       color:#0f172a;
+      font-size: 16px;
       white-space: nowrap;
     }
-    .subout{
-      font-variant-numeric: tabular-nums;
-      color:#475569;
-      white-space: nowrap;
-    }
+    .outval.small{ font-size: 14px; }
     .right{ text-align:right; }
 
+    .group-divider td{
+      padding:0;
+      border-right:none;
+      border-bottom: none;
+      background:#fff;
+    }
+    .divider-line{
+      height: 10px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.00), rgba(0,0,0,0.03));
+      border-top: 1px solid #eef2f7;
+      border-bottom: 1px solid #eef2f7;
+    }
+
     .note{
-      margin-top: 12px;
-      padding: 12px 12px;
+      margin-top: 14px;
+      padding: 12px 14px;
       border: 1px solid #e5e7eb;
-      border-radius: 12px;
+      border-radius: 14px;
       background:#fafafa;
       color:#334155;
       font-size: 13px;
     }
+
+    @media (max-width: 860px){
+      body{ padding: 16px; }
+      h1{ font-size: 28px; }
+      th, td{ padding: 9px 9px; }
+      input{ padding: 10px 10px; }
+      .outval{ font-size: 15px; }
+    }
   </style>
 </head>
+
 <body>
-  <main class="container">
-    
+  <main class="container wrap">
     <h1>연차 사용일수 및 수당 미니 계산기</h1>
     <p class="muted">
-      ·시간 환산 빠르게 하려고 만듦. 키보드 방향키로 셀 이동 가능. 엑셀처럼 Enter치면 아래로 이동. <br/>
-      ·일/시/분 단위 시간은 1일 소정근무시간에 따라 산출됨. <br/>
-    </div>
+      <span class="dot">·</span>시간 환산 빠르게 하려고 만듦. 키보드 방향키로 셀 이동 가능. 엑셀처럼 Enter치면 아래로 이동.<br/>
+      <span class="dot">·</span>일/시/분 단위 시간은 1일 소정근무시간에 따라 산출됨.
+    </p>
 
     <div class="rowbar">
-      <button class="btn" id="addRowBtn" type="button">행 추가</button>
+      <button class="btn" id="addPersonBtn" type="button">행 추가</button>
       <button class="btn" id="clearAllBtn" type="button">전체 초기화</button>
+      <button class="btn" id="downloadXlsxBtn" type="button">결과 엑셀 다운로드</button>
     </div>
 
     <div class="sheet" aria-label="연차 계산 시트">
       <table id="grid">
         <colgroup>
-          <col style="width:120px" />
-          <col style="width:160px" />
-          <col style="width:140px" />
-          <col style="width:120px" />
-          <col style="width:120px" />
-          <col style="width:160px" />
-          <col style="width:170px" />
-          <col style="width:160px" />
-          <col style="width:150px" />
-          <col style="width:180px" />
-          <col style="width:170px" />
+          <col style="width: 18%;" />
+          <col style="width: 16%;" />
+          <col style="width: 16%;" />
+          <col style="width: 16%;" />
+          <col style="width: 16%;" />
+          <col style="width: 18%;" />
         </colgroup>
         <thead>
           <tr>
             <th>이름(선택)</th>
-            <th>1일 소정근무시간</th>
-            <th>연차 부여 일수</th>
-            <th>연차 사용 일수(시간단위)</th>
-            <th>연사 사용 일수(분단위)</th>
-            <th>통상임금</th>
-            <th>총 연차 부여 일수(일/시/분 단위)</th>
-            <th>총 연차 부여 일수(10진수)</th>
-            <th>연차 사용 시간(10진수)</th>
-            <th>잔여 시간(10진수)</th>
-            <th>연차 미사용 수당</th>
+            <th>1일 소정근무시간(시간)</th>
+            <th>연차 부여 일수(일)</th>
+            <th>연차 사용(시간)</th>
+            <th>연차 사용(분)</th>
+            <th>통상임금(시간당,원)</th>
           </tr>
         </thead>
         <tbody id="gridBody"></tbody>
       </table>
     </div>
 
+    <div class="note">
+      계산식: 총 연차시간 = 연차일수 × 1일 소정근무시간, 잔여시간 = 총 연차시간 − 사용시간(음수면 0).<br/>
+      수당: 잔여시간 × 통상임금, 원 단위 절삭(일의 자리 제거) 적용.
+    </div>
   </main>
+
+  <!-- SheetJS: CDN + fallback -->
+  <script>
+    (function loadXLSX(){
+      function inject(src, onload){
+        var s = document.createElement("script");
+        s.src = src;
+        s.onload = onload;
+        s.onerror = function(){ onload(false); };
+        document.head.appendChild(s);
+      }
+      inject("https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js", function(ok){
+        if (ok === false || !window.XLSX){
+          inject("/static/xlsx.full.min.js", function(){ /* silent */ });
+        }
+      });
+    })();
+  </script>
 
   <script>
     // =========================
@@ -188,12 +257,14 @@
       const a = Math.floor(num(amount));
       return Math.floor(a / 10) * 10; // 1111 -> 1110
     }
+    function formatKRW(n){
+      return Math.floor(num(n)).toLocaleString("ko-KR");
+    }
 
     // totalHours -> {d,h,m}
     function hoursToDHM(totalHours, dayHours){
       totalHours = clamp0(totalHours);
       dayHours = num(dayHours);
-
       const minutesAll = Math.round(totalHours * 60);
 
       if (dayHours <= 0){
@@ -218,20 +289,25 @@
     }
 
     // =========================
-    // Grid building
+    // DOM refs
     // =========================
     const gridBody = document.getElementById("gridBody");
-    const addRowBtn = document.getElementById("addRowBtn");
+    const addPersonBtn = document.getElementById("addPersonBtn");
     const clearAllBtn = document.getElementById("clearAllBtn");
+    const downloadXlsxBtn = document.getElementById("downloadXlsxBtn");
 
-    let rowCount = 0;
+    // 사람(세트) 단위 index
+    let personCount = 0;
 
-    function makeCellInput({ row, col, key, placeholder, inputmode }){
+    // =========================
+    // Build 2-row person block
+    // =========================
+    function makeInputCell({ person, col, key, placeholder, inputmode }){
       const td = document.createElement("td");
       const inp = document.createElement("input");
       inp.className = "cell";
-      inp.dataset.r = String(row);
-      inp.dataset.c = String(col);
+      inp.dataset.p = String(person);   // person index
+      inp.dataset.c = String(col);      // column index 1..6
       inp.dataset.key = key;
       if (placeholder) inp.placeholder = placeholder;
       if (inputmode) inp.setAttribute("inputmode", inputmode);
@@ -239,87 +315,126 @@
       return td;
     }
 
-    function makeCellOut({ cls, text }){
+    function makeOutCell({ label, value, valueClass }){
       const td = document.createElement("td");
-      const div = document.createElement("div");
-      div.className = cls;
-      div.textContent = text;
-      td.appendChild(div);
-      return { td, div };
+      const box = document.createElement("div");
+      box.className = "outbox";
+      const l = document.createElement("div");
+      l.className = "outlabel";
+      l.textContent = label;
+      const v = document.createElement("div");
+      v.className = "outval" + (valueClass ? (" " + valueClass) : "");
+      v.textContent = value;
+
+      box.appendChild(l);
+      box.appendChild(v);
+      td.appendChild(box);
+      return { td, v };
     }
 
-    function addRow(){
-      // row index for navigation: start at 1 (header is sticky, body rows are 1..n)
-      rowCount += 1;
-      const navRow = rowCount; // navigation r
+    function addPerson(){
+      personCount += 1;
+      const p = personCount;
 
-      const tr = document.createElement("tr");
-      tr.dataset.rowIndex = String(rowCount);
+      // 입력행
+      const trIn = document.createElement("tr");
+      trIn.className = "person-in";
+      trIn.dataset.person = String(p);
 
-      // Inputs (columns 1..6)
-      tr.appendChild(makeCellInput({ row: navRow, col: 1, key:"name", placeholder:"예: 홍길동", inputmode:"text" }));
-      tr.appendChild(makeCellInput({ row: navRow, col: 2, key:"dayHours", placeholder:"예: 8", inputmode:"decimal" }));
-      tr.appendChild(makeCellInput({ row: navRow, col: 3, key:"leaveDays", placeholder:"예: 12.50", inputmode:"decimal" }));
-      tr.appendChild(makeCellInput({ row: navRow, col: 4, key:"usedHours", placeholder:"예: 7", inputmode:"numeric" }));
-      tr.appendChild(makeCellInput({ row: navRow, col: 5, key:"usedMinutes", placeholder:"예: 30", inputmode:"numeric" }));
-      tr.appendChild(makeCellInput({ row: navRow, col: 6, key:"wage", placeholder:"예: 12345", inputmode:"numeric" }));
+      trIn.appendChild(makeInputCell({ person:p, col:1, key:"name", placeholder:"예: 홍길동", inputmode:"text" }));
+      trIn.appendChild(makeInputCell({ person:p, col:2, key:"dayHours", placeholder:"예: 8", inputmode:"decimal" }));
+      trIn.appendChild(makeInputCell({ person:p, col:3, key:"leaveDays", placeholder:"예: 12.50", inputmode:"decimal" }));
+      trIn.appendChild(makeInputCell({ person:p, col:4, key:"usedHours", placeholder:"예: 7", inputmode:"numeric" }));
+      trIn.appendChild(makeInputCell({ person:p, col:5, key:"usedMinutes", placeholder:"예: 30", inputmode:"numeric" }));
+      trIn.appendChild(makeInputCell({ person:p, col:6, key:"wage", placeholder:"예: 12345", inputmode:"numeric" }));
 
-      // Outputs (columns 7..11)
-      const o1 = makeCellOut({ cls:"subout", text:"0일 0시간 0분" });           // total DHM
-      const o2 = makeCellOut({ cls:"out right", text:"0.00" });                // total hours dec
-      const o3 = makeCellOut({ cls:"out right", text:"0.00" });                // used hours dec
-      const o4 = makeCellOut({ cls:"out right", text:"0.00" });                // remain hours dec
-      const o5 = makeCellOut({ cls:"out right", text:"0" });                   // pay
+      // 결과행
+      const trOut = document.createElement("tr");
+      trOut.className = "person-out";
+      trOut.dataset.person = String(p);
 
-      o1.div.dataset.out = "totalDHM";
-      o2.div.dataset.out = "totalHoursDec";
-      o3.div.dataset.out = "usedHoursDec";
-      o4.div.dataset.out = "remainHoursDec";
-      o5.div.dataset.out = "payWon";
+      const o1 = makeOutCell({ label:"총 연차(일/시/분)", value:"0일 0시간 0분", valueClass:"small" });
+      const o2 = makeOutCell({ label:"총 연차시간(10진수)", value:"0.00", valueClass:"right" });
+      const o3 = makeOutCell({ label:"사용시간(10진수)", value:"0.00", valueClass:"right" });
+      const o4 = makeOutCell({ label:"잔여시간(10진수)", value:"0.00", valueClass:"right" });
+      const o5 = makeOutCell({ label:"미사용 수당(원)", value:"0", valueClass:"right" });
 
-      tr.appendChild(o1.td);
-      tr.appendChild(o2.td);
-      tr.appendChild(o3.td);
-      tr.appendChild(o4.td);
-      tr.appendChild(o5.td);
+      // 결과행은 6칸 유지(가로 스크롤 방지)
+      trOut.appendChild(o1.td);
+      trOut.appendChild(o2.td);
+      trOut.appendChild(o3.td);
+      trOut.appendChild(o4.td);
+      trOut.appendChild(o5.td);
 
-      gridBody.appendChild(tr);
+      // 마지막 1칸은 “세트 정보/구분” 용도로 쓰면 좋음 (여기선 간단히 표시)
+      const tdTag = document.createElement("td");
+      const tagWrap = document.createElement("div");
+      tagWrap.className = "outbox";
+      const t1 = document.createElement("div");
+      t1.className = "row-title";
+      t1.innerHTML = '결과행 <span class="badge">#' + p + '</span>';
+      const t2 = document.createElement("div");
+      t2.className = "outlabel";
+      t2.textContent = "입력은 위 행에서";
+      tagWrap.appendChild(t1);
+      tagWrap.appendChild(t2);
+      tdTag.appendChild(tagWrap);
+      trOut.appendChild(tdTag);
+
+      // output refs
+      o1.v.dataset.out = "totalDHM";
+      o2.v.dataset.out = "totalHoursDec";
+      o3.v.dataset.out = "usedHoursDec";
+      o4.v.dataset.out = "remainHoursDec";
+      o5.v.dataset.out = "payWon";
+
+      // group divider (시각적으로 사람 단위 구분)
+      const trDiv = document.createElement("tr");
+      trDiv.className = "group-divider";
+      const tdDiv = document.createElement("td");
+      tdDiv.colSpan = 6;
+      const divLine = document.createElement("div");
+      divLine.className = "divider-line";
+      tdDiv.appendChild(divLine);
+      trDiv.appendChild(tdDiv);
+
+      gridBody.appendChild(trIn);
+      gridBody.appendChild(trOut);
+      gridBody.appendChild(trDiv);
     }
 
-    // 기본 10행
-    for (let i=0; i<10; i++) addRow();
+    // 기본 8명
+    for (let i=0; i<8; i++) addPerson();
 
     // =========================
-    // Excel-like navigation (dynamic)
+    // Navigation (inputs only)
     // =========================
-    function rebuildNavMap(){
+    function rebuildNav(){
       const cells = Array.from(document.querySelectorAll(".cell"));
       const map = new Map();
       for (const el of cells){
-        const r = Number(el.dataset.r);
+        const p = Number(el.dataset.p);
         const c = Number(el.dataset.c);
-        map.set(`${r},${c}`, el);
+        map.set(`${p},${c}`, el);
       }
       return { cells, map };
     }
+    let nav = rebuildNav();
 
-    let nav = rebuildNavMap();
-
-    function findNextInColumn(r, c, dir){
-      let rr = r + dir;
-      for (let i=0; i<200; i++){
-        const key = `${rr},${c}`;
-        if (nav.map.has(key)) return nav.map.get(key);
-        rr += dir;
-      }
-      return null;
+    function focusCell(p, c){
+      const el = nav.map.get(`${p},${c}`);
+      if (!el) return false;
+      el.focus();
+      el.select?.();
+      return true;
     }
-    function findNextInRow(r, c, dir){
-      let cc = c + dir;
-      for (let i=0; i<50; i++){
-        const key = `${r},${cc}`;
-        if (nav.map.has(key)) return nav.map.get(key);
-        cc += dir;
+
+    function nextP(p, dir){
+      // 사람 단위로 이동
+      let pp = p + dir;
+      for (let i=0; i<400; i++){
+        if (nav.map.has(`${pp},1`)) return pp;
+        pp += dir;
       }
       return null;
     }
@@ -328,26 +443,38 @@
       nav.cells.forEach(el => {
         if (el._navBound) return;
         el._navBound = true;
+
         el.addEventListener("keydown", (e) => {
-          const r = Number(el.dataset.r);
+          const p = Number(el.dataset.p);
           const c = Number(el.dataset.c);
           if (e.isComposing) return;
 
-          if (e.key === "ArrowUp"){
-            const next = findNextInColumn(r, c, -1);
-            if (next){ e.preventDefault(); next.focus(); next.select?.(); }
-          } else if (e.key === "ArrowDown"){
-            const next = findNextInColumn(r, c, +1);
-            if (next){ e.preventDefault(); next.focus(); next.select?.(); }
-          } else if (e.key === "ArrowLeft"){
-            const next = findNextInRow(r, c, -1);
-            if (next){ e.preventDefault(); next.focus(); next.select?.(); }
+          if (e.key === "ArrowLeft"){
+            const cc = c - 1;
+            if (cc >= 1 && nav.map.has(`${p},${cc}`)){
+              e.preventDefault(); focusCell(p, cc);
+            }
           } else if (e.key === "ArrowRight"){
-            const next = findNextInRow(r, c, +1);
-            if (next){ e.preventDefault(); next.focus(); next.select?.(); }
+            const cc = c + 1;
+            if (cc <= 6 && nav.map.has(`${p},${cc}`)){
+              e.preventDefault(); focusCell(p, cc);
+            }
+          } else if (e.key === "ArrowUp"){
+            const pp = nextP(p, -1);
+            if (pp != null && nav.map.has(`${pp},${c}`)){
+              e.preventDefault(); focusCell(pp, c);
+            }
+          } else if (e.key === "ArrowDown"){
+            const pp = nextP(p, +1);
+            if (pp != null && nav.map.has(`${pp},${c}`)){
+              e.preventDefault(); focusCell(pp, c);
+            }
           } else if (e.key === "Enter"){
-            const next = findNextInColumn(r, c, +1);
-            if (next){ e.preventDefault(); next.focus(); next.select?.(); }
+            // Enter: 아래 사람 같은 열
+            const pp = nextP(p, +1);
+            if (pp != null && nav.map.has(`${pp},${c}`)){
+              e.preventDefault(); focusCell(pp, c);
+            }
           }
         });
       });
@@ -355,88 +482,167 @@
     attachNavHandlers();
 
     // =========================
-    // Row recalculation
+    // Recalc per person block
     // =========================
-    function recalcRow(tr){
-      const get = (key) => {
-        const el = tr.querySelector(`input[data-key="${key}"]`);
-        return el ? el.value : "";
-      };
+    function getInput(p, key){
+      const el = document.querySelector(`input.cell[data-p="${p}"][data-key="${key}"]`);
+      return el ? el.value : "";
+    }
 
-      const dayHours = num(get("dayHours"));
-      const leaveDays = num(get("leaveDays"));
+    function setOut(p, outKey, text){
+      const outRow = document.querySelector(`tr.person-out[data-person="${p}"]`);
+      if (!outRow) return;
+      const v = outRow.querySelector(`[data-out="${outKey}"]`);
+      if (v) v.textContent = text;
+    }
+
+    function recalcPerson(p){
+      const dayHours = num(getInput(p, "dayHours"));
+      const leaveDays = num(getInput(p, "leaveDays"));
       const totalLeaveHours = clamp0(leaveDays * (dayHours > 0 ? dayHours : 0));
 
-      const usedNorm = normalizeHM(get("usedHours"), get("usedMinutes"));
+      const usedNorm = normalizeHM(getInput(p, "usedHours"), getInput(p, "usedMinutes"));
       const usedHoursDec = clamp0(usedNorm.totalMin / 60);
 
       const remainHours = clamp0(totalLeaveHours - usedHoursDec);
 
-      const wage = clamp0(num(get("wage")));
+      const wage = clamp0(num(getInput(p, "wage")));
       const pay = floorTo10Won(remainHours * wage);
 
       const totalDHM = hoursToDHM(totalLeaveHours, dayHours);
 
-      tr.querySelector('[data-out="totalDHM"]').textContent =
-        `${totalDHM.d}일 ${totalDHM.h}시간 ${totalDHM.m}분`;
-
-      tr.querySelector('[data-out="totalHoursDec"]').textContent = toFixed2(totalLeaveHours);
-      tr.querySelector('[data-out="usedHoursDec"]').textContent = toFixed2(usedHoursDec);
-      tr.querySelector('[data-out="remainHoursDec"]').textContent = toFixed2(remainHours);
-      tr.querySelector('[data-out="payWon"]').textContent = pay.toLocaleString("ko-KR");
+      setOut(p, "totalDHM", `${totalDHM.d}일 ${totalDHM.h}시간 ${totalDHM.m}분`);
+      setOut(p, "totalHoursDec", toFixed2(totalLeaveHours));
+      setOut(p, "usedHoursDec", toFixed2(usedHoursDec));
+      setOut(p, "remainHoursDec", toFixed2(remainHours));
+      setOut(p, "payWon", formatKRW(pay));
     }
 
     function recalcAll(){
-      const rows = Array.from(gridBody.querySelectorAll("tr"));
-      rows.forEach(recalcRow);
+      for (let p=1; p<=personCount; p++){
+        // 존재하는 사람만
+        if (document.querySelector(`tr.person-in[data-person="${p}"]`)) recalcPerson(p);
+      }
     }
 
-    // 입력 이벤트(버블링)로 처리: 새 행도 자동 적용
+    // 입력 이벤트 위임: 입력행에서만 계산 트리거
     gridBody.addEventListener("input", (e) => {
-      const tr = e.target.closest("tr");
-      if (!tr) return;
-      recalcRow(tr);
+      const cell = e.target.closest("input.cell");
+      if (!cell) return;
+      const p = Number(cell.dataset.p);
+      recalcPerson(p);
     });
     gridBody.addEventListener("change", (e) => {
-      const tr = e.target.closest("tr");
-      if (!tr) return;
-      recalcRow(tr);
+      const cell = e.target.closest("input.cell");
+      if (!cell) return;
+      const p = Number(cell.dataset.p);
+      recalcPerson(p);
     });
 
     // =========================
     // Buttons
     // =========================
-    addRowBtn.addEventListener("click", () => {
-      addRow();
-      nav = rebuildNavMap();
+    addPersonBtn.addEventListener("click", () => {
+      addPerson();
+      nav = rebuildNav();
       attachNavHandlers();
-
-      // 새 행의 첫 칸으로 포커스
-      const el = nav.map.get(`${rowCount},1`);
-      if (el){ el.focus(); el.select?.(); }
-
-      // 새 행 계산 초기화
-      const lastTr = gridBody.lastElementChild;
-      if (lastTr) recalcRow(lastTr);
+      recalcPerson(personCount);
+      focusCell(personCount, 1);
     });
 
     clearAllBtn.addEventListener("click", () => {
-      const inputs = Array.from(document.querySelectorAll(".cell"));
+      const inputs = Array.from(document.querySelectorAll("input.cell"));
       inputs.forEach(i => i.value = "");
       recalcAll();
-      const first = nav.map.get("1,1");
-      if (first){ first.focus(); first.select?.(); }
+      focusCell(1, 1);
     });
 
-    // 초기 계산
+    // =========================
+    // Excel download
+    // =========================
+    function nowStamp(){
+      const d = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      const y = d.getFullYear();
+      const m = pad(d.getMonth()+1);
+      const da = pad(d.getDate());
+      const hh = pad(d.getHours());
+      const mm = pad(d.getMinutes());
+      return `${y}${m}${da}_${hh}${mm}`;
+    }
+
+    function collectRows(){
+      const rows = [];
+      for (let p=1; p<=personCount; p++){
+        const inRow = document.querySelector(`tr.person-in[data-person="${p}"]`);
+        const outRow = document.querySelector(`tr.person-out[data-person="${p}"]`);
+        if (!inRow || !outRow) continue;
+
+        const name = getInput(p, "name");
+        const dayHours = num(getInput(p, "dayHours"));
+        const leaveDays = num(getInput(p, "leaveDays"));
+        const usedH = num(getInput(p, "usedHours"));
+        const usedM = num(getInput(p, "usedMinutes"));
+        const wage = num(getInput(p, "wage"));
+
+        const totalDHM = outRow.querySelector(`[data-out="totalDHM"]`)?.textContent ?? "";
+        const totalHoursDec = outRow.querySelector(`[data-out="totalHoursDec"]`)?.textContent ?? "0.00";
+        const usedHoursDec = outRow.querySelector(`[data-out="usedHoursDec"]`)?.textContent ?? "0.00";
+        const remainHoursDec = outRow.querySelector(`[data-out="remainHoursDec"]`)?.textContent ?? "0.00";
+        const payWon = outRow.querySelector(`[data-out="payWon"]`)?.textContent ?? "0";
+
+        // 완전 공백 행은 제외(이름도 없고 입력값도 0이면)
+        const isEmpty =
+          String(name).trim() === "" &&
+          dayHours === 0 && leaveDays === 0 && usedH === 0 && usedM === 0 && wage === 0;
+        if (isEmpty) continue;
+
+        rows.push({
+          "이름": name,
+          "1일 소정근무시간(시간)": dayHours,
+          "연차 부여 일수(일)": leaveDays,
+          "연차 사용(시간)": usedH,
+          "연차 사용(분)": usedM,
+          "통상임금(시간당,원)": wage,
+          "총 연차(일/시/분)": totalDHM,
+          "총 연차시간(10진수)": Number(totalHoursDec),
+          "사용시간(10진수)": Number(usedHoursDec),
+          "잔여시간(10진수)": Number(remainHoursDec),
+          "미사용 수당(원)": Number(String(payWon).replaceAll(",", ""))
+        });
+      }
+      return rows;
+    }
+
+    downloadXlsxBtn.addEventListener("click", () => {
+      if (!window.XLSX){
+        alert("엑셀 라이브러리(XLSX) 로딩이 아직 안 됐습니다.\n잠깐 뒤 다시 눌러주세요.\n(또는 /static/xlsx.full.min.js를 준비해두면 더 안정적입니다.)");
+        return;
+      }
+
+      recalcAll();
+      const data = collectRows();
+
+      if (data.length === 0){
+        alert("다운로드할 데이터가 없습니다.\n(아무 행도 입력되지 않았어요)");
+        return;
+      }
+
+      const ws = XLSX.utils.json_to_sheet(data, { skipHeader:false });
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "연차미사용_산출");
+
+      const filename = `annual_leave_unused_${nowStamp()}.xlsx`;
+      XLSX.writeFile(wb, filename);
+    });
+
+    // 초기 계산 + 포커스
     recalcAll();
-    const first = nav.map.get("1,1");
-    if (first){ first.focus(); first.select?.(); }
+    focusCell(1, 1);
   </script>
 
   <script src="/static/disable-copy.js"></script>
-<script src="/static/footer.js"></script>
-<script src="/static/global-loader.js?v=1"></script>
-  
+  <script src="/static/footer.js"></script>
+  <script src="/static/global-loader.js?v=1"></script>
 </body>
 </html>
