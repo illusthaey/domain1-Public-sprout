@@ -874,3 +874,16 @@ body h2 + hr {
 
 /* 강조는 별도로 */
 .accent { font-weight: 700; }
+
+
+
+.badge-rose{
+  background: var(--rose-500);
+  color: var(--rose-700);
+  padding: .2em .6em;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+
+
