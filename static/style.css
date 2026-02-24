@@ -831,35 +831,6 @@ body h2 + hr {
 
 
 :root{
-  --rose: #FF5D8F;
-  --coral: #FF6B6B;
-  --peach: #FF9F68;
-  --apricot: #FFB86B;
-  --butter: #FFE08A;
-  --amber: #FBBF24;
-
-  --mint: #2DD4BF;
-  --seafoam: #34D399;
-  --pistachio: #A7F3A0;
-
-  --sky: #38BDF8;
-  --ice: #60A5FA;
-  --periwinkle: #7C83FF;
-
-  --lavender: #A78BFA;
-  --grape: #C084FC;
-  --lilac: #E879F9;
-}
-
-.accent { font-weight: 700; }
-.accent.rose { color: var(--rose); }
-.accent.sky { color: var(--sky); }
-.accent.grape { color: var(--grape); }
-
-
-
-
-:root{
   /* 원본(진한 파스텔) */
   --rose-500: #FF5D8F;
   --coral-500:#FF6B6B;
