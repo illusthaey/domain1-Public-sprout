@@ -1131,12 +1131,17 @@
         keys.add(normalizeSchoolKey(base.replace(/초등학교/g, "초")));
         keys.add(normalizeSchoolKey(base.replace(/중학교/g, "중")));
         keys.add(normalizeSchoolKey(base.replace(/고등학교/g, "고")));
+        // 유치원 약칭(유치원→유)
+        keys.add(normalizeSchoolKey(base.replace(/유치원/g, "유")));
 
         // 병설유치원 표기 변형도 허용
         if (hadAttached) {
           keys.add(normalizeSchoolKey(`${base}병설유치원`));
           keys.add(normalizeSchoolKey(`${base} 병설유치원`));
           keys.add(normalizeSchoolKey(`${base} 및 병설유치원`));
+          // "반곡별유" 같은 약칭도 허용(병설유치원)
+          const baseShort = base.replace(/초등학교$|중학교$|고등학교$/g, "");
+          if (baseShort) keys.add(normalizeSchoolKey(`${baseShort}별유`));
         }
 
         for (const k of keys) {
@@ -1195,12 +1200,91 @@
       return t.replace(/\s+/g, " ").trim();
     }
 
+
+    function expandShortOrgName(s) {
+      let t = normalizeText(s);
+      if (!t) return "";
+      t = t.replace(/\s+/g, " ").trim();
+
+      const raw = t.replace(/\s+/g, "").trim();
+      if (!raw) return t;
+
+      // 병설유치원 약칭: "반곡별유"
+      if (/^[가-힣0-9]{1,30}별유$/.test(raw)) {
+        const basePart = raw.replace(/별유$/, "");
+        let base = basePart;
+
+        // base가 "문막초" 같은 약칭이면 확장
+        if (!base.includes("초등학교") && /초$/.test(base)) base = base.replace(/초$/, "초등학교");
+        if (!base.includes("중학교") && /중$/.test(base)) base = base.replace(/중$/, "중학교");
+        if (!base.includes("고등학교") && /고$/.test(base)) base = base.replace(/고$/, "고등학교");
+
+        // 대부분은 초등학교 병설이므로 학교 단어가 없으면 초등학교 기본 부여
+        if (!base.includes("학교") && !base.includes("유치원")) base = base + "초등학교";
+
+        return `${base} 및 병설유치원`;
+      }
+
+      // 유치원 약칭: "학성유"
+      if (/^[가-힣0-9]{1,30}유$/.test(raw) && !raw.includes("유치원")) {
+        return raw.replace(/유$/, "유치원");
+      }
+
+      // 초/중/고 약칭: "버들초", "버들중", "치악고"
+      if (/^[가-힣0-9]{1,30}초$/.test(raw) && !raw.includes("초등학교")) {
+        return raw.replace(/초$/, "초등학교");
+      }
+      if (/^[가-힣0-9]{1,30}중$/.test(raw) && !raw.includes("중학교")) {
+        return raw.replace(/중$/, "중학교");
+      }
+      if (/^[가-힣0-9]{1,30}고$/.test(raw) && !raw.includes("고등학교")) {
+        return raw.replace(/고$/, "고등학교");
+      }
+
+      return t;
+    }
+
+    function guessSchoolBaseName(orgText) {
+      let t = normalizeText(orgText);
+      if (!t) return "";
+      t = t.replace(/\s+/g, " ").trim();
+
+      // 약칭(초/중/고/유/별유) 우선 확장 (마스터에 없어도)
+      const ex1 = expandShortOrgName(t);
+      if (ex1) t = ex1;
+
+      // 병설유치원 문구 제거해서 base만 남김
+      t = t.replace(/\s*및\s*병설유치원/g, "").replace(/병설유치원/g, "").trim();
+
+      // 행정구역 접두어 제거(매칭 여부 무관)
+      const m = t.match(/^([가-힣]{2,4})(시|군)\s*(.+)$/);
+      if (m) {
+        const regionWord = canonicalRegionName(m[1] || "");
+        const rest = normalizeText(m[3] || "");
+        if (rest && REGION_17.includes(regionWord)) t = rest;
+      }
+
+      // 다시 한번 약칭 확장
+      const ex2 = expandShortOrgName(t);
+      if (ex2) t = ex2;
+
+      t = t.replace(/\s*및\s*병설유치원/g, "").replace(/병설유치원/g, "").trim();
+      if (!t) return "";
+
+      // 부서/기관류는 제외
+      if (isOfficeDept(t)) return "";
+      if (/(교육지원청|교육청|도서관|연수원|문화관|교육문화관|교육연수원|교육연구원|교육원)/.test(t)) return "";
+
+      if (!isSchoolLike(t)) return "";
+      return t;
+    }
+
     function autoCorrectOrgName(s) {
       let t = normalizeText(s);
       if (!t) return "";
       t = t.replace(/\s+/g, " ").trim();
 
-      // 1) "춘천시/철원군" 같은 접두 행정구역은 학교 매칭이 되는 경우에만 제거
+      // 1) "춘천시/철원군" 같은 접두 행정구역은 학교로 보이는 경우 제거
       let candidate = t;
       const m = candidate.match(/^([가-힣]{2,4})(시|군)\s*(.+)$/);
       if (m) {
@@ -1208,11 +1292,16 @@
         const rest = normalizeText(m[3] || "");
         if (rest && REGION_17.includes(regionWord)) {
           const baseTry = resolveSchoolBaseName(rest);
-          if (baseTry) candidate = rest;
+          const restNoSpace = rest.replace(/\s+/g, "");
+          if (baseTry || isSchoolLike(rest) || /^[가-힣0-9]{1,30}(초|중|고|유|별유)$/.test(restNoSpace)) candidate = rest;
         }
       }
 
-      // 2) 학교명 약칭/병설유치원 표기 자동 보정
+      // 1.5) "버들초/학성유/반곡별유" 같은 약칭은 마스터에 없어도 우선 확장
+      candidate = expandShortOrgName(candidate) || candidate;
+
+
+// 2) 학교명 약칭/병설유치원 표기 자동 보정
       const hasAttached = candidate.includes("병설유치원");
       const base = resolveSchoolBaseName(candidate);
       if (base) {
@@ -1289,6 +1378,9 @@
         const key = normalizeSchoolKey(org);
         const b = SCHOOL_MASTER.variants.get(key) || "";
         if (b) return { kind: "school", baseName: b };
+
+        const guessed = guessSchoolBaseName(org);
+        if (guessed) return { kind: "school", baseName: guessed };
       }
 
       return { kind: "unknown", name: org };
