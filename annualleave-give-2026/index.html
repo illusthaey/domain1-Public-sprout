@@ -365,7 +365,13 @@
               <th class="nowrap right">출근율(학기중)</th>
               <th class="nowrap right">출근율(연간)</th>
               <th class="nowrap right">출근율(비례산정)</th>
-              <th class="nowrap right">기본+가산(출근/근속)</th>
+
+              <!-- (수정) 가산 칼럼 분리 -->
+              <th class="nowrap right">기본</th>
+              <th class="nowrap right">출근가산</th>
+              <th class="nowrap right">근속가산</th>
+              <th class="nowrap right">표준합계(상한25)</th>
+
               <th class="nowrap right">최종부여</th>
               <th class="nowrap">판정</th>
             </tr>
@@ -845,13 +851,11 @@
     return isSpecial ? 11 : 12;
   }
 
-  // (수정) 비상시직종: 학기중 출근율 80% 이상이면 기본연차에 +출근가산(일반 3일 / 특수운영 4일)
+  // (수정) 비상시직종: 학기중 출근율 80% 이상이면 기본연차에 +3일(별개 가산)
   function bonusDaysForWorker(w, rates) {
     if (w.pattern !== "emergency") return 0;
     const rSem = rates.rateSemester ?? 0;
-    if (rSem < 0.8) return 0;
-    // 방학중 비상시: 교육공무직 3일 / 특수운영직군 4일
-    return (w.group === "special") ? 4 : 3;
+    return (rSem >= 0.8) ? 3 : 0;
   }
 
   function totalStandardDays(w, baseDays, bonusDays) {
@@ -1108,7 +1112,7 @@
     const rates = calcRatesForWorker(w);
 
     const baseDays = baseDaysForWorker(w);
-    const bonusDays = bonusDaysForWorker(w, rates); // 비상시 학기중 80% 출근가산(일반 3일 / 특수 4일)
+    const bonusDays = bonusDaysForWorker(w, rates); // 비상시 학기중 80% 가산 3일(별개)
     const standard = totalStandardDays(w, baseDays, bonusDays);
 
     const serviceYears = w.serviceYears ?? 0;
@@ -1119,7 +1123,7 @@
       return {
         workerKey: w.key,
         baseDays,
-        bonusDays: 0, // 신규(1년 미만)에는 출근율 가산(일반 3일/특수 4일) 적용 안 함
+        bonusDays: 0, // 신규 월차에는 3일 가산 개념 적용 안 함
         addDays: w.addDays ?? 0,
         standardDays: totalStandardDays(w, baseDays, 0),
         finalDays: monthly.days,
@@ -1158,7 +1162,7 @@
     const rateP = rates.rateProportional ?? 0;
 
     if (rateSem >= 0.8) {
-      // (수정) 비상시: 학기중 80% 이상이면 (기본 12/11) + 출근가산(일반 3 / 특수 4) + 근속가산
+      // (수정) 비상시: 학기중 80% 이상이면 (기본 12/11) + 3일(출근가산) + 근속가산
       return { workerKey: w.key, baseDays, bonusDays, addDays: w.addDays ?? 0, standardDays: standard, finalDays: standard, finalHours: 0, method: "정상부여(학기중 출근율 80% 이상)", note: "", rates };
     }
 
@@ -1535,7 +1539,12 @@
       const rateFull = pct(r.rates.rateFull ?? 0);
       const rateProp = (r.rates.rateProportional == null) ? "-" : pct(r.rates.rateProportional);
 
-      const std = formatStdCompact(r);
+      // (수정) 가산 칼럼 분리 출력
+      const base = r.baseDays ?? 0;
+      const bonus = r.bonusDays ?? 0;
+      const add = r.addDays ?? 0;
+      const standard = r.standardDays ?? 0;
+
       const final = (r.finalHours > 0) ? `${r.finalDays}일 ${r.finalHours}시간` : `${r.finalDays}일`;
 
       const tr = document.createElement("tr");
@@ -1548,7 +1557,12 @@
         <td class="right nowrap">${rateSem}</td>
         <td class="right nowrap">${rateFull}</td>
         <td class="right nowrap">${rateProp}</td>
-        <td class="right nowrap">${escapeHtml(std)}</td>
+
+        <td class="right nowrap">${escapeHtml(String(base))}</td>
+        <td class="right nowrap">${escapeHtml(String(bonus))}</td>
+        <td class="right nowrap">${escapeHtml(String(add))}</td>
+        <td class="right nowrap">${escapeHtml(String(standard))}</td>
+
         <td class="right nowrap"><b>${final}</b></td>
         <td class="nowrap">${escapeHtml(r.method)}</td>
       `;
