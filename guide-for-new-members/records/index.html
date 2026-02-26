@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>신규 교행을 위한 기록물 업무 흐름 | 상세 가이드</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <style>
+      /* 보조 스타일: 타임라인/칩/스티키 내비(최소만) */
+      :root {
+        --line: #e5e7eb;
+        --ink: #111;
+        --muted: #666;
+        --soft: #fafafa;
+      }
+
+      .topnav {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: rgba(255, 255, 255, 0.92);
+        backdrop-filter: blur(6px);
+        border-bottom: 1px solid #e8e8ef;
+      }
+      .topnav .shell {
+        padding: 10px 16px;
+      }
+      .nav-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 999px;
+        background: #fff;
+        font-size: 0.98rem;
+        color: #111;
+        white-space: nowrap;
+      }
+      .chip:hover {
+        background: #f9fafb;
+      }
+
+      .hero {
+        margin-top: 10px;
+      }
+      .hero .kicker {
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        margin: 0;
+      }
+      .kicker span {
+        display: inline-block;
+        padding: 0.2em 0.7em;
+        border-radius: 999px;
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb;
+        color: #111;
+        font-size: 0.95rem;
+        font-weight: 700;
+      }
+
+      .callout {
+        border: 1px dashed #d1d5db;
+        background: #fff;
+      }
+
+      .timeline {
+        list-style: none;
+        margin: 10px 0 0;
+        padding: 0;
+        position: relative;
+      }
+      .timeline::before {
+        content: "";
+        position: absolute;
+        left: 14px;
+        top: 6px;
+        bottom: 6px;
+        width: 2px;
+        background: var(--line);
+      }
+      .t-item {
+        position: relative;
+        padding-left: 42px;
+        padding-bottom: 14px;
+      }
+      .t-item:last-child {
+        padding-bottom: 0;
+      }
+      .t-dot {
+        position: absolute;
+        left: 6px;
+        top: 6px;
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        background: #fff;
+        border: 2px solid #111;
+      }
+      .t-head {
+        display: flex;
+        gap: 10px;
+        align-items: baseline;
+        flex-wrap: wrap;
+      }
+      .t-month {
+        font-weight: 800;
+        color: #111;
+      }
+      .t-badge {
+        display: inline-block;
+        padding: 0.15em 0.6em;
+        border-radius: 999px;
+        border: 1px solid #d1d5db;
+        background: #fafafa;
+        font-weight: 700;
+        font-size: 0.92rem;
+        color: #111;
+      }
+      .t-body {
+        margin-top: 6px;
+      }
+
+      .kbd {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+          "Courier New", monospace;
+        font-size: 0.95rem;
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb;
+        padding: 0.15em 0.45em;
+        border-radius: 8px;
+      }
+
+      .checklist {
+        display: grid;
+        gap: 10px;
+        margin: 10px 0 0;
+      }
+      .check {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        padding: 10px 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        background: #fff;
+      }
+      .check input[type="checkbox"] {
+        margin-top: 4px;
+        width: 18px;
+        height: 18px;
+      }
+      .check .label {
+        flex: 1;
+      }
+      .check .label strong {
+        display: block;
+        color: #111;
+        margin-bottom: 2px;
+      }
+      .check .label .muted {
+        margin: 0;
+      }
+
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+          "Courier New", monospace;
+      }
+
+      .hr-tight {
+        margin: 18px 0;
+      }
+
+      .mini {
+        font-size: 0.95rem;
+        color: #555;
+      }
+
+      /* 접근성: 스킵 링크 */
+      .skip-link {
+        position: absolute;
+        left: -999px;
+        top: 10px;
+        background: #111;
+        color: #fff;
+        padding: 10px 12px;
+        border-radius: 10px;
+        z-index: 9999;
+      }
+      .skip-link:focus {
+        left: 10px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <a class="skip-link" href="#content">본문 바로가기</a>
+
+    <header class="site-header">
+      <div class="shell">
+        <div class="row between">
+          <div class="row gap" aria-label="페이지 정보">
+            <span class="badge-rose">업무 흐름</span>
+            <span class="muted">신규 교행(교육행정직) 실무용</span>
+          </div>
+          <div class="row gap" aria-label="빠른 동작">
+            <button class="btn pastel-blue" type="button" id="btnPrint">인쇄/PDF</button>
+            <button class="btn pastel-grey" type="button" id="btnResetChecks">체크 초기화</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <nav class="topnav" aria-label="섹션 이동">
+      <div class="shell">
+        <div class="nav-chips">
+          <a class="chip" href="#start">0. 스타터 킷</a>
+          <a class="chip" href="#basis">1. 법적 근거</a>
+          <a class="chip" href="#year">2. 연간 흐름</a>
+          <a class="chip" href="#detail">3. 실무 디테일</a>
+          <a class="chip" href="#storage">4. 문서고</a>
+          <a class="chip" href="#submissions">5. 제출/공문 대응</a>
+          <a class="chip" href="#pitfalls">6. 자주 하는 실수</a>
+        </div>
+      </div>
+    </nav>
+
+    <main class="container" id="content">
+      <section class="hero">
+        <h1>신규 교행을 위한 기록물 업무 흐름 (정리본)</h1>
+        <p class="subtitle">
+          학교 기록물은 “쌓이는 대로 두는 종이/파일”이 아니라, <span class="accent">등록 → 분류·편철 → 정리 → 생산현황 통보 → 이관 → 평가·폐기</span>로
+          굴러가는 시스템입니다. 이 페이지는 그 흐름을 “오늘 당장 할 일” 단위로 쪼개둔 체크형 가이드예요.
+        </p>
+        <p class="kicker">
+          <span id="todayText" aria-label="오늘 날짜">오늘: -</span>
+          <span id="yearText" aria-label="업무 기준 연도">기준: -</span>
+        </p>
+      </section>
+
+      <!-- 0. 스타터 킷 -->
+      <section class="section callout" id="start">
+        <h2>0) 10분 스타터 킷: “지금 당장” 확인 5가지</h2>
+        <div class="grid three">
+          <div class="card">
+            <h3 class="local-h3 local-tight">핵심 마감 2개</h3>
+            <ul>
+              <li><span class="accent">전년도 기록물 정리</span>: 다음 해 <span class="accent">2월 말</span>까지 완료</li>
+              <li><span class="accent">생산현황 통보</span>: 매년 <span class="accent">5월 31일</span>까지 K-에듀파인</li>
+            </ul>
+            <p class="muted">이 2개가 “기록물 업무”의 1년 리듬을 만듭니다.</p>
+          </div>
+
+          <div class="card">
+            <h3 class="local-h3 local-tight">내 역할이 뭐냐?</h3>
+            <ul>
+              <li>기록물관리책임자(정/부) 지정 여부</li>
+              <li>내가 주관자인지(책임자) / 보조자인지(담당자)</li>
+              <li>문서고(서고) 열쇠·출입대장·반출대장 위치</li>
+            </ul>
+            <p class="muted">담당자 교체(인사발령) 시 제일 먼저 “지정 문서”부터 정리합니다.</p>
+          </div>
+
+          <div class="card">
+            <h3 class="local-h3 local-tight">금지/주의 3개</h3>
+            <ul>
+              <li>학교가 <span class="accent">자체적으로 기록물 폐기</span>하면 안 됨</li>
+              <li>비전자 원본(종이 등) “스캔본”만 믿지 않기</li>
+              <li>30년↑ 비전자 원본 열람은 책임자 <span class="accent">입회</span> 원칙</li>
+            </ul>
+            <p class="muted">폐기·열람은 특히 “감사 포인트”가 되기 쉬워요.</p>
+          </div>
+        </div>
+
+        <details class="shot-details">
+          <summary class="shot-summary">용어를 1분에 끝내기 (RMS / 단위과제카드 / 기록관리기준표)</summary>
+          <div class="card">
+            <ul>
+              <li><span class="accent">단위과제</span>: 기능분류 체계의 최소 업무 단위(업무를 잘게 쪼갠 칸)</li>
+              <li><span class="accent">단위과제카드</span>: 단위과제 아래 “업무 수행 공간(카드)” — 여기에 기록물이 쌓임</li>
+              <li><span class="accent">기록관리기준표</span>: 분류·보존기간·공개여부 같은 관리 기준의 “지도”</li>
+              <li><span class="accent">RMS</span>(기록관리시스템): 기록관에서 전자적으로 인수·보존·처분·공개·검색을 하는 시스템</li>
+            </ul>
+          </div>
+        </details>
+      </section>
+
+      <!-- 1. 법적 근거 -->
+      <section class="section" id="basis">
+        <h2>1) 왜 해야 하나? (법적 근거 + 책임 구조)</h2>
+
+        <div class="grid two">
+          <div class="card">
+            <h3 class="local-h3 local-tight">법적 근거(핵심만)</h3>
+            <p class="mini">
+              공공기관(학교 포함)은 <span class="accent">처리과별 기록물관리책임자를 지정</span>해야 하고, 책임자는 등록·기준표·정리·이관·간행물 관리 등을 수행합니다.
+            </p>
+            <ul>
+              <li>지정 의무: 처리과별 기록물관리책임자 지정</li>
+              <li>책임자 업무: 등록/기준표/작성기준/정리·보관·이관/간행물/기타 기록관리</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <h3 class="local-h3 local-tight">학교 안에서 “누가 뭘” 하나</h3>
+            <ul>
+              <li><span class="accent">학교장</span>: 생산·분류·정리·이관 등이 체계적으로 수행되도록 지도·감독 + 책임자(정/부) 지정</li>
+              <li><span class="accent">기록물관리책임자</span>: 학교 기록관리 실무 주관(등록~이관, 기준표/카드 관리 등)</li>
+              <li><span class="accent">교직원</span>: 본인이 생산·접수한 기록물 등록/분류·편철/정리 + 문서고 인계 전까지 안전 보관</li>
+            </ul>
+            <p class="muted">즉, “책임자는 조율·점검·최종선”이고, 생산자는 “자기 업무 기록을 제대로 남기는 사람”입니다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. 연간 흐름 -->
+      <section class="section" id="year">
+        <h2>2) 연간 업무 흐름(달력 버전)</h2>
+        <p class="sub">
+          학교 기록물은 보통 “해당 연도(1/1~12/31) 생산분”을 다음 해 초에 정리하고, 이후 기록관에 통보/이관/평가·폐기 절차로 넘어갑니다.
+        </p>
+
+        <ol class="timeline" aria-label="연간 타임라인">
+          <li class="t-item">
+            <span class="t-dot" aria-hidden="true"></span>
+            <div class="t-head">
+              <span class="t-month">1월</span>
+              <span class="t-badge">담당자/현황 정비</span>
+            </div>
+            <div class="t-body">
+              <ul>
+                <li>인사발령/업무분장 변경 시 <span class="accent">기록물관리책임자 재지정</span> 내부결재</li>
+                <li>문서고 열쇠, 출입/반출대장 위치, 이전 담당자 인계 범위 확인</li>
+              </ul>
+            </div>
+          </li>
+
+          <li class="t-item">
+            <span class="t-dot" aria-hidden="true"></span>
+            <div class="t-head">
+              <span class="t-month">2월</span>
+              <span class="t-badge">전년도 정리 마감(2월 말)</span>
+            </div>
+            <div class="t-body">
+              <ul>
+                <li>전년도 생산·접수 기록물 <span class="accent">정리 완료</span>(등록 누락/편철 상태/공개여부 재점검)</li>
+                <li>전자: 미완료문서 종료 처리, 과제카드/공개구분 점검</li>
+                <li>비전자: 미등록분 소급 등록, 보존용 표지/상자 편성</li>
+              </ul>
+            </div>
+          </li>
+
+          <li class="t-item">
+            <span class="t-dot" aria-hidden="true"></span>
+            <div class="t-head">
+              <span class="t-month">5월</span>
+              <span class="t-badge">생산현황 통보(5/31)</span>
+            </div>
+            <div class="t-body">
+              <ul>
+                <li><span class="accent">5월 31일까지</span> K-에듀파인으로 관할 기록관에 생산현황 통보</li>
+                <li>대상: 전자·비전자 문서, 회의록, 시청각기록물, 행정박물, 간행물 등</li>
+              </ul>
+            </div>
+          </li>
+
+          <li class="t-item">
+            <span class="t-dot" aria-hidden="true"></span>
+            <div class="t-head">
+              <span class="t-month">상시</span>
+              <span class="t-badge">이관 준비/이관</span>
+            </div>
+            <div class="t-body">
+              <ul>
+                <li>학교는 기록물을 <span class="accent">보존기간 기산일로부터 2년 범위 내</span> 보관 가능(경과 시 기록관 일정에 따라 이관)</li>
+                <li>전자: 전년도 생산분을 <span class="accent">연 1회 RMS로 이관</span>하는 흐름</li>
+                <li>비전자: 단위과제카드별 편철 → 보존상자 → 목록 맞춰 이관</li>
+              </ul>
+            </div>
+          </li>
+
+          <li class="t-item">
+            <span class="t-dot" aria-hidden="true"></span>
+            <div class="t-head">
+              <span class="t-month">하반기(기록관 일정)</span>
+              <span class="t-badge">평가·폐기 의견 제출</span>
+            </div>
+            <div class="t-body">
+              <ul>
+                <li>기록관에서 “폐기/보류/재책정” 의견 조회 → 학교는 사유 포함해 제출</li>
+                <li><span class="accent">폐기는 교육(지원)청 기록관 주관</span>, 학교는 자체 폐기 불가</li>
+                <li>기록물전문요원 심사, 기록물평가심의회 등 절차 후 폐기</li>
+              </ul>
+            </div>
+          </li>
+
+          <li class="t-item">
+            <span class="t-dot" aria-hidden="true"></span>
+            <div class="t-head">
+              <span class="t-month">12월(요청 시)</span>
+              <span class="t-badge">보유기록물 관리대장 정비/제출</span>
+            </div>
+            <div class="t-body">
+              <ul>
+                <li>교육지원청 계획에 따라 보유기록물 관리대장 정비 후 제출</li>
+                <li>대장에는 위치/상자/보존기간 만료일/이관·평가 이력 등 “추적 정보”가 들어감</li>
+              </ul>
+            </div>
+          </li>
+        </ol>
+
+        <hr class="hr-tight" />
+
+        <h3>연간 체크리스트 (로컬 저장됨)</h3>
+        <p class="muted">체크는 이 브라우저에 저장됩니다(PC/브라우저가 바뀌면 초기화될 수 있어요).</p>
+
+        <div class="checklist" data-checklist="annual">
+          <div class="check">
+            <input id="c1" type="checkbox" />
+            <label class="label" for="c1">
+              <strong>기록물관리책임자(정/부) 지정 여부 확인 + 변경 시 내부결재</strong>
+              <p class="muted">인사발령/업무분장 바뀌면 “현황이 최신인지”부터 잡기.</p>
+            </label>
+          </div>
+
+          <div class="check">
+            <input id="c2" type="checkbox" />
+            <label class="label" for="c2">
+              <strong>전년도 기록물 정리(전자/비전자) 2월 말까지</strong>
+              <p class="muted">등록 누락/편철 상태/공개여부 재점검 포함.</p>
+            </label>
+          </div>
+
+          <div class="check">
+            <input id="c3" type="checkbox" />
+            <label class="label" for="c3">
+              <strong>생산현황 통보 5/31까지 (K-에듀파인)</strong>
+              <p class="muted">문서·회의록·시청각·행정박물·간행물 포함.</p>
+            </label>
+          </div>
+
+          <div class="check">
+            <input id="c4" type="checkbox" />
+            <label class="label" for="c4">
+              <strong>이관 대상 정리(목록-실물 일치 확인) + 기록관 일정에 맞춰 이관</strong>
+              <p class="muted">비전자: 단위과제카드별 편철 → 보존상자.</p>
+            </label>
+          </div>
+
+          <div class="check">
+            <input id="c5" type="checkbox" />
+            <label class="label" for="c5">
+              <strong>평가·폐기 의견 요청 오면: 사유 포함해 학교장 결재 후 제출</strong>
+              <p class="muted">폐기는 기록관 주관(학교 자체 폐기 불가).</p>
+            </label>
+          </div>
+
+          <div class="check">
+            <input id="c6" type="checkbox" />
+            <label class="label" for="c6">
+              <strong>보유기록물 관리대장 정비/제출(요청 시)</strong>
+              <p class="muted">연말 공문이 오면 “대장 정비 → 제출” 루틴으로 처리.</p>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. 실무 디테일 -->
+      <section class="section" id="detail">
+        <h2>3) 실무 디테일: 전자/비전자, 어디서 실수가 나나?</h2>
+
+        <div class="grid two">
+          <div class="card">
+            <h3 class="local-h3 local-tight">등록(언제, 무엇을)</h3>
+            <ul>
+              <li>문서·도서·대장·카드·도면·시청각·전자문서·행정박물 등 <span class="accent">모든 형태</span>를 등록</li>
+              <li>등록 시점:
+                <ul>
+                  <li>생산 기록물: <span class="accent">결재/보고 직후</span></li>
+                  <li>접수 기록물: <span class="accent">접수 확인 직후</span></li>
+                </ul>
+              </li>
+              <li>원칙: 전자/비전자 구분 없이 <span class="accent">K-에듀파인 등록·관리</span></li>
+            </ul>
+            <p class="muted">“나중에 한 번에 올리자”는 보통 누락으로 이어집니다.</p>
+          </div>
+
+          <div class="card">
+            <h3 class="local-h3 local-tight">분류·편철(비전자 핵심)</h3>
+            <ul>
+              <li>기록관리기준표에 따라 처리과·단위과제별 분류</li>
+              <li>일반문서 편철 순서: <span class="accent">표지 → 색인목록 → 문서</span></li>
+              <li>기록물철 1철 편철량: <span class="accent">100매 이내</span> 원칙(많으면 권호 나눔)</li>
+              <li>등록·편철 완료 후: 유형별 보존용 파일/상자/용기에 보관</li>
+            </ul>
+            <p class="muted">편철이 틀리면 보존기간/공개구분 적용이 틀어집니다(나비효과!).</p>
+          </div>
+        </div>
+
+        <details class="shot-details">
+          <summary class="shot-summary">전자 기록물 “정리” 빠른 루틴(미완료문서/공개여부)</summary>
+          <div class="card">
+            <p class="mini">
+              전자 정리는 핵심이 단순합니다: <span class="accent">미완료문서를 “종료”로 만들고</span>, 과제카드/공개여부를 점검해서 “연도 단위로 깔끔하게 마감”하는 것.
+            </p>
+            <ul>
+              <li>미완료문서 정리: <span class="kbd">문서함 → 미완료문서 → (해당연도 조회) → 처리상태 “종료”</span></li>
+              <li>과제카드/공개여부/열람제한 변경 점검</li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="shot-details">
+          <summary class="shot-summary">비전자 기록물 “정리” 빠른 루틴(소급 등록/보존상자)</summary>
+          <div class="card">
+            <ul>
+              <li>K-에듀파인 미등록 비전자 기록물은 <span class="accent">문서등록대장에 소급 등록</span></li>
+              <li>진행문서철 정리 후 <span class="accent">보존용 표지</span>로 변경</li>
+              <li>기록물철별로 <span class="accent">보존상자 편성</span>(이관/보관 동선이 쉬워짐)</li>
+            </ul>
+          </div>
+        </details>
+      </section>
+
+      <!-- 4. 문서고 -->
+      <section class="section" id="storage">
+        <h2>4) 문서고(서고) 운영: “시설/대장/보안”만 잡아도 반은 끝</h2>
+
+        <div class="grid two">
+          <div class="card">
+            <h3 class="local-h3 local-tight">보안·출입(필수)</h3>
+            <ul>
+              <li><span class="accent">이중잠금장치</span> 설치</li>
+              <li><span class="accent">제한구역</span>으로 설정 + 열람공간과 분리</li>
+              <li>불필요한 물품 비치 금지(청결 유지), 음식물 반입 금지</li>
+            </ul>
+            <p class="muted">문서고는 “창고”가 아니라 “보존시설” 취급입니다.</p>
+          </div>
+
+          <div class="card">
+            <h3 class="local-h3 local-tight">비치대장(최소 3종)</h3>
+            <ul>
+              <li>보존문서기록대장(전자파일로 관리 가능)</li>
+              <li>기록물 반출·반입대장</li>
+              <li>문서고 출입대장</li>
+            </ul>
+            <p class="muted">대장이 있어야 “누가/언제/무엇을” 했는지 추적이 됩니다.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 class="local-h3 local-tight">보존환경(권장 예시)</h3>
+          <ul>
+            <li>온도: <span class="accent">20±2℃</span></li>
+            <li>습도: <span class="accent">50±5%</span></li>
+            <li>온·습도계(문서고당 1대), 제습기/항온항습기 등 설치 권장</li>
+          </ul>
+          <p class="muted">습기·누수·직사광선은 종이 기록물의 “천적”입니다.</p>
+        </div>
+      </section>
+
+      <!-- 5. 제출/공문 대응 -->
+      <section class="section" id="submissions">
+        <h2>5) 공문/요청 대응 시나리오(신규 교행이 제일 자주 만나는 2개)</h2>
+
+        <div class="grid two">
+          <div class="card">
+            <h3 class="local-h3 local-tight">A. 인사발령 → 기록물관리책임자 지정(내부결재)</h3>
+            <ol>
+              <li>관련 근거 확인(시행규칙 제15조)</li>
+              <li>지정 대상(정/부 또는 대행) 확정</li>
+              <li>내부결재 문서 작성: <span class="accent">“지정 현황(소속/직급/성명/지정일자)”</span> 포함</li>
+              <li>기존 담당자 인계: 문서고 열쇠, 대장 위치, 미정리 목록, 이관 예정 상자 확인</li>
+            </ol>
+            <p class="muted">포인트: “사람이 바뀌어도 업무가 끊기지 않게” 만드는 게 목적.</p>
+          </div>
+
+          <div class="card">
+            <h3 class="local-h3 local-tight">B. 보유기록물 관리대장 정비/제출</h3>
+            <ol>
+              <li>교육지원청 계획/공문 확인(제출 기한/서식)</li>
+              <li>문서고 현물 점검: 상자 번호/서가/관리번호 등 “위치 정보” 확인</li>
+              <li>대장 업데이트: 보존기간 만료일, 공개구분, 이관/평가 이력 등</li>
+              <li>제출(공문 회신) + 사본 보관</li>
+            </ol>
+            <p class="muted">대장은 “현물과 1:1로 맞아야” 의미가 있습니다.</p>
+          </div>
+        </div>
+
+        <details class="shot-details">
+          <summary class="shot-summary">한 줄 템플릿(문서 제목/문장 샘플)</summary>
+          <div class="card">
+            <ul>
+              <li class="mono">제목: ○○일자 인사발령에 따른 기록물관리책임자 지정</li>
+              <li class="mono">본문: 관련 규정에 따라 기록물관리책임자를 아래와 같이 지정하여 기록물 관리에 만전을 기하고자 합니다.</li>
+              <li class="mono">붙임: 기록물관리책임자 지정 현황 1부.</li>
+            </ul>
+          </div>
+        </details>
+      </section>
+
+      <!-- 6. 자주 하는 실수 -->
+      <section class="section" id="pitfalls">
+        <h2>6) 자주 하는 실수 TOP 8 (피하면 업무가 갑자기 쉬워짐)</h2>
+
+        <div class="card">
+          <ol>
+            <li><span class="accent">등록 시점</span>을 놓쳐서 누락이 쌓임(결재/접수 “직후”가 원칙)</li>
+            <li>비전자 기록물을 “스캔했으니 끝”으로 착각(원본 관리 필요)</li>
+            <li>편철을 대충 해서 보존기간/공개구분이 틀어짐(표지·색인·문서 순 + 100매 원칙)</li>
+            <li>정리(2월 말)만 하고 <span class="accent">생산현황 통보(5/31)</span>를 깜빡함</li>
+            <li>문서고가 “잡동사니 창고”가 됨(불필요 물품, 음식물, 출입통제 부재)</li>
+            <li>반출·반입대장 없이 기록물이 움직임(나중에 “누가 가져갔지?” 상태)</li>
+            <li>평가·폐기 의견 요청이 왔는데, 법령/업무 맥락 없이 “감”으로 폐기 의견 작성</li>
+            <li>학교 자체 폐기 시도(폐기는 기록관 주관 절차로만)</li>
+          </ol>
+          <p class="muted">기록물은 결국 “추적 가능성”의 게임입니다. 흔적을 남기면 강해집니다.</p>
+        </div>
+      </section>
+
+      <footer class="site-footer">
+        <div class="shell">
+          <p><span class="accent">메모:</span> 이 페이지는 신규 교행의 빠른 업무 적응을 돕기 위한 내부용 정리본입니다.</p>
+          <p class="muted">기관별 세부 일정/서식은 관할 교육(지원)청 기록관 안내를 우선하세요.</p>
+        </div>
+      </footer>
+
+      <button id="btnToTop" class="btn pastel-grey" type="button" aria-label="맨 위로">↑</button>
+    </main>
+
+    <script>
+      // ===== 날짜 표시 =====
+      (function () {
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, "0");
+        const dd = String(now.getDate()).padStart(2, "0");
+        const today = `${yyyy}.${mm}.${dd}`;
+        const yearHint = `${yyyy}년 (정리/통보는 전년도 기준으로 움직임)`;
+
+        const t1 = document.getElementById("todayText");
+        const t2 = document.getElementById("yearText");
+        if (t1) t1.textContent = `오늘: ${today}`;
+        if (t2) t2.textContent = `기준: ${yearHint}`;
+      })();
+
+      // ===== 부드러운 앵커 이동 =====
+      document.addEventListener("click", (e) => {
+        const a = e.target.closest('a[href^="#"]');
+        if (!a) return;
+        const id = a.getAttribute("href");
+        const el = document.querySelector(id);
+        if (!el) return;
+        e.preventDefault();
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        history.replaceState(null, "", id);
+      });
+
+      // ===== 맨위로 버튼 =====
+      const btnToTop = document.getElementById("btnToTop");
+      const toggleToTop = () => {
+        if (!btnToTop) return;
+        btnToTop.style.display = window.scrollY > 500 ? "block" : "none";
+      };
+      window.addEventListener("scroll", toggleToTop, { passive: true });
+      toggleToTop();
+
+      if (btnToTop) {
+        btnToTop.addEventListener("click", () => {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+      }
+
+      // ===== 인쇄 =====
+      const btnPrint = document.getElementById("btnPrint");
+      if (btnPrint) btnPrint.addEventListener("click", () => window.print());
+
+      // ===== 체크리스트 로컬 저장 =====
+      const STORAGE_KEY = "records_workflow_checklist_v1";
+
+      function loadChecks() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return {};
+          return JSON.parse(raw);
+        } catch {
+          return {};
+        }
+      }
+
+      function saveChecks(state) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch {
+          // 저장 실패(시크릿 모드 등) 무시
+        }
+      }
+
+      const checkState = loadChecks();
+      const checkboxes = document.querySelectorAll('.checklist input[type="checkbox"]');
+
+      checkboxes.forEach((cb) => {
+        if (!cb.id) return;
+        cb.checked = Boolean(checkState[cb.id]);
+        cb.addEventListener("change", () => {
+          checkState[cb.id] = cb.checked;
+          saveChecks(checkState);
+        });
+      });
+
+      // ===== 체크 초기화 =====
+      const btnResetChecks = document.getElementById("btnResetChecks");
+      if (btnResetChecks) {
+        btnResetChecks.addEventListener("click", () => {
+          checkboxes.forEach((cb) => (cb.checked = false));
+          saveChecks({});
+          alert("체크리스트를 초기화했습니다.");
+        });
+      }
+    </script>
+  </body>
+</html>
