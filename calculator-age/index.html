@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/static/style.css" />
+  <title>만나이 계산기</title>
+</head>
+<body>
+  <main class="container">
+    <header class="page-header">
+      <h1>만나이 계산기</h1>
+      <p class="muted">생년월일과 기준일을 입력하면 만나이(국제나이)를 계산합니다.</p>
+    </header>
+
+    <section class="card">
+      <form id="ageForm" novalidate>
+        <div class="grid">
+          <div class="field">
+            <label for="birth">생년월일</label>
+            <input type="date" id="birth" name="birth" required />
+            <small class="hint">예: 1990-07-15</small>
+          </div>
+
+          <div class="field">
+            <label for="asOf">계산 기준일</label>
+            <input type="date" id="asOf" name="asOf" />
+            <small class="hint">비워두면 오늘 날짜로 계산합니다.</small>
+          </div>
+        </div>
+
+        <details class="advanced">
+          <summary>고급 옵션</summary>
+          <div class="field">
+            <label>2월 29일(윤일) 출생자의 비윤년 생일 처리</label>
+            <div class="radio-row">
+              <label>
+                <input type="radio" name="leapPolicy" value="feb28" checked />
+                2월 28일로 간주(기본)
+              </label>
+              <label>
+                <input type="radio" name="leapPolicy" value="mar1" />
+                3월 1일로 간주
+              </label>
+            </div>
+            <small class="hint">기관/상황에 따라 기준이 다를 수 있어 선택 가능하게 했습니다.</small>
+          </div>
+        </details>
+
+        <div class="actions">
+          <button type="button" id="btnCalc">계산하기</button>
+          <button type="button" id="btnToday">기준일을 오늘로</button>
+          <button type="reset" id="btnReset">초기화</button>
+        </div>
+
+        <p id="msg" class="msg" aria-live="polite"></p>
+
+        <section class="result card" id="result" hidden>
+          <h2>결과</h2>
+
+          <div class="result-line">
+            <span class="result-label">만나이</span>
+            <span class="result-value" id="ageOut">-</span>
+          </div>
+
+          <div class="result-meta" id="metaOut"></div>
+        </section>
+      </form>
+    </section>
+
+    <footer class="footer muted">
+      <p>만나이 = (기준연도 - 출생연도)에서 “기준일에 생일이 지났는지”에 따라 1을 빼거나 유지합니다.</p>
+    </footer>
+  </main>
+
+  <script>
+    (() => {
+      const $ = (sel) => document.querySelector(sel);
+
+      const form = $("#ageForm");
+      const birthEl = $("#birth");
+      const asOfEl = $("#asOf");
+
+      const btnCalc = $("#btnCalc");
+      const btnToday = $("#btnToday");
+
+      const msgEl = $("#msg");
+      const resultEl = $("#result");
+      const ageOutEl = $("#ageOut");
+      const metaOutEl = $("#metaOut");
+
+      function pad2(n) {
+        return String(n).padStart(2, "0");
+      }
+
+      function todayISO() {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = now.getMonth() + 1;
+        const d = now.getDate();
+        return `${y}-${pad2(m)}-${pad2(d)}`;
+      }
+
+      function isLeapYear(y) {
+        return (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0);
+      }
+
+      // "YYYY-MM-DD" -> {y,m,d} (시간/타임존 영향 없이 연월일로만 처리)
+      function parseISODate(value) {
+        if (!value) return null;
+        const parts = value.split("-");
+        if (parts.length !== 3) return null;
+
+        const y = Number(parts[0]);
+        const m = Number(parts[1]);
+        const d = Number(parts[2]);
+
+        if (!Number.isInteger(y) || !Number.isInteger(m) || !Number.isInteger(d)) return null;
+        if (m < 1 || m > 12) return null;
+
+        // 해당 월의 마지막 날짜 검증 (new Date(y, m, 0) = m월의 마지막 날)
+        const maxDay = new Date(y, m, 0).getDate();
+        if (d < 1 || d > maxDay) return null;
+
+        return { y, m, d };
+      }
+
+      function compareYMD(a, b) {
+        if (a.y !== b.y) return a.y - b.y;
+        if (a.m !== b.m) return a.m - b.m;
+        return a.d - b.d;
+      }
+
+      function formatYMD(ymd) {
+        return `${ymd.y}-${pad2(ymd.m)}-${pad2(ymd.d)}`;
+      }
+
+      function getLeapPolicy() {
+        const checked = document.querySelector('input[name="leapPolicy"]:checked');
+        return checked ? checked.value : "feb28";
+      }
+
+      function calcManNai(birth, asOf, leapPolicy) {
+        if (compareYMD(asOf, birth) < 0) {
+          return { ok: false, error: "기준일이 생년월일보다 빠릅니다." };
+        }
+
+        let age = asOf.y - birth.y;
+
+        // 기준연도(asOf.y)에서의 생일 월/일 결정
+        let bMonth = birth.m;
+        let bDay = birth.d;
+
+        // 2/29 출생자가 비윤년일 때 생일 처리 규칙
+        if (birth.m === 2 && birth.d === 29 && !isLeapYear(asOf.y)) {
+          if (leapPolicy === "mar1") {
+            bMonth = 3;
+            bDay = 1;
+          } else {
+            bMonth = 2;
+            bDay = 28;
+          }
+        }
+
+        const hadBirthday =
+          asOf.m > bMonth || (asOf.m === bMonth && asOf.d >= bDay);
+
+        if (!hadBirthday) age -= 1;
+
+        return {
+          ok: true,
+          age,
+          hadBirthday,
+          birthdayThisYear: { y: asOf.y, m: bMonth, d: bDay }
+        };
+      }
+
+      function setMessage(text, kind = "info") {
+        msgEl.textContent = text || "";
+        // CSS에서 hooks로 쓰고 싶으면 data-kind로 스타일링 가능
+        msgEl.dataset.kind = kind;
+      }
+
+      function hideResult() {
+        resultEl.hidden = true;
+        ageOutEl.textContent = "-";
+        metaOutEl.textContent = "";
+      }
+
+      function showResult(res, birth, asOf, leapPolicy) {
+        resultEl.hidden = false;
+        ageOutEl.textContent = `${res.age}세`;
+
+        const policyLabel = (leapPolicy === "mar1") ? "3/1" : "2/28";
+        const birthdayStr = formatYMD(res.birthdayThisYear);
+
+        metaOutEl.innerHTML = `
+          <ul>
+            <li>생년월일: <strong>${formatYMD(birth)}</strong></li>
+            <li>기준일: <strong>${formatYMD(asOf)}</strong></li>
+            <li>${asOf.y}년 생일: <strong>${birthdayStr}</strong> (${res.hadBirthday ? "이미 지남/당일" : "아직 안 지남"})</li>
+            <li>윤일(2/29) 처리: <strong>${policyLabel}</strong> 기준</li>
+          </ul>
+        `;
+      }
+
+      function calculate() {
+        hideResult();
+
+        const birth = parseISODate(birthEl.value);
+        const asOf = parseISODate(asOfEl.value || todayISO());
+        const leapPolicy = getLeapPolicy();
+
+        if (!birth) {
+          setMessage("생년월일을 올바르게 입력해 주세요.", "error");
+          return;
+        }
+        if (!asOf) {
+          setMessage("기준일을 올바르게 입력해 주세요.", "error");
+          return;
+        }
+
+        const res = calcManNai(birth, asOf, leapPolicy);
+        if (!res.ok) {
+          setMessage(res.error, "error");
+          return;
+        }
+
+        setMessage("계산 완료", "success");
+        showResult(res, birth, asOf, leapPolicy);
+      }
+
+      // 이벤트 연결
+      btnCalc.addEventListener("click", calculate);
+
+      btnToday.addEventListener("click", () => {
+        asOfEl.value = todayISO();
+        setMessage("기준일을 오늘로 설정했습니다.", "info");
+      });
+
+      form.addEventListener("reset", () => {
+        // reset은 값이 지워지기 전에 이벤트가 나가므로 다음 틱에 반영
+        setTimeout(() => {
+          asOfEl.value = todayISO();
+          setMessage("");
+          hideResult();
+        }, 0);
+      });
+
+      // 입력 변경 시 자동 재계산(생년월일이 있을 때만)
+      [birthEl, asOfEl].forEach((el) => {
+        el.addEventListener("change", () => {
+          if (birthEl.value) calculate();
+        });
+      });
+
+      document.querySelectorAll('input[name="leapPolicy"]').forEach((r) => {
+        r.addEventListener("change", () => {
+          if (birthEl.value) calculate();
+        });
+      });
+
+      // 초기 기준일 = 오늘
+      asOfEl.value = todayISO();
+    })();
+  </script>
+
+<script src="/static/disable-copy.js"></script>
+<script src="/static/footer.js"></script>
+<script src="/static/global-loader.js?v=1"></script>
+</body>
+</html>
