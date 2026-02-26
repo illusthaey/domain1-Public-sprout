@@ -1,0 +1,349 @@
+/* weekday-grid.js
+ * - 날짜 입력 -> 요일 자동 산출
+ * - 엑셀식 키보드 이동(↑↓←→, Enter, Tab)
+ * - 기본 5행, 필요 시 자동 행 추가
+ * - 다중 라인 붙여넣기(아래로 채우기)
+ */
+(() => {
+  const WEEKDAY_KO = ["일", "월", "화", "수", "목", "금", "토"];
+
+  function pad2(n) {
+    return String(n).padStart(2, "0");
+  }
+
+  function toCanonical(y, m, d) {
+    return `${y}-${pad2(m)}-${pad2(d)}`;
+  }
+
+  // "2026-02-26", "2026/02/26", "2026.02.26", "20260226" 지원
+  function parseDateLoose(raw) {
+    if (!raw) return null;
+    const s = String(raw).trim();
+    if (!s) return null;
+
+    // 8자리 숫자(YYYYMMDD)
+    const digits = s.replace(/[^\d]/g, "");
+    if (digits.length === 8) {
+      const y = Number(digits.slice(0, 4));
+      const m = Number(digits.slice(4, 6));
+      const d = Number(digits.slice(6, 8));
+      return validateYMD(y, m, d);
+    }
+
+    // 구분자 형태
+    const normalized = s.replace(/[./]/g, "-").replace(/\s+/g, "");
+    const m1 = normalized.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (m1) {
+      const y = Number(m1[1]);
+      const m = Number(m1[2]);
+      const d = Number(m1[3]);
+      return validateYMD(y, m, d);
+    }
+
+    return null;
+  }
+
+  function validateYMD(y, m, d) {
+    if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
+    if (y < 1 || y > 9999) return null;
+    if (m < 1 || m > 12) return null;
+    if (d < 1 || d > 31) return null;
+
+    // "YYYY-MM-DD" 문자열 Date 파싱은 UTC로 먹히는 경우가 있어
+    // 반드시 로컬 타임존 생성자를 사용.
+    const dt = new Date(y, m - 1, d);
+    if (
+      dt.getFullYear() !== y ||
+      dt.getMonth() !== (m - 1) ||
+      dt.getDate() !== d
+    ) return null;
+
+    return { y, m, d, date: dt };
+  }
+
+  function weekdayLabel(dt, withYoil = true) {
+    const w = WEEKDAY_KO[dt.getDay()];
+    return withYoil ? `${w}요일` : w;
+  }
+
+  function el(tag, props = {}, children = []) {
+    const node = document.createElement(tag);
+    Object.entries(props).forEach(([k, v]) => {
+      if (k === "class") node.className = v;
+      else if (k === "dataset") Object.assign(node.dataset, v);
+      else if (k === "text") node.textContent = v;
+      else if (k === "html") node.innerHTML = v;
+      else if (k in node) node[k] = v;
+      else node.setAttribute(k, v);
+    });
+    for (const ch of children) node.appendChild(ch);
+    return node;
+  }
+
+  function buildGrid(container, opts) {
+    const state = {
+      container,
+      rows: opts.rows ?? 5,
+      withYoil: opts.withYoil ?? true,
+      maxAutoRows: opts.maxAutoRows ?? 200,
+      table: null,
+      tbody: null,
+    };
+
+    const table = el("table", { class: "sheet", role: "grid" });
+    const thead = el("thead");
+    const headRow = el("tr", {}, [
+      el("th", { text: "날짜" }),
+      el("th", { text: "요일" }),
+    ]);
+    thead.appendChild(headRow);
+
+    const tbody = el("tbody");
+    table.appendChild(thead);
+    table.appendChild(tbody);
+    container.innerHTML = "";
+    container.appendChild(table);
+
+    state.table = table;
+    state.tbody = tbody;
+
+    for (let i = 0; i < state.rows; i++) {
+      appendRow(state);
+    }
+
+    // 이벤트 위임
+    table.addEventListener("input", (e) => onInput(state, e));
+    table.addEventListener("keydown", (e) => onKeyDown(state, e));
+    table.addEventListener("paste", (e) => onPaste(state, e), true);
+    table.addEventListener("blur", (e) => onBlurFormat(state, e), true);
+
+    // 첫 셀 포커스(원하면 주석 해제)
+    // focusCell(state, 0, 0);
+
+    return state;
+  }
+
+  function appendRow(state) {
+    const rowIndex = state.tbody.children.length;
+    if (rowIndex >= state.maxAutoRows) return;
+
+    const dateInput = el("input", {
+      class: "cell date-cell",
+      inputMode: "numeric",
+      placeholder: "YYYY-MM-DD",
+      dataset: { row: String(rowIndex), col: "0" },
+      autocomplete: "off",
+      spellcheck: false,
+    });
+
+    const dowInput = el("input", {
+      class: "cell dow-cell",
+      readOnly: true,
+      tabIndex: -1, // 기본 탭 이동에서 제외(우리가 Tab 커스텀 이동)
+      dataset: { row: String(rowIndex), col: "1" },
+    });
+
+    const tr = el("tr", {}, [
+      el("td", {}, [dateInput]),
+      el("td", {}, [dowInput]),
+    ]);
+
+    state.tbody.appendChild(tr);
+  }
+
+  function getCellFromEventTarget(target) {
+    if (!(target instanceof HTMLElement)) return null;
+    const input = target.closest("input.cell");
+    if (!input) return null;
+    const row = Number(input.dataset.row);
+    const col = Number(input.dataset.col);
+    if (!Number.isFinite(row) || !Number.isFinite(col)) return null;
+    return { input, row, col };
+  }
+
+  function getInputAt(state, row, col) {
+    const tr = state.tbody.children[row];
+    if (!tr) return null;
+    const td = tr.children[col];
+    if (!td) return null;
+    const input = td.querySelector("input.cell");
+    return input || null;
+  }
+
+  function ensureRowExists(state, row) {
+    while (state.tbody.children.length <= row && state.tbody.children.length < state.maxAutoRows) {
+      appendRow(state);
+      // dataset row 재정렬(추가된 행만 처리하면 되지만, 안전하게 갱신)
+      const newRowIndex = state.tbody.children.length - 1;
+      const date = getInputAt(state, newRowIndex, 0);
+      const dow = getInputAt(state, newRowIndex, 1);
+      if (date) date.dataset.row = String(newRowIndex);
+      if (dow) dow.dataset.row = String(newRowIndex);
+    }
+  }
+
+  function focusCell(state, row, col, selectAll = true) {
+    ensureRowExists(state, row);
+    const input = getInputAt(state, row, col);
+    if (!input) return;
+    input.focus();
+    if (selectAll && input instanceof HTMLInputElement && !input.readOnly) {
+      input.select();
+    }
+  }
+
+  function setWeekdayForRow(state, row, parsedOrNull) {
+    const dateInput = getInputAt(state, row, 0);
+    const dowInput = getInputAt(state, row, 1);
+    if (!dateInput || !dowInput) return;
+
+    if (!parsedOrNull) {
+      dowInput.value = "";
+      dateInput.classList.add("invalid");
+      return;
+    }
+    dateInput.classList.remove("invalid");
+    dowInput.value = weekdayLabel(parsedOrNull.date, state.withYoil);
+  }
+
+  function onInput(state, e) {
+    const cell = getCellFromEventTarget(e.target);
+    if (!cell) return;
+
+    // 날짜 칸(0열)만 계산
+    if (cell.col !== 0) return;
+
+    const parsed = parseDateLoose(cell.input.value);
+    setWeekdayForRow(state, cell.row, parsed);
+  }
+
+  function onBlurFormat(state, e) {
+    const cell = getCellFromEventTarget(e.target);
+    if (!cell) return;
+    if (cell.col !== 0) return;
+
+    const parsed = parseDateLoose(cell.input.value);
+    // 유효하면 포맷을 YYYY-MM-DD로 정규화
+    if (parsed) {
+      cell.input.value = toCanonical(parsed.y, parsed.m, parsed.d);
+      setWeekdayForRow(state, cell.row, parsed);
+    }
+  }
+
+  function isAtTextEdge(input, dir) {
+    // readonly거나 selection 정보가 없으면 "edge"로 취급
+    if (!(input instanceof HTMLInputElement) || input.readOnly) return true;
+    const start = input.selectionStart ?? 0;
+    const end = input.selectionEnd ?? 0;
+    if (dir === "left") return start === 0 && end === 0;
+    if (dir === "right") return start === input.value.length && end === input.value.length;
+    return true;
+  }
+
+  function move(state, row, col, dRow, dCol) {
+    const nextRow = Math.max(0, row + dRow);
+    const nextCol = Math.min(1, Math.max(0, col + dCol));
+    focusCell(state, nextRow, nextCol, true);
+  }
+
+  function onKeyDown(state, e) {
+    const cell = getCellFromEventTarget(e.target);
+    if (!cell) return;
+
+    const { input, row, col } = cell;
+
+    // Tab: 우리가 엑셀식으로 표 안에서만 순환 이동
+    if (e.key === "Tab") {
+      e.preventDefault();
+      const dir = e.shiftKey ? -1 : 1;
+      if (dir === 1) {
+        if (col === 0) focusCell(state, row, 1, false);
+        else focusCell(state, row + 1, 0, true);
+      } else {
+        if (col === 1) focusCell(state, row, 0, true);
+        else focusCell(state, Math.max(0, row - 1), 1, false);
+      }
+      return;
+    }
+
+    // Enter: 아래로(Shift+Enter 위로)
+    if (e.key === "Enter") {
+      e.preventDefault();
+      move(state, row, col, e.shiftKey ? -1 : 1, 0);
+      return;
+    }
+
+    // Up/Down: 같은 열 이동
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      move(state, row, col, -1, 0);
+      return;
+    }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      move(state, row, col, 1, 0);
+      return;
+    }
+
+    // Left/Right: 텍스트 커서가 끝/처음일 때만 셀 이동
+    if (e.key === "ArrowLeft") {
+      if (col === 1 || isAtTextEdge(input, "left")) {
+        e.preventDefault();
+        move(state, row, col, 0, -1);
+      }
+      return;
+    }
+    if (e.key === "ArrowRight") {
+      if (col === 0 && !isAtTextEdge(input, "right")) return;
+      e.preventDefault();
+      move(state, row, col, 0, 1);
+      return;
+    }
+  }
+
+  function onPaste(state, e) {
+    const cell = getCellFromEventTarget(e.target);
+    if (!cell) return;
+    if (cell.col !== 0) return; // 날짜 칸에서만 다중 붙여넣기
+
+    const text = e.clipboardData?.getData("text");
+    if (!text) return;
+
+    // 여러 줄이면 아래로 채우기
+    const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+    if (lines.length <= 1) return;
+
+    e.preventDefault();
+    let r = cell.row;
+
+    for (const line of lines) {
+      const value = line.trim();
+      ensureRowExists(state, r);
+      const dateInput = getInputAt(state, r, 0);
+      if (!dateInput) break;
+
+      dateInput.value = value;
+      const parsed = parseDateLoose(value);
+      setWeekdayForRow(state, r, parsed);
+      r++;
+    }
+
+    focusCell(state, Math.min(r, state.tbody.children.length - 1), 0, true);
+  }
+
+  // 외부에서 호출할 초기화 함수
+  window.initWeekdayGrid = function initWeekdayGrid(options = {}) {
+    const containerId = options.containerId ?? "weekday-grid";
+    const container = document.getElementById(containerId);
+    if (!container) {
+      throw new Error(`컨테이너를 찾을 수 없습니다: #${containerId}`);
+    }
+    return buildGrid(container, options);
+  };
+
+  // 페이지 로드 시 자동 초기화(원하면 제거 가능)
+  document.addEventListener("DOMContentLoaded", () => {
+    const el = document.getElementById("weekday-grid");
+    if (el) window.initWeekdayGrid({ containerId: "weekday-grid", rows: 5, withYoil: true });
+  });
+})();
