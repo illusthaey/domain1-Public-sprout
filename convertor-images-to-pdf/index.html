@@ -3,22 +3,39 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>이미지 → PDF 합치기</title>
+  <title>이미지를 PDF파일로 변환하기</title>
 
   <link rel="icon" href="/static/favicon.ico" />
   <link rel="stylesheet" href="/static/style.css" />
 
-  <!-- ✅ 이 페이지에서만 필요한 추가 스타일 -->
   <style>
-    /* style.css의 레이아웃/버튼 톤을 그대로 쓰고, 새 UI만 보강 */
-
-    .subtitle{
-      margin: 0 0 12px;
-      color: #444;
-      font-size: 0.98rem;
-      text-align: center;
+    /* =========================
+       업로드 영역 “구분” UI
+       ========================= */
+    .upload-split{
+      align-items: start;
+    }
+    .upload-drop{
+      min-height: 160px;
+      cursor: pointer;
+    }
+    .upload-controls{
+      display: grid;
+      gap: 10px;
+      align-content: start;
+    }
+    .upload-controls .upload-title{
+      font-weight: 800;
+      color: #111;
+      margin: 0;
+    }
+    .upload-controls .upload-desc{
+      margin: 0;
     }
 
+    /* =========================
+       Dropzone
+       ========================= */
     .dropzone{
       border: 2px dashed #d4d4d8;
       border-radius: 14px;
@@ -46,11 +63,20 @@
       color: #666;
     }
 
+    /* =========================
+       썸네일 그리드
+       ========================= */
+    .thumb-stage{
+      /* 드래그 카드가 “섹션 밖으로 넘어가지 않게” 기준이 되는 영역 */
+      position: relative;
+    }
+
     .thumb-list{
       display: grid;
       gap: 12px;
       grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
       margin-top: 10px;
+      align-content: start;
     }
 
     .thumb-item{
@@ -62,6 +88,8 @@
       cursor: grab;
       display: grid;
       gap: 8px;
+      min-width: 0;          /* ✅ 긴 파일명/레이아웃 넘침 방지 */
+      touch-action: none;    /* ✅ 모바일/터치에서 스크롤과 충돌 방지 */
     }
     .thumb-item:active{ cursor: grabbing; }
 
@@ -110,6 +138,8 @@
       height: 100%;
       object-fit: cover;
       display: block;
+      -webkit-user-drag: none; /* ✅ 이미지 기본 드래그 방지 */
+      user-select: none;
     }
 
     .thumb-name{
@@ -119,39 +149,38 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      min-width: 0;
     }
     .thumb-sub{
       font-size: .92rem;
       color: #666;
     }
 
-    /* ✅ 드래그 정렬용 placeholder */
+    /* ✅ placeholder: 그리드 셀 폭에 맞춰서 “넘침/꼬임” 방지 */
     .thumb-placeholder{
+      width: 100%;
+      box-sizing: border-box;
       border: 2px dashed #b4b4d0;
       border-radius: 12px;
       background: #f3f4f6;
     }
 
-    /* ✅ 드래그 중 “떠다니는 카드” */
+    /* ✅ 떠다니는 카드 */
     .thumb-floating{
       box-shadow: 0 16px 40px rgba(0,0,0,.18);
       border-color: rgba(0,0,0,.25);
       cursor: grabbing;
-      pointer-events: none; /* elementFromPoint가 아래 요소를 잡게 */
+      pointer-events: none;
+      will-change: left, top;
     }
 
-    /* 드래그 중에는 텍스트 선택 방지(선택 깜빡임 방지) */
     body.is-sorting{
       user-select: none;
     }
 
-    .field .label{
-      font-weight: 800;
-      color: #111;
-      margin-bottom: 6px;
-      font-size: .98rem;
-    }
-
+    /* =========================
+       진행바
+       ========================= */
     .progress{
       height: 12px;
       border-radius: 999px;
@@ -167,14 +196,6 @@
       transition: width .1s linear;
     }
 
-    .note-box{
-      background: #fafafa;
-      border: 1px solid #e5e5e5;
-      border-radius: 12px;
-      padding: 12px 14px;
-    }
-
-    /* 인쇄 시 버튼류 숨기기(선택사항) */
     @media print{
       .no-print{ display:none !important; }
     }
@@ -182,46 +203,68 @@
 </head>
 
 <body>
-  <header class="site-header">
-    <div class="shell">
-      <h1>이미지 → PDF 합치기</h1>
-      <p class="subtitle">이미지를 넣고, 썸네일을 <b>클릭-드래그</b>로 순서 바꾼 뒤 PDF로 저장하세요.</p>
-    </div>
-  </header>
-
   <main class="container">
+    <h1>이미지 파일 PDF 변환기</h1>
+    <p class="muted">
+      ·이미지 파일을 올리면 pdf로 병합하는 기능. 여러장 업로드 가능. <br/>
+    </p>
+
+    <hr/>
+
     <!-- 1) 업로드 -->
     <section class="section no-print">
-      <h2 class="local-h2">1) 이미지 추가</h2>
+      <h2>1. 이미지 파일 업로드 (여러장 가능)</h2>
+      <p class="muted">
+        ·WEBP/GIF 넣지 마세요. <br/>
+        ·Ctrl+V로 이미지 붙여넣기 가능
+      </p>
 
-      <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="이미지 드래그 앤 드롭 또는 클릭해서 선택">
-        <div class="dz-title">여기로 이미지 드래그 & 드롭</div>
-        <div class="dz-sub">또는 아래 버튼으로 선택 (JPG/PNG/WEBP 등)</div>
-
-        <div class="row gap">
-          <button class="btn pastel-blue" type="button" id="btnPick">파일 선택</button>
-          <button class="btn pastel-grey" type="button" id="btnClear" disabled>전체 지우기</button>
-          <button class="btn pastel-orange" type="button" id="btnReverse" disabled>역순</button>
+      <!-- ✅ 드롭 영역 / 버튼 영역 “분리” -->
+      <div class="grid two upload-split">
+        <!-- 드래그&드롭 전용 영역 -->
+        <div id="dropzone" class="dropzone upload-drop" tabindex="0" role="button"
+             aria-label="이미지 드래그 앤 드롭 또는 클릭해서 선택">
+          <div class="dz-title">여기로 이미지 드래그 & 드롭</div>
+          <div class="dz-sub">또는 이 박스를 클릭해서 파일 선택</div>
+          <div class="muted">PNG/JPG 권장</div>
         </div>
 
-        <input id="fileInput" type="file" accept="image/*" multiple hidden />
-        <div class="muted" id="countInfo">0장</div>
-        <div class="muted">Tip: 이미지 복사 후 <b>Ctrl+V</b>로 붙여넣기도 지원</div>
+        <!-- 버튼/카운트 전용 영역 -->
+        <div class="card upload-controls">
+          <p class="upload-title">업로드 / 관리</p>
+          <p class="muted upload-desc">버튼으로 추가/정리할 수 있어요.</p>
+
+          <div class="row gap">
+            <button class="btn pastel-blue" type="button" id="btnPick">파일 선택</button>
+            <button class="btn pastel-grey" type="button" id="btnClear" disabled>전체 삭제</button>
+            <button class="btn pastel-orange" type="button" id="btnReverse" disabled>역순으로 정렬하기</button>
+          </div>
+
+          <input id="fileInput" type="file" accept="image/*" multiple hidden />
+          <div class="muted" id="countInfo">0장</div>
+        </div>
       </div>
     </section>
 
     <!-- 2) 미리보기/정렬 -->
     <section class="section">
-      <h2 class="local-h2">2) 순서 정렬</h2>
-      <p class="muted">썸네일을 마우스로 <b>클릭한 채로 끌면</b> 순서가 바뀝니다. PDF는 이 순서대로 생성됩니다.</p>
+      <h2>2. 이미지 순서 정렬</h2>
+      <p class="muted">
+        ·썸네일을 마우스로 클릭한 채로 드래그하면 순서가 바뀝니다. PDF는 정렬한 순서대로 페이지가 생성됩니다.
+      </p>
 
-      <div id="thumbList" class="thumb-list" role="list" aria-label="이미지 미리보기 목록"></div>
-      <p id="hintEmpty" class="note muted" style="display:block;">아직 이미지가 없습니다. 위에서 추가해 주세요.</p>
+      <!-- ✅ 드래그 카드가 이 영역 밖으로 “넘어가지 않게” stage로 감쌈 -->
+      <div id="thumbStage" class="thumb-stage">
+        <div id="thumbList" class="thumb-list" role="list" aria-label="미리보기 목록"></div>
+      </div>
+
+      <p id="hintEmpty" class="note muted" style="display:block;">아직 첨부한 이미지가 없습니다. 위에서 추가해 주세요.</p>
     </section>
 
     <!-- 3) PDF 옵션/생성 -->
     <section class="section no-print">
-      <h2 class="local-h2">3) PDF 만들기</h2>
+      <h2>3. PDF 생성</h2>
+      <p class="muted">·이미지가 매우 크면 PDF도 커지고, 생성 시간이 길어질 수 있습니다.</p>
 
       <div class="grid two">
         <label class="field">
@@ -249,9 +292,9 @@
         <label class="field">
           <div class="label">이미지 인코딩</div>
           <select id="imgEncode">
-            <option value="auto">자동(원본 JPG/PNG 유지, 그 외는 JPG 변환)</option>
-            <option value="jpeg">전부 JPG로 변환(용량↓, 투명도×)</option>
-            <option value="png">전부 PNG로 변환(투명도○, 용량↑)</option>
+            <option value="auto">자동</option>
+            <option value="jpeg">JPG로 변환</option>
+            <option value="png">PNG로 변환</option>
           </select>
         </label>
 
@@ -276,29 +319,8 @@
       <div class="progress" aria-hidden="true">
         <div id="progressBar" class="progress-bar"></div>
       </div>
-
-      <div class="note-box" style="margin-top:12px;">
-        <div class="muted">
-          모든 처리는 <b>브라우저 안에서만</b> 이뤄집니다(서버 업로드 없음).  
-          PDF 생성은 <code>pdf-lib</code>를 사용하며, 라이브러리는 CDN으로 로드됩니다.
-        </div>
-      </div>
-    </section>
-
-    <section class="section">
-      <h2 class="local-h2">메모</h2>
-      <ul>
-        <li>이미지가 매우 크면 PDF도 커지고, 생성 시간이 길어질 수 있습니다.</li>
-        <li>WEBP/GIF 같은 포맷은 PDF에 바로 못 들어갈 수 있어, 옵션에 따라 JPG/PNG로 변환 후 넣습니다. (pdf-lib는 브라우저 예제/문서에서 PNG/JPEG 임베딩을 중심으로 제공) :contentReference[oaicite:2]{index=2}</li>
-      </ul>
     </section>
   </main>
-
-  <footer class="site-footer">
-    <div class="shell">
-      © <span id="year"></span>. 이미지→PDF 도구
-    </div>
-  </footer>
 
   <!-- ✅ PDF 생성 라이브러리: pdf-lib (UMD) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js" referrerpolicy="no-referrer"></script>
@@ -316,6 +338,7 @@
       btnReverse: $("#btnReverse"),
       countInfo: $("#countInfo"),
 
+      thumbStage: $("#thumbStage"),
       thumbList: $("#thumbList"),
       hintEmpty: $("#hintEmpty"),
 
@@ -329,8 +352,6 @@
       btnMakePdf: $("#btnMakePdf"),
       progressText: $("#progressText"),
       progressBar: $("#progressBar"),
-
-      year: $("#year"),
     };
 
     const state = {
@@ -363,7 +384,6 @@
     }
 
     function sanitizeFileName(name){
-      // 윈도우 금지문자 제거 + 너무 긴 파일명 방지
       const cleaned = (name || "images.pdf")
         .replace(/[\\/:*?"<>|]/g, "_")
         .replace(/\s+/g, " ")
@@ -402,7 +422,6 @@
     }
 
     async function getImageDims(file, url){
-      // createImageBitmap이 있으면 빠르게, 아니면 <img>로 fallback
       if ("createImageBitmap" in window) {
         try{
           const bmp = await createImageBitmap(file);
@@ -423,9 +442,7 @@
         try{
           await img.decode();
           return img;
-        } catch(_) {
-          // decode 실패 시 onload로 fallback
-        }
+        } catch(_) {}
       }
 
       await new Promise((resolve, reject) => {
@@ -524,6 +541,7 @@
         img.decoding = "async";
         img.src = it.url;
         img.alt = it.file.name;
+        img.draggable = false; // ✅ HTML5 이미지 드래그 방지
         imgWrap.appendChild(img);
 
         const meta = document.createElement("div");
@@ -582,10 +600,14 @@
     // -----------------------
     // 파일 선택 / 드롭 / 붙여넣기
     // -----------------------
-    els.btnPick.addEventListener("click", () => els.fileInput.click());
+    const openPicker = () => { if(!state.busy) els.fileInput.click(); };
+
+    els.btnPick.addEventListener("click", openPicker);
+    els.dropzone.addEventListener("click", openPicker);
+
     els.fileInput.addEventListener("change", (e) => {
       addFiles(e.target.files);
-      e.target.value = ""; // 같은 파일 다시 선택 가능하게
+      e.target.value = "";
     });
 
     els.btnClear.addEventListener("click", clearAll);
@@ -607,7 +629,6 @@
           els.dropzone.classList.remove("is-over");
           return;
         }
-        // drop
         if (!isFileDrag(e.dataTransfer)) return;
         e.preventDefault();
         els.dropzone.classList.remove("is-over");
@@ -615,7 +636,7 @@
       });
     });
 
-    // 썸네일 영역에도 드롭 허용(추가 편의)
+    // 썸네일 영역에도 드롭 허용
     els.thumbList.addEventListener("dragover", (e) => {
       if (!isFileDrag(e.dataTransfer)) return;
       e.preventDefault();
@@ -626,7 +647,7 @@
       addFiles(e.dataTransfer.files);
     });
 
-    // 붙여넣기(Ctrl+V)로 이미지 추가
+    // 붙여넣기(Ctrl+V)
     document.addEventListener("paste", (e) => {
       const items = Array.from(e.clipboardData?.items || []);
       const files = [];
@@ -639,16 +660,19 @@
       if (files.length) addFiles(files);
     });
 
-    // 드롭존 Enter/Space로 파일 선택
+    // dropzone Enter/Space
     els.dropzone.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
-        els.fileInput.click();
+        openPicker();
       }
     });
 
     // -----------------------
-    // ✅ 정렬: pointer 이벤트 기반(드래그스타트 막혀도 동작)
+    // ✅ 정렬: “멈춤/넘어감” 방지 강화 버전
+    //  - move/up을 window에 바인딩(이벤트 끊김 방지)
+    //  - 떠다니는 카드 위치를 thumbStage 안으로 클램프(섹션 밖으로 넘어가지 않게)
+    //  - placeholder는 width:100% + height만 고정(그리드 꼬임 방지)
     // -----------------------
     els.thumbList.addEventListener("pointerdown", (e) => {
       if (state.busy) return;
@@ -656,16 +680,15 @@
       const card = e.target.closest(".thumb-item");
       if (!card || !els.thumbList.contains(card)) return;
 
-      // 삭제 버튼 눌렀을 땐 정렬 시작 금지
       if (e.target.closest("button")) return;
-
-      // 마우스 좌클릭만(터치도 pointer로 들어오므로 button 체크는 환경별로)
       if (typeof e.button === "number" && e.button !== 0) return;
 
+      e.preventDefault();
+
       const rect = card.getBoundingClientRect();
+
       const placeholder = document.createElement("div");
       placeholder.className = "thumb-placeholder";
-      placeholder.style.width = rect.width + "px";
       placeholder.style.height = rect.height + "px";
 
       state.drag = {
@@ -678,49 +701,98 @@
         offsetY: e.clientY - rect.top,
         active: false,
         parent: els.thumbList,
+        stage: els.thumbStage,
+
+        raf: 0,
+        lastX: e.clientX,
+        lastY: e.clientY,
+
+        cardW: rect.width,
+        cardH: rect.height,
       };
 
-      card.setPointerCapture(e.pointerId);
+      // pointer capture 시도(안 되는 브라우저도 있으니 window 리스너가 보험)
+      try{ card.setPointerCapture(e.pointerId); } catch(_) {}
 
-      card.addEventListener("pointermove", onPointerMove);
-      card.addEventListener("pointerup", onPointerUp);
-      card.addEventListener("pointercancel", onPointerUp);
+      // ✅ window에 move/up 바인딩(드래그 중 “멈춤” 방지)
+      window.addEventListener("pointermove", onPointerMove, { capture:true, passive:false });
+      window.addEventListener("pointerup", onPointerUp, { capture:true });
+      window.addEventListener("pointercancel", onPointerUp, { capture:true });
+      window.addEventListener("blur", onWindowBlur, { capture:true });
     });
+
+    function onWindowBlur(){
+      if (!state.drag) return;
+      // 포커스 이탈 시 안전 종료
+      finishDrag(state.drag);
+    }
 
     function onPointerMove(e){
       const d = state.drag;
       if (!d || e.pointerId !== d.pointerId) return;
 
+      e.preventDefault();
+
       const dx = e.clientX - d.startX;
       const dy = e.clientY - d.startY;
       const dist = Math.hypot(dx, dy);
 
-      // 클릭/탭과 드래그를 구분하는 임계값
       if (!d.active) {
         if (dist < 6) return;
         beginFloatingDrag(d);
         d.active = true;
       }
 
-      moveFloating(d, e.clientX, e.clientY);
-      movePlaceholderIfNeeded(d, e.clientX, e.clientY);
+      d.lastX = e.clientX;
+      d.lastY = e.clientY;
+
+      if (d.raf) return;
+      d.raf = requestAnimationFrame(() => {
+        d.raf = 0;
+
+        // stage 안으로 클램프해서 “섹션 밖으로 넘어감” 방지
+        const stageRect = d.stage.getBoundingClientRect();
+
+        const minLeft = stageRect.left;
+        const maxLeft = stageRect.right - d.cardW;
+        const minTop  = stageRect.top;
+        const maxTop  = stageRect.bottom - d.cardH;
+
+        const left = (maxLeft < minLeft)
+          ? minLeft
+          : clamp(d.lastX - d.offsetX, minLeft, maxLeft);
+
+        const top = (maxTop < minTop)
+          ? minTop
+          : clamp(d.lastY - d.offsetY, minTop, maxTop);
+
+        d.card.style.left = left + "px";
+        d.card.style.top  = top + "px";
+
+        // placeholder 계산은 stage 안 좌표로(경계 밖에서 “멈춘 느낌” 줄이기)
+        const px = clamp(d.lastX, stageRect.left + 1, stageRect.right - 1);
+        const py = clamp(d.lastY, stageRect.top + 1, stageRect.bottom - 1);
+
+        movePlaceholderByGrid(d, px, py);
+      });
     }
 
     function beginFloatingDrag(d){
       document.body.classList.add("is-sorting");
 
       const rect = d.card.getBoundingClientRect();
-      d.cardRect = rect;
+      d.cardW = rect.width;
+      d.cardH = rect.height;
 
-      // 카드 자리에 placeholder 꽂아두기
+      // 카드 자리에 placeholder
       d.parent.replaceChild(d.placeholder, d.card);
 
-      // 카드 자체는 body로 옮겨 “떠다니게”
+      // 카드 떠다니게
       d.card.classList.add("thumb-floating");
       d.card.style.position = "fixed";
       d.card.style.left = rect.left + "px";
-      d.card.style.top = rect.top + "px";
-      d.card.style.width = rect.width + "px";
+      d.card.style.top  = rect.top  + "px";
+      d.card.style.width  = rect.width + "px";
       d.card.style.height = rect.height + "px";
       d.card.style.zIndex = "2147483647";
       d.card.style.margin = "0";
@@ -728,53 +800,89 @@
       document.body.appendChild(d.card);
     }
 
-    function moveFloating(d, clientX, clientY){
-      d.card.style.left = (clientX - d.offsetX) + "px";
-      d.card.style.top  = (clientY - d.offsetY) + "px";
-    }
-
-    function movePlaceholderIfNeeded(d, clientX, clientY){
-      const el = document.elementFromPoint(clientX, clientY);
-      const overCard = el && el.closest ? el.closest(".thumb-item") : null;
-
-      if (!overCard || !d.parent.contains(overCard)) {
-        // 썸네일 영역 위인데 특정 카드가 아니면 끝으로 보냄
-        const overList = el && (el === d.parent || (el.closest && el.closest("#thumbList")));
-        if (overList) d.parent.appendChild(d.placeholder);
+    function movePlaceholderByGrid(d, x, y){
+      const parent = d.parent;
+      const cards = Array.from(parent.querySelectorAll(".thumb-item"));
+      if (!cards.length) {
+        if (d.placeholder.parentNode !== parent) parent.appendChild(d.placeholder);
         return;
       }
 
-      const rect = overCard.getBoundingClientRect();
-      const midX = rect.left + rect.width / 2;
-      const midY = rect.top + rect.height / 2;
+      const layout = cards.map(el => {
+        const r = el.getBoundingClientRect();
+        return { el, r, cx: r.left + r.width/2, cy: r.top + r.height/2 };
+      }).sort((a,b) => (a.r.top - b.r.top) || (a.r.left - b.r.left));
 
-      // 그리드에서 자연스럽게 느껴지도록:
-      // - 세로로 절반 아래면 after
-      // - 거의 중앙이면 가로 위치로 after/before 판정
-      const nearMidY = Math.abs(clientY - midY) < rect.height * 0.25;
-      const after = (clientY > midY) || (nearMidY && clientX > midX);
+      const heights = layout.map(p => p.r.height).sort((a,b)=>a-b);
+      const medianH = heights[Math.floor(heights.length / 2)] || 0;
+      const rowTol = clamp(medianH * 0.35, 14, 46);
 
-      if (after) {
-        if (overCard.nextSibling !== d.placeholder) {
-          d.parent.insertBefore(d.placeholder, overCard.nextSibling);
-        }
-      } else {
-        if (overCard !== d.placeholder) {
-          d.parent.insertBefore(d.placeholder, overCard);
+      // row 그룹핑
+      const rows = [];
+      for (const it of layout){
+        const last = rows[rows.length - 1];
+        if (!last || Math.abs(it.r.top - last.top) > rowTol) {
+          rows.push({ top: it.r.top, items: [it], cy: it.cy });
+        } else {
+          last.items.push(it);
         }
       }
+      for (const row of rows){
+        row.items.sort((a,b)=>a.r.left - b.r.left);
+        row.cy = row.items.reduce((s,it)=>s+it.cy,0) / row.items.length;
+      }
+
+      // 가장 가까운 row 선택
+      let bestRow = rows[0];
+      let bestDist = Math.abs(y - rows[0].cy);
+      for (let i = 1; i < rows.length; i++){
+        const dist = Math.abs(y - rows[i].cy);
+        if (dist < bestDist) { bestDist = dist; bestRow = rows[i]; }
+      }
+
+      // row 안에서 x로 beforeEl 결정
+      let beforeEl = null;
+      for (const it of bestRow.items){
+        if (x < it.cx) { beforeEl = it.el; break; }
+      }
+
+      if (!beforeEl){
+        const lastEl = bestRow.items[bestRow.items.length - 1].el;
+        beforeEl = lastEl.nextElementSibling;
+      }
+
+      // placeholder가 beforeEl이면 그대로(이미 그 위치)
+      if (beforeEl === d.placeholder) return;
+
+      if (!beforeEl){
+        if (d.placeholder === parent.lastElementChild) return;
+        parent.appendChild(d.placeholder);
+        return;
+      }
+
+      if (d.placeholder.nextElementSibling === beforeEl) return;
+      parent.insertBefore(d.placeholder, beforeEl);
     }
 
     function onPointerUp(e){
       const d = state.drag;
       if (!d || e.pointerId !== d.pointerId) return;
+      finishDrag(d);
+    }
 
-      // 리스너 제거
-      try{
-        d.card.removeEventListener("pointermove", onPointerMove);
-        d.card.removeEventListener("pointerup", onPointerUp);
-        d.card.removeEventListener("pointercancel", onPointerUp);
-      } catch(_) {}
+    function finishDrag(d){
+      if (!d) return;
+
+      // window 리스너 제거
+      window.removeEventListener("pointermove", onPointerMove, true);
+      window.removeEventListener("pointerup", onPointerUp, true);
+      window.removeEventListener("pointercancel", onPointerUp, true);
+      window.removeEventListener("blur", onWindowBlur, true);
+
+      if (d.raf) { cancelAnimationFrame(d.raf); d.raf = 0; }
+
+      // capture 해제 시도
+      try{ d.card.releasePointerCapture(d.pointerId); } catch(_) {}
 
       if (d.active) {
         // placeholder 위치에 카드 복귀
@@ -794,7 +902,6 @@
 
         document.body.classList.remove("is-sorting");
 
-        // 상태 배열을 DOM 순서로 동기화
         refreshIndicesAndStateFromDom();
       }
 
@@ -818,10 +925,10 @@
       let outName = sanitizeFileName((els.outName.value || "images.pdf").trim());
       if (!outName.toLowerCase().endsWith(".pdf")) outName += ".pdf";
 
-      const preset = els.pagePreset.value; // a4p | a4l | orig
-      const fitMode = els.fitMode.value;   // contain | cover
+      const preset = els.pagePreset.value;
+      const fitMode = els.fitMode.value;
       const marginPtRaw = mmToPt(Math.max(0, parseFloat(els.marginMm.value || "0")));
-      const encodeMode = els.imgEncode.value; // auto | jpeg | png
+      const encodeMode = els.imgEncode.value;
       const jpgQ = clamp(parseFloat(els.jpegQuality.value || "0.85"), 0.1, 1);
 
       setBusy(true);
@@ -839,13 +946,11 @@
           ? await pdfDoc.embedPng(bytes)
           : await pdfDoc.embedJpg(bytes);
 
-        // 이미지 “픽셀” → PDF pt(96dpi 가정)
         const imgW = embedded.width  * PX_TO_PT;
         const imgH = embedded.height * PX_TO_PT;
 
         let pageW, pageH;
         if (preset === "orig") {
-          // 원본 모드: 이미지 크기에 여백까지 포함
           pageW = imgW + marginPtRaw * 2;
           pageH = imgH + marginPtRaw * 2;
         } else if (preset === "a4l") {
@@ -854,7 +959,6 @@
           pageW = A4_P.w; pageH = A4_P.h;
         }
 
-        // 여백이 페이지를 잡아먹지 않게 안전 처리
         const marginPt = Math.min(marginPtRaw, Math.max(0, (Math.min(pageW, pageH) / 2) - 1));
         const availW = pageW - marginPt * 2;
         const availH = pageH - marginPt * 2;
@@ -865,16 +969,15 @@
 
         const drawW = imgW * scale;
         const drawH = imgH * scale;
-        const x = (pageW - drawW) / 2;
-        const y = (pageH - drawH) / 2;
+        const px = (pageW - drawW) / 2;
+        const py = (pageH - drawH) / 2;
 
         const page = pdfDoc.addPage([pageW, pageH]);
-        page.drawImage(embedded, { x, y, width: drawW, height: drawH });
+        page.drawImage(embedded, { x: px, y: py, width: drawW, height: drawH });
       }
 
       setProgress(98, "PDF 저장 중…");
       const pdfBytes = await pdfDoc.save();
-
       downloadBytes(pdfBytes, outName);
 
       setProgress(100, "완료! 다운로드가 시작됩니다.");
@@ -884,7 +987,6 @@
     }
 
     async function getPdfImageBytes(item, encodeMode, jpgQ){
-      // pdf-lib은 embedPng / embedJpg를 제공하므로, 최종 포맷은 png 또는 jpg로 맞춘다. :contentReference[oaicite:3]{index=3}
       const type = (item.file.type || "").toLowerCase();
 
       if (encodeMode === "auto") {
@@ -894,7 +996,6 @@
         if (type === "image/png") {
           return { format: "png", bytes: new Uint8Array(await item.file.arrayBuffer()) };
         }
-        // webp/gif 등: 호환을 위해 jpg 변환
         return await convertViaCanvas(item.url, "image/jpeg", jpgQ);
       }
 
@@ -902,7 +1003,6 @@
         return await convertViaCanvas(item.url, "image/jpeg", jpgQ);
       }
 
-      // png
       return await convertViaCanvas(item.url, "image/png", 1);
     }
 
@@ -917,7 +1017,6 @@
 
       const ctx = canvas.getContext("2d", { alpha: mime !== "image/jpeg" });
 
-      // JPG는 투명도 없음 → 흰 배경 깔기
       if (mime === "image/jpeg") {
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, w, h);
@@ -954,17 +1053,14 @@
       setTimeout(() => URL.revokeObjectURL(url), 1500);
     }
 
-    // -----------------------
     // 초기화
-    // -----------------------
-    els.year.textContent = String(new Date().getFullYear());
     updateUi();
     setProgress(0, "대기 중");
   })();
   </script>
 
   <script src="/static/disable-copy.js"></script>
-<script src="/static/footer.js"></script>
-<script src="/static/global-loader.js?v=1"></script>
+  <script src="/static/footer.js"></script>
+  <script src="/static/global-loader.js?v=1"></script>
 </body>
 </html>
