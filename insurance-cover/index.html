@@ -1,0 +1,977 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>사회보험료 고지내역 집계기</title>
+
+  <!-- 공용 스타일 -->
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- (선택) 사이트 공통 스크립트: 운영 환경에 맞춰 경로 조정 -->
+  <!-- <script src="global-loader.js" defer></script> -->
+  <!-- <script src="disable-copy.js" defer></script> -->
+  <!-- <script src="footer.js" defer></script> -->
+
+  <!-- SheetJS (xlsx) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <style>
+    /* 이 페이지 전용 최소 보조 스타일 (공용 style.css 우선) */
+    .badge { display:inline-block; padding:.15em .6em; border:1px solid #d4d4d8; border-radius:999px; background:#fafafa; font-size:.95rem; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .log {
+      white-space: pre-wrap;
+      background: #0b1020;
+      color: #d7e1ff;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 0.95rem;
+      overflow: auto;
+      max-height: 260px;
+    }
+    .warn { color:#b45309; font-weight:700; }
+    .ok { color:#065f46; font-weight:700; }
+    .kpi {
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .kpi .card { margin:0; }
+    .kpi .big { font-size:1.35rem; font-weight:800; color:#111; }
+    .kpi .small { font-size:.92rem; color:#666; margin-top:4px; }
+  </style>
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="shell">
+      <h1>사회보험료 고지내역 집계기</h1>
+      <p class="subtitle">
+        고지내역 파일들을 업로드하면 <span class="badge">엑셀 3시트</span>로 자동 집계합니다.
+      </p>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="section">
+      <h2>1) 파일 업로드</h2>
+      <p class="sub">
+        매칭 키는 기본적으로 <span class="mono">이름 + 생년월일(6자리)</span> 입니다.
+        (CSV의 주민번호 앞 6자리 ↔ xlsx의 생년월일 yymmdd 변환)
+      </p>
+
+      <div class="grid two">
+        <div class="card">
+          <h3 class="local-h3 local-tight">국민연금 CSV</h3>
+          <input type="file" id="fPensionCsv" accept=".csv" />
+          <p class="muted">예: nhisYeonkumList.csv</p>
+        </div>
+
+        <div class="card">
+          <h3 class="local-h3 local-tight">건강보험 CSV</h3>
+          <input type="file" id="fHealthCsv" accept=".csv" />
+          <p class="muted">예: nhisGungangList.csv (고지보험료 + 고지보험료.1 합산)</p>
+        </div>
+
+        <div class="card">
+          <h3 class="local-h3 local-tight">고용보험(근로자) xlsx</h3>
+          <input type="file" id="fGoyongWorker" accept=".xlsx,.xls" />
+          <p class="muted">예: 당월보험료부과내역조회(고용)_..._근로자.xlsx</p>
+        </div>
+
+        <div class="card">
+          <h3 class="local-h3 local-tight">산재보험(근로자) xlsx</h3>
+          <input type="file" id="fSanjaeWorker" accept=".xlsx,.xls" />
+          <p class="muted">예: 당월보험료부과내역조회(산재)_..._근로자.xlsx</p>
+        </div>
+
+        <div class="card">
+          <h3 class="local-h3 local-tight">고용보험(특수) xlsx</h3>
+          <input type="file" id="fGoyongSpecial" accept=".xlsx,.xls" />
+          <p class="muted">예: 당월보험료부과내역조회(고용)_..._특수고용.xlsx</p>
+        </div>
+
+        <div class="card">
+          <h3 class="local-h3 local-tight">산재보험(특수) xlsx</h3>
+          <input type="file" id="fSanjaeSpecial" accept=".xlsx,.xls" />
+          <p class="muted">예: 당월보험료부과내역조회(산재)_..._특수고용.xlsx</p>
+        </div>
+
+        <div class="card">
+          <h3 class="local-h3 local-tight">공무직 인사기록 xlsx</h3>
+          <input type="file" id="fHrXlsx" accept=".xlsx,.xls" />
+          <p class="muted">예: 최종-인사기록.xlsx (시트2 필터링에 사용)</p>
+        </div>
+      </div>
+
+      <hr />
+
+      <h2>2) 해석 옵션 (자동 감지 기본)</h2>
+      <div class="grid two">
+        <div class="card">
+          <h3 class="local-h3 local-tight">국민연금 결정보험료 해석</h3>
+          <select id="optPensionMode">
+            <option value="auto" selected>자동(권장)</option>
+            <option value="personal">파일 값 = 개인부담(기관=개인)</option>
+            <option value="total">파일 값 = 총액(개인+기관 → 1/2 분리)</option>
+          </select>
+          <p class="muted">자동은 (결정보험료 / 월평균보수) 비율로 추정합니다.</p>
+        </div>
+
+        <div class="card">
+          <h3 class="local-h3 local-tight">건강보험 고지보험료 해석</h3>
+          <select id="optHealthMode">
+            <option value="auto" selected>자동(권장)</option>
+            <option value="personal">파일 값 = 개인부담(기관=개인)</option>
+            <option value="total">파일 값 = 총액(개인+기관 → 1/2 분리)</option>
+          </select>
+          <p class="muted">고지보험료 + 고지보험료.1(장기요양)을 합산해서 사용합니다.</p>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:14px;">
+        <button class="btn primary pastel-mint" id="btnRun">집계 실행</button>
+        <button class="btn pastel-blue" id="btnDownload" disabled>엑셀 다운로드</button>
+      </div>
+
+      <p class="note muted" id="hint">
+        집계 후 “엑셀 다운로드”가 활성화됩니다.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2>3) 결과 요약</h2>
+      <div class="kpi">
+        <div class="card">
+          <div class="big" id="kpiSheet1">-</div>
+          <div class="small">시트1: 일반 종합 인원</div>
+        </div>
+        <div class="card">
+          <div class="big" id="kpiSheet2">-</div>
+          <div class="small">시트2: 공무직 산재(산재만) 인원</div>
+        </div>
+        <div class="card">
+          <div class="big" id="kpiSheet3">-</div>
+          <div class="small">시트3: 특수고용 인원</div>
+        </div>
+        <div class="card">
+          <div class="big" id="kpiWarnings">-</div>
+          <div class="small">경고(매칭 누락/형식 등)</div>
+        </div>
+      </div>
+
+      <h3 style="margin-top:18px;">로그</h3>
+      <div class="log" id="log"></div>
+    </section>
+
+    <section class="section">
+      <h2>4) 미리보기 (상위 30행)</h2>
+
+      <h3>시트1: 일반 종합</h3>
+      <div class="table-wrap" id="preview1"></div>
+
+      <h3>시트2: 공무직 산재보험료</h3>
+      <div class="table-wrap" id="preview2"></div>
+
+      <h3>시트3: 특수고용</h3>
+      <div class="table-wrap" id="preview3"></div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      // ---------- DOM ----------
+      const $ = (id) => document.getElementById(id);
+      const el = {
+        fPensionCsv: $("fPensionCsv"),
+        fHealthCsv: $("fHealthCsv"),
+        fGoyongWorker: $("fGoyongWorker"),
+        fSanjaeWorker: $("fSanjaeWorker"),
+        fGoyongSpecial: $("fGoyongSpecial"),
+        fSanjaeSpecial: $("fSanjaeSpecial"),
+        fHrXlsx: $("fHrXlsx"),
+
+        optPensionMode: $("optPensionMode"),
+        optHealthMode: $("optHealthMode"),
+
+        btnRun: $("btnRun"),
+        btnDownload: $("btnDownload"),
+
+        log: $("log"),
+        hint: $("hint"),
+
+        kpiSheet1: $("kpiSheet1"),
+        kpiSheet2: $("kpiSheet2"),
+        kpiSheet3: $("kpiSheet3"),
+        kpiWarnings: $("kpiWarnings"),
+
+        preview1: $("preview1"),
+        preview2: $("preview2"),
+        preview3: $("preview3"),
+      };
+
+      // ---------- state ----------
+      let lastWorkbookBlob = null;
+      let lastFilename = null;
+
+      function log(line) {
+        el.log.textContent += line + "\n";
+        el.log.scrollTop = el.log.scrollHeight;
+      }
+      function clearLog() { el.log.textContent = ""; }
+
+      function normalizeName(name) {
+        return String(name ?? "").replace(/\s+/g, "").trim();
+      }
+
+      function birth6FromBirthCell(v) {
+        if (v == null) return "";
+        // date object serialized by SheetJS: may be Date or string
+        if (v instanceof Date && !isNaN(v.getTime())) {
+          const yy = String(v.getFullYear()).slice(-2);
+          const mm = String(v.getMonth() + 1).padStart(2, "0");
+          const dd = String(v.getDate()).padStart(2, "0");
+          return yy + mm + dd;
+        }
+        const s = String(v).trim();
+        // "63-07-01"
+        if (/^\d{2}-\d{2}-\d{2}$/.test(s)) return s.replaceAll("-", "");
+        // "2025-03-01" 같은 형식이면 앞 2자리 연도 제외
+        if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(2, 4) + s.slice(5, 7) + s.slice(8, 10);
+        // "630701..." 형태면 앞6
+        if (/^\d{6}/.test(s)) return s.slice(0, 6);
+        return s;
+      }
+
+      function birth6FromJumin(v) {
+        if (v == null) return "";
+        const s = String(v).trim();
+        const m = s.match(/^(\d{6})/);
+        return m ? m[1] : "";
+      }
+
+      function personKey(name, birth6) {
+        return normalizeName(name) + "|" + String(birth6 ?? "").trim();
+      }
+
+      function parseMoney(v) {
+        if (v == null) return 0;
+        if (typeof v === "number" && isFinite(v)) return Math.round(v);
+        const s = String(v).trim();
+        if (!s || s.toLowerCase() === "nan") return 0;
+        const cleaned = s.replace(/,/g, "");
+        const num = Number(cleaned);
+        return isFinite(num) ? Math.round(num) : 0;
+      }
+
+      function safeTextDecoder(label) {
+        try { return new TextDecoder(label); } catch (_) { return null; }
+      }
+
+      async function readFileAsArrayBuffer(file) {
+        return await new Promise((resolve, reject) => {
+          const fr = new FileReader();
+          fr.onerror = () => reject(fr.error);
+          fr.onload = () => resolve(fr.result);
+          fr.readAsArrayBuffer(file);
+        });
+      }
+
+      async function readFileAsTextEuckr(file) {
+        const ab = await readFileAsArrayBuffer(file);
+        const u8 = new Uint8Array(ab);
+        // 대부분 CP949는 브라우저에서 euc-kr로 디코딩 가능
+        const decEucKr = safeTextDecoder("euc-kr");
+        const decUtf8 = safeTextDecoder("utf-8");
+        if (decEucKr) return decEucKr.decode(u8);
+        if (decUtf8) return decUtf8.decode(u8);
+        // 최후의 수단
+        return String.fromCharCode(...u8);
+      }
+
+      function sheetToRowsAOA(sheet) {
+        return XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: null });
+      }
+
+      // ---------- parsers ----------
+      async function parseCsvToObjects(file) {
+        const text = await readFileAsTextEuckr(file);
+        // SheetJS로 CSV 파싱 (따옴표/콤마 처리 포함)
+        const wb = XLSX.read(text, { type: "string" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const aoa = sheetToRowsAOA(ws);
+        if (!aoa || aoa.length < 2) return [];
+
+        const headers = aoa[0].map(h => String(h ?? "").trim());
+        const out = [];
+        for (let i = 1; i < aoa.length; i++) {
+          const row = aoa[i];
+          if (!row || row.every(v => v == null || String(v).trim() === "")) continue;
+          const obj = {};
+          for (let c = 0; c < headers.length; c++) {
+            obj[headers[c] || `COL${c}`] = row[c];
+          }
+          out.push(obj);
+        }
+        return out;
+      }
+
+      async function parseXlsxFirstSheetAOA(file) {
+        const ab = await readFileAsArrayBuffer(file);
+        const wb = XLSX.read(new Uint8Array(ab), { type: "array", cellDates: true });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        return sheetToRowsAOA(ws);
+      }
+
+      function findColIndexTwoHeader(h1, h2, groupLike, subLike) {
+        const gl = String(groupLike).toLowerCase();
+        const sl = String(subLike).toLowerCase();
+
+        let lastGroup = "";
+        for (let c = 0; c < Math.max(h1.length, h2.length); c++) {
+          const gRaw = h1[c];
+          if (gRaw != null && String(gRaw).trim() !== "") lastGroup = String(gRaw).replace(/\s+/g, "").trim();
+          const sRaw = h2[c];
+          const g = lastGroup.toLowerCase();
+          const s = String(sRaw ?? "").replace(/\s+/g, "").toLowerCase();
+
+          if (g.includes(gl) && s.includes(sl)) return c;
+        }
+        return -1;
+      }
+
+      function findColIndexOneHeader(h, like) {
+        const lk = String(like).toLowerCase();
+        for (let c = 0; c < h.length; c++) {
+          const v = String(h[c] ?? "").replace(/\s+/g, "").toLowerCase();
+          if (v.includes(lk)) return c;
+        }
+        return -1;
+      }
+
+      async function parseKcomwelGoyong(file) {
+        const aoa = await parseXlsxFirstSheetAOA(file);
+        if (!aoa || aoa.length < 4) return [];
+
+        const h1 = aoa[0] || [];
+        const h2 = aoa[1] || [];
+
+        const idxType = findColIndexOneHeader(h1, "근로자구분");
+        const idxName = findColIndexOneHeader(h1, "근로자명");
+        const idxBirth = findColIndexOneHeader(h1, "생년월일");
+        const idxWage = findColIndexOneHeader(h1, "월평균보수");
+
+        const idxEmp = findColIndexTwoHeader(h1, h2, "보험료합계", "근로자실업");
+        const idxEr1 = findColIndexTwoHeader(h1, h2, "보험료합계", "사업주실업");
+        const idxEr2 = findColIndexTwoHeader(h1, h2, "보험료합계", "사업주고안");
+
+        const rows = [];
+        for (let r = 2; r < aoa.length; r++) {
+          const row = aoa[r];
+          if (!row) continue;
+
+          const name = row[idxName];
+          if (name == null || String(name).trim() === "") continue;
+
+          const type = row[idxType];
+          const birth6 = birth6FromBirthCell(row[idxBirth]);
+          const wage = parseMoney(row[idxWage]);
+
+          rows.push({
+            type: String(type ?? "").trim(),
+            name: String(name ?? "").trim(),
+            birth6,
+            wage,
+            goyEmp: parseMoney(row[idxEmp]),
+            goyEr1: parseMoney(row[idxEr1]),
+            goyEr2: parseMoney(row[idxEr2]),
+          });
+        }
+        return rows;
+      }
+
+      async function parseKcomwelSanjae(file) {
+        const aoa = await parseXlsxFirstSheetAOA(file);
+        if (!aoa || aoa.length < 3) return [];
+
+        const h = aoa[0] || [];
+        const idxType = findColIndexOneHeader(h, "근로자구분");
+        const idxName = findColIndexOneHeader(h, "근로자명");
+        const idxBirth = findColIndexOneHeader(h, "생년월일");
+        const idxWage = findColIndexOneHeader(h, "월평균보수");
+        const idxPremium = findColIndexOneHeader(h, "보험료합계");
+
+        const rows = [];
+        for (let r = 1; r < aoa.length; r++) {
+          const row = aoa[r];
+          if (!row) continue;
+
+          const name = row[idxName];
+          if (name == null || String(name).trim() === "") continue;
+
+          const type = row[idxType];
+          const birth6 = birth6FromBirthCell(row[idxBirth]);
+          const wage = parseMoney(row[idxWage]);
+
+          rows.push({
+            type: String(type ?? "").trim(),
+            name: String(name ?? "").trim(),
+            birth6,
+            wage,
+            sanjae: parseMoney(row[idxPremium]),
+          });
+        }
+        return rows;
+      }
+
+      async function parseHr(file) {
+        const aoa = await parseXlsxFirstSheetAOA(file);
+        if (!aoa || aoa.length < 2) return [];
+
+        const headers = (aoa[0] || []).map(v => String(v ?? "").trim());
+        const idxName = headers.findIndex(h => h.includes("성명"));
+        const idxJumin = headers.findIndex(h => h.includes("주민번호"));
+        const idxJob = headers.findIndex(h => h.includes("직종"));
+
+        const out = [];
+        for (let r = 1; r < aoa.length; r++) {
+          const row = aoa[r];
+          if (!row) continue;
+          const name = row[idxName];
+          if (name == null || String(name).trim() === "") continue;
+          const jumin = row[idxJumin];
+          const birth6 = birth6FromJumin(jumin);
+          const job = row[idxJob];
+
+          out.push({
+            name: String(name ?? "").trim(),
+            birth6,
+            job: String(job ?? "").trim(),
+          });
+        }
+        return out;
+      }
+
+      // ---------- business rules ----------
+      function normalizeWorkerKind(s) {
+        const t = String(s ?? "").replace(/\s+/g, "");
+        if (t.includes("일반")) return "일반";
+        if (t.includes("특수")) return "특수";
+        // 산재 특수고용 파일에는 "산재노무제공자" 같은 값이 오기도 함
+        if (t.includes("노무") || t.includes("제공자")) return "특수";
+        return t || "미분류";
+      }
+
+      function decideSplitMode(mode, amount, wage, thresholdRatio) {
+        // returns "total" or "personal"
+        if (!amount) return "personal"; // 0이면 뭐든 상관없음
+        if (mode === "total") return "total";
+        if (mode === "personal") return "personal";
+        // auto
+        if (wage && wage > 0) {
+          const ratio = amount / wage;
+          return ratio > thresholdRatio ? "total" : "personal";
+        }
+        // wage 없으면 보수적으로 "total"로(국민연금 쪽은 보통 총액 파일이 섞여 들어옴)
+        return "total";
+      }
+
+      function splitHalf(amount) {
+        const a = parseMoney(amount);
+        const left = Math.floor(a / 2);
+        const right = a - left;
+        return [left, right];
+      }
+
+      // ---------- rendering ----------
+      function renderPreview(container, headers, rows, limit = 30) {
+        const safe = rows.slice(0, limit);
+        const tbl = document.createElement("table");
+        tbl.className = "sheetlike";
+        const thead = document.createElement("thead");
+        const trh = document.createElement("tr");
+        headers.forEach(h => {
+          const th = document.createElement("th");
+          th.textContent = h;
+          trh.appendChild(th);
+        });
+        thead.appendChild(trh);
+        tbl.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
+        safe.forEach(r => {
+          const tr = document.createElement("tr");
+          r.forEach((v, idx) => {
+            const td = document.createElement("td");
+            td.textContent = (v == null ? "" : String(v));
+            // 숫자 느낌이면 우측 정렬(공용 css의 .numeric를 써도 됨)
+            if (typeof v === "number") td.className = "numeric";
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+        tbl.appendChild(tbody);
+
+        container.innerHTML = "";
+        container.appendChild(tbl);
+
+        const note = document.createElement("p");
+        note.className = "muted";
+        note.textContent = `총 ${rows.length}행 중 ${safe.length}행 미리보기`;
+        container.appendChild(note);
+      }
+
+      // ---------- excel ----------
+      function applyNumberFormats(ws, headerRowIdx = 0) {
+        const range = XLSX.utils.decode_range(ws["!ref"]);
+        for (let R = range.s.r; R <= range.e.r; R++) {
+          for (let C = range.s.c; C <= range.e.c; C++) {
+            const addr = XLSX.utils.encode_cell({ r: R, c: C });
+            const cell = ws[addr];
+            if (!cell) continue;
+            if (R === headerRowIdx) continue;
+            if (cell.t === "n") cell.z = "#,##0";
+          }
+        }
+      }
+
+      function setColWidths(ws, widths) {
+        ws["!cols"] = widths.map(w => ({ wch: w }));
+      }
+
+      function aoaToSheet(headers, rows) {
+        const aoa = [headers, ...rows];
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        applyNumberFormats(ws, 0);
+        return ws;
+      }
+
+      function buildWorkbook(s1, s2, s3) {
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, s1, "일반_종합");
+        XLSX.utils.book_append_sheet(wb, s2, "공무직_산재");
+        XLSX.utils.book_append_sheet(wb, s3, "특수_방과후");
+        return wb;
+      }
+
+      function workbookToBlob(wb) {
+        const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+        return new Blob([wbout], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      }
+
+      function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+      }
+
+      // ---------- main ----------
+      el.btnRun.addEventListener("click", async () => {
+        clearLog();
+        el.btnDownload.disabled = true;
+        lastWorkbookBlob = null;
+        lastFilename = null;
+
+        const warnings = [];
+
+        function reqFile(inputEl, label) {
+          const f = inputEl.files && inputEl.files[0];
+          if (!f) warnings.push(`누락: ${label}`);
+          return f || null;
+        }
+
+        const fPension = reqFile(el.fPensionCsv, "국민연금 CSV");
+        const fHealth = reqFile(el.fHealthCsv, "건강보험 CSV");
+        const fGoyW = reqFile(el.fGoyongWorker, "고용보험(근로자) xlsx");
+        const fSanW = reqFile(el.fSanjaeWorker, "산재보험(근로자) xlsx");
+        const fGoyS = reqFile(el.fGoyongSpecial, "고용보험(특수) xlsx");
+        const fSanS = reqFile(el.fSanjaeSpecial, "산재보험(특수) xlsx");
+        const fHr = reqFile(el.fHrXlsx, "공무직 인사기록 xlsx");
+
+        if (warnings.length) {
+          log("⚠️ 필수 파일 누락이 있습니다:");
+          warnings.forEach(w => log(" - " + w));
+          log("\n누락 파일을 업로드한 뒤 다시 실행하세요.");
+          el.kpiWarnings.textContent = String(warnings.length);
+          return;
+        }
+
+        log("📥 파일 읽는 중...");
+
+        // Parse all
+        let pensionRows = [];
+        let healthRows = [];
+        let goyWorker = [];
+        let sanWorker = [];
+        let goySpecial = [];
+        let sanSpecial = [];
+        let hrRows = [];
+
+        try {
+          pensionRows = await parseCsvToObjects(fPension);
+          log(`- 국민연금 CSV: ${pensionRows.length}행`);
+        } catch (e) {
+          log(`❌ 국민연금 CSV 파싱 실패: ${e}`);
+          return;
+        }
+
+        try {
+          healthRows = await parseCsvToObjects(fHealth);
+          log(`- 건강보험 CSV: ${healthRows.length}행`);
+        } catch (e) {
+          log(`❌ 건강보험 CSV 파싱 실패: ${e}`);
+          return;
+        }
+
+        try {
+          goyWorker = await parseKcomwelGoyong(fGoyW);
+          log(`- 고용보험(근로자): ${goyWorker.length}행`);
+        } catch (e) {
+          log(`❌ 고용보험(근로자) xlsx 파싱 실패: ${e}`);
+          return;
+        }
+
+        try {
+          sanWorker = await parseKcomwelSanjae(fSanW);
+          log(`- 산재보험(근로자): ${sanWorker.length}행`);
+        } catch (e) {
+          log(`❌ 산재보험(근로자) xlsx 파싱 실패: ${e}`);
+          return;
+        }
+
+        try {
+          goySpecial = await parseKcomwelGoyong(fGoyS);
+          log(`- 고용보험(특수): ${goySpecial.length}행`);
+        } catch (e) {
+          log(`❌ 고용보험(특수) xlsx 파싱 실패: ${e}`);
+          return;
+        }
+
+        try {
+          sanSpecial = await parseKcomwelSanjae(fSanS);
+          log(`- 산재보험(특수): ${sanSpecial.length}행`);
+        } catch (e) {
+          log(`❌ 산재보험(특수) xlsx 파싱 실패: ${e}`);
+          return;
+        }
+
+        try {
+          hrRows = await parseHr(fHr);
+          log(`- 공무직 인사기록: ${hrRows.length}행`);
+        } catch (e) {
+          log(`❌ 공무직 인사기록 xlsx 파싱 실패: ${e}`);
+          return;
+        }
+
+        log("\n🧠 매칭/집계 중...");
+
+        // Build maps from CSV
+        // 국민연금: 가입자명, 주민번호, 결정보험료
+        const pensionMap = new Map();
+        for (const r of pensionRows) {
+          const name = r["가입자명"] ?? r["성명"] ?? r["이름"] ?? "";
+          const birth6 = birth6FromJumin(r["주민번호"] ?? r["주민등록번호"] ?? "");
+          const amt = parseMoney(r["결정보험료"] ?? r["결정보험료"] ?? r["보험료"] ?? 0);
+          if (!normalizeName(name) || !birth6) continue;
+          pensionMap.set(personKey(name, birth6), amt);
+        }
+
+        // 건강보험: 성명, 주민번호, 고지보험료, 고지보험료.1
+        const healthMap = new Map();
+        for (const r of healthRows) {
+          const name = r["성명"] ?? r["가입자명"] ?? r["이름"] ?? "";
+          const birth6 = birth6FromJumin(r["주민번호"] ?? r["주민등록번호"] ?? "");
+          const a = parseMoney(r["고지보험료"] ?? 0);
+          const b = parseMoney(r["고지보험료.1"] ?? 0);
+          const sum = a + b;
+          if (!normalizeName(name) || !birth6) continue;
+          healthMap.set(personKey(name, birth6), sum);
+        }
+
+        // HR map
+        const hrMap = new Map();
+        for (const r of hrRows) {
+          if (!normalizeName(r.name) || !r.birth6) continue;
+          hrMap.set(personKey(r.name, r.birth6), r);
+        }
+
+        // Aggregate general (sheet1 base)
+        const people = new Map(); // key -> agg object
+
+        function ensureAgg(name, birth6) {
+          const k = personKey(name, birth6);
+          if (!people.has(k)) {
+            people.set(k, {
+              name: String(name ?? "").trim(),
+              birth6: String(birth6 ?? "").trim(),
+              wage: 0,
+
+              pensionRaw: 0,
+              healthRaw: 0,
+
+              pensionPersonal: 0,
+              pensionOrg: 0,
+              healthPersonal: 0,
+              healthOrg: 0,
+
+              goyPersonal: 0,
+              goyOrg1: 0,
+              goyOrg2: 0,
+
+              sanjaeOrg: 0,
+
+              kind: "미분류",
+            });
+          }
+          return people.get(k);
+        }
+
+        // ingest goy/sanjae (근로자)
+        for (const r of goyWorker) {
+          const kind = normalizeWorkerKind(r.type);
+          if (kind !== "일반") continue;
+          const a = ensureAgg(r.name, r.birth6);
+          a.kind = "일반";
+          a.wage = Math.max(a.wage, r.wage || 0);
+          a.goyPersonal += r.goyEmp;
+          a.goyOrg1 += r.goyEr1;
+          a.goyOrg2 += r.goyEr2;
+        }
+
+        for (const r of sanWorker) {
+          const kind = normalizeWorkerKind(r.type);
+          if (kind !== "일반") continue;
+          const a = ensureAgg(r.name, r.birth6);
+          a.kind = "일반";
+          a.wage = Math.max(a.wage, r.wage || 0);
+          a.sanjaeOrg += r.sanjae;
+        }
+
+        // attach pension/health to general
+        let missingPension = 0, missingHealth = 0;
+        for (const a of people.values()) {
+          const k = personKey(a.name, a.birth6);
+          if (pensionMap.has(k)) a.pensionRaw = pensionMap.get(k);
+          else missingPension++;
+
+          if (healthMap.has(k)) a.healthRaw = healthMap.get(k);
+          else missingHealth++;
+        }
+
+        log(`- 시트1 후보(일반) 매칭 인원: ${people.size}명`);
+        log(`- 국민연금 누락(시트1 기준): ${missingPension}명`);
+        log(`- 건강보험 누락(시트1 기준): ${missingHealth}명`);
+
+        // split pension/health into personal/org
+        const pensionMode = el.optPensionMode.value;
+        const healthMode = el.optHealthMode.value;
+
+        // thresholds: 국민연금 총액(9%) 판단은 >0.06이면 총액으로, 건강보험은 (건강+요양) 총액 판단도 >0.06이면 총액으로
+        for (const a of people.values()) {
+          const pAmt = a.pensionRaw;
+          const hAmt = a.healthRaw;
+
+          // 국민연금
+          const pSplit = decideSplitMode(pensionMode, pAmt, a.wage, 0.06);
+          if (pAmt) {
+            if (pSplit === "total") {
+              const [pp, po] = splitHalf(pAmt);
+              a.pensionPersonal = pp;
+              a.pensionOrg = po;
+            } else {
+              a.pensionPersonal = parseMoney(pAmt);
+              a.pensionOrg = parseMoney(pAmt);
+            }
+          }
+
+          // 건강(건강+요양 합산)
+          const hSplit = decideSplitMode(healthMode, hAmt, a.wage, 0.06);
+          if (hAmt) {
+            if (hSplit === "total") {
+              const [hp, ho] = splitHalf(hAmt);
+              a.healthPersonal = hp;
+              a.healthOrg = ho;
+            } else {
+              a.healthPersonal = parseMoney(hAmt);
+              a.healthOrg = parseMoney(hAmt);
+            }
+          }
+        }
+
+        // Build Sheet1 rows
+        const sheet1Headers = [
+          "연번", "근로자 성명",
+          "국민연금(개인)", "국민연금(기관)",
+          "건강보험료(개인)", "건강보험료(기관)",
+          "고용보험료(개인)", "고용보험료(기관1)", "고용보험료(기관2)",
+          "산재보험료(기관)",
+          "개인부담금 합계", "기관부담금 합계"
+        ];
+
+        const sheet1List = Array.from(people.values())
+          .sort((a, b) => (a.name || "").localeCompare(b.name || "", "ko"));
+
+        const sheet1Rows = sheet1List.map((a, i) => {
+          const personalSum = a.pensionPersonal + a.healthPersonal + a.goyPersonal;
+          const orgSum = a.pensionOrg + a.healthOrg + a.goyOrg1 + a.goyOrg2 + a.sanjaeOrg;
+          return [
+            i + 1,
+            a.name,
+            a.pensionPersonal, a.pensionOrg,
+            a.healthPersonal, a.healthOrg,
+            a.goyPersonal, a.goyOrg1, a.goyOrg2,
+            a.sanjaeOrg,
+            personalSum,
+            orgSum
+          ];
+        });
+
+        // Build Sheet2: 일반 중 산재만(고용 0) + HR에 존재
+        const sheet2Headers = ["연번", "공무직 성명", "직종", "산재보험료(기관)", "기관부담금 합계"];
+        const sheet2Candidates = sheet1List.filter(a => {
+          const goyTotal = a.goyPersonal + a.goyOrg1 + a.goyOrg2;
+          return goyTotal === 0 && a.sanjaeOrg > 0;
+        });
+
+        const sheet2Filtered = [];
+        let missingInHr = 0;
+        for (const a of sheet2Candidates) {
+          const k = personKey(a.name, a.birth6);
+          const hr = hrMap.get(k);
+          if (!hr) { missingInHr++; continue; }
+          sheet2Filtered.push({
+            name: a.name,
+            job: hr.job || "",
+            sanjae: a.sanjaeOrg
+          });
+        }
+
+        const sheet2Rows = sheet2Filtered
+          .sort((a, b) => (a.name || "").localeCompare(b.name || "", "ko"))
+          .map((r, i) => [i + 1, r.name, r.job, r.sanjae, r.sanjae]);
+
+        log(`- 시트2 후보(산재만): ${sheet2Candidates.length}명`);
+        log(`- 시트2 HR 미존재로 제외: ${missingInHr}명`);
+        log(`- 시트2 최종(공무직 산재): ${sheet2Rows.length}명`);
+
+        // Build Sheet3: 특수고용(특수 파일 기반)
+        const special = new Map(); // key -> agg
+
+        function ensureSpecial(name, birth6) {
+          const k = personKey(name, birth6);
+          if (!special.has(k)) {
+            special.set(k, {
+              name: String(name ?? "").trim(),
+              birth6: String(birth6 ?? "").trim(),
+              goyPersonal: 0,
+              goyOrg1: 0,
+              goyOrg2: 0,
+              sanjaeOrg: 0,
+            });
+          }
+          return special.get(k);
+        }
+
+        for (const r of goySpecial) {
+          const kind = normalizeWorkerKind(r.type);
+          // 특수 파일이지만 혹시 섞일 수 있어 필터
+          if (kind !== "특수") continue;
+          const a = ensureSpecial(r.name, r.birth6);
+          a.goyPersonal += r.goyEmp;
+          a.goyOrg1 += r.goyEr1;
+          a.goyOrg2 += r.goyEr2;
+        }
+
+        for (const r of sanSpecial) {
+          // 산재 특수 파일은 "산재노무제공자..." 등일 수 있어 그냥 모두 포함(이 파일 자체가 특수용으로 업로드됨)
+          const a = ensureSpecial(r.name, r.birth6);
+          a.sanjaeOrg += r.sanjae;
+        }
+
+        const sheet3Headers = [
+          "연번", "특수고용근로자 성명",
+          "고용보험료(개인)", "고용보험료(기관1)", "고용보험료(기관2)",
+          "산재보험료(기관)",
+          "개인부담금 합계", "기관부담금 합계"
+        ];
+
+        const sheet3List = Array.from(special.values())
+          .sort((a, b) => (a.name || "").localeCompare(b.name || "", "ko"));
+
+        const sheet3Rows = sheet3List.map((a, i) => {
+          const personalSum = a.goyPersonal;
+          const orgSum = a.goyOrg1 + a.goyOrg2 + a.sanjaeOrg;
+          return [
+            i + 1,
+            a.name,
+            a.goyPersonal, a.goyOrg1, a.goyOrg2,
+            a.sanjaeOrg,
+            personalSum,
+            orgSum
+          ];
+        });
+
+        // ---------- previews ----------
+        renderPreview(el.preview1, sheet1Headers, sheet1Rows);
+        renderPreview(el.preview2, sheet2Headers, sheet2Rows);
+        renderPreview(el.preview3, sheet3Headers, sheet3Rows);
+
+        // ---------- workbook ----------
+        const ws1 = aoaToSheet(sheet1Headers, sheet1Rows);
+        const ws2 = aoaToSheet(sheet2Headers, sheet2Rows);
+        const ws3 = aoaToSheet(sheet3Headers, sheet3Rows);
+
+        // column widths
+        setColWidths(ws1, [6, 14, 16, 16, 16, 16, 16, 16, 16, 16, 18, 18]);
+        setColWidths(ws2, [6, 14, 18, 16, 18]);
+        setColWidths(ws3, [6, 18, 16, 16, 16, 16, 18, 18]);
+
+        const wb = buildWorkbook(ws1, ws2, ws3);
+        const blob = workbookToBlob(wb);
+
+        // filename
+        const now = new Date();
+        const y = String(now.getFullYear());
+        const m = String(now.getMonth() + 1).padStart(2, "0");
+        const d = String(now.getDate()).padStart(2, "0");
+        const filename = `사회보험료_고지내역_집계_${y}${m}${d}.xlsx`;
+
+        lastWorkbookBlob = blob;
+        lastFilename = filename;
+
+        // KPIs
+        el.kpiSheet1.textContent = String(sheet1Rows.length);
+        el.kpiSheet2.textContent = String(sheet2Rows.length);
+        el.kpiSheet3.textContent = String(sheet3Rows.length);
+
+        const warnCount = warnings.length + (missingInHr || 0);
+        el.kpiWarnings.textContent = String(warnCount);
+
+        log("\n✅ 집계 완료!");
+        log(`- 다운로드 파일명: ${filename}`);
+        log("이제 '엑셀 다운로드' 버튼을 누르면 저장됩니다.");
+
+        el.btnDownload.disabled = false;
+      });
+
+      el.btnDownload.addEventListener("click", () => {
+        if (!lastWorkbookBlob || !lastFilename) return;
+        downloadBlob(lastWorkbookBlob, lastFilename);
+      });
+    })();
+  </script>
+
+<script src="/static/disable-copy.js"></script>
+<script src="/static/footer.js"></script>
+<script src="/static/global-loader.js?v=1"></script>
+  
+
+</body>
+</html>
