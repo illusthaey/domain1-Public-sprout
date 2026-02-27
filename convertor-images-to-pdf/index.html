@@ -124,7 +124,7 @@
       color: #666;
     }
 
-    /* ✅ 드래그 정렬용 placeholder (그리드 셀 폭에 맞추기 위해 width:100%) */
+    /* 드래그 정렬용 placeholder (그리드 셀 폭에 맞추기 위해 width:100%) */
     .thumb-placeholder{
       width: 100%;
       box-sizing: border-box;
@@ -133,7 +133,7 @@
       background: #f3f4f6;
     }
 
-    /* ✅ 드래그 중 “떠다니는 카드” */
+    /* 드래그 중 “떠다니는 카드” */
     .thumb-floating{
       box-shadow: 0 16px 40px rgba(0,0,0,.18);
       border-color: rgba(0,0,0,.25);
@@ -207,6 +207,10 @@
       </div>
     </section>
 
+
+
+
+    
     <!-- 2) 미리보기/정렬 -->
     <section class="section">
       <h2>2. 이미지 순서 정렬</h2>
@@ -222,7 +226,7 @@
     <section class="section no-print">
       <h2>3. PDF 생성</h2>
       <p class="muted">
-        ·이미지가 매우 크면 PDF도 커지고, 생성 시간이 길어질 수 있습니다.
+        ·이미지 용량 너무 크면 생성시간 길어질 수 있음.
       </p>
 
       <div class="grid two">
@@ -231,15 +235,15 @@
           <select id="pagePreset">
             <option value="a4p">A4 세로</option>
             <option value="a4l">A4 가로</option>
-            <option value="orig">원본 크기(96dpi 가정)</option>
+            <option value="orig">원본 크기</option>
           </select>
         </label>
 
         <label class="field">
           <div class="label">이미지 배치</div>
           <select id="fitMode">
-            <option value="contain">페이지 안에 맞추기(여백 생김)</option>
-            <option value="cover">가득 채우기(일부 잘릴 수 있음)</option>
+            <option value="contain">페이지 안에 맞추기 (여백 생김)</option>
+            <option value="cover">가득 채우기 (일부 잘릴 수도)</option>
           </select>
         </label>
 
