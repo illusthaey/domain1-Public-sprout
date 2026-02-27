@@ -9,146 +9,96 @@
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 
   <style>
-    .msg { border:1px solid #e5e5e5; border-radius:12px; padding:10px 12px; background:#fafafa; }
-    .msg.ok { border-color:#b7eb8f; background:#f6ffed; }
-    .msg.warn { border-color:#ffd666; background:#fffbe6; }
-    .msg.err { border-color:#ffccc7; background:#fff2f0; }
-    .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:0.92rem; border:1px solid #ddd; background:#fff; }
-    .pill.ok { border-color:#b7eb8f; }
-    .pill.warn { border-color:#ffd666; }
-    .pill.err { border-color:#ffccc7; }
-    .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size:0.95rem; background:#f3f4f6; border:1px solid #e5e7eb; padding:1px 6px; border-radius:6px; }
+    .msg { border:1px solid #e5e5e5; border-radius:12px; padding:12px 14px; background:#fafafa; }
+    .msg.ok { border-color:#b6e3c6; background:#f3fbf6; }
+    .msg.err { border-color:#f5b6b6; background:#fff5f5; }
+    .msg.warn { border-color:#ffd58a; background:#fff9eb; }
+    .msg.hidden { display:none; }
 
-    details > summary { cursor:pointer; font-weight:700; color:#111; }
-    details > summary:hover { text-decoration: underline; }
-    .hidden { display:none !important; }
-
-    .table-compact th, .table-compact td { padding: 6px 8px; }
+    .table-wrap { overflow:auto; border:1px solid #eee; border-radius:12px; }
+    .sheetlike { width:100%; border-collapse:collapse; }
+    .sheetlike th, .sheetlike td { border-bottom:1px solid #eee; padding:8px 10px; font-size:14px; }
+    .sheetlike th { position:sticky; top:0; background:#f6f6f6; z-index:1; text-align:left; }
+    .sheetlike tr:hover td { background:#fcfcfc; }
+    .nowrap { white-space:nowrap; }
     .right { text-align:right; }
     .center { text-align:center; }
-    .nowrap { white-space: nowrap; }
+    .muted { color:#666; font-size:13px; }
+    .mini { font-size:12px; color:#666; }
+    .grid { display:grid; gap:10px; }
+    .grid.two { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+    .grid.three { grid-template-columns:repeat(3, minmax(0, 1fr)); }
+    .row { display:flex; align-items:center; }
+    .row.gap { gap:10px; }
+    .stack { display:flex; flex-direction:column; gap:6px; }
+    .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 12px; border:1px solid #ddd; border-radius:12px; background:#fff; cursor:pointer; font-size:14px; }
+    .btn.primary { border-color:#2f6fff; background:#2f6fff; color:#fff; }
+    .btn:disabled { opacity:0.5; cursor:not-allowed; }
+    .numeric { text-align:right; }
+    .hidden { display:none; }
 
-    .stack { display:flex; flex-direction:column; gap:10px; }
-    .mini { font-size:0.95rem; color:#555; }
+    .dropzone { border:2px dashed #d8d8d8; border-radius:14px; padding:16px; text-align:center; background:#fbfbfb; cursor:pointer; }
+    .dropzone.drag { border-color:#2f6fff; background:#f1f6ff; }
+    .dz-title { margin:0; font-weight:700; }
+    .dz-desc { margin:6px 0 0; color:#777; font-size:13px; }
 
-    .danger-line { border-left: 4px solid #ff4d4f; padding-left: 10px; }
-    .warn-line { border-left: 4px solid #faad14; padding-left: 10px; }
+    .card { border:1px solid #eee; border-radius:16px; padding:14px; background:#fff; }
+    .local-h3 { margin:0 0 8px; font-size:16px; }
+    .local-h4 { margin:12px 0 8px; font-size:15px; }
+    .table-compact th, .table-compact td { padding:6px 8px; font-size:13px; }
+    .pill { display:inline-block; padding:2px 8px; border-radius:999px; background:#f0f0f0; font-size:12px; }
+    .pill.ok { background:#eaf7ef; border:1px solid #b6e3c6; }
+    .pill.err { background:#fff0f0; border:1px solid #f5b6b6; }
+    .pill.warn { background:#fff6e6; border:1px solid #ffd58a; }
 
-    table select { min-width: 140px; }
-
-    .site-header .shell,
-    .site-header h1,
-    .site-header .subtitle { text-align:left !important; }
-
-    /* Drag & Drop */
-    .dropzone {
-      border: 2px dashed #d4d4d8;
-      border-radius: 14px;
-      padding: 14px 16px;
-      background: #fafafa;
-      cursor: pointer;
-      transition: all 0.15s ease;
-    }
-    .dropzone:hover { background:#f3f4f6; }
-    .dropzone.dragover {
-      border-color: #111;
-      background: #eef2ff;
-    }
-    .dz-title { font-weight: 700; color:#111; margin:0 0 4px; }
-    .dz-desc { margin:0; color:#555; font-size:0.95rem; }
-
-    /* =============================
-       결과표 틀고정(헤더 + 성명)
-       ============================= */
-    /* 스크롤 컨테이너(.table-wrap) 안에서 sticky 동작 */
-    #resultTable { border-collapse: separate; border-spacing: 0; }
-    #resultTable thead th {
-      position: sticky;
-      top: 0;
-      z-index: 20;
-      background: #f9fafb;
-    }
-
-    /* 1열(나이스 개인번호) + 2열(성명) 고정: 성명 고정이 목적이지만, 2열만 고정하면 1열이 가려져서 함께 고정 */
-    #resultTable th:nth-child(1),
-    #resultTable td:nth-child(1) {
-      position: sticky;
-      left: 0;
-      z-index: 25;
-      background: #fff;
-      min-width: 140px;
-    }
-    #resultTable th:nth-child(2),
-    #resultTable td:nth-child(2) {
-      position: sticky;
-      left: 140px;
-      z-index: 25;
-      background: #fff;
-      min-width: 120px;
-    }
-    /* 헤더의 고정열은 한 층 더 위로 */
-    #resultTable thead th:nth-child(1),
-    #resultTable thead th:nth-child(2) {
-      z-index: 30;
-      background: #f9fafb;
-    }
+    details summary { cursor:pointer; }
+    .home-link-wrap { margin-top:22px; text-align:center; }
   </style>
 </head>
 
 <body>
-  <header class="site-header">
-    <div class="shell">
-      <h1>2026학년도 교육공무직·특수운영직군 연차 유급휴가 부여일수 계산기</h1>
-      <p class="subtitle">
-        ·2025.3.1.~2026.2.28. 근무 실적을 바탕으로, 2026학년도에 사용할 연차 유급휴가 부여일수를 계산합니다. (산정 기준일자: 2026.3.1.) <br/>
-        ·업무 편람 및 단체협약 등 지침 변화가 잦기 때문에 2026학년도 한정 일회용으로 만든 것임. <br/>
-        ※업로드한 파일은 저장되지 않습니다. 서버랑 DB 없어요.
-      </p>
-    </div>
-  </header>
-
   <main class="container">
+    <h1>2026학년도 연차유급휴가 부여일수 계산기</h1>
+    <p class="muted">
+      ·본 도구는 입력자료(인사/복무/학사일정)를 바탕으로 연차 부여일수를 계산합니다. <br/>
+      ·입력자료와 규정 해석에 따라 결과가 달라질 수 있으며, 최종 확인은 담당자가 수행해야 합니다.
+    </p>
+
     <section class="section">
-      <h2>1. 학사일정 입력</h2>
+      <h2>1. 학사일정 입력(선택)</h2>
       <p class="muted">
-        ·학사일정 입력하면 토요일 제외한 연간 총 일수, 방학 일수, 학기중 총 일수 계산해줌
+        ·방학중 비상시근로자 출근율(학기중/연간) 산정을 위해 방학기간 입력을 권장합니다. <br/>
+        ·토요일은 산정에서 제외됩니다.
       </p>
 
-      <div class="grid two">
-        <div class="card">
-          <h3 class="local-h3 local-tight">여름방학</h3>
-          <div class="grid two">
-            <label class="stack">
-              <span class="mini">시작일자</span>
-              <input type="date" id="summerStart" />
-            </label>
-            <label class="stack">
-              <span class="mini">종료일자</span>
-              <input type="date" id="summerEnd" />
-            </label>
-          </div>
+      <div class="card">
+        <div class="grid two">
+          <label class="stack">
+            <span class="mini">여름방학 시작</span>
+            <input type="date" id="summerStart" />
+          </label>
+          <label class="stack">
+            <span class="mini">여름방학 종료</span>
+            <input type="date" id="summerEnd" />
+          </label>
+          <label class="stack">
+            <span class="mini">겨울방학 시작</span>
+            <input type="date" id="winterStart" />
+          </label>
+          <label class="stack">
+            <span class="mini">겨울방학 종료</span>
+            <input type="date" id="winterEnd" />
+          </label>
         </div>
-        <div class="card">
-          <h3 class="local-h3 local-tight">겨울방학</h3>
-          <div class="grid two">
-            <label class="stack">
-              <span class="mini">시작일자</span>
-              <input type="date" id="winterStart" />
-            </label>
-            <label class="stack">
-              <span class="mini">종료일자</span>
-              <input type="date" id="winterEnd" />
-            </label>
-          </div>
+
+        <div class="row gap" style="margin-top:10px;">
+          <button class="btn primary" id="btnApplyCalendar">학사일정 적용</button>
+          <button class="btn" id="btnClearCalendar">학사일정 초기화</button>
         </div>
-      </div>
 
-      <div class="row gap">
-        <button class="btn primary" id="btnApplyCalendar">학사일정 적용하기</button>
-        <button class="btn ghost" id="btnSetExampleCalendar">테스트용 (예시)</button>
+        <div id="calendarMsg" class="msg" style="margin-top:12px;"></div>
+        <div id="calendarSummary" class="msg" style="margin-top:12px;"></div>
       </div>
-
-      <div id="calendarSummary" class="msg" style="margin-top:12px;"></div>
     </section>
 
     <section class="section">
@@ -258,102 +208,31 @@
     </section>
 
     <section class="section">
-      <h2>3. 근무상황(복무) 입력</h2>
+      <h2>3. 복무자료 입력</h2>
       <p class="muted">
-        ·나이스에서 개인별 근무상황 조회내역 엑셀 파일 수정 없이 그대로 업로드해주십시오. 수기 입력도 가능합니다.<br/>
-        ·파일 업로드 시 전체 복무 사항 자동 취합·분류함.<br/>
-        ·특이사항 예외사항 있는 경우에는 수기 입력하쇼.<br/>
-        <span class="muted">※ <b>연차 사용일수 집계</b>는 <b>결재상태가 “완결”인 건만</b> 집계합니다.</span>
+        ·근무상황목록 엑셀 파일(결재상태 포함)을 업로드하세요. <br/>
+        ·연차 사용일수 집계는 결재상태가 <b>“완결”</b>인 내역만 집계합니다.
       </p>
 
       <div class="card">
         <div class="row gap">
-          <label class="row"><input type="radio" name="workMode" value="file" checked /> 파일 업로드</label>
-          <label class="row"><input type="radio" name="workMode" value="manual" /> 수기 입력</label>
+          <div class="dropzone" id="workDrop" style="flex:1;">
+            <p class="dz-title">근무상황목록 엑셀 파일 업로드하기</p>
+            <p class="dz-desc">(드래그 & 드롭 가능)</p>
+          </div>
+          <input type="file" id="workFile" accept=".xlsx,.xls" class="hidden" multiple />
         </div>
 
-        <div id="workFileBox" style="margin-top:12px;">
-          <div class="grid two">
-            <div>
-              <div class="dropzone" id="workDrop">
-                <p class="dz-title">근무상황목록 파일 업로드 (엑셀/CSV)</p>
-                <p class="dz-desc">(여러 개 가능 · 드래그 & 드롭 가능)</p>
-              </div>
-              <input type="file" id="workFiles" accept=".xlsx,.xls,.csv" multiple class="hidden" />
-              <div class="muted" style="margin-top:8px;">※ 파일 선택 후 <b>복무사항 불러오기</b>를 눌러주세요.</div>
-            </div>
-
-            <div class="msg warn">
-              <div><b>안내</b></div>
-              <ul>
-                <li>복무를 잘못 낸 경우를 대비해서 모든 복무 내역을 취합·분류함.</li>
-                <li>자동으로 분류하기 애매한 항목은 "검토"로 표시함. (개별 확인 필요)</li>
-              </ul>
-            </div>
-          </div>
-
-          <div class="row gap" style="margin-top:10px;">
-            <button class="btn primary" id="btnLoadWork">복무사항 불러오기</button>
-            <button class="btn" id="btnClearWork">전체 초기화</button>
-          </div>
-          <div id="workMsg" class="msg" style="margin-top:12px;"></div>
+        <div class="row gap" style="margin-top:10px;">
+          <button class="btn primary" id="btnLoadWork">복무자료 반영하기</button>
+          <button class="btn" id="btnClearWork">내역 초기화</button>
         </div>
 
-        <div id="workManualBox" class="hidden" style="margin-top:12px;">
-          <h3 class="local-h3">복무사항 수기 입력</h3>
-          <p class="muted">
-            ·수기 입력 모드는 기본적으로 "정상근무"를 전제로 함. 출근율 산정에 영향이 있는 예외사항 입력할 때 사용하세요.
-          </p>
+        <div id="workMsg" class="msg" style="margin-top:12px;"></div>
 
-          <div class="grid three">
-            <label class="stack">
-              <span class="mini">근로자 선택하기</span>
-              <select id="wSelect"></select>
-            </label>
-            <label class="stack">
-              <span class="mini">시작일자</span>
-              <input type="date" id="wStart" />
-            </label>
-            <label class="stack">
-              <span class="mini">종료일자</span>
-              <input type="date" id="wEnd" />
-            </label>
-
-            <label class="stack">
-              <span class="mini">복무 종류</span>
-              <input type="text" id="wType" placeholder="질병휴직 / 결근 / 연가 등" />
-            </label>
-
-            <label class="stack">
-              <span class="mini">복무 사유</span>
-              <input type="text" id="wReason" placeholder="필요 시 입력" />
-            </label>
-
-            <label class="stack">
-              <span class="mini">분류 방법 선택</span>
-              <select id="wClass">
-                <option value="auto">자동 판별</option>
-                <option value="deemed">출근 간주 (분자 포함)</option>
-                <option value="excluded">제외 기간 (분모·분자 제외)</option>
-                <option value="absence">결근 간주</option>
-                <option value="review">확인 필요 (미분류)</option>
-              </select>
-            </label>
-          </div>
-
-          <div class="row gap" style="margin-top:10px;">
-            <label class="row">
-              <input type="checkbox" id="wCredit" />
-              비상시 직종의 방학중 근무 (우선채용 등)
-            </label>
-            <button class="btn primary" id="btnAddRecord">복무내역 추가</button>
-            <button class="btn" id="btnClearManualRecords">전체 초기화</button>
-          </div>
-
-          <div id="workManualMsg" class="msg" style="margin-top:12px;"></div>
+        <div class="muted" style="margin-top:10px;">
+          ※ 임시 생성자의 직군, 근무형태, 최초계약일 등의 인사 정보는 필요시 수기 입력하십시오.
         </div>
-
-        <hr style="margin:16px 0;" />
 
         <div id="vacCreditBox" class="card" style="margin-top:12px;">
           <h3 class="local-h3">비상시 직종: 방학중 근무(출근 간주) 날짜 추가 입력</h3>
@@ -408,42 +287,17 @@
 
     <section class="section">
       <h2>4. 연차 유급휴가 부여일수 계산 실행</h2>
-
       <div class="card">
-        <div class="grid two">
-          <div class="msg">
-            <div><b>비상시근로자의 출근율</b></div>
-            <ol>
-              <li>출근율(학기중): 비상시근로자 기준으로 산정</li>
-              <li>출근율(연간): 연간 기준으로 산정(상시근로자와 동일한 분모)</li>
-              <li>출근율(비례산정): <b>학기중 출근율 80% 미만인 경우에만</b> 산정(제외기간 제거)</li>
-            </ol>
-            <div class="muted">※상시근로자는 연간 출근율이 80% 미만일 때만 비례산정 출근율을 산정합니다.</div>
-          </div>
-
-          <div class="msg">
-            <div><b>계산조건 기본 설정</b></div>
-            <ul>
-              <li>복무실적 산정기간: 2025.3.1.~2026.2.28.</li>
-              <li>연차일수 부여 기준일자: 2026.3.1.</li>
-              <li>토요일은 분모에서 제외</li>
-              <li>비례산정은 소수점 둘째 자리에서 반올림한 후 시간 단위로 환산함.</li>
-            </ul>
-          </div>
+        <div class="row gap">
+          <button class="btn primary" id="btnRun">계산 실행</button>
+          <button class="btn" id="btnExport">결과 엑셀 저장</button>
         </div>
-
-        <div class="row gap" style="margin-top:12px;">
-          <button class="btn primary" id="btnRun">계산 실행하기</button>
-          <button class="btn" id="btnDownload">계산 결과 엑셀 저장</button>
-        </div>
-
         <div id="runMsg" class="msg" style="margin-top:12px;"></div>
       </div>
     </section>
 
     <section class="section">
-      <h2>5. 연차 부여일수 계산 결과</h2>
-
+      <h2>5. 결과</h2>
       <div id="resultSummary" class="msg">계산 실행 버튼 먼저 눌러주세요.</div>
 
       <div class="table-wrap">
@@ -508,159 +362,42 @@
     deemed: "출근간주",
     excluded: "산정제외",
     absence: "결근성",
-    review: "검토",
-    auto: "자동"
+    review: "검토"
   };
 
-  const RULES_2026 = {
-    excludedKeywords: [
-      "질병휴직", "가족돌봄휴직", "노조전임", "유학휴직", "행방불명",
-      "파업", "쟁의", "휴업", "사용자귀책"
-    ],
-    absenceKeywords: [
-      "결근", "무단", "무급", "지각", "조퇴", "외출",
-      "가족돌봄휴가(무급)", "병가(무급)", "특별휴가(무급)"
-    ],
-    deemedKeywords: [
-      "연차", "연가", "병가", "공가", "특별휴가", "경조", "출산", "배우자출산",
-      "자녀돌봄", "육아휴직", "교육훈련", "산재", "공무", "대체공휴일", "공휴일",
-      "근로자의날", "재량휴업", "휴업(유급)", "휴직(유급)"
-    ],
-    reviewKeywords: [
-      "휴업", "휴직", "무급", "파업", "쟁의", "정직", "직위해제"
-    ],
-    creditKeywords: [
-      "급식실청소", "산업안전보건교육", "우선채용", "방학근무", "방학중근무", "방학 중 근무"
-    ],
-    annualLeaveKeywords: [
-      "연차", "연가"
-    ],
-    annualLeaveHalfKeywords: [
-      "반차", "반일"
-    ],
-    annualLeaveLateKeywords: [
-      "지각"
-    ],
-    annualLeaveEarlyKeywords: [
-      "조퇴"
-    ],
-    annualLeaveOutKeywords: [
-      "외출"
-    ],
-    finalApprovedKeywords: [
-      "완결", "승인", "결재완료"
-    ]
-  };
-
-  // ==========================
-  // 직종/직군 추출(인사발령집계기 로직 참고)
-  // ==========================
-  const EDU_LABOR_JOBS = new Set(([
+  const EDU_LABOR_JOBS = [
     "교무행정사",
-    "사무(행정)보조",
-    "조리실무사",
-    "특수교육지도사",
-    "특수교육실무사",
-    "사서",
-    "전문상담사",
-    "상담사",
-    "전산실무원",
-    "실험실무원",
-    "과학실무원",
-    "유치원방과후과정전담사",
-    "늘봄지원실무사",
-    "늘봄실무사",
     "돌봄전담사",
-    "초등돌봄전담사",
-    "늘봄학교전담사",
-    "방과후전담사",
-    "청소원",
-    "환경실무원",
-    "시설관리",
+    "조리실무사",
     "시설관리원",
-    "시설관리실무원",
-    "당직전담원",
-    "통학차량운전원",
-    "통학버스운전원",
-    "통학지도원",
-    "유치원아침돌봄전담사",
-    "조리원",
+    "시설관리직",
+    "환경실무사",
+    "청소원",
+    "행정실무사",
+    "사서실무사",
+    "특수교육실무사",
     "교육복지사",
-    "보건실무사",
+    "전문상담사",
     "영양사",
-    "보조영양사",
-    "사감",
-    "기숙사생활지도원",
-    "발명실무원",
-    "늘봄학교전담사",
-    "초등돌봄전담사",
+    "보건실무사",
+    "운동부지도자",
+    "유치원방과후전담사",
     "방과후전담사",
-    "임상심리사",
-    "대안교육전문가",
-    "학습클리닉전문가",
-    "학부모지원전문가",
-    "진학전문지원관",
-    "학교운동부지도자",
-    "교육지도사",
-    "방과후학교지원가",
-    "구육성회직원",
-  ]));
+    "늘봄실무사",
+    "늘봄지원실무사",
+    "전산실무사",
+    "기타"
+  ];
 
-  function normalizeKey(s) {
-    return String(s || "")
-      .replace(/\s+/g, "")
-      .replace(/[()\[\]{}]/g, "")
-      .toLowerCase();
-  }
-
-  function stripGroupWords(s) {
-    return String(s || "")
-      .replace(/교육공무직원?/g, "")
-      .replace(/교육공무직/g, "")
-      .replace(/특수운영직군/g, "")
-      .replace(/특수운영직/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
-  }
-
-  function extractParenInner(s) {
-    const m = String(s || "").match(/\(([^()]+)\)/);
-    return (m && m[1]) ? String(m[1]).trim() : "";
-  }
-
-  function detectGroupFromHr(groupRaw, jobRaw) {
-    const mix = normalizeKey(`${groupRaw} ${jobRaw}`);
-    if (mix.includes("특수운영")) return "special";
-    // 예외적으로 직종명이 '특수...'로 시작하는 케이스 방어
-    if (mix.includes("특수") && mix.includes("직군")) return "special";
-    return "regular";
-  }
-
-  function detectJobFromHr(group, groupRaw, jobRaw) {
-    const g = String(groupRaw || "").trim();
-    const j = String(jobRaw || "").trim();
-    const mix = normalizeKey(`${g} ${j}`);
-
-    // 특수운영직군: ( ) 안의 직종 우선
-    if (group === "special") {
-      const inner = extractParenInner(j) || extractParenInner(g);
-      if (inner) return stripGroupWords(inner);
-
-      const cleaned = stripGroupWords(j || g);
-      return cleaned || "";
-    }
-
-    // 교육공무직: 알려진 직종 목록 매칭 우선
-    for (const job of EDU_LABOR_JOBS) {
-      if (mix.includes(normalizeKey(job))) return job;
-    }
-
-    // 괄호가 있으면 괄호 안만 직종으로 적힌 경우가 종종 있음
-    const inner = extractParenInner(j);
-    if (inner && /^[가-힣0-9·\s]{2,30}$/.test(inner)) return stripGroupWords(inner);
-
-    return stripGroupWords(j) || "";
-  }
+  const SPECIAL_JOBS = [
+    "객실청소원",
+    "조리원",
+    "조리사",
+    "시설당직원",
+    "통학차량실무사",
+    "대체급식인력",
+    "대체전담인력"
+  ];
 
   const state = {
     calendar: {
@@ -744,20 +481,29 @@
     const ws = state.calendar.winterStart;
     const we = state.calendar.winterEnd;
 
-    const vacRanges = [];
-    const r1 = (ss && se) ? normalizeRange(ss, se) : null;
-    const r2 = (ws && we) ? normalizeRange(ws, we) : null;
-    if (r1) vacRanges.push(r1);
-    if (r2) vacRanges.push(r2);
-
-    for (const r of vacRanges) {
-      for (let d = r.start; d <= r.end; d = addDaysUTC(d, 1)) {
-        if (isSaturdayUTC(d)) continue;
-        vacationSet.add(utcToYmd(d));
+    if (state.calendar.applied && ss && se) {
+      const r = normalizeRange(ss, se);
+      if (r) {
+        for (let d = r.start; d <= r.end; d = addDaysUTC(d, 1)) {
+          if (isSaturdayUTC(d)) continue;
+          vacationSet.add(utcToYmd(d));
+        }
+      }
+    }
+    if (state.calendar.applied && ws && we) {
+      const r = normalizeRange(ws, we);
+      if (r) {
+        for (let d = r.start; d <= r.end; d = addDaysUTC(d, 1)) {
+          if (isSaturdayUTC(d)) continue;
+          vacationSet.add(utcToYmd(d));
+        }
       }
     }
 
-    const semSet = new Set(Array.from(fullSet).filter(ymd => !vacationSet.has(ymd)));
+    const semSet = new Set();
+    for (const ymd of fullSet) {
+      if (!vacationSet.has(ymd)) semSet.add(ymd);
+    }
 
     state.calendar.sets = {
       fullSet,
@@ -765,19 +511,21 @@
       semSet,
       fullCount: fullSet.size,
       vacCount: vacationSet.size,
-      semCount: semSet.size,
+      semCount: semSet.size
     };
   }
 
   function renderCalendarSummary() {
     const el = $("#calendarSummary");
+    if (!state.calendar.sets) {
+      setMsg(el, "", "");
+      return;
+    }
     const sets = state.calendar.sets;
-    if (!sets) { setMsg(el, "", "학사일정을 먼저 적용하세요."); return; }
-
-    const ss = $("#summerStart").value || "(미입력)";
-    const se = $("#summerEnd").value || "(미입력)";
-    const ws = $("#winterStart").value || "(미입력)";
-    const we = $("#winterEnd").value || "(미입력)";
+    const ss = state.calendar.summerStart ? utcToYmd(state.calendar.summerStart) : "-";
+    const se = state.calendar.summerEnd ? utcToYmd(state.calendar.summerEnd) : "-";
+    const ws = state.calendar.winterStart ? utcToYmd(state.calendar.winterStart) : "-";
+    const we = state.calendar.winterEnd ? utcToYmd(state.calendar.winterEnd) : "-";
 
     setMsg(el, "ok", `
       <div><b>학사일정 적용 완료</b></div>
@@ -834,227 +582,152 @@
     for (const w of arr) {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td class="nowrap">${escapeHtml(w.key)}</td>
-        <td class="nowrap">${escapeHtml(w.name)}</td>
+        <td class="nowrap">${escapeHtml(w.key || "")}</td>
+        <td class="nowrap">${escapeHtml(w.name || "")}</td>
         <td class="nowrap">${escapeHtml(w.pid || "")}</td>
         <td class="nowrap">${w.group === "special" ? "특수운영직군" : "교육공무직"}</td>
         <td class="nowrap">${escapeHtml(w.job || "")}</td>
-        <td class="nowrap">${w.pattern === "emergency" ? "방학중 비상시" : "상시"}</td>
+        <td class="nowrap">${w.pattern === "emergency" ? "방학중비상시" : "상시"}</td>
         <td class="nowrap">${w.hireDateUTC ? utcToYmd(w.hireDateUTC) : ""}</td>
-        <td class="right nowrap">${escapeHtml(String(w.dailyHours ?? DEFAULT_DAILY_HOURS))}</td>
-        <td class="right nowrap">${escapeHtml(String(w.serviceYears ?? 0))}년</td>
-        <td class="center nowrap"><button class="btn btn-lightgrey" data-del="${escapeHtml(w.key)}">삭제</button></td>
+        <td class="nowrap right">${escapeHtml(String(w.dailyHours ?? DEFAULT_DAILY_HOURS))}</td>
+        <td class="nowrap right">${escapeHtml(String(w.serviceYears ?? 0))}</td>
+        <td class="nowrap center"><button class="btn" data-del-worker="${escapeHtml(w.key)}">삭제</button></td>
       `;
       tbody.appendChild(tr);
     }
 
-    tbody.querySelectorAll("button[data-del]").forEach(btn => {
+    $$("[data-del-worker]").forEach(btn => {
       btn.addEventListener("click", () => {
-        const key = btn.getAttribute("data-del");
-        state.workers.delete(key);
-        state.records = state.records.filter(r => r.workerKey !== key);
+        const k = btn.getAttribute("data-del-worker");
+        state.workers.delete(k);
+        // 관련 기록/가산 입력도 삭제
+        state.records = state.records.filter(r => r.workerKey !== k);
         renderWorkersTable();
         renderWorkerSelect();
+        renderVacCreditTable();
+        renderResults();
       });
     });
-
-    setMsg($("#hrManualMsg"), arr.length ? "ok" : "warn", `
-      <div><b>대상자 수</b>: ${arr.length}명</div>
-    `);
   }
 
   function renderWorkerSelect() {
-    const sel = $("#wSelect");
-    const sel2 = $("#vacWSelect");
-    if (!sel || !sel2) return;
-
-    const prev = sel.value;
+    const sel = $("#vacWSelect");
+    if (!sel) return;
     sel.innerHTML = "";
 
-    const arr = Array.from(state.workers.values())
+    const emergencyWorkers = Array.from(state.workers.values())
+      .filter(w => w.pattern === "emergency")
       .sort((a, b) => (a.name || "").localeCompare(b.name || "", "ko"));
 
-    if (!arr.length) {
-      const opt = document.createElement("option");
-      opt.value = "";
-      opt.textContent = "대상자 없음";
-      sel.appendChild(opt);
-      sel.disabled = true;
-
-      renderVacCreditUI();
-      return;
-    }
-
-    sel.disabled = false;
-
-    for (const w of arr) {
+    for (const w of emergencyWorkers) {
       const opt = document.createElement("option");
       opt.value = w.key;
-      const g = (w.group === "special") ? "특수운영" : "교육공무직";
-      const j = w.job ? `(${w.job})` : "";
-      opt.textContent = `${w.name} (${w.key}) · ${g}${j}`;
+      opt.textContent = `${w.name} (${w.key})`;
       sel.appendChild(opt);
     }
-
-    if (prev && arr.some(w => w.key === prev)) sel.value = prev;
-    else sel.value = arr[0].key;
-
-    renderVacCreditUI();
   }
 
-  // ==========================
-  // SheetJS helpers
-  // ==========================
-  function ensureXLSX() {
-    if (!window.XLSX) throw new Error("SheetJS(XLSX)가 로드되지 않았습니다.");
-  }
+  function parseDateLoose(v) {
+    if (v == null || v === "") return null;
 
-  function readFileAsArrayBuffer(file) {
-    return new Promise((resolve, reject) => {
-      const fr = new FileReader();
-      fr.onload = () => resolve(fr.result);
-      fr.onerror = () => reject(fr.error || new Error("파일 읽기 실패"));
-      fr.readAsArrayBuffer(file);
-    });
-  }
-
-  function readFileAsText(file) {
-    return new Promise((resolve, reject) => {
-      const fr = new FileReader();
-      fr.onload = () => resolve(fr.result);
-      fr.onerror = () => reject(fr.error || new Error("파일 읽기 실패"));
-      fr.readAsText(file, "utf-8");
-    });
-  }
-
-  function sheetToJson(wb) {
-    const sheetName = wb.SheetNames[0];
-    const ws = wb.Sheets[sheetName];
-    return XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: "" });
-  }
-
-  function findHeaderRow(rows, mustHave) {
-    for (let i = 0; i < rows.length; i++) {
-      const r = rows[i];
-      if (!Array.isArray(r)) continue;
-      const s = r.map(x => String(x || "").trim());
-      const hit = mustHave.every(k => s.some(v => v.includes(k)));
-      if (hit) return i;
+    if (v instanceof Date && !isNaN(v)) {
+      return new Date(Date.UTC(v.getFullYear(), v.getMonth(), v.getDate()));
     }
-    return -1;
+
+    if (typeof v === "number") {
+      const dt = XLSX.SSF.parse_date_code(v);
+      if (dt) return new Date(Date.UTC(dt.y, dt.m - 1, dt.d));
+    }
+
+    const s = String(v).trim();
+    if (!s) return null;
+
+    const m = s.match(/^(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/);
+    if (m) {
+      const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+      return new Date(Date.UTC(y, mo - 1, d));
+    }
+
+    return null;
+  }
+
+  function safeNum(v, def = 0) {
+    const n = Number(String(v ?? "").replaceAll(",", "").trim());
+    return Number.isFinite(n) ? n : def;
+  }
+
+  function normalizeKey(s) {
+    return String(s || "").trim().toLowerCase().replace(/\s+/g, "");
+  }
+
+  function stripGroupWords(s) {
+    return String(s || "")
+      .replaceAll("교육공무직", "")
+      .replaceAll("특수운영직군", "")
+      .replaceAll("종사자", "")
+      .replaceAll("근로자", "")
+      .trim();
+  }
+
+  function extractParenInner(s) {
+    const m = String(s || "").match(/\(([^)]+)\)/);
+    return m ? m[1].trim() : "";
+  }
+
+  function detectGroupFromHr(groupRaw, jobRaw) {
+    const g = String(groupRaw || "");
+    const j = String(jobRaw || "");
+    const mix = normalizeKey(g + " " + j);
+
+    if (mix.includes("특수운영") || mix.includes("특수운영직군")) return "special";
+    for (const s of SPECIAL_JOBS) {
+      if (mix.includes(normalizeKey(s))) return "special";
+    }
+    return "regular";
+  }
+
+  function detectJobFromHr(group, groupRaw, jobRaw) {
+    const g = String(groupRaw || "").trim();
+    const j = String(jobRaw || "").trim();
+    const mix = normalizeKey(j + " " + g);
+
+    if (group === "special") {
+      for (const job of SPECIAL_JOBS) {
+        if (mix.includes(normalizeKey(job))) return job;
+      }
+      const cleaned = stripGroupWords(j || g);
+      return cleaned || "";
+    }
+
+    for (const job of EDU_LABOR_JOBS) {
+      if (mix.includes(normalizeKey(job))) return job;
+    }
+
+    const inner = extractParenInner(j);
+    if (inner && /^[가-힣0-9·\s]{2,30}$/.test(inner)) return stripGroupWords(inner);
+
+    return stripGroupWords(j) || "";
   }
 
   function findColumnIndex(headers, candidates) {
-    const norm = headers.map(h => String(h || "").trim());
+    const norm = headers.map(h => normalizeKey(h));
     for (const c of candidates) {
-      const idx = norm.findIndex(h => h === c || h.includes(c));
+      const idx = norm.indexOf(normalizeKey(c));
       if (idx >= 0) return idx;
     }
     return -1;
   }
 
-  function parseExcelDate(v) {
-    // SheetJS: date가 string/number로 올 수 있음
-    if (v == null || v === "") return null;
+  function parseHrSheet(sheet) {
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: "" });
+    if (!rows.length) return { loaded: 0, skipped: 0 };
 
-    // 이미 Date 객체
-    if (v instanceof Date && !isNaN(v.getTime())) {
-      return new Date(Date.UTC(v.getFullYear(), v.getMonth(), v.getDate()));
-    }
-
-    // 엑셀 serial number
-    if (typeof v === "number" && isFinite(v)) {
-      // Excel serial date: 1900-based with leap bug
-      const utc = XLSX.SSF.parse_date_code(v);
-      if (utc && utc.y && utc.m && utc.d) return new Date(Date.UTC(utc.y, utc.m - 1, utc.d));
-    }
-
-    // string
-    const s = String(v).trim();
-    if (!s) return null;
-
-    // yyyy-mm-dd / yyyy.mm.dd / yyyy/mm/dd
-    const m = s.match(/^(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})/);
-    if (m) return new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
-
-    return null;
-  }
-
-  function parseDateLoose(v) {
-    if (v == null || v === "") return null;
-    const d = parseExcelDate(v);
-    if (d) return d;
-
-    // yyyyMMdd 형태
-    const s = String(v).trim().replace(/\s+/g, "");
-    const m = s.match(/^(\d{4})(\d{2})(\d{2})$/);
-    if (m) return new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
-    return null;
-  }
-
-  function safeNum(v, fallback = NaN) {
-    const n = Number(String(v ?? "").replace(/[^0-9.\-]/g, ""));
-    return Number.isFinite(n) ? n : fallback;
-  }
-
-  function parseRangeLoose(s) {
-    const str = String(s||"").trim();
-    if (!str) return null;
-    const parts = str.split(/~|〜/).map(x => x.trim()).filter(Boolean);
-    if (parts.length === 2) {
-      const a = parseDateLoose(parts[0]);
-      const b = parseDateLoose(parts[1]);
-      if (a && b) return { start: a, end: b };
-    }
-    const d = parseDateLoose(str);
-    if (d) return { start: d, end: d };
-    return null;
-  }
-
-  function parseDurationToMinutes(cell, dailyMinutes) {
-    if (cell == null) return null;
-    const s = String(cell || "").trim();
-    if (!s) return null;
-
-    let days = null, hours = null, mins = null;
-
-    const md = s.match(/(-?\d+(?:\.\d+)?)\s*일/);
-    if (md) days = Number(md[1]);
-
-    const mh = s.match(/(-?\d+(?:\.\d+)?)\s*시간/);
-    if (mh) hours = Number(mh[1]);
-
-    const mm = s.match(/(-?\d+(?:\.\d+)?)\s*분/);
-    if (mm) mins = Number(mm[1]);
-
-    if (md || mh || mm) {
-      let total = 0;
-      if (days != null && Number.isFinite(days)) total += days * dailyMinutes;
-      if (hours != null && Number.isFinite(hours)) total += hours * 60;
-      if (mins != null && Number.isFinite(mins)) total += mins;
-      return Math.round(total);
-    }
-
-    return null;
-  }
-
-  async function loadHrFileSingle(file) {
-    ensureXLSX();
-    const buf = await readFileAsArrayBuffer(file);
-    const wb = XLSX.read(buf, { type: "array" });
-    const rows = sheetToJson(wb);
-
-    const headerIdx = findHeaderRow(rows, ["성명", "이름", "직종", "근무"]);
-    if (headerIdx < 0) throw new Error("인사기록 파일에서 헤더 행을 찾지 못했습니다. (양식 확인 필요)");
-
-    const headers = rows[headerIdx].map(x => String(x || "").trim());
-    const dataRows = rows.slice(headerIdx + 1).filter(r => Array.isArray(r) && r.some(x => String(x||"").trim() !== ""));
+    const headers = rows[0].map(x => String(x || "").trim());
+    const dataRows = rows.slice(1);
 
     const colName = findColumnIndex(headers, ["성명","이름"]);
     const colPid  = findColumnIndex(headers, ["개인번호","사번","인적번호","개인번호(아이디)","나이스개인번호"]);
-    // (수정) 근속 가산 연차 계산 기준: 인사기록 AI열 "최초계약일"을 우선 사용
-    const colFirstContract = findColumnIndex(headers, ["최초계약일","최초계약"]); // AI열(보통)
-    const colHireFallback  = findColumnIndex(headers, ["최초임용일","근무시작일","임용일","계약시작일"]);
+    const colHire = findColumnIndex(headers, ["최초계약일","계약시작일","근무시작일","최초임용일","임용일","현소속교육청근무일"]);
     const colGroup = findColumnIndex(headers, ["직군","직군구분","직종구분","구분"]);
     const colJob = findColumnIndex(headers, ["직종","직종명"]);
     const colPattern = findColumnIndex(headers, ["근무형태","근무형태명","근무구분","근무유형"]);
@@ -1071,15 +744,9 @@
       if (!name) { skipped++; continue; }
 
       const pid = (colPid >= 0) ? String(row[colPid] || "").trim() : "";
-      const firstContract = (colFirstContract >= 0) ? parseDateLoose(row[colFirstContract]) : null;
-      const hireFallback  = (colHireFallback >= 0) ? parseDateLoose(row[colHireFallback]) : null;
-      const hire = firstContract || hireFallback;
+      const hire = (colHire >= 0) ? parseDateLoose(row[colHire]) : null;
 
       const groupRaw = (colGroup >= 0) ? String(row[colGroup] || "").trim() : "";
-      // 교육공무직/특수운영직군만 대상(그 외 직군은 건너뜀)
-      const groupNorm = normalizeKey(groupRaw);
-      if (groupNorm && !groupNorm.includes("교육공무직") && !groupNorm.includes("특수운영")) { skipped++; continue; }
-
       const jobRaw = (colJob >= 0) ? String(row[colJob] || "").trim() : "";
       const group = detectGroupFromHr(groupRaw, jobRaw);
       const job = detectJobFromHr(group, groupRaw, jobRaw);
@@ -1114,698 +781,680 @@
     return { loaded, skipped };
   }
 
-  async function handleLoadHrFiles(files) {
-    if (!files || files.length === 0) throw new Error("인사기록 파일이 선택되지 않았습니다.");
-    let totalLoaded = 0;
-    let totalSkipped = 0;
-    const fail = [];
-
-    for (const f of files) {
-      try {
-        const out = await loadHrFileSingle(f);
-        totalLoaded += out.loaded;
-        totalSkipped += out.skipped;
-      } catch (e) {
-        fail.push(`${f.name}: ${e.message}`);
-      }
-    }
-
-    renderWorkersTable();
-    renderWorkerSelect();
-
-    const failHtml = fail.length
-      ? `<div class="msg err" style="margin-top:10px;"><b>실패 파일</b><ul>${fail.map(x => `<li>${escapeHtml(x)}</li>`).join("")}</ul></div>`
-      : "";
-
-    setMsg($("#hrMsg"), fail.length ? "warn" : "ok", `
-      <div><b>인사내역 파일 불러오기 성공</b></div>
-      <ul>
-        <li>처리 파일: ${files.length}개</li>
-        <li>로드(행 기준): ${totalLoaded}건</li>
-        <li>스킵(빈 성명 등): ${totalSkipped}건</li>
-      </ul>
-      <div class="muted">목록 행 자동 탐색함. 임의로 나이스 서식 변경한 경우 못 읽을 수도 있음.</div>
-      ${failHtml}
-    `);
-  }
-
-  function csvToRows(text) {
-    const lines = text.split(/\r?\n/).filter(x => x.trim() !== "");
-    return lines.map(line => parseCsvLine(line));
-  }
-
-  function parseCsvLine(line) {
-    const res = [];
-    let cur = "";
-    let inQ = false;
-
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (ch === '"' ) {
-        if (inQ && line[i+1] === '"') { cur += '"'; i++; continue; }
-        inQ = !inQ; continue;
-      }
-      if (!inQ && ch === ",") { res.push(cur); cur=""; continue; }
-      cur += ch;
-    }
-    res.push(cur);
-    return res;
-  }
-
-  // ==========================
-  // 복무 기록 저장/분류
-  // ==========================
-  function nextRecordId() {
-    return "R" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-  }
-
-  function includesAny(text, keywords) {
-    const s = text.replace(/\s+/g, "");
-    return keywords.some(k => s.includes(String(k).replace(/\s+/g, "")));
-  }
-
-  function autoClassify(type, reason) {
-    const t = String(type || "");
-    const r = String(reason || "");
-    const hay = (t + " " + r).trim();
-    if (!hay) return "review";
-    if (includesAny(hay, RULES_2026.excludedKeywords)) return "excluded";
-    if (includesAny(hay, RULES_2026.absenceKeywords)) return "absence";
-    if (includesAny(hay, RULES_2026.deemedKeywords)) return "deemed";
-    if (includesAny(hay, RULES_2026.reviewKeywords)) return "review";
-    return "review";
-  }
-
-  function autoCreditGuess(type, reason) {
-    const hay = (String(type||"") + " " + String(reason||"")).trim();
-    if (!hay) return false;
-    return includesAny(hay, RULES_2026.creditKeywords);
-  }
-
-  function rangeOverlapsVacation(startUTC, endUTC) {
-    if (!state.calendar.sets) return false;
-    for (let d = startUTC; d <= endUTC; d = addDaysUTC(d, 1)) {
-      const ymd = utcToYmd(d);
-      if (state.calendar.sets.vacationSet.has(ymd)) return true;
-    }
-    return false;
-  }
-
-  function normalizeApprovalStatus(s) {
-    return String(s || "").trim();
-  }
-
-  function isFinalApprovedStatus(status) {
-    const s = normalizeApprovalStatus(status);
-    if (!s) return false;
-    return RULES_2026.finalApprovedKeywords.some(k => s.includes(k));
-  }
-
-  function classifyAnnualLeaveKind(type) {
-    const t = String(type || "").trim();
-    if (!t) return null;
-
-    const n = t.replace(/\s+/g, "");
-    if (includesAny(n, RULES_2026.annualLeaveHalfKeywords)) return "HALF";
-    if (includesAny(n, RULES_2026.annualLeaveLateKeywords)) return "LATE";
-    if (includesAny(n, RULES_2026.annualLeaveEarlyKeywords)) return "EARLY";
-    if (includesAny(n, RULES_2026.annualLeaveOutKeywords)) return "OUT";
-    if (includesAny(n, RULES_2026.annualLeaveKeywords)) return "FULL";
-    return null;
-  }
-
-  function addRecord(rec) {
-    if (!rec.workerKey) throw new Error("근로자 키가 없습니다.");
-    if (!rec.startUTC) throw new Error("시작일이 없습니다.");
-    if (!rec.endUTC) rec.endUTC = rec.startUTC;
-
-    const range = normalizeRange(rec.startUTC, rec.endUTC);
-    if (!range) throw new Error("산정기간(2025.3.1~2026.2.28) 밖이거나 날짜 범위 오류입니다.");
-
-    const w = state.workers.get(rec.workerKey);
-    const dailyHours = Number(w?.dailyHours || DEFAULT_DAILY_HOURS);
-    const dailyMinutes = dailyHours * 60;
-
-    const autoClass = autoClassify(rec.type, rec.reason);
-    const creditGuess = autoCreditGuess(rec.type, rec.reason);
-
-    const minutes = parseDurationToMinutes(rec.rawDur, dailyMinutes);
-
-    const out = {
-      id: rec.id || nextRecordId(),
-      workerKey: rec.workerKey,
-      startUTC: range.start,
-      endUTC: range.end,
-      type: String(rec.type || "").trim(),
-      reason: String(rec.reason || "").trim(),
-      approvalStatus: normalizeApprovalStatus(rec.approvalStatus),
-      autoClass,
-      finalClass: rec.finalClass || null,
-      credit: (rec.credit != null) ? !!rec.credit : creditGuess,
-      minutes: (minutes != null) ? minutes : null,
-      rawDur: String(rec.rawDur || "").trim(),
-      sourceFile: String(rec.sourceFile || "").trim(),
-    };
-
-    // 방학근무(가산) 체크는 방학 기간과 겹치는 경우만 의미가 큼
-    if (out.credit && state.calendar.applied && !rangeOverlapsVacation(out.startUTC, out.endUTC)) {
-      // 그대로 저장하되, 상세에서 "방학과 무관" 경고를 보여줌
-    }
-
-    state.records.push(out);
-    return out;
-  }
-
   function recordClass(rec) {
-    if (rec.finalClass && rec.finalClass !== "auto") return rec.finalClass;
-    return rec.autoClass || "review";
-  }
-
-  function countDaysOnSet(startUTC, endUTC, set) {
-    let n = 0;
-    for (let d = startUTC; d <= endUTC; d = addDaysUTC(d, 1)) {
-      const ymd = utcToYmd(d);
-      if (set.has(ymd)) n++;
-    }
-    return n;
+    return rec.finalClass || rec.autoClass || "review";
   }
 
   function computeRecordMinutesOnSet(rec, set, dailyMinutes) {
-    const days = countDaysOnSet(rec.startUTC, rec.endUTC, set);
-    if (days <= 0) return 0;
+    if (!rec || !set) return 0;
 
-    if (rec.minutes != null) {
-      // 기록이 시간/분으로 들어온 경우: 해당 기록이 어떤 범위에 걸쳐있든 '분' 그대로 계산 (다만 set에 걸치는 날이 하나라도 있으면 전체를 인정하는 방식은 위험)
-      // -> 안전하게 "일수 비례" 분배
-      const totalDays = countDaysOnSet(rec.startUTC, rec.endUTC, state.calendar.sets.fullSet);
-      if (totalDays <= 0) return 0;
-      return Math.round(rec.minutes * (days / totalDays));
+    if (rec.minutes != null && Number.isFinite(rec.minutes) && rec.minutes >= 0) {
+      return rec.minutes;
     }
 
+    const r = normalizeRange(rec.startUTC, rec.endUTC);
+    if (!r) return 0;
+
+    let days = 0;
+    for (let d = r.start; d <= r.end; d = addDaysUTC(d, 1)) {
+      if (isSaturdayUTC(d)) continue;
+      const ymd = utcToYmd(d);
+      if (set.has(ymd)) days += 1;
+    }
     return days * dailyMinutes;
   }
 
-  function pctValue(x) {
-    return Math.round((x * 100) * 10) / 10;
-  }
-
-  function round1(x) {
-    return Math.round((x + Number.EPSILON) * 10) / 10;
-  }
-
   function minutesToDHM(mins, dailyMinutes) {
-    const m = Math.max(0, Math.round(mins || 0));
-    const dm = Math.max(1, Math.round(dailyMinutes || 480));
-
-    const days = Math.floor(m / dm);
-    const rem = m - days * dm;
-    const hours = Math.floor(rem / 60);
-    const minutes = rem - hours * 60;
-
-    return { days, hours, minutes };
+    mins = Math.max(0, Math.round(mins || 0));
+    const day = Math.floor(mins / dailyMinutes);
+    const rem = mins % dailyMinutes;
+    const h = Math.floor(rem / 60);
+    const m = rem % 60;
+    return { day, h, m };
   }
 
   function fmtDHM(x) {
     if (!x) return "0일";
     const parts = [];
-    parts.push(`${x.days}일`);
-    if (x.hours) parts.push(`${x.hours}시간`);
-    if (x.minutes) parts.push(`${x.minutes}분`);
-    return parts.join(" ");
+    if (x.day) parts.push(`${x.day}일`);
+    if (x.h) parts.push(`${x.h}시간`);
+    if (x.m) parts.push(`${x.m}분`);
+    return parts.length ? parts.join(" ") : "0일";
   }
 
-  function computeAnnualLeaveUsageSummary(workerKey, dailyMinutes) {
-    if (!state.calendar.sets) buildCalendarSets();
-    const sets = state.calendar.sets;
+  function minutesToDays(mins, dailyMinutes) {
+    const dhm = minutesToDHM(mins, dailyMinutes);
+    return fmtDHM(dhm);
+  }
 
-    const byKind = { FULL:0, HALF:0, LATE:0, EARLY:0, OUT:0 };
-    let total = 0;
+  function pct(x) {
+    return `${Math.round((x || 0) * 1000) / 10}%`;
+  }
 
-    const recs = state.records.filter(r => r.workerKey === workerKey);
-    for (const r of recs) {
-      const kind = classifyAnnualLeaveKind(r.type);
-      if (!kind) continue;
-      if (!isFinalApprovedStatus(r.approvalStatus)) continue;
+  function pctValue(x) {
+    return Math.round((x || 0) * 1000) / 10;
+  }
 
-      const mins = computeRecordMinutesOnSet(r, sets.fullSet, dailyMinutes);
-      total += mins;
-      byKind[kind] += mins;
+  function startOfMonthUTC(d) {
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+  }
+
+  function startOfNextMonthUTC(d) {
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1));
+  }
+
+  function toYm(d) {
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}`;
+  }
+
+  // 1개월 "개근"을 달력월 기준으로 보기 위해:
+  // - 입사일이 1일이면 그 달부터,
+  // - 1일이 아니면 다음 달 1일부터를 첫 "완전한 개근월" 시작으로 봄.
+  function firstFullMonthStartUTC(hireUTC) {
+    if (!hireUTC) return PERIOD_START;
+    const ms = startOfMonthUTC(hireUTC);
+    if (hireUTC.getUTCDate() === 1) return ms;
+    return startOfNextMonthUTC(hireUTC);
+  }
+
+  function enumerateMonths(startUTC, endUTC) {
+    const res = [];
+    let y = startUTC.getUTCFullYear();
+    let m = startUTC.getUTCMonth() + 1;
+    const ey = endUTC.getUTCFullYear();
+    const em = endUTC.getUTCMonth() + 1;
+
+    while (y < ey || (y === ey && m <= em)) {
+      res.push(`${y}-${String(m).padStart(2,"0")}`);
+      m += 1;
+      if (m === 13) { m = 1; y += 1; }
     }
-
-    return { total, byKind };
+    return res;
   }
 
-  // ==========================
-  // 출근율/연차부여 계산
-  // ==========================
-
-  // (수정) 기본연차는 직종/근무형태로만 결정(비상시 기본: 12일(일반) / 11일(특수))
-  function baseDaysForWorker(w) {
-    const isEmergency = (w.pattern === "emergency");
-    const isSpecial = (w.group === "special");
-    if (!isEmergency) return 15;
-    return isSpecial ? 11 : 12;
+  function anyAbsenceInMonth(absenceDates, ym) {
+    for (const ymd of absenceDates) {
+      if (ymd.startsWith(ym + "-")) return true;
+    }
+    return false;
   }
 
-  // (수정) 비상시직종: 방학중 근무로 "연간 출근율" 80%를 달성한 경우
-  //   - 교육공무직: +3일 (12 → 15)
-  //   - 특수운영직군: +4일 (11 → 15)
-  function bonusDaysForWorker(w, rates) {
-    if (w.pattern !== "emergency") return 0;
-    const rFull = rates.rateFull ?? 0;
-    if (rFull >= 0.8) return (w.group === "special") ? 4 : 3;
-    return 0;
+  function anyAbsenceInVacation(absenceDates) {
+    const sets = state.calendar.sets;
+    if (!sets) return false;
+    for (const ymd of absenceDates) {
+      if (sets.vacationSet.has(ymd)) return true;
+    }
+    return false;
   }
 
-  function totalStandardDays(w, baseDays, bonusDays) {
-    const add = w.addDays ?? 0; // 근속가산(3년차부터 2년에 1일)
-    return Math.min(25, baseDays + (bonusDays || 0) + add);
+  // (추가) 특정 기간(방학 등) 내 결근성 여부 확인
+  function anyAbsenceInRange(absenceDates, startUTC, endUTC) {
+    if (!startUTC || !endUTC) return false;
+    const r = normalizeRange(startUTC, endUTC);
+    if (!r) return false;
+    for (let d = r.start; d <= r.end; d = addDaysUTC(d, 1)) {
+      if (isSaturdayUTC(d)) continue;
+      const ymd = utcToYmd(d);
+      if (absenceDates.has(ymd)) return true;
+    }
+    return false;
   }
 
-  function calcRatesForWorker(w) {
+  function calcMonthlyAccrual(w) {
     const dailyHours = Number(w.dailyHours || DEFAULT_DAILY_HOURS);
     const dailyMinutes = dailyHours * 60;
 
-    if (!state.calendar.sets) buildCalendarSets();
+    const workerRecords = state.records.filter(r => r.workerKey === w.key && recordClass(r) === "absence");
     const sets = state.calendar.sets;
+
+    const absenceDates = new Set();
+
+    for (const r of workerRecords) {
+      for (let d = r.startUTC; d <= r.endUTC; d = addDaysUTC(d, 1)) {
+        if (isSaturdayUTC(d)) continue;
+        const ymd = utcToYmd(d);
+        if (!sets || sets.fullSet.has(ymd)) absenceDates.add(ymd);
+      }
+    }
+
+    // (수정) 근속 0년(1년 미만)인데 입사 전 달까지 개근월로 카운트되던 문제 방지
+    let accrualStart = PERIOD_START;
+    if (w.hireDateUTC) {
+      const hire = w.hireDateUTC;
+      if (hire > PERIOD_START) {
+        accrualStart = firstFullMonthStartUTC(hire);
+      }
+    }
+    if (accrualStart < PERIOD_START) accrualStart = PERIOD_START;
+
+    if (w.pattern !== "emergency") {
+      const months = enumerateMonths(accrualStart, PERIOD_END);
+      let okCount = 0;
+      for (const ym of months) {
+        const hasAbs = anyAbsenceInMonth(absenceDates, ym);
+        if (!hasAbs) okCount += 1;
+      }
+      const capped = Math.min(11, okCount);
+      const spanText = months.length ? `${months[0]}~${months[months.length - 1]}` : "해당없음";
+      return { days: capped, hours: 0, note: `개근월수(상시): ${okCount}개월 중 ${capped}일(최대11) 부여 · 산정월(${spanText})` };
+    }
+
+    const bucketMonths = ["2025-03","2025-04","2025-05","2025-06","2025-09","2025-10","2025-11"];
+    const startYM = toYm(accrualStart);
+
+    let ok = 0;
+    let vacBucketsAdded = 0;
+
+    for (const ym of bucketMonths) {
+      if (ym < startYM) continue; // 입사 전(또는 완전 개근월 시작 전) 달은 제외
+      const hasAbs = anyAbsenceInMonth(absenceDates, ym);
+      if (!hasAbs) ok += 1;
+    }
+
+    // (수정) 방학버킷을 무조건 +2 하던 로직 제거
+    // → 실제 입력된 여름/겨울방학 각각을 "버킷 1개"로 보고, 입사 이후 방학만 반영
+    if (state.calendar.applied && sets && sets.vacCount > 0) {
+      const vacs = [];
+      if (state.calendar.summerStart && state.calendar.summerEnd) {
+        const r = normalizeRange(state.calendar.summerStart, state.calendar.summerEnd);
+        if (r) vacs.push({ name: "여름방학", start: r.start, end: r.end });
+      }
+      if (state.calendar.winterStart && state.calendar.winterEnd) {
+        const r = normalizeRange(state.calendar.winterStart, state.calendar.winterEnd);
+        if (r) vacs.push({ name: "겨울방학", start: r.start, end: r.end });
+      }
+
+      for (const v of vacs) {
+        if (v.start < accrualStart) continue; // 입사 이전 방학은 제외
+        const hasAbs = anyAbsenceInRange(absenceDates, v.start, v.end);
+        if (!hasAbs) { ok += 1; vacBucketsAdded += 1; }
+      }
+    }
+
+    const capped = Math.min(9, ok);
+    const noteParts = [];
+    noteParts.push(`개근월수(비상시): 버킷 ${ok}개 중 ${capped}일(최대9) 부여`);
+    noteParts.push(`산정 시작월: ${startYM}`);
+    if (!state.calendar.applied || !sets || sets.vacCount === 0) noteParts.push("방학 미입력: 방학버킷(최대2) 미반영");
+    else noteParts.push(`방학버킷 반영: ${vacBucketsAdded}개`);
+    return { days: capped, hours: 0, note: noteParts.join(" · ") };
+  }
+
+  function baseDaysForWorker(w) {
+    const isEmergency = (w.pattern === "emergency");
+    if (!isEmergency) return 15;
+
+    // 비상시 근로자 기본연차: 교육공무직(12), 특수운영직군(11)
+    if (w.group === "special") return 11;
+    return 12;
+  }
+
+  function totalStandardDays(w, baseDays, bonusDays) {
+    const addDays = w.addDays ?? 0;
+    return Math.min(25, (baseDays ?? 0) + (bonusDays ?? 0) + addDays);
+  }
+
+  function computeAnnualLeaveUsageSummary(workerKey, dailyMinutes) {
+    const leaveRecs = state.records.filter(r =>
+      r.workerKey === workerKey &&
+      r.approvalStatus === "완결" &&
+      (r.type || "").includes("연차")
+    );
+
+    let total = 0;
+    let annual = 0, half = 0, late = 0, early = 0, out = 0;
+    for (const r of leaveRecs) {
+      const mins = Number(r.minutes || 0);
+      total += mins;
+
+      const typ = String(r.type || "");
+      if (typ.includes("반일")) half += mins;
+      else if (typ.includes("지각")) late += mins;
+      else if (typ.includes("조퇴")) early += mins;
+      else if (typ.includes("외출")) out += mins;
+      else annual += mins;
+    }
+
+    return { total, annual, half, late, early, out };
+  }
+
+  function calcRatesForWorker(w) {
+    const sets = state.calendar.sets;
+    if (!sets) return { rateSemester: null, rateFull: 0, rateProportional: null, excludedFull: 0, absenceFull: 0, deemedFull: 0, reviewFull: 0, dailyMinutes: Math.round(Number(w.dailyHours || DEFAULT_DAILY_HOURS) * 60) };
+
+    const dailyMinutes = Math.round(Number(w.dailyHours || DEFAULT_DAILY_HOURS) * 60);
 
     const workerRecords = state.records.filter(r => r.workerKey === w.key);
 
-    let excludedFull = 0, absenceFull = 0;
-    let excludedSem = 0, absenceSem = 0;
-    let creditVac = 0;
+    const sum = { deemed:0, excluded:0, absence:0, review:0, creditVac:0, total: sets.fullCount * dailyMinutes };
+    for (const rec of workerRecords) {
+      const cls = recordClass(rec);
+      const mFull = computeRecordMinutesOnSet(rec, sets.fullSet, dailyMinutes);
+      sum[cls] = (sum[cls] || 0) + mFull;
 
-    for (const r of workerRecords) {
-      const cls = recordClass(r);
-      const minsFull = computeRecordMinutesOnSet(r, sets.fullSet, dailyMinutes);
-      const minsSem  = computeRecordMinutesOnSet(r, sets.semSet, dailyMinutes);
-
-      if (cls === "excluded") {
-        excludedFull += minsFull;
-        excludedSem += minsSem;
-      } else if (cls === "absence") {
-        absenceFull += minsFull;
-        absenceSem += minsSem;
-      }
-
-      if (r.credit) {
-        // 방학중근무 가산은 방학에 해당하는 일수만 가산
-        const minsVac = computeRecordMinutesOnSet(r, sets.vacationSet, dailyMinutes);
-        creditVac += minsVac;
+      if (rec.credit) {
+        sum.creditVac += computeRecordMinutesOnSet(rec, sets.vacationSet, dailyMinutes);
       }
     }
 
-    const fullTotal = sets.fullCount * dailyMinutes;
-    const semTotal  = sets.semCount * dailyMinutes;
+    // 분자 = 총 - (결근성 + 산정제외 + 검토?) + 출근간주
+    // 여기서는 "검토"는 분자에서 제외(보수적), 출근간주는 분자에 포함.
+    const numeratorFull = Math.max(0, sum.total - sum.absence - sum.excluded - sum.review + sum.deemed + sum.creditVac);
+    const denomFull = Math.max(1, sum.total - sum.excluded); // 산정제외는 분모에서 제외
+    const rateFull = numeratorFull / denomFull;
 
-    const denomFull = Math.max(0, fullTotal - excludedFull);
-    const denomSem  = Math.max(0, semTotal - excludedSem);
+    let rateSemester = null;
+    if (sets.semCount > 0) {
+      // 학기중: 방학기간 제외한 날만 본다 (records를 semSet에 투영)
+      const totalSem = sets.semCount * dailyMinutes;
+      let deemedSem = 0, excludedSem = 0, absenceSem = 0, reviewSem = 0;
 
-    // 분자: 전체 - 결근성(결근) + 출근간주(deemed) 포함(이미 fullTotal 기반에서 제외를 제외한 나머지 전부 출근으로 보고, 결근만 빼는 방식)
-    const numerFull = Math.max(0, denomFull - absenceFull + creditVac);
-    const numerSem  = Math.max(0, denomSem - absenceSem);
+      for (const rec of workerRecords) {
+        const cls = recordClass(rec);
+        const mSem = computeRecordMinutesOnSet(rec, sets.semSet, dailyMinutes);
+        if (cls === "deemed") deemedSem += mSem;
+        else if (cls === "excluded") excludedSem += mSem;
+        else if (cls === "absence") absenceSem += mSem;
+        else reviewSem += mSem;
+      }
 
-    const rateFull = denomFull > 0 ? (numerFull / denomFull) : 0;
-    const rateSemester = denomSem > 0 ? (numerSem / denomSem) : null;
+      const numeratorSem = Math.max(0, totalSem - absenceSem - excludedSem - reviewSem + deemedSem);
+      const denomSem = Math.max(1, totalSem - excludedSem);
+      rateSemester = numeratorSem / denomSem;
+    }
 
-    // 비례산정: 80% 미달인 경우에만 산정(제외기간 제거)
     let rateProportional = null;
-    const thresholdFail = (w.pattern === "emergency")
-      ? ((rateSemester ?? 0) < 0.8)
-      : (rateFull < 0.8);
-
-    if (thresholdFail) {
-      rateProportional = rateFull; // 이미 제외기간은 denomFull에서 제거되어 있음
-    }
+    // 비례산정: 연간에서 "검토"를 분모/분자에서 모두 빼고 계산(조금 더 관대)
+    const denomP = Math.max(1, sum.total - sum.excluded - sum.review);
+    const numeratorP = Math.max(0, sum.total - sum.absence - sum.excluded - sum.review + sum.deemed + sum.creditVac);
+    rateProportional = numeratorP / denomP;
 
     return {
-      dailyMinutes,
-      excludedFull, absenceFull, excludedSem, absenceSem, creditVac,
-      denomFull, denomSem,
-      numerFull, numerSem,
-      rateFull,
       rateSemester,
-      rateProportional
+      rateFull,
+      rateProportional,
+      excludedFull: sum.excluded / dailyMinutes,
+      absenceFull: sum.absence / dailyMinutes,
+      deemedFull: sum.deemed / dailyMinutes,
+      reviewFull: sum.review / dailyMinutes,
+      creditVac: sum.creditVac / dailyMinutes,
+      dailyMinutes
     };
   }
 
-  function computeFinalLeaveForWorker(w) {
-    const rates = calcRatesForWorker(w);
-    const baseDays = baseDaysForWorker(w);
-    const bonusDays = bonusDaysForWorker(w, rates); // 비상시: 연간 80% 달성 시 3/4일
-    const standardDays = totalStandardDays(w, baseDays, bonusDays);
-
-    const dailyHours = Number(w.dailyHours || DEFAULT_DAILY_HOURS);
-
-    // (원칙) 출근율 80% 이상이면 표준 연차, 아니면 1개월 개근 1일(월단위)로 산정
-    let method = "";
-    let finalDays = 0;
-    let note = "";
-
-    const ok80 = (rates.rateFull >= 0.8);
-
-    if (ok80) {
-      // 표준부여 (단시간 비례 포함)
-      const prop = dailyHours / 8;
-      finalDays = round1(standardDays * prop);
-      method = "80%이상(표준)";
-    } else {
-      // 80% 미만: 월 개근 산정(간이)
-      // 실제 업무편람 기준과 다를 수 있으므로 '검토' 표시
-      method = "80%미만(월개근 추정)";
-      note = "80% 미만: 월 개근 1일 산정은 케이스별 확인 필요(간이 추정).";
-      // 간이: 연간에서 '결근성/제외'를 고려해서 출근한 달을 추정
-      // 여기서는 보수적으로 0으로 두고 검토로 던짐
-      finalDays = 0;
-    }
-
-    // 비례산정(제외기간 존재 & 80%미만 케이스) 안내
-    if (rates.rateProportional != null && rates.rateProportional < 0.8) {
-      // 이 경우는 실제로는 비례산정 연차 계산을 해야 하는데, 현재는 표준부여와 충돌 가능
-      // -> 검토 메모
-      note = (note ? (note + " / ") : "") + "비례산정(제외기간) 적용 대상 가능: 산정식 확인 필요.";
-    }
-
-    // 시간 환산(8시간 기준)
-    const finalHours = round1(finalDays * 8 * (dailyHours / 8)); // 실제 부여는 시간단위 관리(여기선 표시용)
-
-    return { rates, baseDays, bonusDays, addDays: (w.addDays ?? 0), standardDays, finalDays, finalHours, method, note };
+  function bonusDaysForWorker(w, rates) {
+    // 비상시: 연간 출근율 80% 달성 시 3일(교육공무직)/4일(특수운영직군)
+    if (w.pattern !== "emergency") return 0;
+    const r = rates.rateFull ?? 0;
+    if (r < 0.8) return 0;
+    if (w.group === "special") return 4;
+    return 3;
   }
 
-  // ==========================
-  // 결과 렌더링
-  // ==========================
+  function calcGrantForWorker(w) {
+    const rates = calcRatesForWorker(w);
+
+    const baseDays = baseDaysForWorker(w);
+    const bonusDays = bonusDaysForWorker(w, rates); // 비상시: 연간 80% 달성 시 3/4일
+    const standardWithBonus = totalStandardDays(w, baseDays, bonusDays);
+    const standardNoBonus = totalStandardDays(w, baseDays, 0);
+
+    const serviceYears = w.serviceYears ?? 0;
+    const isEmergency = (w.pattern === "emergency");
+
+    if (serviceYears < 1) {
+      const monthly = calcMonthlyAccrual(w);
+      return {
+        workerKey: w.key,
+        baseDays,
+        bonusDays: 0, // 신규 월차에는 3일 가산 개념 적용 안 함
+        addDays: w.addDays ?? 0,
+        standardDays: standardNoBonus,
+        finalDays: monthly.days,
+        finalHours: monthly.hours,
+        method: "신규(1년 미만) 1개월 개근 1일",
+        note: monthly.note,
+        rates
+      };
+    }
+
+    // 상시
+    if (!isEmergency) {
+      const rate1 = rates.rateFull ?? 0;
+      const rateP = rates.rateProportional ?? 0;
+
+      if (rate1 >= 0.8) {
+        return { workerKey: w.key, baseDays, bonusDays: 0, addDays: w.addDays ?? 0, standardDays: standardWithBonus, finalDays: standardWithBonus, finalHours: 0, method: "정상부여(연간 출근율 80% 이상)", note: "", rates };
+      }
+
+      if (rates.rateProportional != null && rateP >= 0.8) {
+        const fullDays = state.calendar.sets ? state.calendar.sets.fullCount : 0;
+        const excludedDays = Math.round((rates.excludedFull ?? 0));
+        return { workerKey: w.key, baseDays, bonusDays: 0, addDays: w.addDays ?? 0, standardDays: standardWithBonus, finalDays: standardWithBonus, finalHours: 0, method: "정상부여(비례산정 80% 이상)", note: `연간 총일수 ${fullDays}일 중 산정제외 ${excludedDays}일 반영`, rates };
+      }
+
+      return { workerKey: w.key, baseDays, bonusDays: 0, addDays: w.addDays ?? 0, standardDays: standardWithBonus, finalDays: standardNoBonus, finalHours: 0, method: "출근율 미달(기본만)", note: "연간 출근율 80% 미만: 가산 제외", rates };
+    }
+
+    // 비상시
+    const r = rates.rateFull ?? 0;
+    if (r >= 0.8) {
+      return { workerKey: w.key, baseDays, bonusDays, addDays: w.addDays ?? 0, standardDays: standardWithBonus, finalDays: standardWithBonus, finalHours: 0, method: "정상부여(연간 출근율 80% 이상)", note: "", rates };
+    }
+
+    // 비상시도 80% 미달이면 가산 제외
+    return { workerKey: w.key, baseDays, bonusDays: 0, addDays: w.addDays ?? 0, standardDays: standardWithBonus, finalDays: standardNoBonus, finalHours: 0, method: "출근율 미달(기본만)", note: "연간 출근율 80% 미만: 출근율가산 제외", rates };
+  }
+
   function renderResults() {
     const tbody = $("#resultTable tbody");
     tbody.innerHTML = "";
 
-    const arr = state.results || [];
+    if (!state.results.length) {
+      $("#resultSummary").textContent = "계산 실행 버튼 먼저 눌러주세요.";
+      $("#detailBox").innerHTML = "";
+      $("#detailNotice").classList.add("hidden");
+      return;
+    }
+
+    const arr = state.results.slice().sort((a,b) => {
+      const wa = state.workers.get(a.workerKey);
+      const wb = state.workers.get(b.workerKey);
+      return (wa?.name || "").localeCompare(wb?.name || "", "ko");
+    });
+
     for (const r of arr) {
       const w = state.workers.get(r.workerKey);
       const tr = document.createElement("tr");
+
+      const groupText = w?.group === "special" ? "특수운영직군" : "교육공무직";
+      const patText = w?.pattern === "emergency" ? "방학중비상시" : "상시";
+
+      const finalText = (r.finalHours > 0) ? `${r.finalDays}일 ${r.finalHours}시간` : `${r.finalDays}일`;
+
       tr.innerHTML = `
         <td class="nowrap">${escapeHtml(w?.key || r.workerKey)}</td>
         <td class="nowrap">${escapeHtml(w?.name || "")}</td>
-        <td class="nowrap">${w?.group==="special" ? "특수운영직군" : "교육공무직"}</td>
+        <td class="nowrap">${groupText}</td>
         <td class="nowrap">${escapeHtml(w?.job || "")}</td>
-        <td class="nowrap">${w?.pattern==="emergency" ? "방학중 비상시" : "상시"}</td>
-        <td class="right nowrap">${escapeHtml(String(w?.serviceYears ?? 0))}년</td>
-        <td class="right nowrap">${r.rates.rateSemester==null ? "" : pctValue(r.rates.rateSemester)}%</td>
-        <td class="right nowrap">${pctValue(r.rates.rateFull ?? 0)}%</td>
-        <td class="right nowrap">${r.rates.rateProportional==null ? "" : pctValue(r.rates.rateProportional)}%</td>
-        <td class="right nowrap">${r.baseDays}</td>
-        <td class="right nowrap">${r.bonusDays ?? 0}</td>
-        <td class="right nowrap">${r.addDays}</td>
-        <td class="right nowrap">${r.standardDays}</td>
-        <td class="right nowrap">${r.finalDays}</td>
+        <td class="nowrap">${patText}</td>
+        <td class="nowrap right">${escapeHtml(String(w?.serviceYears ?? 0))}</td>
+        <td class="nowrap right">${r.rates.rateSemester == null ? "-" : pct(r.rates.rateSemester)}</td>
+        <td class="nowrap right">${pct(r.rates.rateFull ?? 0)}</td>
+        <td class="nowrap right">${r.rates.rateProportional == null ? "-" : pct(r.rates.rateProportional)}</td>
+        <td class="nowrap right">${escapeHtml(String(r.baseDays ?? 0))}</td>
+        <td class="nowrap right">${escapeHtml(String(r.bonusDays ?? 0))}</td>
+        <td class="nowrap right">${escapeHtml(String(r.addDays ?? 0))}</td>
+        <td class="nowrap right">${escapeHtml(String(r.standardDays ?? 0))}</td>
+        <td class="nowrap right"><b>${escapeHtml(finalText)}</b></td>
         <td class="nowrap">${escapeHtml(r.method || "")}</td>
       `;
       tbody.appendChild(tr);
     }
 
-    if (arr.length) {
-      setMsg($("#resultSummary"), "ok", `
-        <div><b>계산 완료</b> · 대상자 ${arr.length}명</div>
-        <div class="muted">※ “검토” 내역은 상세에서 확인 후 분류를 조정하세요.</div>
-      `);
-    } else {
-      setMsg($("#resultSummary"), "warn", "계산 실행 버튼 먼저 눌러주세요.");
-    }
+    $("#resultSummary").innerHTML = `
+      <div><b>총 ${state.results.length}명 계산 완료</b></div>
+      <div class="muted">※ 개인별 상세는 아래에서 확인/엑셀 저장 가능합니다.</div>
+    `;
 
-    renderDetailBox();
+    renderDetailBoxes();
   }
 
-  function renderDetailBox() {
+  function formatStdCompact(rr) {
+    const std = rr.standardDays ?? 0;
+    const base = rr.baseDays ?? 0;
+    const b = rr.bonusDays ?? 0;
+    const a = rr.addDays ?? 0;
+    return `${base}+${b}+${a} = ${std}`;
+  }
+
+  function renderDetailBoxes() {
     const box = $("#detailBox");
     box.innerHTML = "";
+    $("#detailNotice").classList.remove("hidden");
 
-    const showNotice = state.records.some(r => recordClass(r) === "review");
-    $("#detailNotice").classList.toggle("hidden", !showNotice);
-
-    const workersSorted = Array.from(state.workers.values()).sort((a,b) => (a.name||"").localeCompare(b.name||"", "ko"));
-
-    if (!workersSorted.length) {
-      box.innerHTML = `<div class="msg">대상자가 없습니다.</div>`;
-      return;
-    }
-
-    if (!state.calendar.sets) buildCalendarSets();
-    const sets = state.calendar.sets;
+    const workersSorted = Array.from(state.workers.values()).sort((a,b)=> (a.name||"").localeCompare(b.name||"", "ko"));
 
     for (const w of workersSorted) {
-      const dailyMinutes = Math.round(Number(w.dailyHours || DEFAULT_DAILY_HOURS) * 60);
-      const rates = calcRatesForWorker(w);
+      const rr = state.results.find(x => x.workerKey === w.key);
+      if (!rr) continue;
 
-      const recs = state.records
-        .filter(r => r.workerKey === w.key)
-        .sort((a, b) => a.startUTC - b.startUTC);
-
-      const totalRecs = recs.length;
-      const reviewRecs = recs.filter(r => recordClass(r) === "review").length;
-
-      const vacWarns = recs.filter(r => r.credit && state.calendar.applied && !rangeOverlapsVacation(r.startUTC, r.endUTC)).length;
-
+      const dailyMinutes = rr.rates.dailyMinutes || Math.round(Number(w.dailyHours || DEFAULT_DAILY_HOURS) * 60);
       const usage = computeAnnualLeaveUsageSummary(w.key, dailyMinutes);
-      const usageText = fmtDHM(minutesToDHM(usage.total, dailyMinutes));
 
-      const head = document.createElement("details");
-      head.open = false;
+      const rateSem = (rr.rates.rateSemester == null) ? "-" : pct(rr.rates.rateSemester);
+      const rateFull = pct(rr.rates.rateFull ?? 0);
+      const rateProp = (rr.rates.rateProportional == null) ? "-" : pct(rr.rates.rateProportional);
 
-      const g = (w.group === "special") ? "특수운영직군" : "교육공무직";
-      const j = w.job ? `(${w.job})` : "";
-      const p = (w.pattern === "emergency") ? "방학중 비상시" : "상시";
-      const warnTag = reviewRecs ? `<span class="pill warn">검토 ${reviewRecs}건</span>` : `<span class="pill ok">검토 없음</span>`;
-      const vacTag = vacWarns ? `<span class="pill warn">방학무관 가산 ${vacWarns}건</span>` : "";
+      const finalText = (rr.finalHours > 0) ? `${rr.finalDays}일 ${rr.finalHours}시간` : `${rr.finalDays}일`;
+      const stdText = formatStdCompact(rr);
 
-      head.innerHTML = `
-        <summary>
-          <span class="nowrap"><b>${escapeHtml(w.name)}</b> (${escapeHtml(w.key)})</span>
-          <span class="mini"> · ${g}${j} · ${p} · 근속 ${escapeHtml(String(w.serviceYears))}년</span>
-          <span style="margin-left:8px;">${warnTag} ${vacTag}</span>
-        </summary>
-        <div class="msg" style="margin-top:8px;">
-          <div class="grid two">
-            <div>
-              <div><b>출근율</b></div>
-              <ul>
-                <li>학기중: ${rates.rateSemester==null ? "-" : pctValue(rates.rateSemester)}%</li>
-                <li>연간: ${pctValue(rates.rateFull)}%</li>
-                <li>비례산정: ${rates.rateProportional==null ? "-" : pctValue(rates.rateProportional)}%</li>
-              </ul>
-              <div class="muted">방학근무(가산) 분: ${rates.creditVac}분</div>
-            </div>
-            <div>
-              <div><b>연차 사용(완결만)</b>: ${usageText}</div>
-              <div class="muted">연차: ${fmtDHM(minutesToDHM(usage.byKind.FULL, dailyMinutes))}, 반일: ${fmtDHM(minutesToDHM(usage.byKind.HALF, dailyMinutes))}, 지각: ${fmtDHM(minutesToDHM(usage.byKind.LATE, dailyMinutes))}, 조퇴: ${fmtDHM(minutesToDHM(usage.byKind.EARLY, dailyMinutes))}, 외출: ${fmtDHM(minutesToDHM(usage.byKind.OUT, dailyMinutes))}</div>
-              <div class="muted">복무 취합: ${totalRecs}건</div>
-            </div>
+      const ss = state.calendar.summerStart ? utcToYmd(state.calendar.summerStart) : "";
+      const se = state.calendar.summerEnd ? utcToYmd(state.calendar.summerEnd) : "";
+      const ws = state.calendar.winterStart ? utcToYmd(state.calendar.winterStart) : "";
+      const we = state.calendar.winterEnd ? utcToYmd(state.calendar.winterEnd) : "";
+
+      const workerRecords = state.records.filter(x => x.workerKey === w.key).sort((a,b)=> a.startUTC - b.startUTC);
+
+      const sums = { deemed:0, excluded:0, absence:0, review:0, creditVac:0, total: 0 };
+      if (state.calendar.sets) {
+        sums.total = state.calendar.sets.fullCount * dailyMinutes;
+        for (const rec of workerRecords) {
+          const cls = recordClass(rec);
+          const mFull = computeRecordMinutesOnSet(rec, state.calendar.sets.fullSet, dailyMinutes);
+          sums[cls] = (sums[cls] || 0) + mFull;
+          if (rec.credit) sums.creditVac += computeRecordMinutesOnSet(rec, state.calendar.sets.vacationSet, dailyMinutes);
+        }
+      }
+
+      const card = document.createElement("div");
+      card.className = "card";
+
+      card.innerHTML = `
+        <div class="row" style="justify-content:space-between; gap:12px; flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:800; font-size:16px;">${escapeHtml(w.name || "")} <span class="pill">${escapeHtml(w.key || "")}</span></div>
+            <div class="muted">${w.group==="special" ? "특수운영직군" : "교육공무직"} · ${escapeHtml(w.job||"")} · ${w.pattern==="emergency" ? "방학중비상시" : "상시"}</div>
+          </div>
+          <div class="row gap">
+            <button class="btn" data-dl-detail="${escapeHtml(w.key)}">개인별 상세 엑셀 저장</button>
           </div>
         </div>
 
-        <div class="table-wrap">
-          <table class="sheetlike table-compact">
-            <thead>
-              <tr>
-                <th class="nowrap">기간</th>
-                <th class="nowrap">종별</th>
-                <th class="nowrap">사유</th>
-                <th class="nowrap">결재</th>
-                <th class="nowrap">자동분류</th>
-                <th class="nowrap">최종분류</th>
-                <th class="nowrap center">방학중근무가산</th>
-                <th class="nowrap right">분(저장)</th>
-                <th class="nowrap">원본</th>
-                <th class="nowrap">파일</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${recs.map(r => {
-                const auto = r.autoClass || "review";
-                const fin = r.finalClass || "auto";
-                const cls = (fin && fin !== "auto") ? fin : auto;
-                const isReview = (cls === "review");
-                const trClass = isReview ? "warn-line" : "";
-                const vacWarn = (r.credit && state.calendar.applied && !rangeOverlapsVacation(r.startUTC, r.endUTC))
-                  ? `<span class="pill warn">방학X</span>` : "";
+        <div class="grid two" style="margin-top:10px;">
+          <div class="msg">
+            <div><b>인사정보</b></div>
+            <ul>
+              <li>최초계약일: <b>${w.hireDateUTC ? utcToYmd(w.hireDateUTC) : "-"}</b></li>
+              <li>1일 소정근로시간: <b>${escapeHtml(String(w.dailyHours ?? DEFAULT_DAILY_HOURS))}</b></li>
+              <li>근속연수(2026-03-01): <b>${escapeHtml(String(w.serviceYears ?? 0))}년</b></li>
+            </ul>
+          </div>
 
-                return `
-                  <tr class="${trClass}">
-                    <td class="nowrap">${utcToYmd(r.startUTC)} ~ ${utcToYmd(r.endUTC)}</td>
-                    <td class="nowrap">${escapeHtml(r.type || "")}</td>
-                    <td>${escapeHtml(r.reason || "")}</td>
-                    <td class="nowrap">${escapeHtml(r.approvalStatus || "")}</td>
-                    <td class="nowrap">${CLASS_LABEL[auto] || escapeHtml(auto)}</td>
-                    <td class="nowrap">${fin === "auto" ? "자동" : (CLASS_LABEL[fin] || escapeHtml(fin))}</td>
-                    <td class="center nowrap">${r.credit ? "Y" : ""} ${vacWarn}</td>
-                    <td class="right nowrap">${r.minutes == null ? "" : escapeHtml(String(r.minutes))}</td>
-                    <td class="nowrap">${escapeHtml(r.rawDur || "")}</td>
-                    <td class="nowrap">${escapeHtml(r.sourceFile || "")}</td>
+          <div class="msg">
+            <div><b>학사일정</b></div>
+            <ul>
+              <li>여름: ${ss && se ? `${ss}~${se}` : "-"}</li>
+              <li>겨울: ${ws && we ? `${ws}~${we}` : "-"}</li>
+            </ul>
+          </div>
+
+          <div class="msg">
+            <div><b>출근율</b></div>
+            <ul>
+              <li>학기중: <b>${rateSem}</b></li>
+              <li>연간: <b>${rateFull}</b></li>
+              <li>비례산정: <b>${rateProp}</b></li>
+            </ul>
+          </div>
+
+          <div class="msg">
+            <div><b>부여 결과</b></div>
+            <ul>
+              <li>기본연차: <b>${escapeHtml(String(rr.baseDays ?? 0))}</b></li>
+              <li>출근율가산: <b>${escapeHtml(String(rr.bonusDays ?? 0))}</b></li>
+              <li>근속가산: <b>${escapeHtml(String(rr.addDays ?? 0))}</b></li>
+              <li>표준합계(상한25): <b>${escapeHtml(stdText)}</b></li>
+              <li>최종부여: <b>${escapeHtml(finalText)}</b></li>
+              <li>판정: <b>${escapeHtml(rr.method || "")}</b></li>
+            </ul>
+            ${rr.note ? `<div class="muted">비고: ${escapeHtml(rr.note)}</div>` : ""}
+          </div>
+        </div>
+
+        <div class="msg" style="margin-top:10px;">
+          <div><b>연차 사용(완결만 집계)</b></div>
+          <ul>
+            <li>총합: <b>${fmtDHM(minutesToDHM(usage.total, dailyMinutes))}</b></li>
+            <li>연차: ${fmtDHM(minutesToDHM(usage.annual, dailyMinutes))}</li>
+            <li>반일연차: ${fmtDHM(minutesToDHM(usage.half, dailyMinutes))}</li>
+            <li>연차(지각): ${fmtDHM(minutesToDHM(usage.late, dailyMinutes))}</li>
+            <li>연차(조퇴): ${fmtDHM(minutesToDHM(usage.early, dailyMinutes))}</li>
+            <li>연차(외출): ${fmtDHM(minutesToDHM(usage.out, dailyMinutes))}</li>
+          </ul>
+        </div>
+
+        <details style="margin-top:10px;">
+          <summary><b>복무 취합(자동분류/최종분류) 보기</b></summary>
+          <div class="table-wrap" style="margin-top:8px;">
+            <table class="sheetlike table-compact">
+              <thead>
+                <tr>
+                  <th class="nowrap">기간</th>
+                  <th class="nowrap">종별</th>
+                  <th class="nowrap">사유</th>
+                  <th class="nowrap">결재상태</th>
+                  <th class="nowrap">자동분류</th>
+                  <th class="nowrap">최종분류</th>
+                  <th class="nowrap right">분(저장값)</th>
+                  <th class="nowrap">원본</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${workerRecords.map(rec => `
+                  <tr>
+                    <td class="nowrap">${utcToYmd(rec.startUTC)}~${utcToYmd(rec.endUTC)}</td>
+                    <td class="nowrap">${escapeHtml(rec.type || "")}</td>
+                    <td class="nowrap">${escapeHtml(rec.reason || "")}</td>
+                    <td class="nowrap">${escapeHtml(rec.approvalStatus || "")}</td>
+                    <td class="nowrap">${escapeHtml(CLASS_LABEL[rec.autoClass] || rec.autoClass || "")}</td>
+                    <td class="nowrap">${escapeHtml(rec.finalClass === "auto" ? "자동" : (CLASS_LABEL[rec.finalClass] || rec.finalClass || ""))}</td>
+                    <td class="nowrap right">${rec.minutes == null ? "" : escapeHtml(String(rec.minutes))}</td>
+                    <td class="nowrap">${escapeHtml(rec.rawDur || "")}</td>
                   </tr>
-                `;
-              }).join("")}
-            </tbody>
-          </table>
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <div class="msg" style="margin-top:10px;">
+          <div><b>복무 합계(연간, 토요일 제외)</b></div>
+          <ul>
+            <li>산정제외: ${minutesToDays(sums.excluded, dailyMinutes)}</li>
+            <li>결근성: ${minutesToDays(sums.absence, dailyMinutes)}</li>
+            <li>출근간주: ${minutesToDays(sums.deemed, dailyMinutes)}</li>
+            <li>검토: ${minutesToDays(sums.review, dailyMinutes)}</li>
+            ${w.pattern === "emergency" ? `<li>방학중 근무(분자 가산): ${minutesToDays(sums.creditVac, dailyMinutes)}</li>` : ""}
+          </ul>
         </div>
       `;
 
-      box.appendChild(head);
-    }
-  }
-
-  // ==========================
-  // 비상시 방학근무 추가입력 UI
-  // ==========================
-  function getEmergencyWorkersSorted() {
-    return Array.from(state.workers.values())
-      .filter(w => w.pattern === "emergency")
-      .sort((a,b) => (a.name||"").localeCompare(b.name||"", "ko"));
-  }
-
-  function vacCreditRecordsFor(workerKey) {
-    return state.records.filter(r => r.workerKey === workerKey && r.sourceFile === "방학근무추가");
-  }
-
-  function renderVacCreditTable(workerKey) {
-    const tbody = $("#vacCreditTable tbody");
-    tbody.innerHTML = "";
-
-    const w = state.workers.get(workerKey);
-    if (!w) return;
-
-    if (!state.calendar.sets) buildCalendarSets();
-    const sets = state.calendar.sets;
-
-    const recs = vacCreditRecordsFor(workerKey);
-    let totalVacDays = 0;
-
-    for (const r of recs) {
-      const vacDays = (state.calendar.applied && sets)
-        ? countDaysOnSet(r.startUTC, r.endUTC, sets.vacationSet)
-        : 0;
-      totalVacDays += vacDays;
-
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td class="nowrap">${utcToYmd(r.startUTC)} ~ ${utcToYmd(r.endUTC)}</td>
-        <td>${escapeHtml(r.reason || "")}</td>
-        <td class="right nowrap">${vacDays}일</td>
-        <td class="center nowrap"><button class="btn btn-lightgrey" data-vac-del="${escapeHtml(r.id)}">삭제</button></td>
-      `;
-      tbody.appendChild(tr);
+      box.appendChild(card);
     }
 
-    const g = (w.group === "special") ? "특수운영직군" : "교육공무직";
-    const j = w.job ? `(${w.job})` : "";
-    const calWarn = state.calendar.applied ? "" : "<div class=\"muted\">※ 학사일정 미적용: 방학일수로 인식되지 않아 0일로 표시될 수 있습니다.</div>";
-
-    setMsg($("#vacCreditMsg"), recs.length ? "ok" : "warn", `
-      <div><b>${escapeHtml(w.name)}</b> · ${g}${j}</div>
-      <div>추가입력 ${recs.length}건 · 방학일수 합계 <b>${totalVacDays}일</b></div>
-      <div class="muted">※ 여기서 입력한 내역은 복무에 <b>방학중근무(추가)</b>로 저장됩니다. (상세에서 확인 가능)</div>
-      ${calWarn}
-    `);
-
-    tbody.querySelectorAll("button[data-vac-del]").forEach(btn => {
+    $$("[data-dl-detail]").forEach(btn => {
       btn.addEventListener("click", () => {
-        const id = btn.getAttribute("data-vac-del");
-        state.records = state.records.filter(r => r.id !== id);
-        renderVacCreditTable(workerKey);
-        if (state.workers.size) runCalculation();
+        const k = btn.getAttribute("data-dl-detail");
+        downloadWorkerDetailXlsx(k);
       });
     });
   }
 
-  function renderVacCreditUI() {
-    const sel = $("#vacWSelect");
-    const arr = getEmergencyWorkersSorted();
+  // 방학중근무(출근 간주) 입력을 records에 credit 플래그로 저장
+  function addVacCredit(workerKey, startUTC, endUTC, memo) {
+    const r = normalizeRange(startUTC, endUTC);
+    if (!r) return 0;
 
-    const prev = sel.value;
-    sel.innerHTML = "";
-
-    if (!arr.length) {
-      const opt = document.createElement("option");
-      opt.value = "";
-      opt.textContent = "비상시 근로자 없음";
-      sel.appendChild(opt);
-      sel.disabled = true;
-      $("#btnAddVacCredit").disabled = true;
-      $("#btnClearVacCredit").disabled = true;
-      $("#vacCreditTable tbody").innerHTML = "";
-      setMsg($("#vacCreditMsg"), "warn", "비상시 근로자가 없습니다. (근무형태가 '방학 중 비상시'인 대상자만 입력 가능)");
-      return;
+    let days = 0;
+    for (let d = r.start; d <= r.end; d = addDaysUTC(d, 1)) {
+      if (isSaturdayUTC(d)) continue;
+      if (!state.calendar.sets || !state.calendar.sets.vacationSet.has(utcToYmd(d))) continue;
+      days += 1;
     }
 
-    sel.disabled = false;
-    $("#btnAddVacCredit").disabled = false;
-    $("#btnClearVacCredit").disabled = false;
+    if (days <= 0) return 0;
 
-    for (const w of arr) {
-      const opt = document.createElement("option");
-      opt.value = w.key;
-      const g = (w.group === "special") ? "특수운영" : "교육공무직";
-      const j = w.job ? `(${w.job})` : "";
-      opt.textContent = `${w.name} (${w.key}) · ${g}${j}`;
-      sel.appendChild(opt);
-    }
+    state.records.push({
+      workerKey,
+      startUTC: r.start,
+      endUTC: r.end,
+      type: "방학중근무(출근간주)",
+      reason: memo || "",
+      approvalStatus: "완결",
+      autoClass: "deemed",
+      finalClass: "deemed",
+      minutes: null,
+      rawDur: `${days}일`,
+      sourceFile: "수기입력",
+      credit: true
+    });
 
-    if (prev && arr.some(w => w.key === prev)) sel.value = prev;
-    else sel.value = arr[0].key;
-
-    renderVacCreditTable(sel.value);
+    return days;
   }
 
-  // ==========================
-  // 계산 실행
-  // ==========================
-  function runCalculation() {
-    if (!state.workers.size) {
-      setMsg($("#runMsg"), "err", "대상자를 먼저 입력하세요.");
-      return;
+  function renderVacCreditTable() {
+    const tbody = $("#vacCreditTable tbody");
+    tbody.innerHTML = "";
+
+    const wk = $("#vacWSelect")?.value;
+    if (!wk) return;
+
+    const rows = state.records
+      .filter(r => r.workerKey === wk && r.credit)
+      .sort((a,b)=> a.startUTC - b.startUTC);
+
+    for (const rec of rows) {
+      const tr = document.createElement("tr");
+      const sets = state.calendar.sets;
+      const dailyMinutes = Math.round(Number(state.workers.get(wk)?.dailyHours || DEFAULT_DAILY_HOURS) * 60);
+      const vacDays = sets ? Math.round(computeRecordMinutesOnSet(rec, sets.vacationSet, dailyMinutes) / dailyMinutes) : 0;
+
+      tr.innerHTML = `
+        <td class="nowrap">${utcToYmd(rec.startUTC)}~${utcToYmd(rec.endUTC)}</td>
+        <td class="nowrap">${escapeHtml(rec.reason || "")}</td>
+        <td class="nowrap right">${vacDays}</td>
+        <td class="nowrap center"><button class="btn" data-del-vac="${rec.startUTC.getTime()}_${rec.endUTC.getTime()}">삭제</button></td>
+      `;
+      tbody.appendChild(tr);
     }
 
-    if (!state.calendar.sets) buildCalendarSets();
-
-    const results = [];
-    const workersSorted = Array.from(state.workers.values()).sort((a,b) => (a.name||"").localeCompare(b.name||"", "ko"));
-
-    for (const w of workersSorted) {
-      const out = computeFinalLeaveForWorker(w);
-      results.push({
-        workerKey: w.key,
-        ...out
+    $$("[data-del-vac]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const key = btn.getAttribute("data-del-vac");
+        const [s,e] = key.split("_").map(Number);
+        state.records = state.records.filter(r => !(r.credit && r.workerKey === wk && r.startUTC.getTime() === s && r.endUTC.getTime() === e));
+        renderVacCreditTable();
       });
-    }
-
-    state.results = results;
-    state.lastRunAt = new Date();
-
-    setMsg($("#runMsg"), "ok", `
-      <div><b>계산 완료</b> · ${results.length}명</div>
-      <div class="muted">상세(검토 포함)는 아래 개인별 상세에서 확인하세요.</div>
-    `);
-
-    renderResults();
+    });
   }
 
-  // ==========================
-  // 엑셀 다운로드
-  // ==========================
-  function downloadXlsx() {
-    ensureXLSX();
-
-    if (!state.results || state.results.length === 0) {
-      alert("계산 결과가 없습니다. 먼저 계산 실행을 눌러주세요.");
-      return;
+  function ensureXLSX() {
+    if (typeof XLSX === "undefined") {
+      alert("엑셀 저장 기능을 위해 XLSX 라이브러리가 필요합니다. 인터넷 연결 상태를 확인하세요.");
+      throw new Error("XLSX missing");
     }
+  }
 
-    const wb = XLSX.utils.book_new();
+  function downloadResultsXlsx() {
+    ensureXLSX();
 
     const rows1 = [];
     rows1.push([
       "나이스개인번호","성명","직군","직종","근무형태","최초계약일","근속(2026-03-01)",
       "출근율(학기중)","출근율(연간)","출근율(비례산정)",
-      "기본","출근율가산(연간80%)","근속가산","표준합계(상한적용)",
-      "최종부여(일)","최종부여(시간)","판정","비고"
+      "기본","출근율가산(연간80%)","근속가산","표준합계(상한25)","최종부여","최종부여_시간","판정","비고"
     ]);
 
     for (const r of state.results) {
@@ -1832,6 +1481,7 @@
       ]);
     }
 
+    const wb = XLSX.utils.book_new();
     const ws1 = XLSX.utils.aoa_to_sheet(rows1);
     XLSX.utils.book_append_sheet(wb, ws1, "연차부여결과");
 
@@ -1880,472 +1530,563 @@
         w.name || "",
         usage.total,
         toText(usage.total),
-        toText(usage.byKind.FULL),
-        toText(usage.byKind.HALF),
-        toText(usage.byKind.LATE),
-        toText(usage.byKind.EARLY),
-        toText(usage.byKind.OUT)
+        toText(usage.annual),
+        toText(usage.half),
+        toText(usage.late),
+        toText(usage.early),
+        toText(usage.out),
       ]);
     }
 
     const ws3 = XLSX.utils.aoa_to_sheet(rows3);
-    XLSX.utils.book_append_sheet(wb, ws3, "연차사용집계(완결만)");
+    XLSX.utils.book_append_sheet(wb, ws3, "연차사용(완결만)");
 
-    const fname = `연차부여결과_2026학년도_${new Date().toISOString().slice(0,10)}.xlsx`;
-    XLSX.writeFile(wb, fname);
+    const filename = `연차부여결과_${utcToYmd(GRANT_DATE)}.xlsx`;
+    XLSX.writeFile(wb, filename);
   }
 
-  // ==========================
-  // UI 이벤트 바인딩
-  // ==========================
-  function bindDropZone(zoneEl, inputEl, onFiles) {
-    zoneEl.addEventListener("click", () => inputEl.click());
+  function downloadWorkerDetailXlsx(workerKey) {
+    ensureXLSX();
 
-    ["dragenter","dragover"].forEach(evt => {
-      zoneEl.addEventListener(evt, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        zoneEl.classList.add("dragover");
-      });
-    });
+    const w = state.workers.get(workerKey);
+    const rr = state.results.find(x => x.workerKey === workerKey);
 
-    ["dragleave","drop"].forEach(evt => {
-      zoneEl.addEventListener(evt, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        zoneEl.classList.remove("dragover");
-      });
-    });
+    if (!w || !rr) {
+      alert("개인별 상세를 저장하려면 먼저 계산을 실행해주세요.");
+      return;
+    }
 
-    zoneEl.addEventListener("drop", (e) => {
-      const files = Array.from(e.dataTransfer.files || []);
-      if (!files.length) return;
-      onFiles(files);
-    });
+    if (!state.calendar.sets) buildCalendarSets();
+    const sets = state.calendar.sets;
 
-    inputEl.addEventListener("change", () => {
-      const files = Array.from(inputEl.files || []);
-      if (!files.length) return;
-      onFiles(files);
-    });
+    const dailyMinutes = rr.rates.dailyMinutes || Math.round(Number(w.dailyHours || DEFAULT_DAILY_HOURS) * 60);
+    const records = state.records.filter(x => x.workerKey === workerKey).sort((a,b) => a.startUTC - b.startUTC);
+
+    const sum = { deemed:0, excluded:0, absence:0, review:0, creditVac:0, total: sets.fullCount * dailyMinutes };
+    for (const rec of records) {
+      const cls = recordClass(rec);
+      const mFull = computeRecordMinutesOnSet(rec, sets.fullSet, dailyMinutes);
+      sum[cls] = (sum[cls] || 0) + mFull;
+
+      if (rec.credit) {
+        sum.creditVac += computeRecordMinutesOnSet(rec, sets.vacationSet, dailyMinutes);
+      }
+    }
+
+    const leaveUsage = computeAnnualLeaveUsageSummary(workerKey, dailyMinutes);
+
+    const rateSem = (rr.rates.rateSemester == null) ? "-" : pct(rr.rates.rateSemester);
+    const rateFull = pct(rr.rates.rateFull ?? 0);
+    const rateProp = (rr.rates.rateProportional == null) ? "-" : pct(rr.rates.rateProportional);
+
+    const finalText = (rr.finalHours > 0) ? `${rr.finalDays}일 ${rr.finalHours}시간` : `${rr.finalDays}일`;
+    const stdText = formatStdCompact(rr);
+
+    const ss = state.calendar.summerStart ? utcToYmd(state.calendar.summerStart) : "";
+    const se = state.calendar.summerEnd ? utcToYmd(state.calendar.summerEnd) : "";
+    const ws = state.calendar.winterStart ? utcToYmd(state.calendar.winterStart) : "";
+    const we = state.calendar.winterEnd ? utcToYmd(state.calendar.winterEnd) : "";
+
+    const wb = XLSX.utils.book_new();
+
+    const rows1 = [];
+    rows1.push(["항목","값"]);
+    rows1.push(["나이스개인번호", w.key || ""]);
+    rows1.push(["성명", w.name || ""]);
+    rows1.push(["직군", w.group==="special" ? "특수운영직군" : "교육공무직"]);
+    rows1.push(["직종", w.job || ""]);
+    rows1.push(["근무형태", w.pattern==="emergency" ? "방학중비상시" : "상시"]);
+    rows1.push(["최초계약일", w.hireDateUTC ? utcToYmd(w.hireDateUTC) : ""]);
+    rows1.push(["1일 소정근로시간", String(w.dailyHours ?? DEFAULT_DAILY_HOURS)]);
+    rows1.push(["근속연수(2026-03-01)", String(w.serviceYears ?? 0) + "년"]);
+    rows1.push(["학사일정(여름)", (ss && se) ? `${ss}~${se}` : ""]);
+    rows1.push(["학사일정(겨울)", (ws && we) ? `${ws}~${we}` : ""]);
+    rows1.push(["출근율(학기중)", rateSem]);
+    rows1.push(["출근율(연간)", rateFull]);
+    rows1.push(["출근율(비례산정)", rateProp]);
+    rows1.push(["기본연차(비상시 기본 12/11)", String(rr.baseDays ?? "")]);
+    rows1.push(["출근율가산(연간80% 달성)", String(rr.bonusDays ?? 0)]);
+    rows1.push(["근속가산(3년차부터 2년에 1일)", String(rr.addDays ?? 0)]);
+    rows1.push(["기본+가산(상한25)", stdText]);
+    rows1.push(["최종부여", finalText]);
+    rows1.push(["판정", rr.method || ""]);
+    rows1.push(["비고", rr.note || ""]);
+    rows1.push(["연차 사용(완결만 집계)", fmtDHM(minutesToDHM(leaveUsage.total, dailyMinutes))]);
+    rows1.push(["복무-산정제외(연간)", minutesToDays(sum.excluded, dailyMinutes)]);
+    rows1.push(["복무-결근성(연간)", minutesToDays(sum.absence, dailyMinutes)]);
+    rows1.push(["복무-출근간주(연간)", minutesToDays(sum.deemed, dailyMinutes)]);
+    rows1.push(["복무-검토(연간)", minutesToDays(sum.review, dailyMinutes)]);
+    if (w.pattern === "emergency") {
+      rows1.push(["비상시 방학중 근무(분자 가산)", minutesToDays(sum.creditVac, dailyMinutes)]);
+    }
+
+    const ws1 = XLSX.utils.aoa_to_sheet(rows1);
+    XLSX.utils.book_append_sheet(wb, ws1, "요약");
+
+    const rows2 = [];
+    rows2.push([
+      "기간시작","기간종료","종별","사유","결재상태","자동분류","최종분류","방학중근무","분(저장값)","원본시간/일수","파일"
+    ]);
+
+    for (const rec of records) {
+      const auto = rec.autoClass || "review";
+      const fin = rec.finalClass || "auto";
+      rows2.push([
+        utcToYmd(rec.startUTC),
+        utcToYmd(rec.endUTC),
+        rec.type || "",
+        rec.reason || "",
+        rec.approvalStatus || "",
+        CLASS_LABEL[auto] || auto,
+        fin === "auto" ? "자동" : (CLASS_LABEL[fin] || fin),
+        rec.credit ? "Y" : "",
+        rec.minutes == null ? "" : rec.minutes,
+        rec.rawDur || "",
+        rec.sourceFile || ""
+      ]);
+    }
+
+    const ws2 = XLSX.utils.aoa_to_sheet(rows2);
+    XLSX.utils.book_append_sheet(wb, ws2, "복무취합");
+
+    const filename = `개인별상세_${w.name || w.key}_${utcToYmd(GRANT_DATE)}.xlsx`;
+    XLSX.writeFile(wb, filename);
+  }
+
+  function downloadRecordsDebugXlsx() {
+    ensureXLSX();
+
+    const rows = [];
+    rows.push(["workerKey","name","start","end","type","reason","approvalStatus","autoClass","finalClass","minutes","rawDur","sourceFile","credit"]);
+    for (const rec of state.records) {
+      const w = state.workers.get(rec.workerKey);
+      rows.push([
+        rec.workerKey,
+        w?.name || "",
+        utcToYmd(rec.startUTC),
+        utcToYmd(rec.endUTC),
+        rec.type || "",
+        rec.reason || "",
+        rec.approvalStatus || "",
+        rec.autoClass || "",
+        rec.finalClass || "",
+        rec.minutes == null ? "" : rec.minutes,
+        rec.rawDur || "",
+        rec.sourceFile || "",
+        rec.credit ? "Y" : ""
+      ]);
+    }
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, "records");
+    XLSX.writeFile(wb, "records_debug.xlsx");
+  }
+
+  // ---------- 근무상황목록 파싱(기존 로직) ----------
+  function parseWorkSheet(sheet, sourceFile) {
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: "" });
+    if (!rows.length) return { loaded: 0, skipped: 0 };
+
+    const headers = rows[0].map(x => String(x || "").trim());
+    const dataRows = rows.slice(1);
+
+    const colPid  = findColumnIndex(headers, ["개인번호","사번","인적번호","개인번호(아이디)","나이스개인번호","나이스 개인번호"]);
+    const colName = findColumnIndex(headers, ["성명","이름"]);
+    const colStart = findColumnIndex(headers, ["기간시작","시작일","시작","시작일자","기간 시작"]);
+    const colEnd = findColumnIndex(headers, ["기간종료","종료일","종료","종료일자","기간 종료"]);
+    const colType = findColumnIndex(headers, ["근무상황","근무상황명","근무상황구분","구분","종별","유형"]);
+    const colReason = findColumnIndex(headers, ["사유","사유명","비고","내용"]);
+    const colStatus = findColumnIndex(headers, ["결재상태","결재 상태","상태"]);
+    const colDur = findColumnIndex(headers, ["시간/일수","시간", "일수", "기간", "원본시간/일수"]);
+
+    if (colStart < 0 || colEnd < 0) {
+      throw new Error("근무상황목록 파일에서 기간(시작/종료) 컬럼을 찾지 못했습니다.");
+    }
+
+    let loaded = 0;
+    let skipped = 0;
+
+    for (const row of dataRows) {
+      const pid = (colPid >= 0) ? String(row[colPid] || "").trim() : "";
+      const name = (colName >= 0) ? String(row[colName] || "").trim() : "";
+      const workerKey = workerKeyOf(name, pid);
+
+      const start = parseDateLoose(row[colStart]);
+      const end = parseDateLoose(row[colEnd]);
+      if (!workerKey || !start || !end) { skipped++; continue; }
+
+      const type = (colType >= 0) ? String(row[colType] || "").trim() : "";
+      const reason = (colReason >= 0) ? String(row[colReason] || "").trim() : "";
+      const approvalStatus = (colStatus >= 0) ? String(row[colStatus] || "").trim() : "";
+      const rawDur = (colDur >= 0) ? String(row[colDur] || "").trim() : "";
+
+      const rec = {
+        workerKey,
+        startUTC: start,
+        endUTC: end,
+        type,
+        reason,
+        approvalStatus,
+        minutes: null,
+        rawDur,
+        sourceFile: sourceFile || ""
+      };
+
+      state.records.push(rec);
+      loaded++;
+
+      // 대상자 정보가 없으면 임시 생성
+      if (!state.workers.has(workerKey)) {
+        addOrUpdateWorker({
+          key: workerKey,
+          name,
+          pid,
+          group: "regular",
+          job: "",
+          pattern: "always",
+          hireDateUTC: null,
+          dailyHours: DEFAULT_DAILY_HOURS
+        });
+      }
+    }
+
+    return { loaded, skipped };
+  }
+
+  function classifyRecord(rec) {
+    const t = String(rec.type || "");
+    const r = String(rec.reason || "");
+
+    // 기본값
+    let auto = "review";
+
+    // 산정제외
+    if (t.includes("병가") && r.includes("공무상")) auto = "deemed";
+    if (t.includes("공가")) auto = "deemed";
+    if (t.includes("출장")) auto = "deemed";
+    if (t.includes("교육") || t.includes("연수")) auto = "deemed";
+
+    if (t.includes("휴직")) auto = "excluded";
+    if (t.includes("정직") || t.includes("직위해제")) auto = "excluded";
+
+    // 결근성
+    if (t.includes("결근")) auto = "absence";
+    if (t.includes("무단")) auto = "absence";
+
+    // 출근간주
+    if (t.includes("연차")) auto = "deemed";
+    if (t.includes("특별") && t.includes("휴가")) auto = "deemed";
+    if (t.includes("병가")) auto = "deemed";
+    if (t.includes("경조")) auto = "deemed";
+    if (t.includes("출산") || t.includes("육아")) auto = "deemed";
+
+    // 산정제외(무급)
+    if (t.includes("무급")) auto = "excluded";
+    if (t.includes("가족돌봄") && t.includes("무급")) auto = "excluded";
+
+    // (참고) 실제 분(min) 값이 들어있는 경우가 있으나 여기서는 rawDur 기반 추가 파싱 없이 minutes는 null 유지
+
+    rec.autoClass = auto;
+    if (!rec.finalClass) rec.finalClass = "auto";
   }
 
   function bindEvents() {
+    // 학사일정
     $("#btnApplyCalendar").addEventListener("click", () => {
-      state.calendar.summerStart = $("#summerStart").value ? ymdToUTC($("#summerStart").value) : null;
-      state.calendar.summerEnd   = $("#summerEnd").value ? ymdToUTC($("#summerEnd").value) : null;
-      state.calendar.winterStart = $("#winterStart").value ? ymdToUTC($("#winterStart").value) : null;
-      state.calendar.winterEnd   = $("#winterEnd").value ? ymdToUTC($("#winterEnd").value) : null;
+      const ss = $("#summerStart").value;
+      const se = $("#summerEnd").value;
+      const ws = $("#winterStart").value;
+      const we = $("#winterEnd").value;
+
+      state.calendar.summerStart = ss ? ymdToUTC(ss) : null;
+      state.calendar.summerEnd = se ? ymdToUTC(se) : null;
+      state.calendar.winterStart = ws ? ymdToUTC(ws) : null;
+      state.calendar.winterEnd = we ? ymdToUTC(we) : null;
+      state.calendar.applied = true;
 
       buildCalendarSets();
-      state.calendar.applied = true;
       renderCalendarSummary();
-      renderVacCreditUI();
+      setMsg($("#calendarMsg"), "ok", "학사일정이 적용되었습니다.");
     });
 
-    $("#btnSetExampleCalendar").addEventListener("click", () => {
-      $("#summerStart").value = "2025-07-21";
-      $("#summerEnd").value = "2025-08-11";
-      $("#winterStart").value = "2026-01-03";
-      $("#winterEnd").value = "2026-02-28";
-      $("#btnApplyCalendar").click();
+    $("#btnClearCalendar").addEventListener("click", () => {
+      $("#summerStart").value = "";
+      $("#summerEnd").value = "";
+      $("#winterStart").value = "";
+      $("#winterEnd").value = "";
+
+      state.calendar.summerStart = null;
+      state.calendar.summerEnd = null;
+      state.calendar.winterStart = null;
+      state.calendar.winterEnd = null;
+      state.calendar.applied = false;
+      state.calendar.sets = null;
+
+      setMsg($("#calendarMsg"), "", "학사일정이 초기화되었습니다.");
+      setMsg($("#calendarSummary"), "", "");
     });
 
-    // 비상시직종 방학근무 추가입력 UI
+    // 인사 입력 모드
+    $$("input[name='hrMode']").forEach(r => {
+      r.addEventListener("change", () => {
+        const v = $$("input[name='hrMode']").find(x => x.checked)?.value;
+        if (v === "manual") {
+          $("#hrFileBox").classList.add("hidden");
+          $("#hrManualBox").classList.remove("hidden");
+        } else {
+          $("#hrFileBox").classList.remove("hidden");
+          $("#hrManualBox").classList.add("hidden");
+        }
+      });
+    });
+
+    // dropzone: hr
+    const hrDrop = $("#hrDrop");
+    const hrFile = $("#hrFile");
+    hrDrop.addEventListener("click", () => hrFile.click());
+    hrDrop.addEventListener("dragover", (e) => { e.preventDefault(); hrDrop.classList.add("drag"); });
+    hrDrop.addEventListener("dragleave", () => hrDrop.classList.remove("drag"));
+    hrDrop.addEventListener("drop", (e) => {
+      e.preventDefault();
+      hrDrop.classList.remove("drag");
+      const files = Array.from(e.dataTransfer.files || []);
+      if (!files.length) return;
+      hrFile.files = createFileList(files);
+      state.selectedFiles.hr = files;
+      setMsg($("#hrMsg"), "", `${files.length}개 파일 선택됨`);
+    });
+    hrFile.addEventListener("change", () => {
+      const files = Array.from(hrFile.files || []);
+      state.selectedFiles.hr = files;
+      setMsg($("#hrMsg"), "", `${files.length}개 파일 선택됨`);
+    });
+
+    // dropzone: work
+    const workDrop = $("#workDrop");
+    const workFile = $("#workFile");
+    workDrop.addEventListener("click", () => workFile.click());
+    workDrop.addEventListener("dragover", (e) => { e.preventDefault(); workDrop.classList.add("drag"); });
+    workDrop.addEventListener("dragleave", () => workDrop.classList.remove("drag"));
+    workDrop.addEventListener("drop", (e) => {
+      e.preventDefault();
+      workDrop.classList.remove("drag");
+      const files = Array.from(e.dataTransfer.files || []);
+      if (!files.length) return;
+      workFile.files = createFileList(files);
+      state.selectedFiles.work = files;
+      setMsg($("#workMsg"), "", `${files.length}개 파일 선택됨`);
+    });
+    workFile.addEventListener("change", () => {
+      const files = Array.from(workFile.files || []);
+      state.selectedFiles.work = files;
+      setMsg($("#workMsg"), "", `${files.length}개 파일 선택됨`);
+    });
+
+    // 인사 파일 반영
+    $("#btnLoadHr").addEventListener("click", async () => {
+      try {
+        const files = state.selectedFiles.hr || [];
+        if (!files.length) { setMsg($("#hrMsg"), "err", "인사기록 파일을 선택해주세요."); return; }
+        ensureXLSX();
+
+        let totalLoaded = 0, totalSkipped = 0;
+        for (const f of files) {
+          const buf = await f.arrayBuffer();
+          const wb = XLSX.read(buf, { type: "array" });
+          const first = wb.Sheets[wb.SheetNames[0]];
+          const res = parseHrSheet(first);
+          totalLoaded += res.loaded;
+          totalSkipped += res.skipped;
+        }
+
+        buildCalendarSets();
+        renderCalendarSummary();
+        renderWorkerSelect();
+        renderWorkersTable();
+
+        setMsg($("#hrMsg"), "ok", `인사정보 반영 완료: ${totalLoaded}명 / 스킵 ${totalSkipped}건`);
+      } catch (err) {
+        console.error(err);
+        setMsg($("#hrMsg"), "err", `오류: ${escapeHtml(err.message || String(err))}`);
+      }
+    });
+
+    $("#btnClearHr").addEventListener("click", () => {
+      state.workers.clear();
+      state.results = [];
+      state.records = state.records.filter(r => r.sourceFile !== "수기입력"); // 방학근무 제외가 목적은 아니지만, 안전하게 전체 초기화 대신 유지
+      state.records = []; // 완전 초기화
+      renderWorkersTable();
+      renderWorkerSelect();
+      renderVacCreditTable();
+      renderResults();
+      setMsg($("#hrMsg"), "", "인사/대상자 내역이 초기화되었습니다.");
+    });
+
+    // 수기 대상자 추가
+    $("#btnAddWorker").addEventListener("click", () => {
+      const name = $("#mName").value.trim();
+      const pid = $("#mPid").value.trim();
+      const hireYmd = $("#mHire").value;
+      if (!name) { setMsg($("#hrManualMsg"), "err", "성명은 필수 입력사항입니다."); return; }
+      if (!hireYmd) { setMsg($("#hrManualMsg"), "err", "최초계약일은 필수 입력사항입니다."); return; }
+
+      const hire = ymdToUTC(hireYmd);
+      const group = $("#mGroup").value === "special" ? "special" : "regular";
+      const job = $("#mJob").value.trim();
+      const pattern = $("#mPattern").value === "emergency" ? "emergency" : "always";
+      const dailyHours = safeNum($("#mDailyHours").value, DEFAULT_DAILY_HOURS);
+
+      addOrUpdateWorker({
+        key: workerKeyOf(name, pid),
+        name, pid,
+        hireDateUTC: hire,
+        group,
+        job,
+        pattern,
+        dailyHours
+      });
+
+      renderWorkersTable();
+      renderWorkerSelect();
+      setMsg($("#hrManualMsg"), "ok", "대상자를 추가했습니다.");
+    });
+
+    $("#btnClearWorkers").addEventListener("click", () => {
+      state.workers.clear();
+      state.results = [];
+      state.records = [];
+      renderWorkersTable();
+      renderWorkerSelect();
+      renderVacCreditTable();
+      renderResults();
+      setMsg($("#hrManualMsg"), "", "대상자 목록이 초기화되었습니다.");
+    });
+
+    // 복무 파일 반영
+    $("#btnLoadWork").addEventListener("click", async () => {
+      try {
+        const files = state.selectedFiles.work || [];
+        if (!files.length) { setMsg($("#workMsg"), "err", "근무상황목록 파일을 선택해주세요."); return; }
+        ensureXLSX();
+
+        let totalLoaded = 0, totalSkipped = 0;
+        for (const f of files) {
+          const buf = await f.arrayBuffer();
+          const wb = XLSX.read(buf, { type: "array" });
+          const first = wb.Sheets[wb.SheetNames[0]];
+          const res = parseWorkSheet(first, f.name);
+          totalLoaded += res.loaded;
+          totalSkipped += res.skipped;
+        }
+
+        // 자동분류
+        for (const rec of state.records) {
+          if (!rec.autoClass) classifyRecord(rec);
+        }
+
+        renderWorkersTable();
+        renderWorkerSelect();
+        renderVacCreditTable();
+        setMsg($("#workMsg"), "ok", `복무자료 반영 완료: ${totalLoaded}건 / 스킵 ${totalSkipped}건`);
+      } catch (err) {
+        console.error(err);
+        setMsg($("#workMsg"), "err", `오류: ${escapeHtml(err.message || String(err))}`);
+      }
+    });
+
+    $("#btnClearWork").addEventListener("click", () => {
+      state.records = [];
+      renderVacCreditTable();
+      renderResults();
+      setMsg($("#workMsg"), "", "복무 내역이 초기화되었습니다.");
+    });
+
+    // 방학근무 추가/삭제
     $("#vacWSelect").addEventListener("change", () => {
-      renderVacCreditTable($("#vacWSelect").value);
+      renderVacCreditTable();
     });
 
     $("#btnAddVacCredit").addEventListener("click", () => {
       const wk = $("#vacWSelect").value;
       if (!wk) { setMsg($("#vacCreditMsg"), "err", "비상시 근로자를 선택하세요."); return; }
 
-      const w = state.workers.get(wk);
-      if (!w || w.pattern !== "emergency") { setMsg($("#vacCreditMsg"), "err", "비상시 근로자만 입력 가능합니다."); return; }
+      const s = $("#vacStart").value;
+      const e = $("#vacEnd").value;
+      if (!s || !e) { setMsg($("#vacCreditMsg"), "err", "기간(시작/종료)을 입력하세요."); return; }
 
-      const s = $("#vacStart").value ? ymdToUTC($("#vacStart").value) : null;
-      const e = $("#vacEnd").value ? ymdToUTC($("#vacEnd").value) : null;
-      if (!s) { setMsg($("#vacCreditMsg"), "err", "시작일자를 입력하세요."); return; }
+      if (!state.calendar.applied) { setMsg($("#vacCreditMsg"), "warn", "학사일정을 먼저 적용해야 방학일수로 인식됩니다."); }
 
-      const end = e || s;
       const memo = $("#vacMemo").value.trim();
+      const days = addVacCredit(wk, ymdToUTC(s), ymdToUTC(e), memo);
 
-      try {
-        addRecord({
-          workerKey: wk,
-          startUTC: s,
-          endUTC: end,
-          type: "방학중근무(추가)",
-          reason: memo,
-          finalClass: "deemed",
-          credit: true,
-          approvalStatus: "",
-          rawDur: "",
-          sourceFile: "방학근무추가"
-        });
-
-        $("#vacStart").value = "";
-        $("#vacEnd").value = "";
-        $("#vacMemo").value = "";
-
-        renderVacCreditTable(wk);
-        if (state.workers.size) runCalculation();
-      } catch (err) {
-        setMsg($("#vacCreditMsg"), "err", `<b>오류</b>: ${escapeHtml(err.message)}`);
+      if (days <= 0) {
+        setMsg($("#vacCreditMsg"), "warn", "입력 기간 중 방학으로 인식되는 날짜(토요일 제외)가 없습니다.");
+      } else {
+        setMsg($("#vacCreditMsg"), "ok", `방학근무(출근간주) ${days}일 반영했습니다.`);
       }
+
+      renderVacCreditTable();
     });
 
     $("#btnClearVacCredit").addEventListener("click", () => {
       const wk = $("#vacWSelect").value;
       if (!wk) return;
-      state.records = state.records.filter(r => !(r.workerKey === wk && r.sourceFile === "방학근무추가"));
-      renderVacCreditTable(wk);
-      if (state.workers.size) runCalculation();
+      state.records = state.records.filter(r => !(r.workerKey === wk && r.credit));
+      renderVacCreditTable();
+      setMsg($("#vacCreditMsg"), "", "선택자 방학근무 내역을 모두 삭제했습니다.");
     });
 
-    bindDropZone($("#hrDrop"), $("#hrFile"), (files) => {
-      const ok = files.filter(f => /\.(xlsx|xls)$/i.test(f.name));
-      state.selectedFiles.hr = ok;
-      if (!ok.length) {
-        setMsg($("#hrMsg"), "err", "엑셀(.xlsx/.xls) 파일만 업로드 가능합니다.");
-        return;
-      }
-      setMsg($("#hrMsg"), "warn", `인사기록 파일 ${ok.length}개 선택됨. <b>인사 정보 반영하기</b>를 눌러주세요.`);
-    });
-
-    bindDropZone($("#workDrop"), $("#workFiles"), (files) => {
-      const ok = files.filter(f => /\.(xlsx|xls|csv)$/i.test(f.name));
-      state.selectedFiles.work = ok;
-      if (!ok.length) {
-        setMsg($("#workMsg"), "err", "엑셀(.xlsx/.xls) 또는 CSV(.csv) 파일만 업로드 가능합니다.");
-        return;
-      }
-      setMsg($("#workMsg"), "warn", `근무상황 파일 ${ok.length}개 선택됨. <b>복무사항 불러오기</b>를 눌러주세요.`);
-    });
-
-    // HR mode toggle
-    $$("input[name='hrMode']").forEach(r => r.addEventListener("change", () => {
-      const mode = $$("input[name='hrMode']").find(x => x.checked)?.value || "file";
-      $("#hrFileBox").classList.toggle("hidden", mode !== "file");
-      $("#hrManualBox").classList.toggle("hidden", mode !== "manual");
-    }));
-
-    // Work mode toggle
-    $$("input[name='workMode']").forEach(r => r.addEventListener("change", () => {
-      const mode = $$("input[name='workMode']").find(x => x.checked)?.value || "file";
-      $("#workFileBox").classList.toggle("hidden", mode !== "file");
-      $("#workManualBox").classList.toggle("hidden", mode !== "manual");
-    }));
-
-    $("#btnLoadHr").addEventListener("click", async () => {
+    // 계산 실행
+    $("#btnRun").addEventListener("click", () => {
       try {
-        const files = state.selectedFiles.hr;
-        await handleLoadHrFiles(files);
-      } catch (e) {
-        setMsg($("#hrMsg"), "err", `<b>오류</b>: ${escapeHtml(e.message)}`);
-      }
-    });
+        if (!state.workers.size) { setMsg($("#runMsg"), "err", "대상자(인사정보)를 먼저 입력하세요."); return; }
+        if (!state.calendar.sets) buildCalendarSets();
 
-    $("#btnClearHr").addEventListener("click", () => {
-      state.selectedFiles.hr = [];
-      setMsg($("#hrMsg"), "warn", "인사기록 파일 선택을 초기화했습니다.");
-      $("#hrFile").value = "";
-    });
-
-    $("#btnClearWorkers").addEventListener("click", () => {
-      state.workers.clear();
-      state.records = [];
-      state.results = [];
-      renderWorkersTable();
-      renderWorkerSelect();
-      renderResults();
-      setMsg($("#hrManualMsg"), "warn", "대상자 전체 삭제 완료");
-    });
-
-    $("#btnAddWorker").addEventListener("click", () => {
-      const name = $("#mName").value.trim();
-      const pid = $("#mPid").value.trim();
-      const hire = $("#mHire").value ? ymdToUTC($("#mHire").value) : null;
-      const group = $("#mGroup").value;
-      const job = $("#mJob").value.trim();
-      const pattern = $("#mPattern").value;
-      const dailyHours = safeNum($("#mDailyHours").value, DEFAULT_DAILY_HOURS);
-
-      if (!name) { setMsg($("#hrManualMsg"), "err", "성명은 필수 입력사항입니다."); return; }
-      if (!hire) { setMsg($("#hrManualMsg"), "err", "최초계약일은 필수 입력사항입니다."); return; }
-
-      try {
-        addOrUpdateWorker({
-          key: workerKeyOf(name, pid),
-          name, pid,
-          group,
-          job,
-          pattern,
-          hireDateUTC: hire,
-          dailyHours
-        });
-        $("#mName").value = "";
-        $("#mPid").value = "";
-        $("#mHire").value = "";
-        $("#mJob").value = "";
-        $("#mDailyHours").value = String(DEFAULT_DAILY_HOURS);
-
-        renderWorkersTable();
-        renderWorkerSelect();
-        setMsg($("#hrManualMsg"), "ok", "대상자를 추가했습니다.");
-      } catch (e) {
-        setMsg($("#hrManualMsg"), "err", `<b>오류</b>: ${escapeHtml(e.message)}`);
-      }
-    });
-
-    $("#btnClearWork").addEventListener("click", () => {
-      state.records = [];
-      state.results = [];
-      renderResults();
-      setMsg($("#workMsg"), "warn", "복무 내역을 전체 초기화했습니다.");
-    });
-
-    $("#btnClearWork").addEventListener("click", () => {
-      state.selectedFiles.work = [];
-      $("#workFiles").value = "";
-    });
-
-    $("#btnLoadWork").addEventListener("click", async () => {
-      try {
-        const files = state.selectedFiles.work;
-        if (!files || files.length === 0) throw new Error("근무상황 파일이 선택되지 않았습니다.");
-
-        if (!state.workers.size) {
-          // 근무상황에만 있는 이름이 있을 수 있으므로 임시 생성 모드 지원
-          // 여기선 경고만
-          setMsg($("#workMsg"), "warn", `
-            <div><b>주의</b>: 인사정보 대상자가 아직 없습니다.</div>
-            <div class="muted">근무상황 파일의 성명만으로 임시 생성할 수는 있지만, 직군/근무형태/최초계약일 등의 정보가 부족할 수 있습니다.</div>
-          `);
+        // 근속/가산 업데이트(혹시 변경된 경우)
+        for (const w of state.workers.values()) {
+          w.serviceYears = computeServiceYears(w.hireDateUTC);
+          w.addDays = Math.floor(Math.max(0, w.serviceYears - 1) / 2);
         }
 
-        let loaded = 0;
-        let skipped = 0;
-
-        // 여러 파일 합치기
-        for (const f of files) {
-          if (/\.(csv)$/i.test(f.name)) {
-            const text = await readFileAsText(f);
-            const rows = csvToRows(text);
-
-            const headerIdx = findHeaderRow(rows, ["성명", "일자", "근무"]);
-            if (headerIdx < 0) throw new Error(`${f.name}: CSV 헤더 행을 찾지 못했습니다.`);
-
-            const headers = rows[headerIdx].map(x => String(x || "").trim());
-            const dataRows = rows.slice(headerIdx + 1).filter(r => Array.isArray(r) && r.some(x => String(x||"").trim() !== ""));
-
-            const colName = findColumnIndex(headers, ["성명","이름"]);
-            const colType = findColumnIndex(headers, ["근무상황","근무내용","복무","종별","근무구분"]);
-            const colReason = findColumnIndex(headers, ["사유","비고"]);
-            const colRange = findColumnIndex(headers, ["기간","일자","근무일자"]);
-            const colStart = findColumnIndex(headers, ["시작일","시작일자"]);
-            const colEnd = findColumnIndex(headers, ["종료일","종료일자"]);
-            const colDur = findColumnIndex(headers, ["시간","일수","기간(시간)","기간"]);
-            const colApproval = findColumnIndex(headers, ["결재상태","상태","결재"]);
-
-            for (const row of dataRows) {
-              const name = (colName >= 0) ? String(row[colName] || "").trim() : "";
-              if (!name) { skipped++; continue; }
-
-              // worker 매칭/임시 생성
-              let wk = Array.from(state.workers.values()).find(w => w.name === name)?.key;
-              if (!wk) {
-                // 임시 생성: 최소정보
-                const tmpKey = workerKeyOf(name, "");
-                addOrUpdateWorker({
-                  key: tmpKey,
-                  name,
-                  pid: "",
-                  group: "regular",
-                  job: "",
-                  pattern: "always",
-                  hireDateUTC: null,
-                  dailyHours: DEFAULT_DAILY_HOURS
-                });
-                wk = tmpKey;
-              }
-
-              const type = (colType >= 0) ? String(row[colType] || "").trim() : "";
-              const reason = (colReason >= 0) ? String(row[colReason] || "").trim() : "";
-              const approvalStatus = (colApproval >= 0) ? String(row[colApproval] || "").trim() : "";
-
-              let range = null;
-              if (colRange >= 0) range = parseRangeLoose(row[colRange]);
-              if (!range && colStart >= 0) {
-                const s = parseDateLoose(row[colStart]);
-                const e = (colEnd >= 0) ? parseDateLoose(row[colEnd]) : null;
-                if (s) range = { start: s, end: (e || s) };
-              }
-              if (!range) { skipped++; continue; }
-
-              const w = state.workers.get(wk);
-              const dailyHours = Number(w?.dailyHours || DEFAULT_DAILY_HOURS);
-              const dailyMinutes = dailyHours * 60;
-
-              const rawDur = (colDur >= 0) ? String(row[colDur] || "").trim() : "";
-              const minutes = parseDurationToMinutes(rawDur, dailyMinutes);
-
-              addRecord({
-                workerKey: wk,
-                startUTC: range.start,
-                endUTC: range.end,
-                type,
-                reason,
-                approvalStatus,
-                rawDur,
-                finalClass: null,
-                credit: null,
-                sourceFile: f.name
-              });
-
-              loaded++;
-            }
-          } else {
-            // xlsx/xls
-            ensureXLSX();
-            const buf = await readFileAsArrayBuffer(f);
-            const wb = XLSX.read(buf, { type: "array" });
-            const rows = sheetToJson(wb);
-
-            const headerIdx = findHeaderRow(rows, ["성명", "근무", "일자"]);
-            if (headerIdx < 0) throw new Error(`${f.name}: 근무상황 헤더 행을 찾지 못했습니다.`);
-
-            const headers = rows[headerIdx].map(x => String(x || "").trim());
-            const dataRows = rows.slice(headerIdx + 1).filter(r => Array.isArray(r) && r.some(x => String(x||"").trim() !== ""));
-
-            const colName = findColumnIndex(headers, ["성명","이름"]);
-            const colType = findColumnIndex(headers, ["근무상황","근무내용","복무","종별","근무구분"]);
-            const colReason = findColumnIndex(headers, ["사유","비고"]);
-            const colRange = findColumnIndex(headers, ["기간","일자","근무일자"]);
-            const colStart = findColumnIndex(headers, ["시작일","시작일자"]);
-            const colEnd = findColumnIndex(headers, ["종료일","종료일자"]);
-            const colDur = findColumnIndex(headers, ["시간","일수","기간(시간)","기간"]);
-            const colApproval = findColumnIndex(headers, ["결재상태","상태","결재"]);
-
-            for (const row of dataRows) {
-              const name = (colName >= 0) ? String(row[colName] || "").trim() : "";
-              if (!name) { skipped++; continue; }
-
-              let wk = Array.from(state.workers.values()).find(w => w.name === name)?.key;
-              if (!wk) {
-                const tmpKey = workerKeyOf(name, "");
-                addOrUpdateWorker({
-                  key: tmpKey,
-                  name,
-                  pid: "",
-                  group: "regular",
-                  job: "",
-                  pattern: "always",
-                  hireDateUTC: null,
-                  dailyHours: DEFAULT_DAILY_HOURS
-                });
-                wk = tmpKey;
-              }
-
-              const type = (colType >= 0) ? String(row[colType] || "").trim() : "";
-              const reason = (colReason >= 0) ? String(row[colReason] || "").trim() : "";
-              const approvalStatus = (colApproval >= 0) ? String(row[colApproval] || "").trim() : "";
-
-              let range = null;
-              if (colRange >= 0) range = parseRangeLoose(row[colRange]);
-              if (!range && colStart >= 0) {
-                const s = parseDateLoose(row[colStart]);
-                const e = (colEnd >= 0) ? parseDateLoose(row[colEnd]) : null;
-                if (s) range = { start: s, end: (e || s) };
-              }
-              if (!range) { skipped++; continue; }
-
-              const w = state.workers.get(wk);
-              const dailyHours = Number(w?.dailyHours || DEFAULT_DAILY_HOURS);
-              const dailyMinutes = dailyHours * 60;
-
-              const rawDur = (colDur >= 0) ? String(row[colDur] || "").trim() : "";
-              const minutes = parseDurationToMinutes(rawDur, dailyMinutes);
-
-              addRecord({
-                workerKey: wk,
-                startUTC: range.start,
-                endUTC: range.end,
-                type,
-                reason,
-                approvalStatus,
-                rawDur,
-                finalClass: null,
-                credit: null,
-                sourceFile: f.name
-              });
-
-              loaded++;
-            }
-          }
+        // 결과 계산
+        state.results = [];
+        for (const w of state.workers.values()) {
+          state.results.push(calcGrantForWorker(w));
         }
+        state.lastRunAt = new Date();
 
         renderResults();
-        renderWorkerSelect();
-
-        setMsg($("#workMsg"), "ok", `
-          <div><b>복무사항 불러오기 완료</b></div>
-          <ul>
-            <li>처리 파일: ${files.length}개</li>
-            <li>추가 기록: ${loaded}건</li>
-            <li>스킵: ${skipped}건</li>
-          </ul>
-        `);
-      } catch (e) {
-        setMsg($("#workMsg"), "err", `<b>오류</b>: ${escapeHtml(e.message)}`);
-      }
-    });
-
-    $("#btnAddRecord").addEventListener("click", () => {
-      const wk = $("#wSelect").value;
-      const s = $("#wStart").value ? ymdToUTC($("#wStart").value) : null;
-      const e = $("#wEnd").value ? ymdToUTC($("#wEnd").value) : null;
-      const type = $("#wType").value.trim();
-      const reason = $("#wReason").value.trim();
-      const clsMode = $("#wClass").value;
-      const credit = $("#wCredit").checked;
-
-      try {
-        addRecord({
-          workerKey: wk,
-          startUTC: s,
-          endUTC: e,
-          type,
-          reason,
-          finalClass: clsMode === "auto" ? null : clsMode,
-          credit,
-          approvalStatus: "",
-          rawDur: "",
-          sourceFile: "수기입력"
-        });
-        setMsg($("#workManualMsg"), "ok", "복무 항목을 추가했습니다.");
-        $("#wType").value = "";
-        $("#wReason").value = "";
+        setMsg($("#runMsg"), "ok", "계산이 완료되었습니다.");
       } catch (err) {
-        setMsg($("#workManualMsg"), "err", `<b>오류</b>: ${escapeHtml(err.message)}`);
+        console.error(err);
+        setMsg($("#runMsg"), "err", `오류: ${escapeHtml(err.message || String(err))}`);
       }
     });
 
-    $("#btnClearManualRecords").addEventListener("click", () => {
-      state.records = [];
-      setMsg($("#workManualMsg"), "warn", "전체 삭제 완료");
-    });
-
-    $("#btnRun").addEventListener("click", runCalculation);
-
-    $("#btnDownload").addEventListener("click", () => {
-      try { downloadXlsx(); } catch (e) { alert(e.message); }
+    // 결과 엑셀 저장
+    $("#btnExport").addEventListener("click", () => {
+      try {
+        if (!state.results.length) { setMsg($("#runMsg"), "err", "먼저 계산을 실행해주세요."); return; }
+        downloadResultsXlsx();
+      } catch (err) {
+        console.error(err);
+        setMsg($("#runMsg"), "err", `오류: ${escapeHtml(err.message || String(err))}`);
+      }
     });
   }
 
+  function createFileList(files) {
+    const dt = new DataTransfer();
+    files.forEach(f => dt.items.add(f));
+    return dt.files;
+  }
+
   function init() {
-    setMsg($("#hrMsg"), "", "인사정보를 입력해주세요.");
-    setMsg($("#workMsg"), "", "근무상황을 입력해주세요.");
+    setMsg($("#calendarMsg"), "", "학사일정은 선택사항입니다. 비상시근로자 산정을 위해 입력을 권장합니다.");
+    setMsg($("#hrMsg"), "", "인사기록 파일을 업로드하거나 수기 입력으로 대상자를 등록하세요.");
+    setMsg($("#workMsg"), "", "근무상황목록 파일을 업로드하고 복무자료를 반영하세요.");
     setMsg($("#runMsg"), "", "인사 및 복무사항 입력 후 계산 버튼을 눌러주세요.");
 
     buildCalendarSets();
