@@ -198,9 +198,12 @@
     <!-- 1) 업로드 -->
     <section class="section no-print">
       <h2>1. 이미지 파일 업로드 (여러장 가능)</h2>
-        <div class="muted">
-          ·Ctrl+C/V로 붙여넣기도 지원함</div>
+        <p class="muted">
+          ·WEBP/GIF 넣지 마세요. <br/>
+          ·Ctrl+C/V로 파일 붙여넣기 가능
+        </p>
 
+      
       <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="이미지 드래그 앤 드롭 또는 클릭해서 선택">
         <div class="dz-title">여기로 이미지 드래그 & 드롭</div>
         <div class="dz-sub">또는 아래 버튼으로 선택 (JPG/PNG/WEBP 등)</div>
@@ -229,7 +232,10 @@
     <!-- 3) PDF 옵션/생성 -->
     <section class="section no-print">
       <h2>3. PDF 생성</h2>
-
+      <p class="muted">
+        ·이미지가 매우 크면 PDF도 커지고, 생성 시간이 길어질 수 있습니다.
+      </p>
+      
       <div class="grid two">
         <label class="field">
           <div class="label">페이지 크기</div>
@@ -284,28 +290,10 @@
         <div id="progressBar" class="progress-bar"></div>
       </div>
 
-      <div class="note-box" style="margin-top:12px;">
-        <div class="muted">
-          모든 처리는 <b>브라우저 안에서만</b> 이뤄집니다(서버 업로드 없음).  
-          PDF 생성은 <code>pdf-lib</code>를 사용하며, 라이브러리는 CDN으로 로드됩니다.
-        </div>
-      </div>
     </section>
 
-    <section class="section">
-      <h2 class="local-h2">메모</h2>
-      <ul>
-        <li>이미지가 매우 크면 PDF도 커지고, 생성 시간이 길어질 수 있습니다.</li>
-        <li>WEBP/GIF 같은 포맷은 PDF에 바로 못 들어갈 수 있어, 옵션에 따라 JPG/PNG로 변환 후 넣습니다. (pdf-lib는 브라우저 예제/문서에서 PNG/JPEG 임베딩을 중심으로 제공) :contentReference[oaicite:2]{index=2}</li>
-      </ul>
-    </section>
   </main>
 
-  <footer class="site-footer">
-    <div class="shell">
-      © <span id="year"></span>. 이미지→PDF 도구
-    </div>
-  </footer>
 
   <!-- ✅ PDF 생성 라이브러리: pdf-lib (UMD) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js" referrerpolicy="no-referrer"></script>
