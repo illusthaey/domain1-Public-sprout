@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>연차일수 계산기(간단)</title>
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#fff; --text:#111; --muted:#666;
+      --border:#e5e7eb; --accent:#111; --accentText:#fff;
+      --danger:#b91c1c; --ok:#065f46;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0; padding:24px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      background:var(--bg); color:var(--text);
+    }
+    .wrap{ max-width:860px; margin:0 auto; }
+    h1{ margin:0 0 10px; font-size:22px; }
+    .sub{ margin:0 0 18px; color:var(--muted); line-height:1.5; }
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:16px;
+      margin:12px 0;
+      box-shadow:0 1px 0 rgba(0,0,0,.03);
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:12px;
+    }
+    @media (max-width:720px){ .grid{ grid-template-columns:1fr; } }
+    label{ display:block; font-weight:650; font-size:14px; margin-bottom:6px; }
+    input, select, button{
+      font:inherit;
+    }
+    input[type="date"], select{
+      width:100%;
+      padding:10px 12px;
+      border:1px solid #d9d9e3;
+      border-radius:12px;
+      background:#f9fafb;
+      outline:none;
+    }
+    input:focus, select:focus{
+      border-color:#b4b4d0;
+      box-shadow:0 0 0 2px rgba(180,180,208,.25);
+      background:#fff;
+    }
+    input:disabled, select:disabled{
+      background:#f3f4f6;
+      color:#888;
+    }
+    .row{
+      display:flex; gap:10px; flex-wrap:wrap;
+      margin-top:12px;
+    }
+    .btn{
+      padding:10px 14px;
+      border-radius:12px;
+      border:1px solid #222;
+      background:#fff;
+      cursor:pointer;
+      font-weight:650;
+    }
+    .btn.primary{
+      background:var(--accent);
+      color:var(--accentText);
+    }
+    .btn:active{ transform: translateY(1px); }
+    .hint{ margin-top:6px; color:var(--muted); font-size:13px; line-height:1.4; }
+    .msg{
+      border-radius:12px;
+      padding:12px;
+      border:1px solid var(--border);
+      background:#fafafa;
+      line-height:1.6;
+    }
+    .msg.ok{ border-color:#a7f3d0; background:#ecfdf5; color:var(--ok); }
+    .msg.err{ border-color:#fecaca; background:#fff1f2; color:var(--danger); }
+    table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      margin-top:10px;
+      overflow:hidden;
+      border:1px solid var(--border);
+      border-radius:12px;
+      background:#fff;
+    }
+    th, td{
+      padding:10px 12px;
+      border-bottom:1px solid var(--border);
+      text-align:left;
+      font-size:14px;
+      vertical-align:top;
+    }
+    th{ width:160px; color:#111; background:#f9fafb; }
+    tr:last-child th, tr:last-child td{ border-bottom:none; }
+    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>연차일수 계산기 (간단 버전)</h1>
+    <p class="sub">
+      입력: <b>최초임용일</b>, <b>직종</b> (상시/방학중비상시).<br/>
+      <b>방학중비상시 직종</b>을 고르면 <b>출근율(80% 이상/미만)</b> 드롭박스가 활성화됩니다.
+      <span class="mono" id="periodInfo"></span>
+    </p>
+
+    <div class="card">
+      <div class="grid">
+        <div>
+          <label for="hireDate">최초임용일</label>
+          <input type="date" id="hireDate" />
+          <div class="hint">예: 2023-03-01</div>
+        </div>
+
+        <div>
+          <label for="jobType">직종</label>
+          <select id="jobType">
+            <option value="">선택</option>
+            <option value="edu-always" data-group="edu" data-pattern="always">교육공무직 (상시)</option>
+            <option value="edu-emergency" data-group="edu" data-pattern="emergency">교육공무직 (방학중비상시)</option>
+            <option value="special-always" data-group="special" data-pattern="always">특수운영직군 (상시)</option>
+            <option value="special-emergency" data-group="special" data-pattern="emergency">특수운영직군 (방학중비상시)</option>
+          </select>
+          <div class="hint">“방학중비상시” 선택 시 출근율 선택이 필요합니다.</div>
+        </div>
+
+        <div>
+          <label for="attendance">출근율(80% 기준)</label>
+          <select id="attendance" disabled>
+            <option id="attPlaceholder" value="" selected>직종 선택 후 활성화</option>
+            <option id="attGe" value="ge80" disabled>80% 이상</option>
+            <option id="attLt" value="lt80" disabled>80% 미만</option>
+          </select>
+          <div class="hint" id="attendanceHint">상시 직종은 출근율 선택이 비활성화됩니다.</div>
+        </div>
+
+        <div>
+          <label>계산 기준</label>
+          <div class="msg">
+            <div>부여 기준일: <b class="mono" id="grantText"></b></div>
+            <div>산정기간: <b class="mono" id="spanText"></b></div>
+            <div class="hint">
+              다른 연도로 계산하려면 코드 상단의 <span class="mono">PERIOD_START / PERIOD_END / GRANT_DATE</span>만 수정하세요.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <button class="btn primary" id="calcBtn" type="button">계산</button>
+        <button class="btn" id="resetBtn" type="button">초기화</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0 0 10px; font-size:18px;">결과</h2>
+      <div id="result" class="msg">값을 입력하고 “계산”을 눌러주세요.</div>
+
+      <table id="breakdown" style="display:none;">
+        <tbody id="breakdownBody"></tbody>
+      </table>
+
+      <div class="hint" style="margin-top:10px;">
+        ※ 1년 미만(근속 0년) 계산은 “개근”을 가정한 단순 계산입니다(결근/휴직/휴업 등 반영 없음).<br/>
+        ※ 방학중비상시의 “최대 9일(개근월수)” 아이디어는 방학 달을 묶어 산정하는 예시를 반영한 단순화 버전입니다.
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (() => {
+    "use strict";
+
+    /* =========================
+       [설정] 다른 연도 계산 시 아래 3개만 수정
+       ========================= */
+    const PERIOD_START = ymdToUTC("2025-03-01");
+    const PERIOD_END   = ymdToUTC("2026-02-28"); // inclusive
+    const GRANT_DATE   = ymdToUTC("2026-03-01");
+
+    /* =========================
+       DOM helpers
+       ========================= */
+    const $ = (sel) => document.querySelector(sel);
+
+    const hireInput = $("#hireDate");
+    const jobSelect = $("#jobType");
+
+    const attendanceSelect = $("#attendance");
+    const attPlaceholder = $("#attPlaceholder");
+    const attGe = $("#attGe");
+    const attLt = $("#attLt");
+    const attendanceHint = $("#attendanceHint");
+
+    const periodInfo = $("#periodInfo");
+    const grantText = $("#grantText");
+    const spanText = $("#spanText");
+
+    const calcBtn = $("#calcBtn");
+    const resetBtn = $("#resetBtn");
+
+    const resultBox = $("#result");
+    const breakdownTable = $("#breakdown");
+    const breakdownBody = $("#breakdownBody");
+
+    /* =========================
+       Date utils (UTC 기반)
+       ========================= */
+    function ymdToUTC(ymd) {
+      const [y, m, d] = String(ymd).split("-").map(Number);
+      return new Date(Date.UTC(y, m - 1, d));
+    }
+    function utcToYmd(date) {
+      const y = date.getUTCFullYear();
+      const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+      const d = String(date.getUTCDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
+    function addDaysUTC(date, days) {
+      return new Date(date.getTime() + days * 86400000);
+    }
+    function isLeapYear(y) {
+      return (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0);
+    }
+
+    /* =========================
+       Month helpers (1년 미만 개근월수)
+       ========================= */
+    function startOfMonthUTC(d) {
+      return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+    }
+    function startOfNextMonthUTC(d) {
+      return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1));
+    }
+    // 1개월 "개근"을 달력월 기준으로 보기 위해:
+    // - 입사일이 1일이면 그 달부터,
+    // - 1일이 아니면 다음 달 1일부터를 첫 "완전한 개근월" 시작으로 봄.
+    function firstFullMonthStartUTC(hireUTC) {
+      if (!hireUTC) return PERIOD_START;
+      const ms = startOfMonthUTC(hireUTC);
+      if (hireUTC.getUTCDate() === 1) return ms;
+      return startOfNextMonthUTC(hireUTC);
+    }
+    function enumerateMonths(startUTC, endUTC) {
+      const res = [];
+      let y = startUTC.getUTCFullYear();
+      let m = startUTC.getUTCMonth() + 1;
+      const ey = endUTC.getUTCFullYear();
+      const em = endUTC.getUTCMonth() + 1;
+
+      while (y < ey || (y === ey && m <= em)) {
+        res.push(`${y}-${String(m).padStart(2, "0")}`);
+        m += 1;
+        if (m === 13) { m = 1; y += 1; }
+      }
+      return res;
+    }
+    function toYm(d) {
+      return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+    }
+
+    /* =========================
+       Core calc
+       ========================= */
+    function getJob() {
+      const opt = jobSelect.selectedOptions && jobSelect.selectedOptions[0];
+      if (!opt || !opt.value) return null;
+      return {
+        value: opt.value,
+        label: opt.textContent.trim(),
+        group: opt.dataset.group,     // "edu" | "special"
+        pattern: opt.dataset.pattern  // "always" | "emergency"
+      };
+    }
+
+    function escapeHtml(s) {
+      return String(s ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    // 근속 "만" 년수(부여 기준일 기준)
+    function diffFullYearsUTC(startUTC, endUTC) {
+      if (!startUTC || !endUTC) return 0;
+      if (startUTC > endUTC) return 0;
+
+      let y = endUTC.getUTCFullYear() - startUTC.getUTCFullYear();
+      let annivYear = startUTC.getUTCFullYear() + y;
+      let m = startUTC.getUTCMonth();
+      let d = startUTC.getUTCDate();
+
+      // 2/29 입사 케이스: 윤년이 아니면 2/28을 "기념일"로 취급(실무에서 흔히 쓰는 처리)
+      if (m === 1 && d === 29 && !isLeapYear(annivYear)) d = 28;
+
+      let anniv = new Date(Date.UTC(annivYear, m, d));
+      if (anniv > endUTC) y -= 1;
+      return Math.max(0, y);
+    }
+
+    // 근속가산(3년차부터 2년에 1일)
+    function calcSeniorityAddDays(serviceYears) {
+      if (serviceYears < 3) return 0;
+      return 1 + Math.floor((serviceYears - 3) / 2);
+    }
+
+    // 기본일수(상시 15 / 비상시 12·11)
+    function baseDaysFor(job) {
+      if (!job) return 0;
+      if (job.pattern !== "emergency") return 15;
+      return job.group === "special" ? 11 : 12;
+    }
+
+    // 출근율가산(비상시 +3·+4, 단 80% 이상일 때만)
+    function bonusDaysFor(job, attendanceGe80) {
+      if (!job) return 0;
+      if (job.pattern !== "emergency") return 0;
+      if (!attendanceGe80) return 0;
+      return job.group === "special" ? 4 : 3;
+    }
+
+    function totalStandardDays(base, bonus, add) {
+      return Math.min(25, base + bonus + add);
+    }
+
+    // 1년 미만: 개근월수 기반(단순화: 결근 없음 가정)
+    function calcMonthlyAccrualDays(job, hireUTC) {
+      let accrualStart = PERIOD_START;
+      if (hireUTC && hireUTC > PERIOD_START) {
+        accrualStart = firstFullMonthStartUTC(hireUTC);
+      }
+      if (accrualStart < PERIOD_START) accrualStart = PERIOD_START;
+      if (accrualStart > PERIOD_END) {
+        return { days: 0, note: "산정기간 내 개근월(버킷) 없음" };
+      }
+
+      if (!job || job.pattern !== "emergency") {
+        const months = enumerateMonths(accrualStart, PERIOD_END);
+        const okCount = months.length;           // 결근 없다고 가정
+        const days = Math.min(11, okCount);
+        const span = months.length ? `${months[0]}~${months[months.length - 1]}` : "해당없음";
+        return { days, note: `개근월수(상시 가정): ${okCount}개월 중 ${days}일(최대 11) · 산정월(${span})` };
+      }
+
+      // 방학중비상시: (3~6, 9~11) 7개월 + (7~8) 1버킷 + (12~2) 1버킷 = 최대 9
+      const y = PERIOD_START.getUTCFullYear();
+      const bucketMonths = [`${y}-03`,`${y}-04`,`${y}-05`,`${y}-06`,`${y}-09`,`${y}-10`,`${y}-11`];
+      const startYM = toYm(accrualStart);
+
+      let ok = 0;
+      for (const ym of bucketMonths) {
+        if (ym < startYM) continue;
+        ok += 1; // 결근 없다고 가정
+      }
+
+      const summerYM = `${y}-07`; // 7~8월을 1버킷으로 보는 단순화
+      const winterYM = `${y}-12`; // 12~2월을 1버킷으로 보는 단순화
+      if (startYM <= summerYM) ok += 1;
+      if (startYM <= winterYM) ok += 1;
+
+      const days = Math.min(9, ok);
+      return { days, note: `개근월수(비상시 가정): ${ok}버킷 중 ${days}일(최대 9) · (7~8월=1버킷, 12~2월=1버킷)` };
+    }
+
+    /* =========================
+       UI behavior
+       ========================= */
+    function setAttendanceEnabled(enabled) {
+      attendanceSelect.disabled = !enabled;
+      attGe.disabled = !enabled;
+      attLt.disabled = !enabled;
+
+      if (enabled) {
+        attPlaceholder.textContent = "선택";
+        attendanceHint.textContent = "방학중비상시 직종은 출근율(80% 이상/미만) 선택이 필요합니다.";
+        attendanceSelect.value = "";
+      } else {
+        attPlaceholder.textContent = "상시직종은 선택없음";
+        attendanceHint.textContent = "상시 직종은 출근율 선택이 비활성화됩니다.";
+        attendanceSelect.value = "";
+      }
+    }
+
+    function updateAttendanceUI() {
+      const job = getJob();
+      if (!job) {
+        setAttendanceEnabled(false);
+        attPlaceholder.textContent = "직종 선택 후 활성화";
+        attendanceHint.textContent = "직종을 선택하면 필요한 항목만 활성화됩니다.";
+        return;
+      }
+      setAttendanceEnabled(job.pattern === "emergency");
+    }
+
+    function setMsg(cls, html) {
+      resultBox.className = `msg ${cls || ""}`.trim();
+      resultBox.innerHTML = html;
+    }
+
+    function renderBreakdown(rows) {
+      breakdownBody.innerHTML = rows.map(([k, v]) => {
+        return `<tr><th>${escapeHtml(k)}</th><td>${v}</td></tr>`;
+      }).join("");
+      breakdownTable.style.display = "table";
+    }
+
+    function handleCalc() {
+      const hireYmd = hireInput.value;
+      const job = getJob();
+
+      if (!hireYmd) {
+        setMsg("err", "<b>최초임용일</b>을 입력해 주세요.");
+        breakdownTable.style.display = "none";
+        return;
+      }
+      if (!job) {
+        setMsg("err", "<b>직종</b>을 선택해 주세요.");
+        breakdownTable.style.display = "none";
+        return;
+      }
+
+      const hireUTC = ymdToUTC(hireYmd);
+      const serviceYears = diffFullYearsUTC(hireUTC, GRANT_DATE);
+      const addDays = calcSeniorityAddDays(serviceYears);
+
+      const base = baseDaysFor(job);
+
+      // 1년 미만은 개근월수(가정)로만 계산
+      if (serviceYears < 1) {
+        const monthly = calcMonthlyAccrualDays(job, hireUTC);
+        setMsg("ok",
+          `<b>최종 연차: ${monthly.days}일</b><br/>` +
+          `<span class="mono">근속 ${serviceYears}년</span> (1년 미만) · ${escapeHtml(monthly.note)}`
+        );
+
+        renderBreakdown([
+          ["부여 기준일", `<span class="mono">${utcToYmd(GRANT_DATE)}</span>`],
+          ["산정기간", `<span class="mono">${utcToYmd(PERIOD_START)} ~ ${utcToYmd(PERIOD_END)}</span>`],
+          ["최초임용일", `<span class="mono">${escapeHtml(hireYmd)}</span>`],
+          ["직종", escapeHtml(job.label)],
+          ["근무형태", job.pattern === "emergency" ? "방학중비상시" : "상시"],
+          ["근속(만)", `${serviceYears}년`],
+          ["산정방식", "1년 미만: 1개월 개근 1일(단순 가정)"],
+          ["최종부여", `<b>${monthly.days}일</b>`],
+        ]);
+        return;
+      }
+
+      // 1년 이상
+      let attendanceText = "상시(선택없음)";
+      let attendanceGe80 = true;
+
+      if (job.pattern === "emergency") {
+        if (!attendanceSelect.value) {
+          setMsg("err", "방학중비상시 직종은 <b>출근율(80% 이상/미만)</b>을 선택해야 합니다.");
+          breakdownTable.style.display = "none";
+          return;
+        }
+        attendanceGe80 = (attendanceSelect.value === "ge80");
+        attendanceText = attendanceGe80 ? "80% 이상" : "80% 미만";
+      }
+
+      const bonus = bonusDaysFor(job, attendanceGe80);
+      const standard = totalStandardDays(base, bonus, addDays);
+
+      const method =
+        job.pattern === "emergency"
+          ? (attendanceGe80 ? "비상시: 80% 이상 → 출근율가산 포함" : "비상시: 80% 미만 → 기본일수만")
+          : "상시: 기본 15일(+근속가산, 상한 25)";
+
+      setMsg("ok",
+        `<b>최종 연차: ${standard}일</b><br/>` +
+        `<span class="mono">근속 ${serviceYears}년</span> · ${escapeHtml(method)}`
+      );
+
+      renderBreakdown([
+        ["부여 기준일", `<span class="mono">${utcToYmd(GRANT_DATE)}</span>`],
+        ["산정기간", `<span class="mono">${utcToYmd(PERIOD_START)} ~ ${utcToYmd(PERIOD_END)}</span>`],
+        ["최초임용일", `<span class="mono">${escapeHtml(hireYmd)}</span>`],
+        ["직종", escapeHtml(job.label)],
+        ["근무형태", job.pattern === "emergency" ? "방학중비상시" : "상시"],
+        ["출근율(80% 기준)", escapeHtml(attendanceText)],
+        ["근속(만)", `${serviceYears}년`],
+        ["기본일수", `${base}일`],
+        ["출근율가산", `${bonus}일`],
+        ["근속가산", `${addDays}일`],
+        ["표준합계(상한25)", `${standard}일`],
+        ["최종부여", `<b>${standard}일</b>`],
+      ]);
+    }
+
+    function handleReset() {
+      hireInput.value = "";
+      jobSelect.value = "";
+      attendanceSelect.value = "";
+      updateAttendanceUI();
+      breakdownTable.style.display = "none";
+      setMsg("", "값을 입력하고 “계산”을 눌러주세요.");
+    }
+
+    function init() {
+      grantText.textContent = utcToYmd(GRANT_DATE);
+      spanText.textContent = `${utcToYmd(PERIOD_START)} ~ ${utcToYmd(PERIOD_END)}`;
+      periodInfo.textContent = ` (기준: ${utcToYmd(PERIOD_START)}~${utcToYmd(PERIOD_END)}, 부여일 ${utcToYmd(GRANT_DATE)})`;
+
+      updateAttendanceUI();
+
+      jobSelect.addEventListener("change", updateAttendanceUI);
+      calcBtn.addEventListener("click", handleCalc);
+      resetBtn.addEventListener("click", handleReset);
+    }
+
+    init();
+  })();
+  </script>
+</body>
+</html>
