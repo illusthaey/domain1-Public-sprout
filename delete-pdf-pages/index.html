@@ -3,109 +3,138 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>PDF 페이지 삭제 (브라우저에서만 처리)</title>
+  <title>PDF 페이지 선택/삭제 도구 (미리보기·필터·저장·드롭)</title>
 
-  <!-- ✅ PDF 조작 라이브러리 (pdf-lib) -->
-  <!-- 인터넷이 되는 환경에서 사용: CDN 로드 -->
+  <!-- PDF 편집/저장: pdf-lib -->
   <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 
+  <!-- PDF 미리보기 렌더링: pdf.js -->
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+
   <style>
-    :root {
-      --fg: #111;
-      --muted: #666;
-      --bd: #e5e7eb;
-      --bg: #fff;
-      --card: #fafafa;
-      --accent: #111;
-      --danger: #b91c1c;
+    :root{
+      --fg:#111;
+      --muted:#666;
+      --bd:#e5e7eb;
+      --bg:#fff;
+      --card:#fafafa;
+      --danger:#b91c1c;
+      --ok:#0f766e;
+      --shadow: 0 1px 12px rgba(0,0,0,0.06);
+      --shadow2: 0 10px 40px rgba(0,0,0,0.25);
     }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; padding: 0;
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", Arial, sans-serif;
-      color: var(--fg);
-      background: var(--bg);
-      line-height: 1.5;
+      background:var(--bg);
+      color:var(--fg);
+      line-height:1.5;
+      word-break: keep-all;
     }
-    .container {
-      max-width: 920px;
+    a{ color:inherit; text-decoration:none; }
+
+    .container{
+      max-width: 1120px;
       margin: 0 auto;
-      padding: 24px 16px 64px;
+      padding: 22px 16px 64px;
     }
-    h1 {
-      font-size: 1.8rem;
-      margin: 16px 0 8px;
-      text-align: center;
+    h1{
+      text-align:center;
+      margin: 10px 0 6px;
+      font-size: 1.9rem;
     }
-    .subtitle {
-      text-align: center;
-      color: var(--muted);
-      margin: 0 0 18px;
-      font-size: 0.98rem;
+    .subtitle{
+      text-align:center;
+      color:var(--muted);
+      margin: 0 0 16px;
+      font-size: 1rem;
     }
-    .section {
-      border: 1px solid var(--bd);
+    .section{
+      border:1px solid var(--bd);
       border-radius: 14px;
       padding: 18px;
-      background: #fff;
+      background:#fff;
       margin: 14px 0;
+      box-shadow: var(--shadow);
     }
-    .card {
-      border: 1px solid var(--bd);
-      border-radius: 12px;
-      background: var(--card);
-      padding: 14px;
-      margin-top: 12px;
+    .grid{
+      display:grid;
+      gap:12px;
     }
-    label { font-weight: 700; display: block; margin-bottom: 8px; }
-    input[type="file"],
-    input[type="text"] {
-      width: 100%;
-      padding: 10px 12px;
-      border: 1px solid #d9d9e3;
-      border-radius: 12px;
-      background: #f9fafb;
-      outline: none;
-    }
-    input[type="text"]:focus {
-      border-color: #b4b4d0;
-      box-shadow: 0 0 0 2px rgba(180, 180, 208, 0.25);
-      background: #fff;
-    }
-    .row {
-      display: flex;
-      gap: 10px;
-      align-items: center;
+    .grid.two{ grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+    .grid.three{ grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+
+    .row{
+      display:flex;
+      gap:10px;
+      align-items:center;
       flex-wrap: wrap;
     }
-    .row > * { flex: 1; min-width: 240px; }
-    .btn {
-      display: inline-block;
+    .row > *{ min-width: 220px; flex: 1; }
+
+    label{ font-weight: 800; display:block; margin-bottom: 8px; }
+    input[type="file"], input[type="text"], input[type="number"], input[type="range"]{
+      width:100%;
+      padding: 10px 12px;
+      border:1px solid #d9d9e3;
+      border-radius: 12px;
+      background:#f9fafb;
+      outline:none;
+      min-width: 0;
+    }
+    input[type="text"]:focus, input[type="number"]:focus, input[type="file"]:focus{
+      border-color:#b4b4d0;
+      box-shadow: 0 0 0 2px rgba(180,180,208,0.25);
+      background:#fff;
+    }
+    input:disabled{
+      background:#f6f7fb;
+      color:#888;
+    }
+    .hint{
+      color:var(--muted);
+      font-size: 0.95rem;
+      margin-top: 8px;
+    }
+    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+    .btn{
+      display:inline-block;
       padding: 10px 14px;
       border-radius: 12px;
-      border: 1px solid #222;
-      background: #fff;
-      font-weight: 700;
-      cursor: pointer;
+      border:1px solid #222;
+      background:#fff;
+      font-weight: 800;
+      cursor:pointer;
+      user-select:none;
+      white-space: nowrap;
     }
-    .btn:hover { background: #f3f4f6; }
-    .btn.primary {
-      background: #111;
-      color: #fff;
+    .btn:hover{ background:#f3f4f6; }
+    .btn.primary{ background:#111; color:#fff; }
+    .btn.primary:hover{ background:#000; }
+    .btn.ghost{ background:#f9fafb; border-color:#d4d4d8; }
+    .btn.ghost:hover{ background:#eef2ff; }
+    .btn.danger{ border-color: rgba(185,28,28,0.35); background: rgba(185,28,28,0.06); color: var(--danger); }
+    .btn.danger:hover{ background: rgba(185,28,28,0.10); }
+    .btn.small{ padding: 8px 10px; border-radius: 10px; font-size: 0.95rem; }
+    .btn:disabled{ opacity: 0.55; cursor:not-allowed; }
+
+    .pill{
+      display:inline-block;
+      padding: 4px 10px;
+      border:1px solid var(--bd);
+      border-radius: 999px;
+      background:#fff;
+      font-size: 0.92rem;
+      color:#333;
+      margin: 6px 6px 0 0;
+      white-space: nowrap;
     }
-    .btn.primary:hover { background: #000; }
-    .btn.ghost {
-      background: #f9fafb;
-      border-color: #d4d4d8;
-    }
-    .btn.ghost:hover { background: #eef2ff; }
-    .btn:disabled {
-      opacity: 0.55;
-      cursor: not-allowed;
-    }
-    .hint { color: var(--muted); font-size: 0.95rem; margin-top: 8px; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-    .status {
+    .pill.ok{ border-color: rgba(15,118,110,0.35); background: rgba(15,118,110,0.06); color: var(--ok); }
+    .pill.bad{ border-color: rgba(185,28,28,0.35); background: rgba(185,28,28,0.06); color: var(--danger); }
+
+    .status{
       margin-top: 12px;
       padding: 12px;
       border-radius: 12px;
@@ -113,115 +142,522 @@
       background: #fff;
       white-space: pre-wrap;
     }
-    .status.error {
-      border-color: rgba(185, 28, 28, 0.35);
-      background: rgba(185, 28, 28, 0.06);
+    .status.error{
+      border-color: rgba(185,28,28,0.35);
+      background: rgba(185,28,28,0.06);
       color: var(--danger);
     }
-    .pill {
-      display: inline-block;
-      padding: 3px 10px;
-      border: 1px solid var(--bd);
-      border-radius: 999px;
-      background: #fff;
-      font-size: 0.92rem;
-      color: #333;
-      margin-right: 6px;
-      margin-top: 6px;
+
+    /* 드롭존 */
+    .dropzone{
+      border: 2px dashed #d4d4d8;
+      border-radius: 16px;
+      background: #fafafa;
+      padding: 18px;
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 12px;
+      cursor: pointer;
+      user-select:none;
     }
-    .footer {
-      margin-top: 28px;
+    .dropzone:hover{ background:#f5f6ff; }
+    .dropzone.dragover{
+      border-color: rgba(56,189,248,0.9);
+      background: rgba(56,189,248,0.08);
+      box-shadow: 0 0 0 3px rgba(56,189,248,0.12);
+    }
+    .drop-title{ font-weight: 900; font-size: 1.05rem; }
+    .drop-sub{ color: var(--muted); font-size: 0.95rem; margin-top: 4px; }
+    .drop-actions{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
+    .file-hidden{ display:none; }
+
+    /* 모드 라디오 */
+    .mode-box{
+      border:1px solid var(--bd);
+      border-radius: 12px;
+      background: #fff;
+      padding: 12px;
+    }
+    .mode-row{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .radio{
+      display:flex;
+      align-items:center;
+      gap: 8px;
+      font-weight: 800;
+      color:#222;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border:1px solid #eee;
+      background:#fafafa;
+      cursor:pointer;
+      user-select:none;
+    }
+    .radio input{ width: 18px; height: 18px; }
+    .radio:has(input:checked){
+      border-color: rgba(17,17,17,0.25);
+      background:#fff;
+      box-shadow: 0 0 0 2px rgba(17,17,17,0.08);
+    }
+
+    /* 썸네일 그리드 */
+    .thumb-grid{
+      display:grid;
+      grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .page-card{
+      border: 1px solid var(--bd);
+      border-radius: 14px;
+      background: #fff;
+      overflow: hidden;
+      display:flex;
+      flex-direction: column;
+      min-height: 220px;
+      box-shadow: 0 1px 8px rgba(0,0,0,0.04);
+      cursor: pointer;
+    }
+    .page-card:hover{ box-shadow: 0 1px 14px rgba(0,0,0,0.08); }
+    .page-card.selected{
+      border-color: rgba(185,28,28,0.35);
+      background: rgba(185,28,28,0.03);
+    }
+    .page-toolbar{
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 10px 10px;
+      border-bottom: 1px solid #f0f0f4;
+      background: #fafafa;
+    }
+    .page-title{
+      font-weight: 900;
+      font-size: 0.98rem;
+      color:#222;
+      white-space: nowrap;
+    }
+    .chk{
+      display:flex;
+      align-items:center;
+      gap: 8px;
+      font-weight: 900;
+      color:#333;
+      user-select:none;
+      white-space: nowrap;
+    }
+    .chk input{ width: 18px; height: 18px; }
+
+    .thumb-wrap{
+      position: relative;
+      padding: 10px;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      min-height: 170px;
+      background: #fff;
+    }
+    canvas.thumb{
+      display:block;
+      border-radius: 10px;
+      border: 1px solid #eee;
+      background: #fff;
+      max-width: 100%;
+      height: auto;
+    }
+    .thumb-placeholder{
+      position:absolute;
+      inset: 10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border-radius: 10px;
+      border: 1px dashed #ddd;
+      color:#777;
+      font-size: 0.95rem;
+      background: #fafafa;
+      text-align:center;
+      padding: 8px;
+    }
+    .thumb-placeholder.hidden{ display:none; }
+
+    /* 모달 */
+    .modal{
+      display:none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+    }
+    .modal.open{ display:block; }
+    .modal-backdrop{
+      position:absolute;
+      inset:0;
+      background: rgba(0,0,0,0.65);
+    }
+    .modal-panel{
+      position:absolute;
+      inset: 18px;
+      max-width: 1180px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 16px;
+      overflow: hidden;
+      display:flex;
+      flex-direction: column;
+      box-shadow: var(--shadow2);
+    }
+    .modal-head{
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px 14px;
+      border-bottom: 1px solid #eee;
+      background: #fafafa;
+    }
+    .modal-body{
+      padding: 12px;
+      overflow:auto;
+      background:#fff;
+      flex: 1;
+      display:flex;
+      justify-content:center;
+      align-items:flex-start;
+    }
+    canvas.big{
+      border-radius: 12px;
+      border: 1px solid #eee;
+      background:#fff;
+      max-width: 100%;
+      height: auto;
+    }
+
+    .download-area{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items:center;
+      margin-top: 12px;
+    }
+    a.download{ display:none; }
+
+    hr{
+      border:none;
+      border-top: 1px solid #eee;
+      margin: 16px 0;
+    }
+
+    .footer-note{
+      text-align:center;
+      margin-top: 18px;
       color: var(--muted);
       font-size: 0.92rem;
-      text-align: center;
+    }
+
+    @media (max-width: 640px){
+      .dropzone{ flex-direction: column; align-items:flex-start; }
+      .drop-actions{ width:100%; justify-content:flex-start; }
     }
   </style>
 </head>
 
 <body>
   <div class="container">
-    <h1>PDF 페이지 삭제</h1>
-    <p class="subtitle">파일은 서버로 전송되지 않고, 브라우저 안에서만 처리됩니다.</p>
+    <h1>PDF 페이지 선택/삭제 도구</h1>
+    <p class="subtitle">미리보기 · 해상도 슬라이더 · 페이지 필터 · 상태 저장/불러오기 · 드래그&드롭 · (브라우저 내부 처리)</p>
 
+    <!-- 업로드 -->
     <div class="section">
-      <div class="row">
+      <label>1) PDF 업로드</label>
+
+      <div id="dropZone" class="dropzone" tabindex="0" role="button" aria-label="PDF 파일을 드래그 앤 드롭하거나 클릭해서 선택">
         <div>
-          <label for="pdfFile">1) PDF 업로드</label>
-          <input id="pdfFile" type="file" accept="application/pdf" />
-          <div class="hint">선택한 PDF에서 삭제할 페이지 번호를 입력하세요.</div>
+          <div class="drop-title">여기에 PDF를 드래그해서 놓기</div>
+          <div class="drop-sub">또는 버튼/영역을 클릭해서 파일 선택 · 서버로 전송되지 않습니다.</div>
+          <div class="hint" style="margin-top:8px;">
+            <span class="mono">file://</span>로 열면 pdf.js 워커가 막혀 미리보기가 느릴 수 있어요(자동 fallback 포함).
+          </div>
         </div>
-        <div>
-          <label for="pagesToDelete">2) 삭제할 페이지 번호</label>
-          <input id="pagesToDelete" type="text" placeholder="예: 2, 4-6, 9" disabled />
+
+        <div class="drop-actions">
+          <button id="btnPickFile" class="btn ghost" type="button">파일 선택</button>
+          <button id="btnReset" class="btn danger" type="button" disabled>초기화</button>
+        </div>
+      </div>
+
+      <input id="pdfFile" class="file-hidden" type="file" accept="application/pdf" />
+      <div id="metaChips"></div>
+      <div id="status" class="status" style="display:none;"></div>
+
+      <div class="download-area">
+        <button id="btnMake" class="btn primary" type="button" disabled>3) 새 PDF 만들기</button>
+        <a id="downloadLink" class="btn download" download>결과 PDF 다운로드</a>
+      </div>
+    </div>
+
+    <!-- 설정/선택 -->
+    <div class="section">
+      <label>2) 선택/필터/저장 설정</label>
+
+      <div class="grid two">
+        <!-- 모드 -->
+        <div class="mode-box">
+          <div style="font-weight:900; margin-bottom: 10px;">모드</div>
+          <div class="mode-row">
+            <label class="radio" title="체크한 페이지를 '삭제' 대상으로 지정">
+              <input type="radio" name="mode" value="delete" checked />
+              삭제할 페이지 선택
+            </label>
+
+            <label class="radio" title="체크한 페이지를 '남길(유지)' 대상으로 지정">
+              <input type="radio" name="mode" value="keep" />
+              남길 페이지 선택
+            </label>
+          </div>
+
+          <div class="hint" id="modeHint">
+            모드 전환 시 현재 결과(남는 페이지)가 유지되도록 선택이 자동 반전됩니다.
+          </div>
+        </div>
+
+        <!-- 썸네일 해상도 -->
+        <div class="mode-box">
+          <div style="font-weight:900; margin-bottom: 10px;">미리보기 해상도</div>
+
+          <div class="row" style="align-items: center;">
+            <div style="flex: 1; min-width: 240px;">
+              <input id="thumbSlider" type="range" min="110" max="260" step="10" value="170" disabled />
+              <div class="hint" id="thumbLabel" style="margin-top:6px;">
+                썸네일 폭: <span class="mono" id="thumbValue">170px</span> (왼쪽=빠름 · 오른쪽=선명)
+              </div>
+            </div>
+            <div style="min-width: 200px;">
+              <button id="btnRerenderVisible" class="btn ghost" type="button" disabled>보이는 페이지 재렌더</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr>
+
+      <div class="grid two">
+        <!-- 숫자 입력 + 빠른 조작 -->
+        <div class="mode-box">
+          <div style="font-weight:900; margin-bottom: 10px;" id="pagesTextTitle">숫자 입력 (선택 대상)</div>
+
+          <div class="row">
+            <input id="pagesText" type="text" placeholder="예: 2, 4-6, 9" disabled />
+            <button id="btnApplyText" class="btn ghost" type="button" disabled>입력 적용</button>
+          </div>
+
           <div class="hint">
-            입력 형식: <span class="mono">쉼표</span> 또는 <span class="mono">공백</span> 구분,
-            <span class="mono">-</span> 또는 <span class="mono">~</span>로 범위 지정 가능
+            구분: <span class="mono">쉼표/공백</span>,
+            범위: <span class="mono">-</span> 또는 <span class="mono">~</span> ,
+            페이지 번호는 <b>1부터</b>.
           </div>
-        </div>
-      </div>
 
-      <div class="card">
-        <div class="row" style="align-items:flex-start;">
-          <div style="min-width:260px;">
-            <button id="btnMake" class="btn primary" disabled>3) 삭제 적용 & 새 PDF 만들기</button>
-            <button id="btnReset" class="btn ghost" disabled>초기화</button>
-          </div>
-          <div>
-            <div id="meta"></div>
-            <div id="chips"></div>
+          <div class="row" style="margin-top: 10px;">
+            <button id="btnSelectAll" class="btn ghost" type="button" disabled>전체 선택</button>
+            <button id="btnClearAll" class="btn ghost" type="button" disabled>전체 해제</button>
+            <button id="btnInvert" class="btn ghost" type="button" disabled>선택 반전</button>
           </div>
         </div>
 
-        <div id="status" class="status" style="display:none;"></div>
+        <!-- 필터 + 저장/불러오기 -->
+        <div class="mode-box">
+          <div style="font-weight:900; margin-bottom: 10px;">페이지 필터 / 상태 저장</div>
 
-        <div style="margin-top:12px;">
-          <a id="downloadLink" class="btn" style="display:none;" download>결과 PDF 다운로드</a>
+          <div class="row" style="align-items: flex-start;">
+            <div style="flex: 1; min-width: 240px;">
+              <div style="font-weight:800; margin-bottom:6px;">페이지 범위만 보기</div>
+              <div class="row">
+                <input id="filterRange" type="text" placeholder="예: 10-20 또는 10~20 (비우면 전체)" disabled />
+                <button id="btnApplyFilter" class="btn ghost" type="button" disabled>필터 적용</button>
+                <button id="btnClearFilter" class="btn ghost" type="button" disabled>전체 보기</button>
+              </div>
+              <div class="hint">예: <span class="mono">10~20</span> 입력 후 “필터 적용” → 그 구간만 표시</div>
+            </div>
+
+            <div style="min-width: 250px;">
+              <div style="font-weight:800; margin-bottom:6px;">선택한 페이지만 보기</div>
+              <label class="chk" style="padding: 8px 10px; border:1px solid #eee; border-radius:12px; background:#fafafa; justify-content: space-between;">
+                <span id="showSelectedLabel">선택한 페이지(삭제/남김)만</span>
+                <input id="showSelectedOnly" type="checkbox" disabled />
+              </label>
+              <div class="hint">대량 문서에서 선택 페이지 확인할 때 유용합니다.</div>
+            </div>
+          </div>
+
+          <hr>
+
+          <div class="row" style="align-items: center;">
+            <button id="btnSaveState" class="btn ghost" type="button" disabled>상태 저장(로컬)</button>
+            <button id="btnLoadState" class="btn ghost" type="button" disabled>상태 불러오기(로컬)</button>
+            <label class="chk" style="min-width: 260px; justify-content: flex-start;">
+              <input id="forceLoad" type="checkbox" disabled />
+              다른 파일에도 강제 적용
+            </label>
+          </div>
+
+          <div class="row" style="margin-top: 10px; align-items: center;">
+            <button id="btnExportState" class="btn ghost" type="button" disabled>내보내기(JSON)</button>
+            <button id="btnImportState" class="btn ghost" type="button" disabled>불러오기(JSON)</button>
+            <input id="stateFile" class="file-hidden" type="file" accept="application/json" />
+          </div>
+
+          <div class="hint">
+            “상태 저장”은 이 브라우저의 로컬 저장소(LocalStorage)에 저장됩니다.<br/>
+            “내보내기(JSON)”는 선택 상태를 파일로 백업합니다.
+          </div>
         </div>
       </div>
     </div>
 
+    <!-- 미리보기 -->
     <div class="section">
-      <h2 style="margin:0 0 10px; font-size:1.1rem;">작동 방식 메모</h2>
-      <ul style="margin:0; padding-left:18px; color:#333;">
-        <li>페이지 번호는 PDF 뷰어 기준처럼 <b>1부터 시작</b>합니다.</li>
-        <li>예: <span class="mono">1, 3-5</span> → 1페이지와 3~5페이지를 삭제합니다.</li>
-        <li>암호로 보호된(암호화된) PDF는 브라우저에서 처리가 실패할 수 있습니다.</li>
-      </ul>
+      <div class="row" style="align-items: baseline;">
+        <h2 style="margin:0; font-size: 1.25rem;">페이지 미리보기</h2>
+        <div class="hint" style="margin:0;">카드를 클릭하면 체크 토글 · “미리보기” 버튼은 확대</div>
+      </div>
+      <div id="thumbGrid" class="thumb-grid"></div>
     </div>
 
-    <div class="footer">© 단일 HTML · pdf-lib 사용</div>
+    <div class="footer-note">© 단일 HTML · pdf.js(미리보기) + pdf-lib(편집)</div>
+  </div>
+
+  <!-- 모달 -->
+  <div id="modal" class="modal" aria-hidden="true">
+    <div class="modal-backdrop"></div>
+    <div class="modal-panel" role="dialog" aria-modal="true" aria-label="페이지 미리보기 확대">
+      <div class="modal-head">
+        <div id="modalTitle" style="font-weight:900;">미리보기</div>
+        <div class="row" style="margin:0; gap:8px;">
+          <button id="btnToggleInModal" class="btn small ghost" type="button" title="이 페이지 선택/해제">
+            선택 토글
+          </button>
+          <button id="btnCloseModal" class="btn small" type="button">닫기</button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <canvas id="bigCanvas" class="big"></canvas>
+      </div>
+    </div>
   </div>
 
   <script>
-    const $ = (sel) => document.querySelector(sel);
+    "use strict";
 
+    const $ = (s) => document.querySelector(s);
+
+    // DOM
+    const dropZone = $("#dropZone");
+    const btnPickFile = $("#btnPickFile");
     const pdfFile = $("#pdfFile");
-    const pagesToDelete = $("#pagesToDelete");
-    const btnMake = $("#btnMake");
+
     const btnReset = $("#btnReset");
-    const meta = $("#meta");
-    const chips = $("#chips");
-    const statusEl = $("#status");
+    const btnMake = $("#btnMake");
     const downloadLink = $("#downloadLink");
 
+    const metaChips = $("#metaChips");
+    const statusEl = $("#status");
+    const thumbGrid = $("#thumbGrid");
+
+    const modeRadios = Array.from(document.querySelectorAll('input[name="mode"]'));
+    const modeHint = $("#modeHint");
+
+    const pagesTextTitle = $("#pagesTextTitle");
+    const pagesText = $("#pagesText");
+    const btnApplyText = $("#btnApplyText");
+
+    const btnSelectAll = $("#btnSelectAll");
+    const btnClearAll = $("#btnClearAll");
+    const btnInvert = $("#btnInvert");
+
+    const thumbSlider = $("#thumbSlider");
+    const thumbValue = $("#thumbValue");
+    const btnRerenderVisible = $("#btnRerenderVisible");
+
+    const filterRange = $("#filterRange");
+    const btnApplyFilter = $("#btnApplyFilter");
+    const btnClearFilter = $("#btnClearFilter");
+    const showSelectedOnly = $("#showSelectedOnly");
+    const showSelectedLabel = $("#showSelectedLabel");
+
+    const btnSaveState = $("#btnSaveState");
+    const btnLoadState = $("#btnLoadState");
+    const forceLoad = $("#forceLoad");
+
+    const btnExportState = $("#btnExportState");
+    const btnImportState = $("#btnImportState");
+    const stateFile = $("#stateFile");
+
+    // Modal
+    const modal = $("#modal");
+    const modalTitle = $("#modalTitle");
+    const btnCloseModal = $("#btnCloseModal");
+    const btnToggleInModal = $("#btnToggleInModal");
+    const bigCanvas = $("#bigCanvas");
+
+    // State
     let originalBytes = null;
+    let originalFile = null; // File
     let originalName = null;
     let totalPages = 0;
+
+    // file identity
+    let fileQuickKey = null;
+    let fileSha256 = null;
+
+    // mode: 'delete' | 'keep'
+    let mode = "delete";
+
+    // selected pages (meaning depends on mode)
+    let selectedSet = new Set();
+
+    // pdf.js doc
+    let pdfjsDoc = null;
+
+    // render & filter
+    let io = null;
+    const renderedThumb = new Set();
+    const renderingThumb = new Set();
+    let thumbWidth = 170;
+
+    let filterState = {
+      rangeActive: false,
+      from: 1,
+      to: 1,
+      rangeText: "",
+      showSelectedOnly: false
+    };
+
+    // download url
     let lastObjectUrl = null;
 
-    function setStatus(msg, type = "info") {
+    // pdf.js worker
+    const WORKER_SRC = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+    if (window.pdfjsLib) {
+      try { pdfjsLib.GlobalWorkerOptions.workerSrc = WORKER_SRC; } catch (_) {}
+    }
+
+    // ---------- UI helpers ----------
+    function setStatus(msg, type="info"){
       statusEl.style.display = "block";
       statusEl.textContent = msg;
       statusEl.classList.toggle("error", type === "error");
     }
-
-    function clearStatus() {
+    function clearStatus(){
       statusEl.style.display = "none";
       statusEl.textContent = "";
       statusEl.classList.remove("error");
     }
-
-    function clearDownload() {
+    function clearDownload(){
       downloadLink.style.display = "none";
       downloadLink.removeAttribute("href");
       downloadLink.removeAttribute("download");
@@ -230,254 +666,1133 @@
         lastObjectUrl = null;
       }
     }
-
-    function updateMeta() {
-      meta.innerHTML = "";
-      chips.innerHTML = "";
-
-      if (!originalBytes) return;
-
-      const fileChip = document.createElement("span");
-      fileChip.className = "pill";
-      fileChip.textContent = `파일: ${originalName}`;
-
-      const pageChip = document.createElement("span");
-      pageChip.className = "pill";
-      pageChip.textContent = `총 페이지: ${totalPages}`;
-
-      meta.appendChild(fileChip);
-      meta.appendChild(pageChip);
+    function safeOutputName(inputName, suffix){
+      const base = (inputName || "document.pdf").replace(/\.pdf$/i, "");
+      const safe = base.replace(/[\\\/:*?"<>|]+/g, "_").trim() || "document";
+      return `${safe}${suffix}.pdf`;
+    }
+    function humanMode(){
+      return mode === "delete" ? "삭제 모드" : "남김(유지) 모드";
+    }
+    function humanSelectLabel(){
+      return mode === "delete" ? "삭제" : "남김";
+    }
+    function resultPageCount(){
+      if (!totalPages) return 0;
+      return mode === "delete" ? (totalPages - selectedSet.size) : selectedSet.size;
+    }
+    function clampPage(n){
+      return Math.min(totalPages, Math.max(1, n));
     }
 
-    // 입력 텍스트를 페이지 번호 Set(1-based)로 변환
-    // 지원: "1,2,5-7", "1 2 3-4", "1~3" 등
-    function parsePages(text, maxPage) {
+    // Set -> range string (압축)
+    function setToRangesString(set){
+      const arr = Array.from(set).filter(n => Number.isFinite(n)).sort((a,b)=>a-b);
+      if (arr.length === 0) return "";
+      const out = [];
+      let start = arr[0], prev = arr[0];
+      for (let i=1;i<arr.length;i++){
+        const cur = arr[i];
+        if (cur === prev + 1) { prev = cur; continue; }
+        out.push(start === prev ? String(start) : `${start}-${prev}`);
+        start = prev = cur;
+      }
+      out.push(start === prev ? String(start) : `${start}-${prev}`);
+      return out.join(", ");
+    }
+
+    // 페이지 목록 파싱 (1-based)
+    function parsePages(text, maxPage){
       const cleaned = (text || "")
         .trim()
         .replace(/[，;]/g, ",")
-        .replace(/[~〜–—]/g, "-"); // 사용자가 ~, en dash 등을 써도 처리
+        .replace(/[~〜–—]/g, "-");
 
-      if (!cleaned) {
-        return { set: new Set(), invalidTokens: [], outOfRange: [] };
-      }
+      if (!cleaned) return { set: new Set(), invalidTokens: [], outOfRange: [] };
 
       const tokens = cleaned.split(/[\s,]+/).filter(Boolean);
-
       const set = new Set();
       const invalidTokens = [];
       const outOfRange = [];
 
-      for (const token of tokens) {
-        // 단일 숫자
+      for (const token of tokens){
         if (/^\d+$/.test(token)) {
           const n = Number(token);
-          if (!Number.isFinite(n)) { invalidTokens.push(token); continue; }
           if (n < 1 || n > maxPage) outOfRange.push(n);
           else set.add(n);
           continue;
         }
-
-        // 범위 a-b
         if (/^\d+\-\d+$/.test(token)) {
-          const [aStr, bStr] = token.split("-");
-          let a = Number(aStr);
-          let b = Number(bStr);
+          let [a,b] = token.split("-").map(Number);
           if (!Number.isFinite(a) || !Number.isFinite(b)) { invalidTokens.push(token); continue; }
-
-          // 사용자가 7-3처럼 써도 정상 처리(뒤집기)
-          if (a > b) [a, b] = [b, a];
-
-          // 너무 큰 범위 방지(실수로 1-999999 같은 입력)
+          if (a > b) [a,b] = [b,a];
           if (b - a > 20000) { invalidTokens.push(token); continue; }
-
-          for (let n = a; n <= b; n++) {
+          for (let n=a; n<=b; n++){
             if (n < 1 || n > maxPage) outOfRange.push(n);
             else set.add(n);
           }
           continue;
         }
-
         invalidTokens.push(token);
       }
-
-      // outOfRange 중복 제거
       const uniqOut = Array.from(new Set(outOfRange)).sort((x,y)=>x-y);
-
       return { set, invalidTokens, outOfRange: uniqOut };
     }
 
-    function safeOutputName(inputName, suffix) {
-      const base = (inputName || "document.pdf").replace(/\.pdf$/i, "");
-      // 파일명에 위험 문자 제거
-      const safe = base.replace(/[\\\/:*?"<>|]+/g, "_").trim() || "document";
-      return `${safe}${suffix}.pdf`;
-    }
+    // 범위 필터 파싱: "", "all", "10-20", "10~20", "15"
+    function parseRangeText(text, maxPage){
+      const t = (text || "").trim();
+      if (!t) return { active:false };
+      const normalized = t.replace(/[~〜–—]/g, "-").toLowerCase();
+      if (normalized === "all" || normalized === "전체") return { active:false };
 
-    async function loadPdf(file) {
-      clearStatus();
-      clearDownload();
-
-      originalName = file.name || "document.pdf";
-      originalBytes = await file.arrayBuffer();
-
-      // 페이지 수 확인
-      const pdfDoc = await PDFLib.PDFDocument.load(originalBytes);
-      totalPages = pdfDoc.getPageCount();
-
-      updateMeta();
-
-      pagesToDelete.disabled = false;
-      btnMake.disabled = false;
-      btnReset.disabled = false;
-
-      pagesToDelete.placeholder = totalPages
-        ? `예: 2, 4-6, ${Math.min(9, totalPages)}`
-        : "예: 2, 4-6, 9";
-    }
-
-    function resetAll() {
-      originalBytes = null;
-      originalName = null;
-      totalPages = 0;
-
-      pdfFile.value = "";
-      pagesToDelete.value = "";
-      pagesToDelete.disabled = true;
-
-      btnMake.disabled = true;
-      btnReset.disabled = true;
-
-      meta.innerHTML = "";
-      chips.innerHTML = "";
-      clearStatus();
-      clearDownload();
-    }
-
-    async function makeDeletedPdf() {
-      clearStatus();
-      clearDownload();
-
-      if (!originalBytes) {
-        setStatus("PDF 파일을 먼저 선택하세요.", "error");
-        return;
+      if (/^\d+$/.test(normalized)){
+        const n = clampPage(Number(normalized));
+        return { active:true, from:n, to:n };
       }
-
-      let pdfDoc;
-      try {
-        pdfDoc = await PDFLib.PDFDocument.load(originalBytes);
-      } catch (e) {
-        setStatus(
-          "PDF를 읽는 데 실패했습니다.\n- 암호로 보호된 PDF일 수 있습니다.\n- 파일이 손상되었을 수도 있습니다.\n\n에러: " + (e?.message || String(e)),
-          "error"
-        );
-        return;
+      if (/^\d+\-\d+$/.test(normalized)){
+        let [a,b] = normalized.split("-").map(Number);
+        if (!Number.isFinite(a) || !Number.isFinite(b)) return { active:"error", error:"범위 형식이 올바르지 않습니다." };
+        a = clampPage(a); b = clampPage(b);
+        if (a > b) [a,b] = [b,a];
+        return { active:true, from:a, to:b };
       }
+      return { active:"error", error:"예: 10-20 또는 10~20 형태로 입력하세요." };
+    }
 
-      const total = pdfDoc.getPageCount();
-      const input = pagesToDelete.value;
+    function updateMetaChips(extra=null){
+      metaChips.innerHTML = "";
+      if (!originalBytes) return;
 
-      const parsed = parsePages(input, total);
-      const delSet = parsed.set;
-
-      // 피드백 칩
-      chips.innerHTML = "";
-      const mkChip = (txt) => {
+      const mk = (txt, cls="") => {
         const s = document.createElement("span");
-        s.className = "pill";
+        s.className = "pill" + (cls ? (" " + cls) : "");
         s.textContent = txt;
         return s;
       };
 
-      chips.appendChild(mkChip(`삭제 대상: ${delSet.size}개`));
-      if (parsed.invalidTokens.length) chips.appendChild(mkChip(`형식 오류: ${parsed.invalidTokens.length}개`));
-      if (parsed.outOfRange.length) chips.appendChild(mkChip(`범위 밖: ${parsed.outOfRange.length}개`));
+      metaChips.appendChild(mk(`파일: ${originalName || "-"}`));
+      metaChips.appendChild(mk(`모드: ${humanMode()}`));
+      metaChips.appendChild(mk(`총 페이지: ${totalPages}`));
 
-      if (parsed.invalidTokens.length) {
+      const selLabel = mode === "delete" ? "삭제 선택" : "남김 선택";
+      metaChips.appendChild(mk(`${selLabel}: ${selectedSet.size}`, selectedSet.size ? "bad" : ""));
+
+      const res = resultPageCount();
+      metaChips.appendChild(mk(`결과 페이지: ${res}`, res > 0 ? "ok" : "bad"));
+
+      // filter info
+      const visCount = countVisibleCards();
+      metaChips.appendChild(mk(`표시중: ${visCount}/${totalPages}`));
+
+      if (filterState.rangeActive) metaChips.appendChild(mk(`필터: ${filterState.from}-${filterState.to}`));
+      if (filterState.showSelectedOnly) metaChips.appendChild(mk(`필터: 선택만`));
+
+      // id
+      if (fileSha256) metaChips.appendChild(mk(`SHA-256: ${fileSha256.slice(0,12)}…`));
+      else if (fileQuickKey) metaChips.appendChild(mk(`ID: ${fileQuickKey.slice(0,18)}…`));
+
+      if (extra) metaChips.appendChild(mk(extra, "bad"));
+    }
+
+    function setControlsEnabled(enabled){
+      btnReset.disabled = !enabled;
+
+      btnMake.disabled = !enabled;
+
+      pagesText.disabled = !enabled;
+      btnApplyText.disabled = !enabled;
+
+      btnSelectAll.disabled = !enabled;
+      btnClearAll.disabled = !enabled;
+      btnInvert.disabled = !enabled;
+
+      thumbSlider.disabled = !enabled;
+      btnRerenderVisible.disabled = !enabled;
+
+      filterRange.disabled = !enabled;
+      btnApplyFilter.disabled = !enabled;
+      btnClearFilter.disabled = !enabled;
+      showSelectedOnly.disabled = !enabled;
+
+      btnSaveState.disabled = !enabled;
+      btnLoadState.disabled = !enabled;
+      forceLoad.disabled = !enabled;
+
+      btnExportState.disabled = !enabled;
+      btnImportState.disabled = !enabled;
+    }
+
+    // ---------- mode ----------
+    function applyModeLabels(){
+      pagesTextTitle.textContent = (mode === "delete")
+        ? "숫자 입력 (삭제할 페이지)"
+        : "숫자 입력 (남길 페이지)";
+
+      showSelectedLabel.textContent = (mode === "delete")
+        ? "선택한 페이지(삭제 대상)만"
+        : "선택한 페이지(남길 대상)만";
+
+      // 카드 체크 라벨도 변경
+      thumbGrid.querySelectorAll(".chk .labelText").forEach(el => {
+        el.textContent = humanSelectLabel();
+      });
+    }
+
+    function complementSet(set){
+      const next = new Set();
+      for (let p=1; p<=totalPages; p++){
+        if (!set.has(p)) next.add(p);
+      }
+      return next;
+    }
+
+    // preserveOutput=true면 모드 전환 시 결과 페이지(남는 페이지)를 유지하기 위해 선택을 자동 반전
+    function setMode(newMode, {preserveOutput=false} = {}){
+      if (newMode !== "delete" && newMode !== "keep") return;
+      if (newMode === mode) return;
+
+      if (preserveOutput && totalPages > 0){
+        selectedSet = complementSet(selectedSet);
+      }
+      mode = newMode;
+
+      applyModeLabels();
+      syncTextFromSet();
+      syncCardsFromSet();
+      applyFilter(); // "선택만 보기" 상태면 반영
+      updateMetaChips();
+
+      if (preserveOutput){
+        setStatus(`모드를 전환했습니다: ${humanMode()}\n현재 결과를 유지하기 위해 선택이 자동 반전되었습니다.`, "info");
+      }
+      clearDownload();
+    }
+
+    // ---------- selection sync ----------
+    function syncTextFromSet(){
+      pagesText.value = setToRangesString(selectedSet);
+    }
+
+    function syncCardsFromSet(){
+      thumbGrid.querySelectorAll(".page-card").forEach(card => {
+        const p = Number(card.dataset.page);
+        const checked = selectedSet.has(p);
+
+        const cb = card.querySelector(".page-checkbox");
+        if (cb) cb.checked = checked;
+
+        card.classList.toggle("selected", checked);
+      });
+    }
+
+    function toggleSelected(page, checked){
+      if (checked) selectedSet.add(page);
+      else selectedSet.delete(page);
+
+      // 카드 UI
+      const card = thumbGrid.querySelector(`.page-card[data-page="${page}"]`);
+      if (card) card.classList.toggle("selected", checked);
+
+      // 숫자 입력 동기화
+      syncTextFromSet();
+
+      // 선택만 보기 필터가 켜져 있으면 즉시 반영
+      if (filterState.showSelectedOnly) applyFilter();
+
+      updateMetaChips();
+      clearDownload();
+    }
+
+    function applyTextToSelection(){
+      clearStatus();
+      clearDownload();
+
+      const parsed = parsePages(pagesText.value, totalPages);
+
+      if (parsed.invalidTokens.length){
         setStatus(
           "입력 형식이 올바르지 않은 항목이 있습니다:\n- " + parsed.invalidTokens.join(", ") +
           "\n\n예시: 2, 4-6, 9",
           "error"
         );
+        updateMetaChips("입력 오류");
         return;
       }
-
-      if (parsed.outOfRange.length) {
+      if (parsed.outOfRange.length){
         setStatus(
-          `페이지 범위를 벗어난 번호가 있습니다 (1 ~ ${total}):\n- ` + parsed.outOfRange.join(", "),
+          `페이지 범위를 벗어난 번호가 있습니다 (1 ~ ${totalPages}):\n- ` + parsed.outOfRange.join(", "),
           "error"
         );
+        updateMetaChips("범위 오류");
         return;
       }
 
-      // 아무 것도 삭제하지 않는 경우도 허용(그대로 재저장)
-      const keepIndices = [];
-      for (let p = 1; p <= total; p++) {
-        if (!delSet.has(p)) keepIndices.push(p - 1); // 0-based
+      selectedSet = parsed.set;
+      syncCardsFromSet();
+      syncTextFromSet(); // 정규화
+      if (filterState.showSelectedOnly) applyFilter();
+      updateMetaChips();
+      setStatus("입력값을 체크박스에 반영했습니다.", "info");
+    }
+
+    // ---------- filter ----------
+    function countVisibleCards(){
+      const cards = thumbGrid.querySelectorAll(".page-card");
+      let cnt = 0;
+      cards.forEach(c => { if (c.style.display !== "none") cnt++; });
+      return cnt;
+    }
+
+    function applyFilter(){
+      if (!totalPages) return;
+
+      filterState.showSelectedOnly = !!showSelectedOnly.checked;
+
+      const r = parseRangeText(filterRange.value, totalPages);
+      if (r.active === "error"){
+        setStatus(r.error, "error");
+        updateMetaChips("필터 오류");
+        return;
       }
 
-      if (keepIndices.length === 0) {
-        setStatus("모든 페이지를 삭제할 수는 없습니다. (최소 1페이지는 남겨야 합니다)", "error");
+      if (!r.active){
+        filterState.rangeActive = false;
+        filterState.rangeText = filterRange.value.trim();
+      } else {
+        filterState.rangeActive = true;
+        filterState.from = r.from;
+        filterState.to = r.to;
+        filterState.rangeText = filterRange.value.trim();
+      }
+
+      // apply visibility
+      thumbGrid.querySelectorAll(".page-card").forEach(card => {
+        const p = Number(card.dataset.page);
+        let visible = true;
+
+        if (filterState.rangeActive){
+          visible = visible && (p >= filterState.from && p <= filterState.to);
+        }
+        if (filterState.showSelectedOnly){
+          visible = visible && selectedSet.has(p);
+        }
+        card.style.display = visible ? "" : "none";
+      });
+
+      // observer: visible only
+      setupIntersectionObserver();
+
+      updateMetaChips();
+    }
+
+    function clearFilterToAll(){
+      filterRange.value = "";
+      showSelectedOnly.checked = false;
+      filterState = { rangeActive:false, from:1, to:totalPages, rangeText:"", showSelectedOnly:false };
+      applyFilter();
+      clearStatus();
+      setStatus("전체 페이지를 표시합니다.", "info");
+    }
+
+    // ---------- thumbnails render ----------
+    function setupIntersectionObserver(){
+      if (io) { try { io.disconnect(); } catch (_) {} }
+      io = new IntersectionObserver((entries) => {
+        for (const ent of entries){
+          if (!ent.isIntersecting) continue;
+          const canvas = ent.target;
+          const page = Number(canvas.dataset.page);
+          if (!Number.isFinite(page)) continue;
+          if (renderedThumb.has(page) || renderingThumb.has(page)) continue;
+          renderThumb(page).catch(() => {});
+        }
+      }, { root: null, threshold: 0.10 });
+
+      // observe only visible canvases
+      thumbGrid.querySelectorAll(".page-card").forEach(card => {
+        if (card.style.display === "none") return;
+        const canvas = card.querySelector("canvas.thumb");
+        if (canvas) io.observe(canvas);
+      });
+    }
+
+    function resetThumbCanvas(pageNumber){
+      const canvas = thumbGrid.querySelector(`canvas.thumb[data-page="${pageNumber}"]`);
+      const ph = canvas?.parentElement?.querySelector(".thumb-placeholder");
+      if (!canvas || !ph) return;
+
+      // reset canvas
+      const ctx = canvas.getContext("2d");
+      if (ctx) ctx.clearRect(0,0,canvas.width,canvas.height);
+      canvas.width = 0; canvas.height = 0;
+      canvas.style.width = "0px";
+      canvas.style.height = "0px";
+
+      ph.textContent = "렌더링 대기…";
+      ph.classList.remove("hidden");
+    }
+
+    function invalidateAllThumbnails(){
+      renderedThumb.clear();
+      renderingThumb.clear();
+
+      thumbGrid.querySelectorAll("canvas.thumb").forEach(c => {
+        const p = Number(c.dataset.page);
+        resetThumbCanvas(p);
+      });
+
+      setupIntersectionObserver();
+    }
+
+    async function renderThumb(pageNumber){
+      if (!pdfjsDoc) return;
+      renderingThumb.add(pageNumber);
+
+      const canvas = thumbGrid.querySelector(`canvas.thumb[data-page="${pageNumber}"]`);
+      const placeholder = canvas?.parentElement?.querySelector(".thumb-placeholder");
+      if (!canvas) { renderingThumb.delete(pageNumber); return; }
+
+      try{
+        const page = await pdfjsDoc.getPage(pageNumber);
+
+        const v1 = page.getViewport({ scale: 1 });
+        const scale = thumbWidth / v1.width;
+        const viewport = page.getViewport({ scale });
+
+        const dpr = window.devicePixelRatio || 1;
+        const ctx = canvas.getContext("2d", { alpha: false });
+
+        canvas.width = Math.floor(viewport.width * dpr);
+        canvas.height = Math.floor(viewport.height * dpr);
+        canvas.style.width = Math.floor(viewport.width) + "px";
+        canvas.style.height = Math.floor(viewport.height) + "px";
+
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        renderedThumb.add(pageNumber);
+        if (placeholder) placeholder.classList.add("hidden");
+      } catch (e){
+        if (placeholder) placeholder.textContent = "렌더링 실패";
+      } finally {
+        renderingThumb.delete(pageNumber);
+      }
+    }
+
+    // ---------- modal preview ----------
+    let modalPage = null;
+
+    function openModal(){
+      modal.classList.add("open");
+      modal.setAttribute("aria-hidden", "false");
+    }
+    function closeModal(){
+      modal.classList.remove("open");
+      modal.setAttribute("aria-hidden", "true");
+
+      const ctx = bigCanvas.getContext("2d");
+      if (ctx) ctx.clearRect(0,0,bigCanvas.width,bigCanvas.height);
+      bigCanvas.width = 0;
+      bigCanvas.height = 0;
+      bigCanvas.style.width = "0px";
+      bigCanvas.style.height = "0px";
+      modalPage = null;
+    }
+
+    async function openModalWithPage(pageNumber){
+      if (!pdfjsDoc) return;
+      modalPage = pageNumber;
+      openModal();
+
+      modalTitle.textContent = `페이지 ${pageNumber} 미리보기`;
+      btnToggleInModal.textContent = `선택 토글 (${humanSelectLabel()})`;
+
+      try{
+        const page = await pdfjsDoc.getPage(pageNumber);
+        const v1 = page.getViewport({ scale: 1 });
+
+        const body = modal.querySelector(".modal-body");
+        const maxW = Math.max(320, body.clientWidth - 24);
+        const maxH = Math.max(240, body.clientHeight - 24);
+
+        const scale = Math.min(maxW / v1.width, maxH / v1.height);
+        const viewport = page.getViewport({ scale });
+
+        const dpr = window.devicePixelRatio || 1;
+        const ctx = bigCanvas.getContext("2d", { alpha: false });
+
+        bigCanvas.width = Math.floor(viewport.width * dpr);
+        bigCanvas.height = Math.floor(viewport.height * dpr);
+        bigCanvas.style.width = Math.floor(viewport.width) + "px";
+        bigCanvas.style.height = Math.floor(viewport.height) + "px";
+
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        await page.render({ canvasContext: ctx, viewport }).promise;
+      } catch (e){
+        modalTitle.textContent = `페이지 ${pageNumber} 미리보기 (실패)`;
+      }
+    }
+
+    btnCloseModal.addEventListener("click", closeModal);
+    modal.querySelector(".modal-backdrop").addEventListener("click", closeModal);
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && modal.classList.contains("open")) closeModal();
+    });
+
+    btnToggleInModal.addEventListener("click", () => {
+      if (!modalPage) return;
+      const p = modalPage;
+      const next = !selectedSet.has(p);
+      // 카드 체크 토글
+      const cb = thumbGrid.querySelector(`.page-checkbox[data-page="${p}"]`);
+      if (cb) cb.checked = next;
+      toggleSelected(p, next);
+    });
+
+    // ---------- build grid ----------
+    function buildThumbGrid(){
+      thumbGrid.innerHTML = "";
+      const frag = document.createDocumentFragment();
+
+      for (let p=1; p<=totalPages; p++){
+        const card = document.createElement("div");
+        card.className = "page-card";
+        card.dataset.page = String(p);
+
+        const toolbar = document.createElement("div");
+        toolbar.className = "page-toolbar";
+
+        const left = document.createElement("label");
+        left.className = "chk";
+        left.title = "이 페이지를 선택/해제";
+
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.className = "page-checkbox";
+        cb.dataset.page = String(p);
+
+        const cbText = document.createElement("span");
+        cbText.className = "labelText";
+        cbText.textContent = humanSelectLabel();
+
+        left.appendChild(cb);
+        left.appendChild(cbText);
+
+        const title = document.createElement("div");
+        title.className = "page-title";
+        title.textContent = `p. ${p}`;
+
+        const btnPrev = document.createElement("button");
+        btnPrev.type = "button";
+        btnPrev.className = "btn small ghost btnPreview";
+        btnPrev.dataset.page = String(p);
+        btnPrev.textContent = "미리보기";
+
+        toolbar.appendChild(left);
+        toolbar.appendChild(title);
+        toolbar.appendChild(btnPrev);
+
+        const wrap = document.createElement("div");
+        wrap.className = "thumb-wrap";
+
+        const canvas = document.createElement("canvas");
+        canvas.className = "thumb";
+        canvas.dataset.page = String(p);
+
+        const ph = document.createElement("div");
+        ph.className = "thumb-placeholder";
+        ph.textContent = "렌더링 대기…";
+
+        wrap.appendChild(canvas);
+        wrap.appendChild(ph);
+
+        card.appendChild(toolbar);
+        card.appendChild(wrap);
+
+        frag.appendChild(card);
+      }
+
+      thumbGrid.appendChild(frag);
+
+      // checkbox change
+      thumbGrid.querySelectorAll(".page-checkbox").forEach(cb => {
+        cb.addEventListener("change", (e) => {
+          const page = Number(e.target.dataset.page);
+          toggleSelected(page, e.target.checked);
+        });
+      });
+
+      // card click toggles (except clicking input/button)
+      thumbGrid.querySelectorAll(".page-card").forEach(card => {
+        card.addEventListener("click", (e) => {
+          const t = e.target;
+          if (t && (t.tagName === "INPUT" || t.tagName === "BUTTON")) return;
+          const page = Number(card.dataset.page);
+          const cb = card.querySelector(".page-checkbox");
+          cb.checked = !cb.checked;
+          toggleSelected(page, cb.checked);
+        });
+      });
+
+      // preview button
+      thumbGrid.querySelectorAll(".btnPreview").forEach(btn => {
+        btn.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          const page = Number(btn.dataset.page);
+          await openModalWithPage(page);
+        });
+      });
+
+      // initial observe
+      setupIntersectionObserver();
+    }
+
+    // ---------- save/load state ----------
+    const STORAGE_PREFIX = "pdfPageToolState:";
+
+    function currentStorageKeys(){
+      const keys = [];
+      if (fileSha256) keys.push(STORAGE_PREFIX + "sha256:" + fileSha256);
+      if (fileQuickKey) keys.push(STORAGE_PREFIX + "quick:" + fileQuickKey);
+      return keys;
+    }
+
+    function makeStateObject(){
+      const selected = Array.from(selectedSet).sort((a,b)=>a-b);
+      return {
+        version: 1,
+        savedAt: new Date().toISOString(),
+        file: {
+          name: originalName,
+          size: originalFile?.size ?? null,
+          lastModified: originalFile?.lastModified ?? null,
+          quickKey: fileQuickKey,
+          sha256: fileSha256
+        },
+        mode,
+        selected,
+        ui: {
+          thumbWidth,
+          filterRange: filterRange.value,
+          showSelectedOnly: showSelectedOnly.checked
+        }
+      };
+    }
+
+    function isSameFile(stateObj){
+      if (!stateObj || !stateObj.file) return false;
+
+      const st = stateObj.file;
+      // sha 있으면 sha 우선 비교
+      if (fileSha256 && st.sha256) return fileSha256 === st.sha256;
+
+      // sha 없으면 quick 비교
+      if (fileQuickKey && st.quickKey) return fileQuickKey === st.quickKey;
+
+      // 그 외는 이름/크기/수정시간 정도로 비교
+      const a = [originalName, originalFile?.size, originalFile?.lastModified].join("|");
+      const b = [st.name, st.size, st.lastModified].join("|");
+      return a === b;
+    }
+
+    function applyStateObject(stateObj, {force=false} = {}){
+      if (!stateObj || stateObj.version !== 1){
+        setStatus("상태 데이터 형식이 올바르지 않습니다.", "error");
         return;
+      }
+
+      if (!force && !isSameFile(stateObj)){
+        setStatus(
+          "저장된 상태가 현재 PDF와 다릅니다.\n“다른 파일에도 강제 적용”을 체크하거나, 올바른 PDF에 적용하세요.",
+          "error"
+        );
+        updateMetaChips("상태 불일치");
+        return;
+      }
+
+      // apply mode without auto-invert (그 자체가 저장된 의도)
+      mode = (stateObj.mode === "keep") ? "keep" : "delete";
+      modeRadios.forEach(r => r.checked = (r.value === mode));
+      applyModeLabels();
+
+      // apply selection
+      const next = new Set();
+      const arr = Array.isArray(stateObj.selected) ? stateObj.selected : [];
+      for (const n of arr){
+        if (Number.isFinite(n) && n >= 1 && n <= totalPages) next.add(n);
+      }
+      selectedSet = next;
+
+      // ui
+      if (stateObj.ui){
+        if (Number.isFinite(stateObj.ui.thumbWidth)){
+          thumbWidth = Math.min(260, Math.max(110, Number(stateObj.ui.thumbWidth)));
+          thumbSlider.value = String(thumbWidth);
+          thumbValue.textContent = thumbWidth + "px";
+        }
+        filterRange.value = stateObj.ui.filterRange ?? "";
+        showSelectedOnly.checked = !!stateObj.ui.showSelectedOnly;
+      }
+
+      // sync
+      syncTextFromSet();
+      syncCardsFromSet();
+
+      // rerender thumb due to possible width change
+      invalidateAllThumbnails();
+
+      // filter apply
+      applyFilter();
+
+      updateMetaChips();
+      setStatus("상태를 불러와 적용했습니다.", "info");
+      clearDownload();
+    }
+
+    function saveStateToLocal(){
+      if (!originalBytes) return;
+
+      const state = makeStateObject();
+      const keys = currentStorageKeys();
+      if (keys.length === 0){
+        setStatus("파일 ID가 준비되지 않았습니다(잠시 후 다시).", "error");
+        return;
+      }
+
+      // sha/quick 모두 저장(가능하면)
+      for (const k of keys){
+        try { localStorage.setItem(k, JSON.stringify(state)); }
+        catch (e){
+          setStatus("로컬 저장에 실패했습니다:\n" + (e?.message || String(e)), "error");
+          return;
+        }
+      }
+      setStatus(`상태 저장 완료!\n- 저장 키: ${keys.join(", ")}`, "info");
+    }
+
+    function loadStateFromLocal(){
+      if (!originalBytes) return;
+
+      // sha 우선, 없으면 quick
+      const keys = currentStorageKeys();
+      const tried = [];
+      let raw = null;
+
+      for (const k of keys){
+        tried.push(k);
+        raw = localStorage.getItem(k);
+        if (raw) break;
+      }
+
+      // sha가 있는데 sha키에 없고 quick키에 있을 수도 있으니 quick도 추가 시도
+      if (!raw && fileQuickKey){
+        const fallback = STORAGE_PREFIX + "quick:" + fileQuickKey;
+        if (!tried.includes(fallback)){
+          tried.push(fallback);
+          raw = localStorage.getItem(fallback);
+        }
+      }
+
+      if (!raw){
+        setStatus("저장된 상태를 찾지 못했습니다.\n- 시도한 키:\n" + tried.map(s=>"  - "+s).join("\n"), "error");
+        return;
+      }
+
+      try{
+        const stateObj = JSON.parse(raw);
+        applyStateObject(stateObj, {force: !!forceLoad.checked});
+      } catch (e){
+        setStatus("저장된 상태를 읽는 데 실패했습니다:\n" + (e?.message || String(e)), "error");
+      }
+    }
+
+    function exportStateJSON(){
+      if (!originalBytes) return;
+      const state = makeStateObject();
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+
+      const base = (originalName || "document.pdf").replace(/\.pdf$/i, "");
+      a.download = safeOutputName(base + ".pdf", "_state").replace(/\.pdf$/i, ".json");
+
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      setTimeout(() => URL.revokeObjectURL(url), 3000);
+      setStatus("상태를 JSON 파일로 내보냈습니다.", "info");
+    }
+
+    async function importStateJSON(file){
+      if (!file) return;
+      try{
+        const text = await file.text();
+        const obj = JSON.parse(text);
+        applyStateObject(obj, {force: !!forceLoad.checked});
+      } catch (e){
+        setStatus("상태 JSON 불러오기에 실패했습니다:\n" + (e?.message || String(e)), "error");
+      }
+    }
+
+    // ---------- create new pdf ----------
+    async function makeOutputPdf(){
+      clearStatus();
+      clearDownload();
+
+      if (!originalBytes){
+        setStatus("PDF를 먼저 업로드하세요.", "error");
+        return;
+      }
+
+      // validation
+      const resCount = resultPageCount();
+
+      if (mode === "delete"){
+        if (selectedSet.size >= totalPages){
+          setStatus("모든 페이지를 삭제할 수는 없습니다. 최소 1페이지는 남겨야 합니다.", "error");
+          updateMetaChips("전체 삭제 불가");
+          return;
+        }
+        // selectedSet.size === 0은 허용(그대로 저장)
+      } else {
+        // keep mode
+        if (selectedSet.size === 0){
+          setStatus("남길 페이지가 0개입니다. 최소 1페이지는 선택해야 합니다.", "error");
+          updateMetaChips("남김 0 불가");
+          return;
+        }
       }
 
       btnMake.disabled = true;
       btnMake.textContent = "처리 중...";
 
-      try {
+      try{
+        const srcDoc = await PDFLib.PDFDocument.load(originalBytes);
+        const total = srcDoc.getPageCount();
+        if (total !== totalPages) totalPages = total;
+
+        let keepIndices = [];
+
+        if (mode === "delete"){
+          for (let p=1; p<=totalPages; p++){
+            if (!selectedSet.has(p)) keepIndices.push(p-1);
+          }
+        } else {
+          const keptPages = Array.from(selectedSet).filter(n => n>=1 && n<=totalPages).sort((a,b)=>a-b);
+          keepIndices = keptPages.map(p => p-1);
+        }
+
+        if (keepIndices.length === 0){
+          setStatus("결과 PDF에 남는 페이지가 없습니다. 선택을 확인하세요.", "error");
+          return;
+        }
+
         const newDoc = await PDFLib.PDFDocument.create();
-        const copied = await newDoc.copyPages(pdfDoc, keepIndices);
-        copied.forEach((page) => newDoc.addPage(page));
+        const pages = await newDoc.copyPages(srcDoc, keepIndices);
+        pages.forEach(pg => newDoc.addPage(pg));
 
         const newBytes = await newDoc.save();
-
         const blob = new Blob([newBytes], { type: "application/pdf" });
         const url = URL.createObjectURL(blob);
         lastObjectUrl = url;
 
-        const outName = safeOutputName(originalName, `_deleted_${delSet.size}pages`);
+        const suffix = (mode === "delete")
+          ? `_deleted_${selectedSet.size}pages`
+          : `_kept_${selectedSet.size}pages`;
+
         downloadLink.href = url;
-        downloadLink.download = outName;
+        downloadLink.download = safeOutputName(originalName, suffix);
         downloadLink.style.display = "inline-block";
 
-        const msg =
-          `완료!\n` +
-          `- 원본 페이지: ${total}\n` +
-          `- 삭제 페이지: ${delSet.size}\n` +
-          `- 결과 페이지: ${keepIndices.length}\n` +
-          `\n다운로드 버튼을 눌러 저장하세요.`;
-        setStatus(msg, "info");
-      } catch (e) {
+        setStatus(
+          `완료!\n- 모드: ${humanMode()}\n- 원본 페이지: ${totalPages}\n- 선택 페이지: ${selectedSet.size}\n- 결과 페이지: ${keepIndices.length}\n\n다운로드 버튼으로 저장하세요.`,
+          "info"
+        );
+        updateMetaChips();
+      } catch (e){
         setStatus("처리 중 오류가 발생했습니다:\n" + (e?.message || String(e)), "error");
       } finally {
         btnMake.disabled = false;
-        btnMake.textContent = "3) 삭제 적용 & 새 PDF 만들기";
+        btnMake.textContent = "3) 새 PDF 만들기";
       }
     }
+
+    // ---------- compute sha256 ----------
+    function abToHex(buffer){
+      const bytes = new Uint8Array(buffer);
+      let hex = "";
+      for (const b of bytes){
+        hex += b.toString(16).padStart(2, "0");
+      }
+      return hex;
+    }
+
+    async function computeSha256(arrayBuffer){
+      if (!window.crypto || !crypto.subtle) return null;
+      try{
+        const digest = await crypto.subtle.digest("SHA-256", arrayBuffer);
+        return abToHex(digest);
+      } catch (_){
+        return null;
+      }
+    }
+
+    // ---------- load pdf ----------
+    async function destroyPdfJsDoc(){
+      if (!pdfjsDoc) return;
+      try { await pdfjsDoc.destroy(); } catch (_) {}
+      pdfjsDoc = null;
+    }
+
+    function resetAll(){
+      originalBytes = null;
+      originalFile = null;
+      originalName = null;
+      totalPages = 0;
+
+      fileQuickKey = null;
+      fileSha256 = null;
+
+      selectedSet = new Set();
+      mode = "delete";
+      modeRadios.forEach(r => r.checked = (r.value === "delete"));
+
+      filterState = { rangeActive:false, from:1, to:1, rangeText:"", showSelectedOnly:false };
+      filterRange.value = "";
+      showSelectedOnly.checked = false;
+
+      renderedThumb.clear();
+      renderingThumb.clear();
+      if (io) { try { io.disconnect(); } catch (_) {} io = null; }
+
+      thumbGrid.innerHTML = "";
+      metaChips.innerHTML = "";
+      pagesText.value = "";
+      pagesText.placeholder = "예: 2, 4-6, 9";
+
+      thumbWidth = 170;
+      thumbSlider.value = "170";
+      thumbValue.textContent = "170px";
+
+      applyModeLabels();
+
+      clearStatus();
+      clearDownload();
+      setControlsEnabled(false);
+
+      closeModal();
+      destroyPdfJsDoc();
+    }
+
+    async function loadPdfFromFile(file){
+      resetAll();
+
+      originalFile = file;
+      originalName = file.name || "document.pdf";
+      originalBytes = await file.arrayBuffer();
+
+      fileQuickKey = `${originalName}|${file.size}|${file.lastModified || 0}`;
+      fileSha256 = null;
+
+      setControlsEnabled(false);
+      setStatus("PDF 로드 중...", "info");
+      updateMetaChips();
+
+      // sha256 async (상태 저장/불러오기 정확도 올리기)
+      (async () => {
+        const sha = await computeSha256(originalBytes);
+        if (sha){
+          fileSha256 = sha;
+          updateMetaChips();
+        }
+      })();
+
+      // pdf.js load
+      try{
+        const isFileProto = (location.protocol === "file:");
+        const task = pdfjsLib.getDocument({ data: originalBytes, disableWorker: isFileProto });
+        pdfjsDoc = await task.promise;
+        totalPages = pdfjsDoc.numPages;
+      } catch (e){
+        setStatus(
+          "미리보기 로드에 실패했습니다.\n- 암호로 보호된 PDF일 수 있습니다.\n- 파일이 손상되었을 수도 있습니다.\n\n에러: " + (e?.message || String(e)),
+          "error"
+        );
+        return;
+      }
+
+      // enable
+      setControlsEnabled(true);
+      btnReset.disabled = false;
+      btnMake.disabled = false;
+
+      pagesText.placeholder = totalPages ? `예: 2, 4-6, ${Math.min(9, totalPages)}` : "예: 2, 4-6, 9";
+      filterRange.placeholder = totalPages ? `예: 10-20 (1~${totalPages})` : "예: 10-20";
+      applyModeLabels();
+
+      // build grid
+      buildThumbGrid();
+
+      // initial filter apply (none)
+      applyFilter();
+      updateMetaChips();
+
+      setStatus(`로드 완료! (총 ${totalPages}페이지)\n체크박스/숫자 입력/필터/저장을 사용해 선택하세요.`, "info");
+    }
+
+    // ---------- drag & drop ----------
+    function prevent(e){ e.preventDefault(); e.stopPropagation(); }
+
+    dropZone.addEventListener("dragenter", (e)=>{ prevent(e); dropZone.classList.add("dragover"); });
+    dropZone.addEventListener("dragover",  (e)=>{ prevent(e); dropZone.classList.add("dragover"); });
+    dropZone.addEventListener("dragleave", (e)=>{ prevent(e); dropZone.classList.remove("dragover"); });
+    dropZone.addEventListener("drop", async (e)=>{
+      prevent(e);
+      dropZone.classList.remove("dragover");
+      const files = e.dataTransfer?.files;
+      if (!files || !files.length) return;
+      const file = files[0];
+      if (!file.name.toLowerCase().endsWith(".pdf") && file.type !== "application/pdf"){
+        setStatus("PDF 파일만 업로드할 수 있습니다.", "error");
+        return;
+      }
+      await loadPdfFromFile(file);
+    });
+
+    // click / keyboard open file
+    function openFilePicker(){ pdfFile.click(); }
+    dropZone.addEventListener("click", openFilePicker);
+    dropZone.addEventListener("keydown", (e)=>{
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openFilePicker(); }
+    });
+    btnPickFile.addEventListener("click", (e)=>{ e.stopPropagation(); openFilePicker(); });
 
     pdfFile.addEventListener("change", async (e) => {
       const file = e.target.files && e.target.files[0];
       if (!file) return;
 
-      if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+      if (!file.name.toLowerCase().endsWith(".pdf") && file.type !== "application/pdf"){
         setStatus("PDF 파일만 선택할 수 있습니다.", "error");
         pdfFile.value = "";
         return;
       }
-
-      try {
-        setStatus("PDF 읽는 중...", "info");
-        await loadPdf(file);
-        setStatus(`PDF 로드 완료! (총 ${totalPages}페이지)`, "info");
-      } catch (err) {
-        setStatus("PDF 로드 실패:\n" + (err?.message || String(err)), "error");
-        resetAll();
-      }
+      await loadPdfFromFile(file);
     });
 
-    btnMake.addEventListener("click", makeDeletedPdf);
+    // ---------- events ----------
     btnReset.addEventListener("click", resetAll);
 
-    // 초기 상태
+    btnMake.addEventListener("click", makeOutputPdf);
+
+    btnApplyText.addEventListener("click", applyTextToSelection);
+    pagesText.addEventListener("keydown", (e)=>{ if (e.key === "Enter") applyTextToSelection(); });
+
+    btnSelectAll.addEventListener("click", ()=>{
+      clearDownload(); clearStatus();
+      selectedSet = new Set();
+      for (let p=1; p<=totalPages; p++) selectedSet.add(p);
+      syncCardsFromSet();
+      syncTextFromSet();
+      if (filterState.showSelectedOnly) applyFilter();
+      updateMetaChips(mode === "delete" ? "주의: 전체 삭제 선택됨" : null);
+    });
+
+    btnClearAll.addEventListener("click", ()=>{
+      clearDownload(); clearStatus();
+      selectedSet = new Set();
+      syncCardsFromSet();
+      syncTextFromSet();
+      if (filterState.showSelectedOnly) applyFilter();
+      updateMetaChips();
+    });
+
+    btnInvert.addEventListener("click", ()=>{
+      clearDownload(); clearStatus();
+      selectedSet = complementSet(selectedSet);
+      syncCardsFromSet();
+      syncTextFromSet();
+      if (filterState.showSelectedOnly) applyFilter();
+      updateMetaChips();
+    });
+
+    // mode change (preserve output by auto invert)
+    modeRadios.forEach(r => {
+      r.addEventListener("change", ()=>{
+        if (!r.checked) return;
+        setMode(r.value, { preserveOutput:true });
+      });
+    });
+
+    // thumb slider (debounced invalidate)
+    let sliderTimer = null;
+    function setThumbWidth(v){
+      thumbWidth = v;
+      thumbValue.textContent = v + "px";
+      updateMetaChips();
+    }
+
+    thumbSlider.addEventListener("input", ()=>{
+      const v = Number(thumbSlider.value);
+      setThumbWidth(v);
+      clearDownload();
+      if (sliderTimer) clearTimeout(sliderTimer);
+      sliderTimer = setTimeout(()=> invalidateAllThumbnails(), 250);
+    });
+
+    btnRerenderVisible.addEventListener("click", ()=>{
+      // 보이는 페이지에 한정해서 캐시 무효화 후 다시 렌더
+      renderedThumb.clear();
+      renderingThumb.clear();
+
+      thumbGrid.querySelectorAll(".page-card").forEach(card => {
+        if (card.style.display === "none") return;
+        const p = Number(card.dataset.page);
+        resetThumbCanvas(p);
+      });
+
+      setupIntersectionObserver();
+      setStatus("보이는 페이지를 다시 렌더링합니다.", "info");
+    });
+
+    // filter events
+    btnApplyFilter.addEventListener("click", ()=>{
+      clearDownload();
+      applyFilter();
+      clearStatus();
+      setStatus("필터를 적용했습니다.", "info");
+    });
+
+    btnClearFilter.addEventListener("click", ()=>{
+      clearDownload();
+      clearFilterToAll();
+    });
+
+    showSelectedOnly.addEventListener("change", ()=>{
+      clearDownload();
+      applyFilter();
+      clearStatus();
+      setStatus(showSelectedOnly.checked ? "선택한 페이지만 표시합니다." : "전체(또는 범위) 페이지를 표시합니다.", "info");
+    });
+
+    // save/load
+    btnSaveState.addEventListener("click", saveStateToLocal);
+    btnLoadState.addEventListener("click", loadStateFromLocal);
+    btnExportState.addEventListener("click", exportStateJSON);
+
+    btnImportState.addEventListener("click", ()=> stateFile.click());
+    stateFile.addEventListener("change", async (e)=>{
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      await importStateJSON(f);
+      stateFile.value = "";
+    });
+
+    // start
     resetAll();
   </script>
 </body>
