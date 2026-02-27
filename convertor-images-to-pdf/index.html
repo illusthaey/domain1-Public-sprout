@@ -5,10 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>이미지를 PDF파일로 변환하기</title>
 
-<link rel="icon" href="/static/favicon.ico" />
+  <link rel="icon" href="/static/favicon.ico" />
   <link rel="stylesheet" href="/static/style.css" />
 
-  
   <style>
     /* style.css의 레이아웃/버튼 톤을 그대로 쓰고, 새 UI만 보강 */
 
@@ -125,8 +124,10 @@
       color: #666;
     }
 
-    /* ✅ 드래그 정렬용 placeholder */
+    /* ✅ 드래그 정렬용 placeholder (그리드 셀 폭에 맞추기 위해 width:100%) */
     .thumb-placeholder{
+      width: 100%;
+      box-sizing: border-box;
       border: 2px dashed #b4b4d0;
       border-radius: 12px;
       background: #f3f4f6;
@@ -137,7 +138,7 @@
       box-shadow: 0 16px 40px rgba(0,0,0,.18);
       border-color: rgba(0,0,0,.25);
       cursor: grabbing;
-      pointer-events: none; /* elementFromPoint가 아래 요소를 잡게 */
+      pointer-events: none; /* pointer 캡처로 move 받기 때문에 hit-test는 아래 요소로 */
     }
 
     /* 드래그 중에는 텍스트 선택 방지(선택 깜빡임 방지) */
@@ -167,13 +168,6 @@
       transition: width .1s linear;
     }
 
-    .note-box{
-      background: #fafafa;
-      border: 1px solid #e5e5e5;
-      border-radius: 12px;
-      padding: 12px 14px;
-    }
-
     /* 인쇄 시 버튼류 숨기기(선택사항) */
     @media print{
       .no-print{ display:none !important; }
@@ -182,28 +176,22 @@
 </head>
 
 <body>
-
   <main class="container">
+    <h1>이미지 파일 PDF 변환기</h1>
+    <p class="muted">
+      ·이미지 파일을 올리면 pdf로 병합하는 기능. 여러장 업로드 가능. <br/>
+    </p>
 
-    
-  <h1>이미지 파일 PDF 변환기</h1>
-  <p class="muted">
-    ·이미지 파일을 올리면 pdf로 병합하는 기능. 여러장 업로드 가능. <br/>
-  </p>
+    <hr/>
 
-  <hr/>
-
-
-    
     <!-- 1) 업로드 -->
     <section class="section no-print">
       <h2>1. 이미지 파일 업로드 (여러장 가능)</h2>
-        <p class="muted">
-          ·WEBP/GIF 넣지 마세요. <br/>
-          ·Ctrl+C/V로 파일 붙여넣기 가능
-        </p>
+      <p class="muted">
+        ·WEBP/GIF 넣지 마세요. <br/>
+        ·Ctrl+C/V로 파일 붙여넣기 가능
+      </p>
 
-      
       <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="이미지 드래그 앤 드롭 또는 클릭해서 선택">
         <div class="dz-title">여기로 이미지 드래그 & 드롭</div>
         <div class="dz-sub">또는 아래 버튼으로 선택 (JPG/PNG/WEBP 등)</div>
@@ -223,7 +211,8 @@
     <section class="section">
       <h2>2. 이미지 순서 정렬</h2>
       <p class="muted">
-        ·썸네일을 마우스로 클릭한 채로 드래그하면 순서가 바뀝니다. PDF는 정렬한 순서대로 페이지가 생성됩니다.</p>
+        ·썸네일을 마우스로 클릭한 채로 드래그하면 순서가 바뀝니다. PDF는 정렬한 순서대로 페이지가 생성됩니다.
+      </p>
 
       <div id="thumbList" class="thumb-list" role="list" aria-label="미리보기 목록"></div>
       <p id="hintEmpty" class="note muted" style="display:block;">아직 첨부한 이미지가 없습니다. 위에서 추가해 주세요.</p>
@@ -235,7 +224,7 @@
       <p class="muted">
         ·이미지가 매우 크면 PDF도 커지고, 생성 시간이 길어질 수 있습니다.
       </p>
-      
+
       <div class="grid two">
         <label class="field">
           <div class="label">페이지 크기</div>
@@ -289,11 +278,8 @@
       <div class="progress" aria-hidden="true">
         <div id="progressBar" class="progress-bar"></div>
       </div>
-
     </section>
-
   </main>
-
 
   <!-- ✅ PDF 생성 라이브러리: pdf-lib (UMD) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js" referrerpolicy="no-referrer"></script>
@@ -324,8 +310,6 @@
       btnMakePdf: $("#btnMakePdf"),
       progressText: $("#progressText"),
       progressBar: $("#progressBar"),
-
-      year: $("#year"),
     };
 
     const state = {
@@ -358,7 +342,6 @@
     }
 
     function sanitizeFileName(name){
-      // 윈도우 금지문자 제거 + 너무 긴 파일명 방지
       const cleaned = (name || "images.pdf")
         .replace(/[\\/:*?"<>|]/g, "_")
         .replace(/\s+/g, " ")
@@ -397,7 +380,6 @@
     }
 
     async function getImageDims(file, url){
-      // createImageBitmap이 있으면 빠르게, 아니면 <img>로 fallback
       if ("createImageBitmap" in window) {
         try{
           const bmp = await createImageBitmap(file);
@@ -418,9 +400,7 @@
         try{
           await img.decode();
           return img;
-        } catch(_) {
-          // decode 실패 시 onload로 fallback
-        }
+        } catch(_) {}
       }
 
       await new Promise((resolve, reject) => {
@@ -580,7 +560,7 @@
     els.btnPick.addEventListener("click", () => els.fileInput.click());
     els.fileInput.addEventListener("change", (e) => {
       addFiles(e.target.files);
-      e.target.value = ""; // 같은 파일 다시 선택 가능하게
+      e.target.value = "";
     });
 
     els.btnClear.addEventListener("click", clearAll);
@@ -602,7 +582,6 @@
           els.dropzone.classList.remove("is-over");
           return;
         }
-        // drop
         if (!isFileDrag(e.dataTransfer)) return;
         e.preventDefault();
         els.dropzone.classList.remove("is-over");
@@ -610,7 +589,6 @@
       });
     });
 
-    // 썸네일 영역에도 드롭 허용(추가 편의)
     els.thumbList.addEventListener("dragover", (e) => {
       if (!isFileDrag(e.dataTransfer)) return;
       e.preventDefault();
@@ -621,7 +599,6 @@
       addFiles(e.dataTransfer.files);
     });
 
-    // 붙여넣기(Ctrl+V)로 이미지 추가
     document.addEventListener("paste", (e) => {
       const items = Array.from(e.clipboardData?.items || []);
       const files = [];
@@ -634,7 +611,6 @@
       if (files.length) addFiles(files);
     });
 
-    // 드롭존 Enter/Space로 파일 선택
     els.dropzone.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
@@ -643,7 +619,7 @@
     });
 
     // -----------------------
-    // ✅ 정렬: pointer 이벤트 기반(드래그스타트 막혀도 동작)
+    // ✅ 정렬: pointer 이벤트 기반 + 그리드(행/열) 기준 안정 정렬
     // -----------------------
     els.thumbList.addEventListener("pointerdown", (e) => {
       if (state.busy) return;
@@ -654,14 +630,15 @@
       // 삭제 버튼 눌렀을 땐 정렬 시작 금지
       if (e.target.closest("button")) return;
 
-      // 마우스 좌클릭만(터치도 pointer로 들어오므로 button 체크는 환경별로)
+      // 좌클릭만
       if (typeof e.button === "number" && e.button !== 0) return;
 
       const rect = card.getBoundingClientRect();
+
       const placeholder = document.createElement("div");
       placeholder.className = "thumb-placeholder";
-      placeholder.style.width = rect.width + "px";
-      placeholder.style.height = rect.height + "px";
+      placeholder.style.height = rect.height + "px"; // ✅ 카드 높이에 맞춤
+      placeholder.style.width = "100%";             // ✅ 그리드 셀 폭에 맞춤
 
       state.drag = {
         pointerId: e.pointerId,
@@ -673,6 +650,11 @@
         offsetY: e.clientY - rect.top,
         active: false,
         parent: els.thumbList,
+
+        // rAF로 1프레임 1번만 업데이트
+        raf: 0,
+        lastX: e.clientX,
+        lastY: e.clientY,
       };
 
       card.setPointerCapture(e.pointerId);
@@ -690,24 +672,29 @@
       const dy = e.clientY - d.startY;
       const dist = Math.hypot(dx, dy);
 
-      // 클릭/탭과 드래그를 구분하는 임계값
       if (!d.active) {
         if (dist < 6) return;
         beginFloatingDrag(d);
         d.active = true;
       }
 
-      moveFloating(d, e.clientX, e.clientY);
-      movePlaceholderIfNeeded(d, e.clientX, e.clientY);
+      d.lastX = e.clientX;
+      d.lastY = e.clientY;
+
+      if (d.raf) return;
+      d.raf = requestAnimationFrame(() => {
+        d.raf = 0;
+        moveFloating(d, d.lastX, d.lastY);
+        movePlaceholderByGrid(d, d.lastX, d.lastY);
+      });
     }
 
     function beginFloatingDrag(d){
       document.body.classList.add("is-sorting");
 
       const rect = d.card.getBoundingClientRect();
-      d.cardRect = rect;
 
-      // 카드 자리에 placeholder 꽂아두기
+      // 카드 자리에 placeholder
       d.parent.replaceChild(d.placeholder, d.card);
 
       // 카드 자체는 body로 옮겨 “떠다니게”
@@ -728,41 +715,108 @@
       d.card.style.top  = (clientY - d.offsetY) + "px";
     }
 
-    function movePlaceholderIfNeeded(d, clientX, clientY){
-      const el = document.elementFromPoint(clientX, clientY);
-      const overCard = el && el.closest ? el.closest(".thumb-item") : null;
+    // ✅ 핵심: elementFromPoint로 “대상 카드”를 찍지 않고,
+    //         현재 그리드 배치(행/열) 좌표를 계산해서 placeholder를 이동
+    function movePlaceholderByGrid(d, x, y){
+      const parent = d.parent;
 
-      if (!overCard || !d.parent.contains(overCard)) {
-        // 썸네일 영역 위인데 특정 카드가 아니면 끝으로 보냄
-        const overList = el && (el === d.parent || (el.closest && el.closest("#thumbList")));
-        if (overList) d.parent.appendChild(d.placeholder);
+      const cards = Array.from(parent.querySelectorAll(".thumb-item"));
+      if (!cards.length) {
+        if (d.placeholder.parentNode !== parent) parent.appendChild(d.placeholder);
         return;
       }
 
-      const rect = overCard.getBoundingClientRect();
-      const midX = rect.left + rect.width / 2;
-      const midY = rect.top + rect.height / 2;
+      const layout = cards.map(el => {
+        const r = el.getBoundingClientRect();
+        return {
+          el,
+          r,
+          cx: r.left + r.width / 2,
+          cy: r.top + r.height / 2,
+        };
+      }).sort((a,b) => (a.r.top - b.r.top) || (a.r.left - b.r.left));
 
-      // 그리드에서 자연스럽게 느껴지도록:
-      // - 세로로 절반 아래면 after
-      // - 거의 중앙이면 가로 위치로 after/before 판정
-      const nearMidY = Math.abs(clientY - midY) < rect.height * 0.25;
-      const after = (clientY > midY) || (nearMidY && clientX > midX);
+      const heights = layout.map(p => p.r.height).sort((a,b)=>a-b);
+      const medianH = heights[Math.floor(heights.length / 2)] || 0;
+      const rowTol = clamp(medianH * 0.35, 12, 40); // ✅ 썸네일(카드) 크기 기반 row 판정 여유
 
-      if (after) {
-        if (overCard.nextSibling !== d.placeholder) {
-          d.parent.insertBefore(d.placeholder, overCard.nextSibling);
-        }
-      } else {
-        if (overCard !== d.placeholder) {
-          d.parent.insertBefore(d.placeholder, overCard);
+      // 행(row) 그룹핑
+      const rows = [];
+      for (const it of layout) {
+        const last = rows[rows.length - 1];
+        if (!last || Math.abs(it.r.top - last.top) > rowTol) {
+          rows.push({ top: it.r.top, items: [it], cy: it.cy });
+        } else {
+          last.items.push(it);
         }
       }
+      for (const row of rows) {
+        row.items.sort((a,b)=>a.r.left - b.r.left);
+        row.cy = row.items.reduce((s,it)=>s+it.cy,0) / row.items.length;
+      }
+
+      const topBoundary = Math.min(...layout.map(it => it.r.top));
+      const bottomBoundary = Math.max(...layout.map(it => it.r.bottom));
+      const boundaryMargin = rowTol;
+
+      let beforeEl = null;
+
+      // 위/아래로 많이 벗어나면 맨앞/맨뒤로
+      if (y < topBoundary - boundaryMargin) {
+        beforeEl = layout[0].el;
+      } else if (y > bottomBoundary + boundaryMargin) {
+        beforeEl = null; // append
+      } else {
+        // y 기준으로 가장 가까운 행 선택
+        let bestRow = rows[0];
+        let bestDist = Math.abs(y - rows[0].cy);
+        for (let i = 1; i < rows.length; i++) {
+          const dist = Math.abs(y - rows[i].cy);
+          if (dist < bestDist) {
+            bestDist = dist;
+            bestRow = rows[i];
+          }
+        }
+
+        // 선택된 행에서 x 기준으로 삽입 위치 결정
+        beforeEl = null;
+        for (const it of bestRow.items) {
+          if (x < it.cx) {
+            beforeEl = it.el;
+            break;
+          }
+        }
+
+        // 행의 마지막보다 오른쪽이면 “그 행의 마지막 다음”에 삽입
+        if (!beforeEl) {
+          const lastEl = bestRow.items[bestRow.items.length - 1].el;
+          beforeEl = lastEl.nextElementSibling; // 다음 행 첫 카드 or null or placeholder
+        }
+      }
+
+      movePlaceholderTo(parent, d.placeholder, beforeEl);
+    }
+
+    function movePlaceholderTo(parent, placeholder, beforeEl){
+      if (!beforeEl) {
+        if (placeholder === parent.lastElementChild) return;
+        parent.appendChild(placeholder);
+        return;
+      }
+      if (beforeEl === placeholder) return;
+      if (placeholder.nextElementSibling === beforeEl) return; // 이미 제자리면 스킵
+      parent.insertBefore(placeholder, beforeEl);
     }
 
     function onPointerUp(e){
       const d = state.drag;
       if (!d || e.pointerId !== d.pointerId) return;
+
+      // rAF 취소
+      if (d.raf) {
+        cancelAnimationFrame(d.raf);
+        d.raf = 0;
+      }
 
       // 리스너 제거
       try{
@@ -770,6 +824,8 @@
         d.card.removeEventListener("pointerup", onPointerUp);
         d.card.removeEventListener("pointercancel", onPointerUp);
       } catch(_) {}
+
+      try { d.card.releasePointerCapture(e.pointerId); } catch(_) {}
 
       if (d.active) {
         // placeholder 위치에 카드 복귀
@@ -840,7 +896,6 @@
 
         let pageW, pageH;
         if (preset === "orig") {
-          // 원본 모드: 이미지 크기에 여백까지 포함
           pageW = imgW + marginPtRaw * 2;
           pageH = imgH + marginPtRaw * 2;
         } else if (preset === "a4l") {
@@ -849,7 +904,6 @@
           pageW = A4_P.w; pageH = A4_P.h;
         }
 
-        // 여백이 페이지를 잡아먹지 않게 안전 처리
         const marginPt = Math.min(marginPtRaw, Math.max(0, (Math.min(pageW, pageH) / 2) - 1));
         const availW = pageW - marginPt * 2;
         const availH = pageH - marginPt * 2;
@@ -860,11 +914,11 @@
 
         const drawW = imgW * scale;
         const drawH = imgH * scale;
-        const x = (pageW - drawW) / 2;
-        const y = (pageH - drawH) / 2;
+        const px = (pageW - drawW) / 2;
+        const py = (pageH - drawH) / 2;
 
         const page = pdfDoc.addPage([pageW, pageH]);
-        page.drawImage(embedded, { x, y, width: drawW, height: drawH });
+        page.drawImage(embedded, { x: px, y: py, width: drawW, height: drawH });
       }
 
       setProgress(98, "PDF 저장 중…");
@@ -879,7 +933,6 @@
     }
 
     async function getPdfImageBytes(item, encodeMode, jpgQ){
-      // pdf-lib은 embedPng / embedJpg를 제공하므로, 최종 포맷은 png 또는 jpg로 맞춘다. :contentReference[oaicite:3]{index=3}
       const type = (item.file.type || "").toLowerCase();
 
       if (encodeMode === "auto") {
@@ -889,7 +942,6 @@
         if (type === "image/png") {
           return { format: "png", bytes: new Uint8Array(await item.file.arrayBuffer()) };
         }
-        // webp/gif 등: 호환을 위해 jpg 변환
         return await convertViaCanvas(item.url, "image/jpeg", jpgQ);
       }
 
@@ -897,7 +949,6 @@
         return await convertViaCanvas(item.url, "image/jpeg", jpgQ);
       }
 
-      // png
       return await convertViaCanvas(item.url, "image/png", 1);
     }
 
@@ -912,7 +963,6 @@
 
       const ctx = canvas.getContext("2d", { alpha: mime !== "image/jpeg" });
 
-      // JPG는 투명도 없음 → 흰 배경 깔기
       if (mime === "image/jpeg") {
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, w, h);
@@ -952,14 +1002,14 @@
     // -----------------------
     // 초기화
     // -----------------------
-    els.year.textContent = String(new Date().getFullYear());
     updateUi();
     setProgress(0, "대기 중");
   })();
   </script>
 
+  <!-- 사이트 공통(우클릭/드래그 방지 등) -->
   <script src="/static/disable-copy.js"></script>
-<script src="/static/footer.js"></script>
-<script src="/static/global-loader.js?v=1"></script>
+  <script src="/static/footer.js"></script>
+  <script src="/static/global-loader.js?v=1"></script>
 </body>
 </html>
