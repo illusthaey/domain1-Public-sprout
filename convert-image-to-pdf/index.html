@@ -1,0 +1,976 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>이미지를 PDF파일로 변환하기</title>
+
+<link rel="icon" href="/static/favicon.ico" />
+  <link rel="stylesheet" href="/static/style.css" />
+
+  
+  <style>
+    /* style.css의 레이아웃/버튼 톤을 그대로 쓰고, 새 UI만 보강 */
+
+    .subtitle{
+      margin: 0 0 12px;
+      color: #444;
+      font-size: 0.98rem;
+      text-align: center;
+    }
+
+    .dropzone{
+      border: 2px dashed #d4d4d8;
+      border-radius: 14px;
+      padding: 18px 14px;
+      background: #fafafa;
+      text-align: center;
+      display: grid;
+      gap: 10px;
+      justify-items: center;
+      transition: background-color .15s ease, border-color .15s ease, transform .05s ease;
+      outline: none;
+    }
+    .dropzone.is-over{
+      background: #eef2ff;
+      border-color: #111;
+      transform: translateY(-1px);
+    }
+    .dz-title{
+      font-weight: 800;
+      color: #111;
+      font-size: 1.05rem;
+    }
+    .dz-sub{
+      font-size: .95rem;
+      color: #666;
+    }
+
+    .thumb-list{
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      margin-top: 10px;
+    }
+
+    .thumb-item{
+      border: 1px solid #e5e5e5;
+      border-radius: 12px;
+      background: #fff;
+      padding: 10px;
+      user-select: none;
+      cursor: grab;
+      display: grid;
+      gap: 8px;
+    }
+    .thumb-item:active{ cursor: grabbing; }
+
+    .thumb-top{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .thumb-index{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 30px;
+      height: 26px;
+      padding: 0 10px;
+      border-radius: 999px;
+      border: 1px solid #e5e5e5;
+      background: #f9fafb;
+      font-weight: 800;
+      color: #111;
+      font-size: .95rem;
+      line-height: 1;
+    }
+
+    .btn.btn-mini{
+      padding: 7px 12px;
+      border-radius: 999px;
+      font-size: .95rem;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .thumb-img-wrap{
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid #eee;
+      background: #fafafa;
+      aspect-ratio: 4 / 3;
+      display: grid;
+      place-items: center;
+    }
+    .thumb-img-wrap img{
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .thumb-name{
+      font-weight: 800;
+      color: #111;
+      font-size: .98rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .thumb-sub{
+      font-size: .92rem;
+      color: #666;
+    }
+
+    /* ✅ 드래그 정렬용 placeholder */
+    .thumb-placeholder{
+      border: 2px dashed #b4b4d0;
+      border-radius: 12px;
+      background: #f3f4f6;
+    }
+
+    /* ✅ 드래그 중 “떠다니는 카드” */
+    .thumb-floating{
+      box-shadow: 0 16px 40px rgba(0,0,0,.18);
+      border-color: rgba(0,0,0,.25);
+      cursor: grabbing;
+      pointer-events: none; /* elementFromPoint가 아래 요소를 잡게 */
+    }
+
+    /* 드래그 중에는 텍스트 선택 방지(선택 깜빡임 방지) */
+    body.is-sorting{
+      user-select: none;
+    }
+
+    .field .label{
+      font-weight: 800;
+      color: #111;
+      margin-bottom: 6px;
+      font-size: .98rem;
+    }
+
+    .progress{
+      height: 12px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: #f3f4f6;
+      border: 1px solid #e5e5e5;
+      margin-top: 10px;
+    }
+    .progress-bar{
+      height: 100%;
+      width: 0%;
+      background: #111;
+      transition: width .1s linear;
+    }
+
+    .note-box{
+      background: #fafafa;
+      border: 1px solid #e5e5e5;
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+
+    /* 인쇄 시 버튼류 숨기기(선택사항) */
+    @media print{
+      .no-print{ display:none !important; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="container">
+
+    
+  <h1>이미지 파일 PDF 변환기</h1>
+  <p class="muted">
+    ·이미지 파일을 올리면 pdf로 병합하는 기능. 여러장 업로드 가능. <br/>
+  </p>
+
+  <hr/>
+
+
+    
+    <!-- 1) 업로드 -->
+    <section class="section no-print">
+      <h2>1. 이미지 파일 업로드 (여러장 가능)</h2>
+        <div class="muted">
+          ·Ctrl+C/V로 붙여넣기도 지원함</div>
+
+      <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="이미지 드래그 앤 드롭 또는 클릭해서 선택">
+        <div class="dz-title">여기로 이미지 드래그 & 드롭</div>
+        <div class="dz-sub">또는 아래 버튼으로 선택 (JPG/PNG/WEBP 등)</div>
+
+        <div class="row gap">
+          <button class="btn pastel-blue" type="button" id="btnPick">파일 선택</button>
+          <button class="btn pastel-grey" type="button" id="btnClear" disabled>전체 삭제</button>
+          <button class="btn pastel-orange" type="button" id="btnReverse" disabled>역순으로 정렬하기</button>
+        </div>
+
+        <input id="fileInput" type="file" accept="image/*" multiple hidden />
+        <div class="muted" id="countInfo">0장</div>
+      </div>
+    </section>
+
+    <!-- 2) 미리보기/정렬 -->
+    <section class="section">
+      <h2 class="local-h2">2) 순서 정렬</h2>
+      <p class="muted">썸네일을 마우스로 <b>클릭한 채로 끌면</b> 순서가 바뀝니다. PDF는 이 순서대로 생성됩니다.</p>
+
+      <div id="thumbList" class="thumb-list" role="list" aria-label="이미지 미리보기 목록"></div>
+      <p id="hintEmpty" class="note muted" style="display:block;">아직 이미지가 없습니다. 위에서 추가해 주세요.</p>
+    </section>
+
+    <!-- 3) PDF 옵션/생성 -->
+    <section class="section no-print">
+      <h2 class="local-h2">3) PDF 만들기</h2>
+
+      <div class="grid two">
+        <label class="field">
+          <div class="label">페이지 크기</div>
+          <select id="pagePreset">
+            <option value="a4p">A4 세로</option>
+            <option value="a4l">A4 가로</option>
+            <option value="orig">원본 크기(96dpi 가정)</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <div class="label">이미지 배치</div>
+          <select id="fitMode">
+            <option value="contain">페이지 안에 맞추기(여백 생김)</option>
+            <option value="cover">가득 채우기(일부 잘릴 수 있음)</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <div class="label">여백(mm)</div>
+          <input id="marginMm" type="number" min="0" max="30" value="8" />
+        </label>
+
+        <label class="field">
+          <div class="label">이미지 인코딩</div>
+          <select id="imgEncode">
+            <option value="auto">자동(원본 JPG/PNG 유지, 그 외는 JPG 변환)</option>
+            <option value="jpeg">전부 JPG로 변환(용량↓, 투명도×)</option>
+            <option value="png">전부 PNG로 변환(투명도○, 용량↑)</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <div class="label">JPG 품질 (0.10 ~ 1.00)</div>
+          <input id="jpegQuality" type="number" min="0.1" max="1" step="0.05" value="0.85" />
+        </label>
+
+        <label class="field">
+          <div class="label">출력 파일명</div>
+          <input id="outName" type="text" value="images.pdf" />
+        </label>
+      </div>
+
+      <div class="row between" style="margin-top:12px;">
+        <div class="muted" id="progressText">대기 중</div>
+        <div class="row gap">
+          <button class="btn pastel-mint" type="button" id="btnMakePdf" disabled>PDF 다운로드</button>
+        </div>
+      </div>
+
+      <div class="progress" aria-hidden="true">
+        <div id="progressBar" class="progress-bar"></div>
+      </div>
+
+      <div class="note-box" style="margin-top:12px;">
+        <div class="muted">
+          모든 처리는 <b>브라우저 안에서만</b> 이뤄집니다(서버 업로드 없음).  
+          PDF 생성은 <code>pdf-lib</code>를 사용하며, 라이브러리는 CDN으로 로드됩니다.
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="local-h2">메모</h2>
+      <ul>
+        <li>이미지가 매우 크면 PDF도 커지고, 생성 시간이 길어질 수 있습니다.</li>
+        <li>WEBP/GIF 같은 포맷은 PDF에 바로 못 들어갈 수 있어, 옵션에 따라 JPG/PNG로 변환 후 넣습니다. (pdf-lib는 브라우저 예제/문서에서 PNG/JPEG 임베딩을 중심으로 제공) :contentReference[oaicite:2]{index=2}</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell">
+      © <span id="year"></span>. 이미지→PDF 도구
+    </div>
+  </footer>
+
+  <!-- ✅ PDF 생성 라이브러리: pdf-lib (UMD) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js" referrerpolicy="no-referrer"></script>
+
+  <script>
+  (() => {
+    const $ = (sel, el = document) => el.querySelector(sel);
+    const $$ = (sel, el = document) => Array.from(el.querySelectorAll(sel));
+
+    const els = {
+      dropzone: $("#dropzone"),
+      fileInput: $("#fileInput"),
+      btnPick: $("#btnPick"),
+      btnClear: $("#btnClear"),
+      btnReverse: $("#btnReverse"),
+      countInfo: $("#countInfo"),
+
+      thumbList: $("#thumbList"),
+      hintEmpty: $("#hintEmpty"),
+
+      pagePreset: $("#pagePreset"),
+      fitMode: $("#fitMode"),
+      marginMm: $("#marginMm"),
+      imgEncode: $("#imgEncode"),
+      jpegQuality: $("#jpegQuality"),
+      outName: $("#outName"),
+
+      btnMakePdf: $("#btnMakePdf"),
+      progressText: $("#progressText"),
+      progressBar: $("#progressBar"),
+
+      year: $("#year"),
+    };
+
+    const state = {
+      items: [], // { id, file, url, width, height }
+      busy: false,
+      drag: null,
+    };
+
+    // -----------------------
+    // 유틸
+    // -----------------------
+    const A4_P = { w: 595.28, h: 841.89 }; // pt
+    const A4_L = { w: 841.89, h: 595.28 }; // pt
+    const PX_TO_PT = 72 / 96;              // 96dpi 가정 → pt 변환
+
+    function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
+    function mmToPt(mm){ return (72 / 25.4) * mm; }
+
+    function formatBytes(bytes){
+      if(!Number.isFinite(bytes)) return "-";
+      const units = ["B","KB","MB","GB"];
+      let v = bytes, i = 0;
+      while(v >= 1024 && i < units.length - 1){ v /= 1024; i++; }
+      return `${v.toFixed(v >= 10 || i === 0 ? 0 : 1)}${units[i]}`;
+    }
+
+    function safeId(){
+      if (crypto && crypto.randomUUID) return crypto.randomUUID();
+      return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+
+    function sanitizeFileName(name){
+      // 윈도우 금지문자 제거 + 너무 긴 파일명 방지
+      const cleaned = (name || "images.pdf")
+        .replace(/[\\/:*?"<>|]/g, "_")
+        .replace(/\s+/g, " ")
+        .trim();
+      return cleaned.slice(0, 180) || "images.pdf";
+    }
+
+    function setProgress(pct, text){
+      els.progressBar.style.width = `${clamp(pct, 0, 100)}%`;
+      els.progressText.textContent = text || "";
+    }
+
+    function setBusy(flag){
+      state.busy = !!flag;
+      updateUi();
+    }
+
+    function updateUi(){
+      els.countInfo.textContent = `${state.items.length}장`;
+      els.hintEmpty.style.display = state.items.length ? "none" : "block";
+
+      const has = state.items.length > 0;
+      const dis = state.busy;
+
+      els.btnPick.disabled = dis;
+      els.btnClear.disabled = dis || !has;
+      els.btnReverse.disabled = dis || !has;
+      els.btnMakePdf.disabled = dis || !has;
+
+      els.pagePreset.disabled = dis;
+      els.fitMode.disabled = dis;
+      els.marginMm.disabled = dis;
+      els.imgEncode.disabled = dis;
+      els.jpegQuality.disabled = dis;
+      els.outName.disabled = dis;
+    }
+
+    async function getImageDims(file, url){
+      // createImageBitmap이 있으면 빠르게, 아니면 <img>로 fallback
+      if ("createImageBitmap" in window) {
+        try{
+          const bmp = await createImageBitmap(file);
+          const dims = { width: bmp.width, height: bmp.height };
+          if (bmp.close) bmp.close();
+          return dims;
+        } catch(_) {}
+      }
+      const img = await loadImage(url);
+      return { width: img.naturalWidth || img.width, height: img.naturalHeight || img.height };
+    }
+
+    async function loadImage(url){
+      const img = new Image();
+      img.src = url;
+
+      if (img.decode) {
+        try{
+          await img.decode();
+          return img;
+        } catch(_) {
+          // decode 실패 시 onload로 fallback
+        }
+      }
+
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+      return img;
+    }
+
+    // -----------------------
+    // 파일 추가
+    // -----------------------
+    async function addFiles(fileList){
+      const files = Array.from(fileList || []).filter(f => f && (f.type || "").startsWith("image/"));
+      if (!files.length) return;
+
+      setBusy(true);
+      setProgress(0, `이미지 추가 중… (0/${files.length})`);
+
+      for (let i = 0; i < files.length; i++){
+        const file = files[i];
+        const id = safeId();
+        const url = URL.createObjectURL(file);
+
+        let width = 0, height = 0;
+        try{
+          const dims = await getImageDims(file, url);
+          width = dims.width;
+          height = dims.height;
+        } catch(_) {}
+
+        state.items.push({ id, file, url, width, height });
+        setProgress(Math.round(((i + 1) / files.length) * 100), `이미지 추가 중… (${i + 1}/${files.length})`);
+      }
+
+      renderThumbs();
+      setProgress(0, "대기 중");
+      setBusy(false);
+    }
+
+    function clearAll(){
+      for (const it of state.items){
+        try{ URL.revokeObjectURL(it.url); } catch(_) {}
+      }
+      state.items = [];
+      renderThumbs();
+    }
+
+    function removeById(id){
+      const idx = state.items.findIndex(x => x.id === id);
+      if (idx < 0) return;
+      const [it] = state.items.splice(idx, 1);
+      try{ URL.revokeObjectURL(it.url); } catch(_) {}
+      renderThumbs();
+    }
+
+    function reverseOrder(){
+      state.items.reverse();
+      renderThumbs();
+    }
+
+    // -----------------------
+    // 렌더링
+    // -----------------------
+    function renderThumbs(){
+      els.thumbList.innerHTML = "";
+      const frag = document.createDocumentFragment();
+
+      state.items.forEach((it, idx) => {
+        const card = document.createElement("div");
+        card.className = "thumb-item";
+        card.dataset.id = it.id;
+        card.setAttribute("role", "listitem");
+        card.setAttribute("aria-label", `${idx + 1}번째 이미지: ${it.file.name}`);
+
+        const top = document.createElement("div");
+        top.className = "thumb-top";
+
+        const badge = document.createElement("span");
+        badge.className = "thumb-index";
+        badge.textContent = String(idx + 1);
+
+        const btnDel = document.createElement("button");
+        btnDel.type = "button";
+        btnDel.className = "btn btn-mini pastel-red";
+        btnDel.textContent = "삭제";
+        btnDel.dataset.action = "remove";
+
+        top.appendChild(badge);
+        top.appendChild(btnDel);
+
+        const imgWrap = document.createElement("div");
+        imgWrap.className = "thumb-img-wrap";
+        const img = document.createElement("img");
+        img.loading = "lazy";
+        img.decoding = "async";
+        img.src = it.url;
+        img.alt = it.file.name;
+        imgWrap.appendChild(img);
+
+        const meta = document.createElement("div");
+
+        const name = document.createElement("div");
+        name.className = "thumb-name";
+        name.title = it.file.name;
+        name.textContent = it.file.name;
+
+        const sub = document.createElement("div");
+        sub.className = "thumb-sub";
+        const dimText = (it.width && it.height) ? `${it.width}×${it.height}px` : "크기 확인 실패";
+        sub.textContent = `${dimText} · ${formatBytes(it.file.size)}`;
+
+        meta.appendChild(name);
+        meta.appendChild(sub);
+
+        card.appendChild(top);
+        card.appendChild(imgWrap);
+        card.appendChild(meta);
+
+        frag.appendChild(card);
+      });
+
+      els.thumbList.appendChild(frag);
+      updateUi();
+    }
+
+    function refreshIndicesAndStateFromDom(){
+      const domItems = $$(".thumb-item", els.thumbList);
+      const ids = domItems.map(el => el.dataset.id);
+
+      const map = new Map(state.items.map(it => [it.id, it]));
+      state.items = ids.map(id => map.get(id)).filter(Boolean);
+
+      domItems.forEach((el, idx) => {
+        const badge = $(".thumb-index", el);
+        if (badge) badge.textContent = String(idx + 1);
+        el.setAttribute("aria-label", `${idx + 1}번째 이미지`);
+      });
+
+      updateUi();
+    }
+
+    // -----------------------
+    // 이벤트: 삭제 버튼(이벤트 위임)
+    // -----------------------
+    els.thumbList.addEventListener("click", (e) => {
+      const btn = e.target.closest('button[data-action="remove"]');
+      if (!btn) return;
+      const card = btn.closest(".thumb-item");
+      if (!card) return;
+      removeById(card.dataset.id);
+    });
+
+    // -----------------------
+    // 파일 선택 / 드롭 / 붙여넣기
+    // -----------------------
+    els.btnPick.addEventListener("click", () => els.fileInput.click());
+    els.fileInput.addEventListener("change", (e) => {
+      addFiles(e.target.files);
+      e.target.value = ""; // 같은 파일 다시 선택 가능하게
+    });
+
+    els.btnClear.addEventListener("click", clearAll);
+    els.btnReverse.addEventListener("click", reverseOrder);
+
+    const isFileDrag = (dt) => dt && Array.from(dt.types || []).includes("Files");
+
+    ["dragenter", "dragover"].forEach(type => {
+      els.dropzone.addEventListener(type, (e) => {
+        if (!isFileDrag(e.dataTransfer)) return;
+        e.preventDefault();
+        els.dropzone.classList.add("is-over");
+      });
+    });
+
+    ["dragleave", "drop"].forEach(type => {
+      els.dropzone.addEventListener(type, (e) => {
+        if (type === "dragleave") {
+          els.dropzone.classList.remove("is-over");
+          return;
+        }
+        // drop
+        if (!isFileDrag(e.dataTransfer)) return;
+        e.preventDefault();
+        els.dropzone.classList.remove("is-over");
+        addFiles(e.dataTransfer.files);
+      });
+    });
+
+    // 썸네일 영역에도 드롭 허용(추가 편의)
+    els.thumbList.addEventListener("dragover", (e) => {
+      if (!isFileDrag(e.dataTransfer)) return;
+      e.preventDefault();
+    });
+    els.thumbList.addEventListener("drop", (e) => {
+      if (!isFileDrag(e.dataTransfer)) return;
+      e.preventDefault();
+      addFiles(e.dataTransfer.files);
+    });
+
+    // 붙여넣기(Ctrl+V)로 이미지 추가
+    document.addEventListener("paste", (e) => {
+      const items = Array.from(e.clipboardData?.items || []);
+      const files = [];
+      for (const it of items) {
+        if (it.kind === "file") {
+          const f = it.getAsFile();
+          if (f && (f.type || "").startsWith("image/")) files.push(f);
+        }
+      }
+      if (files.length) addFiles(files);
+    });
+
+    // 드롭존 Enter/Space로 파일 선택
+    els.dropzone.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        els.fileInput.click();
+      }
+    });
+
+    // -----------------------
+    // ✅ 정렬: pointer 이벤트 기반(드래그스타트 막혀도 동작)
+    // -----------------------
+    els.thumbList.addEventListener("pointerdown", (e) => {
+      if (state.busy) return;
+
+      const card = e.target.closest(".thumb-item");
+      if (!card || !els.thumbList.contains(card)) return;
+
+      // 삭제 버튼 눌렀을 땐 정렬 시작 금지
+      if (e.target.closest("button")) return;
+
+      // 마우스 좌클릭만(터치도 pointer로 들어오므로 button 체크는 환경별로)
+      if (typeof e.button === "number" && e.button !== 0) return;
+
+      const rect = card.getBoundingClientRect();
+      const placeholder = document.createElement("div");
+      placeholder.className = "thumb-placeholder";
+      placeholder.style.width = rect.width + "px";
+      placeholder.style.height = rect.height + "px";
+
+      state.drag = {
+        pointerId: e.pointerId,
+        card,
+        placeholder,
+        startX: e.clientX,
+        startY: e.clientY,
+        offsetX: e.clientX - rect.left,
+        offsetY: e.clientY - rect.top,
+        active: false,
+        parent: els.thumbList,
+      };
+
+      card.setPointerCapture(e.pointerId);
+
+      card.addEventListener("pointermove", onPointerMove);
+      card.addEventListener("pointerup", onPointerUp);
+      card.addEventListener("pointercancel", onPointerUp);
+    });
+
+    function onPointerMove(e){
+      const d = state.drag;
+      if (!d || e.pointerId !== d.pointerId) return;
+
+      const dx = e.clientX - d.startX;
+      const dy = e.clientY - d.startY;
+      const dist = Math.hypot(dx, dy);
+
+      // 클릭/탭과 드래그를 구분하는 임계값
+      if (!d.active) {
+        if (dist < 6) return;
+        beginFloatingDrag(d);
+        d.active = true;
+      }
+
+      moveFloating(d, e.clientX, e.clientY);
+      movePlaceholderIfNeeded(d, e.clientX, e.clientY);
+    }
+
+    function beginFloatingDrag(d){
+      document.body.classList.add("is-sorting");
+
+      const rect = d.card.getBoundingClientRect();
+      d.cardRect = rect;
+
+      // 카드 자리에 placeholder 꽂아두기
+      d.parent.replaceChild(d.placeholder, d.card);
+
+      // 카드 자체는 body로 옮겨 “떠다니게”
+      d.card.classList.add("thumb-floating");
+      d.card.style.position = "fixed";
+      d.card.style.left = rect.left + "px";
+      d.card.style.top = rect.top + "px";
+      d.card.style.width = rect.width + "px";
+      d.card.style.height = rect.height + "px";
+      d.card.style.zIndex = "2147483647";
+      d.card.style.margin = "0";
+      d.card.style.pointerEvents = "none";
+      document.body.appendChild(d.card);
+    }
+
+    function moveFloating(d, clientX, clientY){
+      d.card.style.left = (clientX - d.offsetX) + "px";
+      d.card.style.top  = (clientY - d.offsetY) + "px";
+    }
+
+    function movePlaceholderIfNeeded(d, clientX, clientY){
+      const el = document.elementFromPoint(clientX, clientY);
+      const overCard = el && el.closest ? el.closest(".thumb-item") : null;
+
+      if (!overCard || !d.parent.contains(overCard)) {
+        // 썸네일 영역 위인데 특정 카드가 아니면 끝으로 보냄
+        const overList = el && (el === d.parent || (el.closest && el.closest("#thumbList")));
+        if (overList) d.parent.appendChild(d.placeholder);
+        return;
+      }
+
+      const rect = overCard.getBoundingClientRect();
+      const midX = rect.left + rect.width / 2;
+      const midY = rect.top + rect.height / 2;
+
+      // 그리드에서 자연스럽게 느껴지도록:
+      // - 세로로 절반 아래면 after
+      // - 거의 중앙이면 가로 위치로 after/before 판정
+      const nearMidY = Math.abs(clientY - midY) < rect.height * 0.25;
+      const after = (clientY > midY) || (nearMidY && clientX > midX);
+
+      if (after) {
+        if (overCard.nextSibling !== d.placeholder) {
+          d.parent.insertBefore(d.placeholder, overCard.nextSibling);
+        }
+      } else {
+        if (overCard !== d.placeholder) {
+          d.parent.insertBefore(d.placeholder, overCard);
+        }
+      }
+    }
+
+    function onPointerUp(e){
+      const d = state.drag;
+      if (!d || e.pointerId !== d.pointerId) return;
+
+      // 리스너 제거
+      try{
+        d.card.removeEventListener("pointermove", onPointerMove);
+        d.card.removeEventListener("pointerup", onPointerUp);
+        d.card.removeEventListener("pointercancel", onPointerUp);
+      } catch(_) {}
+
+      if (d.active) {
+        // placeholder 위치에 카드 복귀
+        d.parent.insertBefore(d.card, d.placeholder);
+        d.placeholder.remove();
+
+        // 스타일 원복
+        d.card.classList.remove("thumb-floating");
+        d.card.style.position = "";
+        d.card.style.left = "";
+        d.card.style.top = "";
+        d.card.style.width = "";
+        d.card.style.height = "";
+        d.card.style.zIndex = "";
+        d.card.style.margin = "";
+        d.card.style.pointerEvents = "";
+
+        document.body.classList.remove("is-sorting");
+
+        // 상태 배열을 DOM 순서로 동기화
+        refreshIndicesAndStateFromDom();
+      }
+
+      state.drag = null;
+    }
+
+    // -----------------------
+    // PDF 생성
+    // -----------------------
+    els.btnMakePdf.addEventListener("click", makePdf);
+
+    async function makePdf(){
+      if (state.busy) return;
+      if (!state.items.length) return;
+
+      if (!window.PDFLib || !PDFLib.PDFDocument) {
+        alert("PDF 라이브러리(pdf-lib)를 불러오지 못했습니다. 인터넷 연결을 확인하세요.");
+        return;
+      }
+
+      let outName = sanitizeFileName((els.outName.value || "images.pdf").trim());
+      if (!outName.toLowerCase().endsWith(".pdf")) outName += ".pdf";
+
+      const preset = els.pagePreset.value; // a4p | a4l | orig
+      const fitMode = els.fitMode.value;   // contain | cover
+      const marginPtRaw = mmToPt(Math.max(0, parseFloat(els.marginMm.value || "0")));
+      const encodeMode = els.imgEncode.value; // auto | jpeg | png
+      const jpgQ = clamp(parseFloat(els.jpegQuality.value || "0.85"), 0.1, 1);
+
+      setBusy(true);
+      setProgress(0, `PDF 생성 시작… (0/${state.items.length})`);
+
+      const pdfDoc = await PDFLib.PDFDocument.create();
+
+      for (let i = 0; i < state.items.length; i++){
+        const it = state.items[i];
+        setProgress(Math.round((i / state.items.length) * 100), `이미지 처리 중… (${i + 1}/${state.items.length})`);
+
+        const { format, bytes } = await getPdfImageBytes(it, encodeMode, jpgQ);
+
+        const embedded = (format === "png")
+          ? await pdfDoc.embedPng(bytes)
+          : await pdfDoc.embedJpg(bytes);
+
+        // 이미지 “픽셀” → PDF pt(96dpi 가정)
+        const imgW = embedded.width  * PX_TO_PT;
+        const imgH = embedded.height * PX_TO_PT;
+
+        let pageW, pageH;
+        if (preset === "orig") {
+          // 원본 모드: 이미지 크기에 여백까지 포함
+          pageW = imgW + marginPtRaw * 2;
+          pageH = imgH + marginPtRaw * 2;
+        } else if (preset === "a4l") {
+          pageW = A4_L.w; pageH = A4_L.h;
+        } else {
+          pageW = A4_P.w; pageH = A4_P.h;
+        }
+
+        // 여백이 페이지를 잡아먹지 않게 안전 처리
+        const marginPt = Math.min(marginPtRaw, Math.max(0, (Math.min(pageW, pageH) / 2) - 1));
+        const availW = pageW - marginPt * 2;
+        const availH = pageH - marginPt * 2;
+
+        const scale = (fitMode === "cover")
+          ? Math.max(availW / imgW, availH / imgH)
+          : Math.min(availW / imgW, availH / imgH);
+
+        const drawW = imgW * scale;
+        const drawH = imgH * scale;
+        const x = (pageW - drawW) / 2;
+        const y = (pageH - drawH) / 2;
+
+        const page = pdfDoc.addPage([pageW, pageH]);
+        page.drawImage(embedded, { x, y, width: drawW, height: drawH });
+      }
+
+      setProgress(98, "PDF 저장 중…");
+      const pdfBytes = await pdfDoc.save();
+
+      downloadBytes(pdfBytes, outName);
+
+      setProgress(100, "완료! 다운로드가 시작됩니다.");
+      setTimeout(() => setProgress(0, "대기 중"), 1200);
+
+      setBusy(false);
+    }
+
+    async function getPdfImageBytes(item, encodeMode, jpgQ){
+      // pdf-lib은 embedPng / embedJpg를 제공하므로, 최종 포맷은 png 또는 jpg로 맞춘다. :contentReference[oaicite:3]{index=3}
+      const type = (item.file.type || "").toLowerCase();
+
+      if (encodeMode === "auto") {
+        if (type === "image/jpeg" || type === "image/jpg") {
+          return { format: "jpg", bytes: new Uint8Array(await item.file.arrayBuffer()) };
+        }
+        if (type === "image/png") {
+          return { format: "png", bytes: new Uint8Array(await item.file.arrayBuffer()) };
+        }
+        // webp/gif 등: 호환을 위해 jpg 변환
+        return await convertViaCanvas(item.url, "image/jpeg", jpgQ);
+      }
+
+      if (encodeMode === "jpeg") {
+        return await convertViaCanvas(item.url, "image/jpeg", jpgQ);
+      }
+
+      // png
+      return await convertViaCanvas(item.url, "image/png", 1);
+    }
+
+    async function convertViaCanvas(url, mime, quality){
+      const img = await loadImage(url);
+      const w = img.naturalWidth || img.width;
+      const h = img.naturalHeight || img.height;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+
+      const ctx = canvas.getContext("2d", { alpha: mime !== "image/jpeg" });
+
+      // JPG는 투명도 없음 → 흰 배경 깔기
+      if (mime === "image/jpeg") {
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, w, h);
+      }
+
+      ctx.drawImage(img, 0, 0, w, h);
+
+      const dataUrl = canvas.toDataURL(mime, quality);
+      const bytes = dataUrlToBytes(dataUrl);
+
+      return { format: (mime === "image/png") ? "png" : "jpg", bytes };
+    }
+
+    function dataUrlToBytes(dataUrl){
+      const base64 = (dataUrl.split(",")[1] || "");
+      const bin = atob(base64);
+      const len = bin.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+      return bytes;
+    }
+
+    function downloadBytes(bytes, filename){
+      const blob = new Blob([bytes], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    }
+
+    // -----------------------
+    // 초기화
+    // -----------------------
+    els.year.textContent = String(new Date().getFullYear());
+    updateUi();
+    setProgress(0, "대기 중");
+  })();
+  </script>
+
+  <script src="/static/disable-copy.js"></script>
+<script src="/static/footer.js"></script>
+<script src="/static/global-loader.js?v=1"></script>
+</body>
+</html>
