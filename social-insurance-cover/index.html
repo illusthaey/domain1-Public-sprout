@@ -17,11 +17,10 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <style>
-    /* 페이지 전용 보조 스타일 */
+    /* 이 페이지 전용 최소 보조 스타일 (공용 style.css 우선) */
     .badge { display:inline-block; padding:.15em .6em; border:1px solid #d4d4d8; border-radius:999px; background:#fafafa; font-size:.95rem; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-
-    .log{
+    .log {
       white-space: pre-wrap;
       background: #0b1020;
       color: #d7e1ff;
@@ -29,20 +28,19 @@
       padding: 12px 14px;
       font-size: 0.95rem;
       overflow: auto;
-      max-height: 320px;
+      max-height: 300px;
     }
-
-    .kpi{
+    .kpi {
       display:grid;
       grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
       gap: 10px;
       margin-top: 10px;
     }
-    .kpi .card{ margin:0; }
-    .kpi .big{ font-size:1.35rem; font-weight:800; color:#111; }
-    .kpi .small{ font-size:.92rem; color:#666; margin-top:4px; }
+    .kpi .card { margin:0; }
+    .kpi .big { font-size:1.35rem; font-weight:800; color:#111; }
+    .kpi .small { font-size:.92rem; color:#666; margin-top:4px; }
 
-    .pill{
+    .pill {
       display:inline-flex;
       align-items:center;
       gap:8px;
@@ -52,80 +50,9 @@
       background: #fff;
       font-size: .95rem;
     }
-    .pill b{ font-weight: 800; }
-    details > summary{ cursor:pointer; }
-    .file-picked{ margin-top: 8px; font-size: 0.95rem; color: #555; }
-
-    /* =========================
-       Drag & Drop 업로드 UI
-       ========================= */
-    .drop-card{ position: relative; }
-    .drop-card::after{
-      content: "";
-      position: absolute;
-      inset: 10px;
-      border: 2px dashed #d1d5db;
-      border-radius: 12px;
-      pointer-events: none;
-      opacity: .45;
-    }
-    .drop-card.dragover::after{
-      content: "여기에 놓기";
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 800;
-      color: #111;
-      background: rgba(255,255,255,0.7);
-      opacity: 1;
-      border-color: #111;
-    }
-    .drop-all-zone{ text-align: center; padding: 18px 16px; }
-    .drop-all-zone.dragover{ border-color: #111 !important; background: #fff !important; }
-
-    /* =========================
-       미리보기 테이블 틀고정
-       - 헤더(상단) + 이름(2열) + 연번(1열)
-       ========================= */
-    :root{
-      --sticky-col0-w: 72px; /* 연번 */
-      --sticky-col1-w: 150px; /* 성명 */
-    }
-
-    /* table-wrap은 원래 overflow-x만 있는데, 여기서 y도 활성화 */
-    .table-wrap{
-      overflow: auto;
-      max-height: 520px;
-    }
-
-    /* 헤더 고정 */
-    .sheetlike thead th{
-      position: sticky;
-      top: 0;
-      z-index: 5;
-      background: #f9fafb;
-    }
-
-    /* 왼쪽 1~2열 고정 */
-    .sheetlike .sticky-col-0,
-    .sheetlike .sticky-col-1{
-      position: sticky;
-      background: #fff;
-      z-index: 2;
-    }
-    .sheetlike .sticky-col-0{ left: 0; z-index: 4; }
-    .sheetlike .sticky-col-1{ left: var(--sticky-col0-w); z-index: 3; }
-
-    /* 헤더의 좌측 고정 칸은 z-index 더 높게 */
-    .sheetlike thead th.sticky-col-0{ z-index: 9; background:#f9fafb; }
-    .sheetlike thead th.sticky-col-1{ z-index: 9; background:#f9fafb; }
-
-    /* (선택) footer 합계행도 좌측이 겹치지 않게 */
-    .sheetlike tfoot td.sticky-col-0,
-    .sheetlike tfoot td.sticky-col-1{
-      background:#fff;
-      font-weight: 800;
-    }
+    .pill b { font-weight: 800; }
+    .mini { font-size:.9rem; color:#555; }
+    details > summary { cursor:pointer; }
   </style>
 </head>
 
@@ -134,7 +61,8 @@
     <div class="shell">
       <h1>사회보험료 고지내역 집계기</h1>
       <p class="subtitle">
-        파일 업로드 → <span class="badge">엑셀 3시트</span>로 자동 집계 (CSV/XLSX 둘 다 가능)
+        고지내역 파일들을 업로드하면 <span class="badge">엑셀 3시트</span>로 자동 집계합니다.
+        (추가 리포트는 별도 다운로드 / 옵션으로 메인에 포함 가능)
       </p>
     </div>
   </header>
@@ -144,62 +72,56 @@
       <h2>1) 파일 업로드</h2>
       <p class="sub">
         매칭 키: <span class="mono">이름(공백 제거) + 생년월일(6자리)</span>
-        (CSV 주민번호 앞 6자리 ↔ 고용/산재 생년월일 변환)
+        (CSV 주민번호 앞 6자리 ↔ xlsx 생년월일 yymmdd 변환)
       </p>
-
-      <!-- 한 번에 드롭존(자동 삽입도 되지만, 여기서는 명시로 고정) -->
-      <div id="dropAllZone" class="card drop-all-zone">
-        <h3 class="local-h3 local-tight">파일 한 번에 드래그&드롭</h3>
-        <p class="muted" style="margin:6px 0 0;">
-          여기로 파일을 한꺼번에 떨어뜨리면 파일명 키워드로 자동 분류합니다.
-          (틀리면 각 카드에 직접 드롭해서 덮어쓰면 됩니다)
-        </p>
-      </div>
 
       <div class="grid two">
         <div class="card">
-          <h3 class="local-h3 local-tight">국민연금 (CSV/XLSX)</h3>
-          <input type="file" id="fPension" accept=".csv,.xlsx,.xls" />
-          <p class="muted">예: nhisYeonkumList.csv 또는 xlsx</p>
+          <h3 class="local-h3 local-tight">국민연금 CSV</h3>
+          <input type="file" id="fPensionCsv" accept=".csv" />
+          <p class="muted">예: nhisYeonkumList.csv</p>
         </div>
 
         <div class="card">
-          <h3 class="local-h3 local-tight">건강/요양 (CSV/XLSX)</h3>
-          <input type="file" id="fHealth" accept=".csv,.xlsx,.xls" />
-          <p class="muted">
-            “구분(건강)…구분(요양)” 컬럼 블록을 인식해 건강/요양을 분리 집계합니다.
-          </p>
+          <h3 class="local-h3 local-tight">건강보험 CSV</h3>
+          <input type="file" id="fHealthCsv" accept=".csv" />
+          <p class="muted">예: nhisGungangList.csv (고지보험료 + 고지보험료.1 합산)</p>
         </div>
 
         <div class="card">
-          <h3 class="local-h3 local-tight">고용보험(근로자) (CSV/XLSX)</h3>
-          <input type="file" id="fGoyongWorker" accept=".csv,.xlsx,.xls" />
+          <h3 class="local-h3 local-tight">고용보험(근로자) xlsx</h3>
+          <input type="file" id="fGoyongWorker" accept=".xlsx,.xls" />
+          <p class="muted">예: 당월보험료부과내역조회(고용)_..._근로자.xlsx</p>
         </div>
 
         <div class="card">
-          <h3 class="local-h3 local-tight">산재보험(근로자) (CSV/XLSX)</h3>
-          <input type="file" id="fSanjaeWorker" accept=".csv,.xlsx,.xls" />
+          <h3 class="local-h3 local-tight">산재보험(근로자) xlsx</h3>
+          <input type="file" id="fSanjaeWorker" accept=".xlsx,.xls" />
+          <p class="muted">예: 당월보험료부과내역조회(산재)_..._근로자.xlsx</p>
         </div>
 
         <div class="card">
-          <h3 class="local-h3 local-tight">고용보험(특수) (CSV/XLSX)</h3>
-          <input type="file" id="fGoyongSpecial" accept=".csv,.xlsx,.xls" />
+          <h3 class="local-h3 local-tight">고용보험(특수) xlsx</h3>
+          <input type="file" id="fGoyongSpecial" accept=".xlsx,.xls" />
+          <p class="muted">예: 당월보험료부과내역조회(고용)_..._특수고용.xlsx</p>
         </div>
 
         <div class="card">
-          <h3 class="local-h3 local-tight">산재보험(특수) (CSV/XLSX)</h3>
-          <input type="file" id="fSanjaeSpecial" accept=".csv,.xlsx,.xls" />
+          <h3 class="local-h3 local-tight">산재보험(특수) xlsx</h3>
+          <input type="file" id="fSanjaeSpecial" accept=".xlsx,.xls" />
+          <p class="muted">예: 당월보험료부과내역조회(산재)_..._특수고용.xlsx</p>
         </div>
 
         <div class="card">
-          <h3 class="local-h3 local-tight">공무직 인사기록 (CSV/XLSX)</h3>
-          <input type="file" id="fHr" accept=".csv,.xlsx,.xls" />
+          <h3 class="local-h3 local-tight">공무직 인사기록 xlsx</h3>
+          <input type="file" id="fHrXlsx" accept=".xlsx,.xls" />
+          <p class="muted">예: 최종-인사기록.xlsx (시트2 필터링에 사용)</p>
         </div>
       </div>
 
       <hr />
 
-      <h2>2) 옵션</h2>
+      <h2>2) 해석 옵션 (자동 감지 기본)</h2>
       <div class="grid two">
         <div class="card">
           <h3 class="local-h3 local-tight">국민연금 결정보험료 해석</h3>
@@ -208,15 +130,17 @@
             <option value="personal">파일 값 = 개인부담(기관=개인)</option>
             <option value="total">파일 값 = 총액(개인+기관 → 1/2 분리)</option>
           </select>
-          <p class="muted">자동은 (결정보험료/보수) 비율로 총액 여부를 추정합니다.</p>
+          <p class="muted">자동은 (결정보험료 / 월평균보수) 비율로 추정합니다.</p>
         </div>
 
         <div class="card">
-          <h3 class="local-h3 local-tight">건강/요양 분배 규칙</h3>
-          <p class="muted" style="margin:6px 0 0;">
-            건강/요양 각각 <b>산출보험료+고지보험료+정산보험료</b> 합산 후,
-            <b>개인:기관=1:1</b>로 자동 분배합니다(고정 규칙).
-          </p>
+          <h3 class="local-h3 local-tight">건강보험 고지보험료 해석</h3>
+          <select id="optHealthMode">
+            <option value="auto" selected>자동(권장)</option>
+            <option value="personal">파일 값 = 개인부담(기관=개인)</option>
+            <option value="total">파일 값 = 총액(개인+기관 → 1/2 분리)</option>
+          </select>
+          <p class="muted">고지보험료 + 고지보험료.1(장기요양)을 합산해서 사용합니다.</p>
         </div>
       </div>
 
@@ -225,7 +149,7 @@
           <h3 class="local-h3 local-tight">추가 출력 옵션</h3>
           <label class="row" style="gap:10px;">
             <input type="checkbox" id="optIncludeReportSheet" />
-            <span>메인 엑셀에 <b>누락_충돌</b> 시트 추가 (체크 시 4시트)</span>
+            <span>메인 엑셀에 <b>누락_충돌</b> 시트 추가 (체크 시 4시트가 됨)</span>
           </label>
           <p class="muted">기본은 꺼져있어서 메인 엑셀은 “3시트” 유지합니다.</p>
         </div>
@@ -236,14 +160,19 @@
             <input type="checkbox" id="optPreviewTotals" checked />
             <span>미리보기 표에 합계 Footer 표시</span>
           </label>
+          <p class="muted">엑셀 본문에는 합계행을 추가하지 않고(원본 포맷 보존), 화면에서만 합계를 보여줍니다.</p>
         </div>
       </div>
 
       <div class="row" style="margin-top:14px;">
         <button class="btn primary pastel-mint" id="btnRun">집계 실행</button>
-        <button class="btn pastel-blue" id="btnDownloadMain" disabled>메인 엑셀 다운로드</button>
+        <button class="btn pastel-blue" id="btnDownload" disabled>메인 엑셀 다운로드</button>
         <button class="btn pastel-orange" id="btnDownloadReport" disabled>누락/충돌 리포트 다운로드</button>
       </div>
+
+      <p class="note muted" id="hint">
+        집계 후 다운로드 버튼이 활성화됩니다.
+      </p>
     </section>
 
     <section class="section">
@@ -251,28 +180,28 @@
 
       <div class="kpi">
         <div class="card">
-          <div class="big" id="kpiS1">-</div>
-          <div class="small">시트1(일반) 인원</div>
+          <div class="big" id="kpiSheet1">-</div>
+          <div class="small">시트1: 일반 종합 인원</div>
         </div>
         <div class="card">
-          <div class="big" id="kpiS2">-</div>
-          <div class="small">시트2(공무직 산재만) 인원</div>
+          <div class="big" id="kpiSheet2">-</div>
+          <div class="small">시트2: 공무직 산재(산재만) 인원</div>
         </div>
         <div class="card">
-          <div class="big" id="kpiS3">-</div>
-          <div class="small">시트3(특수) 인원</div>
+          <div class="big" id="kpiSheet3">-</div>
+          <div class="small">시트3: 특수고용 인원</div>
         </div>
         <div class="card">
-          <div class="big" id="kpiWarn">-</div>
+          <div class="big" id="kpiWarnings">-</div>
           <div class="small">경고(누락/미매칭/중복키)</div>
         </div>
       </div>
 
       <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
         <div class="pill"><span>국민연금 누락</span> <b id="pillMissPension">-</b></div>
-        <div class="pill"><span>건강/요양 누락</span> <b id="pillMissHealth">-</b></div>
+        <div class="pill"><span>건강보험 누락</span> <b id="pillMissHealth">-</b></div>
         <div class="pill"><span>NHIS 미매칭(국민)</span> <b id="pillUnmatchPension">-</b></div>
-        <div class="pill"><span>NHIS 미매칭(건강/요양)</span> <b id="pillUnmatchHealth">-</b></div>
+        <div class="pill"><span>NHIS 미매칭(건강)</span> <b id="pillUnmatchHealth">-</b></div>
         <div class="pill"><span>중복키 감지</span> <b id="pillDupKeys">-</b></div>
       </div>
 
@@ -281,7 +210,7 @@
     </section>
 
     <section class="section">
-      <h2>4) 미리보기 (상위 30행 / 헤더+이름 틀고정)</h2>
+      <h2>4) 미리보기 (상위 30행 + Footer 합계)</h2>
 
       <h3>시트1: 일반 종합</h3>
       <div class="table-wrap" id="preview1"></div>
@@ -294,1391 +223,1088 @@
     </section>
 
     <section class="section">
-      <h2>5) 누락/충돌 리포트</h2>
-      <p class="muted">집계 기준에서 벗어난 항목(누락/미매칭/중복키)을 추적하기 위한 참고용입니다.</p>
+      <h2>5) 누락/충돌 리포트 (화면 + 다운로드)</h2>
+      <p class="muted">
+        아래 표는 “집계 기준(시트1/시트2)”에서 벗어난 항목을 추적하기 위한 참고용입니다.
+      </p>
 
       <details open>
-        <summary><b>시트1(일반) 기준 누락</b></summary>
+        <summary class="mini"><b>시트1(일반) 기준 누락</b></summary>
         <h3 class="local-h3">국민연금 누락</h3>
         <div class="table-wrap" id="repMissPension"></div>
 
-        <h3 class="local-h3">건강/요양 누락</h3>
+        <h3 class="local-h3">건강보험 누락</h3>
         <div class="table-wrap" id="repMissHealth"></div>
       </details>
 
       <details style="margin-top:10px;">
-        <summary><b>NHIS에 있으나 시트1(일반)에 매칭되지 않은 내역</b></summary>
+        <summary class="mini"><b>NHIS(CSV)에 있으나 시트1(일반)에 매칭되지 않은 내역</b></summary>
         <h3 class="local-h3">국민연금 미매칭</h3>
         <div class="table-wrap" id="repUnmatchPension"></div>
 
-        <h3 class="local-h3">건강/요양 미매칭</h3>
+        <h3 class="local-h3">건강보험 미매칭</h3>
         <div class="table-wrap" id="repUnmatchHealth"></div>
       </details>
 
       <details style="margin-top:10px;">
-        <summary><b>시트2 후보 중 HR 미존재로 제외</b></summary>
+        <summary class="mini"><b>시트2 후보 중 HR 미존재로 제외</b></summary>
         <div class="table-wrap" id="repMissHr"></div>
       </details>
 
       <details style="margin-top:10px;">
-        <summary><b>중복키(이름+생년월일6) 감지</b></summary>
+        <summary class="mini"><b>중복키(이름+생년월일6) 감지</b></summary>
         <div class="table-wrap" id="repDupKeys"></div>
       </details>
     </section>
   </main>
 
-<script>
-(function(){
-  // ---------------------------
-  // DOM
-  // ---------------------------
-  const $ = (id) => document.getElementById(id);
-  const el = {
-    fPension: $("fPension"),
-    fHealth: $("fHealth"),
-    fGoyongWorker: $("fGoyongWorker"),
-    fSanjaeWorker: $("fSanjaeWorker"),
-    fGoyongSpecial: $("fGoyongSpecial"),
-    fSanjaeSpecial: $("fSanjaeSpecial"),
-    fHr: $("fHr"),
-
-    optPensionMode: $("optPensionMode"),
-    optIncludeReportSheet: $("optIncludeReportSheet"),
-    optPreviewTotals: $("optPreviewTotals"),
-
-    btnRun: $("btnRun"),
-    btnDownloadMain: $("btnDownloadMain"),
-    btnDownloadReport: $("btnDownloadReport"),
-
-    kpiS1: $("kpiS1"),
-    kpiS2: $("kpiS2"),
-    kpiS3: $("kpiS3"),
-    kpiWarn: $("kpiWarn"),
-
-    pillMissPension: $("pillMissPension"),
-    pillMissHealth: $("pillMissHealth"),
-    pillUnmatchPension: $("pillUnmatchPension"),
-    pillUnmatchHealth: $("pillUnmatchHealth"),
-    pillDupKeys: $("pillDupKeys"),
-
-    log: $("log"),
-
-    preview1: $("preview1"),
-    preview2: $("preview2"),
-    preview3: $("preview3"),
-
-    repMissPension: $("repMissPension"),
-    repMissHealth: $("repMissHealth"),
-    repUnmatchPension: $("repUnmatchPension"),
-    repUnmatchHealth: $("repUnmatchHealth"),
-    repMissHr: $("repMissHr"),
-    repDupKeys: $("repDupKeys"),
-
-    dropAllZone: $("dropAllZone"),
-  };
-
-  // ---------------------------
-  // state
-  // ---------------------------
-  let lastMain = { blob: null, filename: null };
-  let lastReport = { blob: null, filename: null };
-
-  function log(line){
-    el.log.textContent += line + "\n";
-    el.log.scrollTop = el.log.scrollHeight;
-  }
-  function clearLog(){ el.log.textContent = ""; }
-
-  // ---------------------------
-  // utils
-  // ---------------------------
-  function normalizeName(name){
-    return String(name ?? "").replace(/\s+/g,"").trim();
-  }
-
-  function birth6FromBirthCell(v){
-    if (v == null) return "";
-    if (v instanceof Date && !isNaN(v.getTime())){
-      const yy = String(v.getFullYear()).slice(-2);
-      const mm = String(v.getMonth()+1).padStart(2,"0");
-      const dd = String(v.getDate()).padStart(2,"0");
-      return yy+mm+dd;
-    }
-    const s = String(v).trim();
-    if (/^\d{2}-\d{2}-\d{2}$/.test(s)) return s.replaceAll("-","");
-    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(2,4)+s.slice(5,7)+s.slice(8,10);
-    if (/^\d{6}/.test(s)) return s.slice(0,6);
-    return s;
-  }
-
-  function birth6FromJumin(v){
-    if (v == null) return "";
-    const s = String(v).trim();
-    const m = s.match(/^(\d{6})/);
-    return m ? m[1] : "";
-  }
-
-  function personKey(name, birth6){
-    return normalizeName(name) + "|" + String(birth6 ?? "").trim();
-  }
-
-  function keyToParts(k){
-    const [n,b] = String(k||"").split("|");
-    return { name: n||"", birth6: b||"" };
-  }
-
-  function parseMoney(v){
-    if (v == null) return 0;
-    if (typeof v === "number" && isFinite(v)) return Math.round(v);
-    const s = String(v).trim();
-    if (!s || s.toLowerCase()==="nan") return 0;
-    const cleaned = s.replace(/,/g,"");
-    const num = Number(cleaned);
-    return isFinite(num) ? Math.round(num) : 0;
-  }
-
-  function fmtMoney(n){
-    const x = (typeof n === "number" && isFinite(n)) ? n : parseMoney(n);
-    return x.toLocaleString("ko-KR");
-  }
-
-  function splitHalf(amount){
-    const a = parseMoney(amount);
-    const p = Math.floor(a/2);
-    const o = a - p;
-    return [p,o]; // 개인, 기관
-  }
-
-  function safeTextDecoder(label){
-    try { return new TextDecoder(label); } catch(_) { return null; }
-  }
-
-  async function readFileAsArrayBuffer(file){
-    return await new Promise((resolve,reject)=>{
-      const fr = new FileReader();
-      fr.onerror = () => reject(fr.error);
-      fr.onload = () => resolve(fr.result);
-      fr.readAsArrayBuffer(file);
-    });
-  }
-
-  async function readFileAsTextEuckr(file){
-    const ab = await readFileAsArrayBuffer(file);
-    const u8 = new Uint8Array(ab);
-    const decEuc = safeTextDecoder("euc-kr");
-    const decUtf = safeTextDecoder("utf-8");
-    if (decEuc) return decEuc.decode(u8);
-    if (decUtf) return decUtf.decode(u8);
-    return String.fromCharCode(...u8);
-  }
-
-  function sheetToAOA(ws){
-    return XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null });
-  }
-
-  async function parseAnyFirstSheetAOA(file){
-    const fname = String(file.name||"").toLowerCase();
-    let wb;
-    if (fname.endsWith(".csv")){
-      const text = await readFileAsTextEuckr(file);
-      wb = XLSX.read(text, { type: "string", cellDates: true });
-    } else {
-      const ab = await readFileAsArrayBuffer(file);
-      wb = XLSX.read(new Uint8Array(ab), { type: "array", cellDates: true });
-    }
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    return sheetToAOA(ws);
-  }
-
-  function findColIndexOneHeader(headers, like){
-    const lk = String(like).toLowerCase();
-    for (let c=0;c<headers.length;c++){
-      const v = String(headers[c] ?? "").replace(/\s+/g,"").toLowerCase();
-      if (v.includes(lk)) return c;
-    }
-    return -1;
-  }
-
-  function findColIndexTwoHeader(h1, h2, groupLike, subLike){
-    const gl = String(groupLike).toLowerCase();
-    const sl = String(subLike).toLowerCase();
-    let lastGroup = "";
-    for (let c=0;c<Math.max(h1.length,h2.length);c++){
-      const gRaw = h1[c];
-      if (gRaw != null && String(gRaw).trim() !== "") lastGroup = String(gRaw).replace(/\s+/g,"").trim();
-      const sRaw = h2[c];
-      const g = lastGroup.toLowerCase();
-      const s = String(sRaw ?? "").replace(/\s+/g,"").toLowerCase();
-      if (g.includes(gl) && s.includes(sl)) return c;
-    }
-    return -1;
-  }
-
-  function normalizeWorkerKind(s){
-    const t = String(s ?? "").replace(/\s+/g,"");
-    if (t.includes("일반")) return "일반";
-    if (t.includes("특수")) return "특수";
-    if (t.includes("노무") || t.includes("제공자")) return "특수";
-    return t || "미분류";
-  }
-
-  function decidePensionSplitMode(mode, amount, wage, thresholdRatio){
-    if (!amount) return "personal";
-    if (mode === "total") return "total";
-    if (mode === "personal") return "personal";
-    // auto
-    if (wage && wage > 0){
-      const ratio = amount / wage;
-      return ratio > thresholdRatio ? "total" : "personal";
-    }
-    return "total";
-  }
-
-  // ---------------------------
-  // parsers
-  // ---------------------------
-  async function parsePension(file){
-    const aoa = await parseAnyFirstSheetAOA(file);
-    if (!aoa || aoa.length < 2) return { map: new Map(), dup: [] };
-
-    const headers = (aoa[0]||[]).map(v=>String(v??"").trim());
-    const idxName = headers.findIndex(h => h.includes("가입자명") || h.includes("성명") || h.includes("이름"));
-    const idxJumin = headers.findIndex(h => h.includes("주민번호") || h.includes("주민등록번호"));
-    const idxPremium = headers.findIndex(h => h.includes("결정보험료") || (h.includes("보험료") && !h.includes("고지")) );
-
-    const agg = new Map(); // key -> {sum,count}
-    for (let r=1;r<aoa.length;r++){
-      const row = aoa[r];
-      if (!row) continue;
-      const name = row[idxName];
-      const jumin = row[idxJumin];
-      if (name == null || String(name).trim()==="") continue;
-      const birth6 = birth6FromJumin(jumin);
-      if (!birth6) continue;
-
-      const amt = parseMoney(row[idxPremium]);
-      const k = personKey(name, birth6);
-
-      const cur = agg.get(k) || { sum: 0, count: 0 };
-      cur.sum += amt;
-      cur.count += 1;
-      agg.set(k, cur);
-    }
-
-    const map = new Map();
-    const dup = [];
-    for (const [k,v] of agg.entries()){
-      map.set(k, v.sum);
-      if (v.count > 1){
-        const p = keyToParts(k);
-        dup.push({ dataset:"국민연금", key:k, name:p.name, birth6:p.birth6, count:v.count, sum:v.sum });
-      }
-    }
-    return { map, dup };
-  }
-
-  async function parseHealthNursing(file){
-    // 규칙:
-    // - 구분(건강) 시작~구분(요양) 직전: 건강 구간
-    // - 구분(요양) 이후: 요양 구간
-    // - 각 구간에서 산출보험료+고지보험료+정산보험료 합산
-    const aoa = await parseAnyFirstSheetAOA(file);
-    if (!aoa || aoa.length < 2) return { map: new Map(), dup: [] };
-
-    const headers = (aoa[0]||[]).map(v=>String(v??"").trim());
-
-    const idxName = headers.findIndex(h => h.includes("성명") || h.includes("가입자명") || h.includes("이름"));
-    const idxJumin = headers.findIndex(h => h.includes("주민번호") || h.includes("주민등록번호"));
-    const idxWage = headers.findIndex(h => h.includes("보수월액") || h.includes("보수") );
-
-    // '구분' 열들(구분, 구분.1 등)
-    const groupIdxs = [];
-    for (let i=0;i<headers.length;i++){
-      const h = headers[i].replace(/\s+/g,"");
-      if (/^구분(\.|$)/.test(h)) groupIdxs.push(i);
-    }
-
-    // 돈 컬럼명(기본명)들
-    const want = new Set(["산출보험료","고지보험료","정산보험료"]);
-    function baseHeader(h){
-      return String(h??"").replace(/\s+/g,"").replace(/\.\d+$/,"");
-    }
-
-    function sumRange(row, start, end){
-      if (start < 0 || end < 0 || start > end) return 0;
-      let s = 0;
-      for (let c=start;c<=end;c++){
-        const b = baseHeader(headers[c]);
-        if (want.has(b)) s += parseMoney(row[c]);
-      }
-      return s;
-    }
-
-    const agg = new Map(); // key -> {healthTotal, nursingTotal, wage, count}
-    for (let r=1;r<aoa.length;r++){
-      const row = aoa[r];
-      if (!row) continue;
-
-      const name = row[idxName];
-      const jumin = row[idxJumin];
-      if (name == null || String(name).trim()==="") continue;
-      const birth6 = birth6FromJumin(jumin);
-      if (!birth6) continue;
-
-      const k = personKey(name, birth6);
-
-      // 건강/요양 구간 경계 찾기(해당 행의 구분 값으로 판단)
-      let healthStart = -1;
-      let nursingStart = -1;
-
-      for (const gi of groupIdxs){
-        const v = String(row[gi] ?? "").trim();
-        if (healthStart === -1 && v.includes("건강")) healthStart = gi;
-        if (healthStart !== -1 && gi > healthStart && v.includes("요양")) { nursingStart = gi; break; }
-      }
-
-      // fallback: 값이 없으면 구분열 위치로만 가정
-      if (healthStart === -1 && groupIdxs.length >= 1) healthStart = groupIdxs[0];
-      if (nursingStart === -1 && groupIdxs.length >= 2) nursingStart = groupIdxs[1];
-
-      const healthEnd = (nursingStart !== -1) ? (nursingStart - 1) : (headers.length - 1);
-
-      const healthTotal = sumRange(row, healthStart, healthEnd);
-      const nursingTotal = (nursingStart !== -1) ? sumRange(row, nursingStart, headers.length - 1) : 0;
-
-      const wage = (idxWage >= 0) ? parseMoney(row[idxWage]) : 0;
-
-      const cur = agg.get(k) || { healthTotal:0, nursingTotal:0, wage:0, count:0 };
-      cur.healthTotal += healthTotal;
-      cur.nursingTotal += nursingTotal;
-      cur.wage = Math.max(cur.wage, wage);
-      cur.count += 1;
-      agg.set(k, cur);
-    }
-
-    const map = new Map();
-    const dup = [];
-    for (const [k,v] of agg.entries()){
-      map.set(k, v);
-      if (v.count > 1){
-        const p = keyToParts(k);
-        dup.push({ dataset:"건강/요양", key:k, name:p.name, birth6:p.birth6, count:v.count, sum:(v.healthTotal+v.nursingTotal) });
-      }
-    }
-    return { map, dup };
-  }
-
-  async function parseKcomwelGoyong(file){
-    const aoa = await parseAnyFirstSheetAOA(file);
-    if (!aoa || aoa.length < 2) return [];
-
-    const h0 = aoa[0] || [];
-    const h1 = aoa[1] || [];
-
-    const row0Has = (kw) => h0.some(v => String(v??"").includes(kw));
-    const row1Has = (kw) => h1.some(v => String(v??"").includes(kw));
-
-    const looksTwoHeader =
-      (aoa.length >= 4) &&
-      (row0Has("보험료합계") || row0Has("보험료 합계")) &&
-      (row1Has("근로자실업") || row1Has("사업주실업") || row1Has("사업주고안"));
-
-    let idxType, idxName, idxBirth, idxWage, idxEmp, idxEr1, idxEr2;
-    let dataStartRow = 1;
-    let headersOne = null;
-
-    if (looksTwoHeader){
-      const H1 = h0;
-      const H2 = h1;
-
-      idxType = findColIndexOneHeader(H1, "근로자구분");
-      idxName = findColIndexOneHeader(H1, "근로자명");
-      idxBirth = findColIndexOneHeader(H1, "생년월일");
-      idxWage = findColIndexOneHeader(H1, "월평균보수");
-
-      idxEmp = findColIndexTwoHeader(H1, H2, "보험료합계", "근로자실업");
-      idxEr1 = findColIndexTwoHeader(H1, H2, "보험료합계", "사업주실업");
-      idxEr2 = findColIndexTwoHeader(H1, H2, "보험료합계", "사업주고안");
-
-      dataStartRow = 2;
-    } else {
-      headersOne = (aoa[0]||[]).map(v=>String(v??"").trim());
-
-      idxType = findColIndexOneHeader(headersOne, "근로자구분");
-      idxName = findColIndexOneHeader(headersOne, "근로자명");
-      if (idxName === -1) idxName = findColIndexOneHeader(headersOne, "성명");
-      idxBirth = findColIndexOneHeader(headersOne, "생년월일");
-      idxWage = findColIndexOneHeader(headersOne, "월평균보수");
-
-      // 한 줄 헤더에 이미 실업/고안이 들어있을 수 있음
-      idxEmp = findColIndexOneHeader(headersOne, "근로자실업");
-      idxEr1 = findColIndexOneHeader(headersOne, "사업주실업");
-      idxEr2 = findColIndexOneHeader(headersOne, "사업주고안");
-
-      dataStartRow = 1;
-    }
-
-    const rows = [];
-    for (let r=dataStartRow;r<aoa.length;r++){
-      const row = aoa[r];
-      if (!row) continue;
-
-      const name = row[idxName];
-      if (name == null || String(name).trim()==="") continue;
-
-      const type = row[idxType];
-      const birth6 = birth6FromBirthCell(row[idxBirth]);
-      const wage = parseMoney(row[idxWage]);
-
-      rows.push({
-        type: String(type ?? "").trim(),
-        name: String(name ?? "").trim(),
-        birth6,
-        wage,
-        goyEmp: parseMoney(row[idxEmp]),
-        goyEr1: parseMoney(row[idxEr1]),
-        goyEr2: parseMoney(row[idxEr2]),
-      });
-    }
-    return rows;
-  }
-
-  async function parseKcomwelSanjae(file){
-    const aoa = await parseAnyFirstSheetAOA(file);
-    if (!aoa || aoa.length < 2) return [];
-
-    const headers = (aoa[0]||[]).map(v=>String(v??"").trim());
-    const idxType = findColIndexOneHeader(headers, "근로자구분");
-    const idxName = findColIndexOneHeader(headers, "근로자명");
-    const idxBirth = findColIndexOneHeader(headers, "생년월일");
-    const idxWage = findColIndexOneHeader(headers, "월평균보수");
-    const idxPremium = findColIndexOneHeader(headers, "보험료합계");
-
-    const rows = [];
-    for (let r=1;r<aoa.length;r++){
-      const row = aoa[r];
-      if (!row) continue;
-      const name = row[idxName];
-      if (name == null || String(name).trim()==="") continue;
-
-      rows.push({
-        type: String(row[idxType] ?? "").trim(),
-        name: String(name ?? "").trim(),
-        birth6: birth6FromBirthCell(row[idxBirth]),
-        wage: parseMoney(row[idxWage]),
-        sanjae: parseMoney(row[idxPremium]),
-      });
-    }
-    return rows;
-  }
-
-  async function parseHr(file){
-    const aoa = await parseAnyFirstSheetAOA(file);
-    if (!aoa || aoa.length < 2) return { map: new Map(), dup: [] };
-
-    const headers = (aoa[0]||[]).map(v=>String(v??"").trim());
-    const idxName = headers.findIndex(h => h.includes("성명") || h.includes("이름"));
-    const idxJumin = headers.findIndex(h => h.includes("주민번호"));
-    const idxJob = headers.findIndex(h => h.includes("직종"));
-
-    const map = new Map();
-    const count = new Map();
-    const dup = [];
-
-    for (let r=1;r<aoa.length;r++){
-      const row = aoa[r];
-      if (!row) continue;
-      const name = row[idxName];
-      if (name == null || String(name).trim()==="") continue;
-
-      const birth6 = birth6FromJumin(row[idxJumin]);
-      if (!birth6) continue;
-
-      const k = personKey(name, birth6);
-      count.set(k, (count.get(k)||0) + 1);
-
-      if (!map.has(k)){
-        map.set(k, {
-          name: String(name??"").trim(),
-          birth6,
-          job: String(row[idxJob]??"").trim(),
-        });
-      }
-    }
-
-    for (const [k,c] of count.entries()){
-      if (c > 1){
-        const p = keyToParts(k);
-        dup.push({ dataset:"인사기록", key:k, name:p.name, birth6:p.birth6, count:c, sum:"" });
-      }
-    }
-    return { map, dup };
-  }
-
-  // ---------------------------
-  // preview rendering (sticky)
-  // ---------------------------
-  function renderPreview(container, headers, rows, limit=30, opts={}){
-    const showFooterTotals = !!opts.showFooterTotals;
-    const safe = rows.slice(0, limit);
-
-    const sums = new Array(headers.length).fill(0);
-    if (showFooterTotals){
-      for (const r of rows){
-        for (let c=0;c<headers.length;c++){
-          if (c === 0) continue; // 연번 제외
-          const v = r[c];
-          if (typeof v === "number" && isFinite(v)) sums[c] += v;
-        }
-      }
-    }
-
-    const tbl = document.createElement("table");
-    tbl.className = "sheetlike";
-
-    // colgroup: 좌측 2열 폭 고정(틀고정 left 계산 안정화)
-    const colgroup = document.createElement("colgroup");
-    const c0 = document.createElement("col"); c0.style.width = "var(--sticky-col0-w)";
-    const c1 = document.createElement("col"); c1.style.width = "var(--sticky-col1-w)";
-    colgroup.appendChild(c0); colgroup.appendChild(c1);
-    for (let i=2;i<headers.length;i++){
-      const cx = document.createElement("col");
-      colgroup.appendChild(cx);
-    }
-    tbl.appendChild(colgroup);
-
-    const thead = document.createElement("thead");
-    const trh = document.createElement("tr");
-    headers.forEach((h, idx)=>{
-      const th = document.createElement("th");
-      th.textContent = h;
-      if (idx === 0) th.classList.add("sticky-col-0");
-      if (idx === 1) th.classList.add("sticky-col-1");
-      trh.appendChild(th);
-    });
-    thead.appendChild(trh);
-    tbl.appendChild(thead);
-
-    const tbody = document.createElement("tbody");
-    safe.forEach(r=>{
-      const tr = document.createElement("tr");
-      r.forEach((v, idx)=>{
-        const td = document.createElement("td");
-        if (typeof v === "number" && isFinite(v)){
-          td.textContent = fmtMoney(v);
-          td.className = "numeric";
-        } else {
-          td.textContent = (v == null ? "" : String(v));
-        }
-        if (idx === 0) td.classList.add("sticky-col-0");
-        if (idx === 1) td.classList.add("sticky-col-1");
-        tr.appendChild(td);
-      });
-      tbody.appendChild(tr);
-    });
-    tbl.appendChild(tbody);
-
-    if (showFooterTotals){
-      const tfoot = document.createElement("tfoot");
-      const trf = document.createElement("tr");
-      for (let c=0;c<headers.length;c++){
-        const td = document.createElement("td");
-        if (c === 0) td.textContent = "";
-        else if (c === 1){
-          td.textContent = "합계";
-          td.style.fontWeight = "800";
-        } else if (typeof sums[c] === "number" && isFinite(sums[c]) && sums[c] !== 0){
-          td.textContent = fmtMoney(sums[c]);
-          td.className = "numeric";
-          td.style.fontWeight = "800";
-        } else {
-          td.textContent = "";
-        }
-        if (c === 0) td.classList.add("sticky-col-0");
-        if (c === 1) td.classList.add("sticky-col-1");
-        trf.appendChild(td);
-      }
-      tfoot.appendChild(trf);
-      tbl.appendChild(tfoot);
-    }
-
-    container.innerHTML = "";
-    container.appendChild(tbl);
-
-    const note = document.createElement("p");
-    note.className = "muted";
-    note.textContent = `총 ${rows.length}행 중 ${safe.length}행 미리보기`;
-    container.appendChild(note);
-  }
-
-  // ---------------------------
-  // xlsx helpers
-  // ---------------------------
-  function applyNumberFormats(ws, headerRowIdx=0){
-    const ref = ws["!ref"];
-    if (!ref) return;
-    const range = XLSX.utils.decode_range(ref);
-    for (let R=range.s.r;R<=range.e.r;R++){
-      for (let C=range.s.c;C<=range.e.c;C++){
-        const addr = XLSX.utils.encode_cell({ r:R, c:C });
-        const cell = ws[addr];
-        if (!cell) continue;
-        if (R === headerRowIdx) continue;
-        if (cell.t === "n") cell.z = "#,##0";
-      }
-    }
-  }
-
-  function setColWidths(ws, widths){
-    ws["!cols"] = widths.map(w=>({ wch:w }));
-  }
-
-  function applyFreeze(ws, xSplit, ySplit){
-    // SheetJS는 일부 버전에서 !freeze를 지원(지원 안 해도 무시됨)
-    try{
-      ws["!freeze"] = {
-        xSplit,
-        ySplit,
-        topLeftCell: XLSX.utils.encode_cell({ r: ySplit, c: xSplit }),
-        activePane: "bottomRight",
-        state: "frozen"
+  <script>
+    (function () {
+      // ---------- DOM ----------
+      const $ = (id) => document.getElementById(id);
+
+      const el = {
+        fPensionCsv: $("fPensionCsv"),
+        fHealthCsv: $("fHealthCsv"),
+        fGoyongWorker: $("fGoyongWorker"),
+        fSanjaeWorker: $("fSanjaeWorker"),
+        fGoyongSpecial: $("fGoyongSpecial"),
+        fSanjaeSpecial: $("fSanjaeSpecial"),
+        fHrXlsx: $("fHrXlsx"),
+
+        optPensionMode: $("optPensionMode"),
+        optHealthMode: $("optHealthMode"),
+        optIncludeReportSheet: $("optIncludeReportSheet"),
+        optPreviewTotals: $("optPreviewTotals"),
+
+        btnRun: $("btnRun"),
+        btnDownload: $("btnDownload"),
+        btnDownloadReport: $("btnDownloadReport"),
+
+        log: $("log"),
+
+        kpiSheet1: $("kpiSheet1"),
+        kpiSheet2: $("kpiSheet2"),
+        kpiSheet3: $("kpiSheet3"),
+        kpiWarnings: $("kpiWarnings"),
+
+        pillMissPension: $("pillMissPension"),
+        pillMissHealth: $("pillMissHealth"),
+        pillUnmatchPension: $("pillUnmatchPension"),
+        pillUnmatchHealth: $("pillUnmatchHealth"),
+        pillDupKeys: $("pillDupKeys"),
+
+        preview1: $("preview1"),
+        preview2: $("preview2"),
+        preview3: $("preview3"),
+
+        repMissPension: $("repMissPension"),
+        repMissHealth: $("repMissHealth"),
+        repUnmatchPension: $("repUnmatchPension"),
+        repUnmatchHealth: $("repUnmatchHealth"),
+        repMissHr: $("repMissHr"),
+        repDupKeys: $("repDupKeys"),
       };
-    } catch(_) {}
-  }
 
-  function aoaToSheet(headers, rows){
-    const aoa = [headers, ...rows];
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
-    applyNumberFormats(ws, 0);
-    return ws;
-  }
+      // ---------- state ----------
+      let lastWorkbookBlob = null;
+      let lastFilename = null;
 
-  function workbookToBlob(wb){
-    const wbout = XLSX.write(wb, { bookType:"xlsx", type:"array" });
-    return new Blob([wbout], { type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-  }
+      let lastReportBlob = null;
+      let lastReportFilename = null;
 
-  function downloadBlob(blob, filename){
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url), 1500);
-  }
-
-  function buildReportWorkbook(report){
-    const aoa = [];
-    aoa.push(["누락/충돌 리포트"]);
-    aoa.push([]);
-    aoa.push(["항목", "건수"]);
-    aoa.push(["시트1(일반) 국민연금 누락", report.missPension.length]);
-    aoa.push(["시트1(일반) 건강/요양 누락", report.missHealth.length]);
-    aoa.push(["NHIS 국민연금 미매칭(시트1 외)", report.unmatchPension.length]);
-    aoa.push(["NHIS 건강/요양 미매칭(시트1 외)", report.unmatchHealth.length]);
-    aoa.push(["시트2 후보 중 HR 미존재로 제외", report.missHr.length]);
-    aoa.push(["중복키 감지(전체)", report.dupKeys.length]);
-
-    aoa.push([]);
-    aoa.push(["[1] 시트1(일반) 국민연금 누락"]);
-    aoa.push(["연번", "성명", "생년월일6", "키"]);
-    report.missPension.forEach((r,i)=>aoa.push([i+1, r.name, r.birth6, r.key]));
-
-    aoa.push([]);
-    aoa.push(["[2] 시트1(일반) 건강/요양 누락"]);
-    aoa.push(["연번", "성명", "생년월일6", "키"]);
-    report.missHealth.forEach((r,i)=>aoa.push([i+1, r.name, r.birth6, r.key]));
-
-    aoa.push([]);
-    aoa.push(["[3] NHIS 국민연금 미매칭(시트1 일반에 없음)"]);
-    aoa.push(["연번", "성명", "생년월일6", "금액(합산)", "키"]);
-    report.unmatchPension.forEach((r,i)=>aoa.push([i+1, r.name, r.birth6, r.amount, r.key]));
-
-    aoa.push([]);
-    aoa.push(["[4] NHIS 건강/요양 미매칭(시트1 일반에 없음)"]);
-    aoa.push(["연번", "성명", "생년월일6", "건강합", "요양합", "키"]);
-    report.unmatchHealth.forEach((r,i)=>aoa.push([i+1, r.name, r.birth6, r.healthTotal, r.nursingTotal, r.key]));
-
-    aoa.push([]);
-    aoa.push(["[5] 시트2 후보 중 HR 미존재로 제외"]);
-    aoa.push(["연번", "성명", "생년월일6", "산재보험료(기관)", "키"]);
-    report.missHr.forEach((r,i)=>aoa.push([i+1, r.name, r.birth6, r.sanjaeOrg, r.key]));
-
-    aoa.push([]);
-    aoa.push(["[6] 중복키 감지(이름+생년월일6)"]);
-    aoa.push(["연번", "데이터셋", "성명", "생년월일6", "건수", "금액합(가능시)", "키"]);
-    report.dupKeys.forEach((r,i)=>aoa.push([i+1, r.dataset, r.name, r.birth6, r.count, r.sum ?? "", r.key]));
-
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
-    applyNumberFormats(ws, -1);
-    setColWidths(ws, [6, 22, 14, 14, 14, 26]);
-    applyFreeze(ws, 0, 1);
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "누락_충돌_리포트");
-    return wb;
-  }
-
-  // ---------------------------
-  // Drag & Drop
-  // ---------------------------
-  function getPickedFile(input){
-    return (input.files && input.files[0]) || input.__pickedFile || null;
-  }
-
-  function updatePickedLabel(input){
-    const id = input.id;
-    let lbl = document.getElementById("picked-" + id);
-    if (!lbl){
-      lbl = document.createElement("div");
-      lbl.id = "picked-" + id;
-      lbl.className = "file-picked muted";
-      input.insertAdjacentElement("afterend", lbl);
-    }
-    const f = getPickedFile(input);
-    lbl.textContent = f
-      ? `선택된 파일: ${f.name} (${(f.size/1024/1024).toFixed(2)}MB)`
-      : "선택된 파일: 없음";
-  }
-
-  function setPickedFile(input, file){
-    input.__pickedFile = file || null;
-    if (file){
-      try{
-        const dt = new DataTransfer();
-        dt.items.add(file);
-        input.files = dt.files;
-      } catch(_) {}
-    } else {
-      try{ input.value=""; } catch(_) {}
-    }
-    updatePickedLabel(input);
-  }
-
-  function guessTargetIdByName(filename){
-    const n = String(filename||"").toLowerCase();
-
-    if (n.includes("yeonkum") || n.includes("연금") || n.includes("pension")) return "fPension";
-    if (n.includes("gungang") || n.includes("건강") || n.includes("health")) return "fHealth";
-    if (n.includes("인사기록") || n.includes("hr")) return "fHr";
-
-    const isGoyong = n.includes("고용") || n.includes("goyong");
-    const isSanjae = n.includes("산재") || n.includes("sanjae");
-    const isWorker = n.includes("근로자") || n.includes("worker");
-    const isSpecial = n.includes("특수") || n.includes("특수고용") || n.includes("special");
-
-    if (isGoyong && isWorker) return "fGoyongWorker";
-    if (isSanjae && isWorker) return "fSanjaeWorker";
-    if (isGoyong && isSpecial) return "fGoyongSpecial";
-    if (isSanjae && isSpecial) return "fSanjaeSpecial";
-
-    return null;
-  }
-
-  function wireDropCard(card, input){
-    card.classList.add("drop-card");
-    let enterCount = 0;
-
-    const onDragOver = (e) => {
-      if (!e.dataTransfer) return;
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "copy";
-      card.classList.add("dragover");
-    };
-
-    card.addEventListener("dragenter", (e)=>{
-      if (!e.dataTransfer) return;
-      enterCount++;
-      onDragOver(e);
-    });
-
-    card.addEventListener("dragover", onDragOver);
-
-    card.addEventListener("dragleave", ()=>{
-      enterCount--;
-      if (enterCount <= 0){
-        enterCount = 0;
-        card.classList.remove("dragover");
+      function log(line) {
+        el.log.textContent += line + "\n";
+        el.log.scrollTop = el.log.scrollHeight;
       }
-    });
+      function clearLog() { el.log.textContent = ""; }
 
-    card.addEventListener("drop", (e)=>{
-      if (!e.dataTransfer) return;
-      e.preventDefault();
-      enterCount = 0;
-      card.classList.remove("dragover");
-
-      const files = Array.from(e.dataTransfer.files || []);
-      if (!files.length) return;
-      const f = files[0];
-
-      setPickedFile(input, f);
-      log(`📎 드롭 업로드: ${input.id} ← ${f.name}`);
-    });
-
-    // 카드 클릭 → 파일 선택창
-    card.addEventListener("click", (e)=>{
-      const tag = (e.target && e.target.tagName || "").toLowerCase();
-      if (["input","select","button","a"].includes(tag)) return;
-      input.click();
-    });
-  }
-
-  function wireDropAllZone(zoneEl, inputs){
-    let enterCount = 0;
-
-    const onDragOver = (e)=>{
-      if (!e.dataTransfer) return;
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "copy";
-      zoneEl.classList.add("dragover");
-    };
-
-    zoneEl.addEventListener("dragenter", (e)=>{
-      if (!e.dataTransfer) return;
-      enterCount++;
-      onDragOver(e);
-    });
-
-    zoneEl.addEventListener("dragover", onDragOver);
-
-    zoneEl.addEventListener("dragleave", ()=>{
-      enterCount--;
-      if (enterCount <= 0){
-        enterCount = 0;
-        zoneEl.classList.remove("dragover");
-      }
-    });
-
-    zoneEl.addEventListener("drop", (e)=>{
-      if (!e.dataTransfer) return;
-      e.preventDefault();
-      enterCount = 0;
-      zoneEl.classList.remove("dragover");
-
-      const files = Array.from(e.dataTransfer.files || []);
-      if (!files.length) return;
-
-      const assigned = [];
-      const unknown = [];
-
-      for (const f of files){
-        const id = guessTargetIdByName(f.name);
-        if (!id) { unknown.push(f.name); continue; }
-        const input = inputs.find(x=>x.id===id);
-        if (!input) { unknown.push(f.name); continue; }
-        setPickedFile(input, f);
-        assigned.push(`${f.name} → ${id}`);
+      function normalizeName(name) {
+        return String(name ?? "").replace(/\s+/g, "").trim();
       }
 
-      if (assigned.length){
-        log("📦 한 번에 드롭 자동 분류:");
-        assigned.forEach(s=>log(" - " + s));
+      function birth6FromBirthCell(v) {
+        if (v == null) return "";
+        if (v instanceof Date && !isNaN(v.getTime())) {
+          const yy = String(v.getFullYear()).slice(-2);
+          const mm = String(v.getMonth() + 1).padStart(2, "0");
+          const dd = String(v.getDate()).padStart(2, "0");
+          return yy + mm + dd;
+        }
+        const s = String(v).trim();
+        if (/^\d{2}-\d{2}-\d{2}$/.test(s)) return s.replaceAll("-", "");
+        if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(2, 4) + s.slice(5, 7) + s.slice(8, 10);
+        if (/^\d{6}/.test(s)) return s.slice(0, 6);
+        return s;
       }
-      if (unknown.length){
-        log("⚠️ 자동 분류 실패(키워드 부족): 해당 카드에 직접 드롭하세요.");
-        unknown.forEach(s=>log(" - " + s));
+
+      function birth6FromJumin(v) {
+        if (v == null) return "";
+        const s = String(v).trim();
+        const m = s.match(/^(\d{6})/);
+        return m ? m[1] : "";
       }
-    });
 
-    // 바깥에 떨어뜨려 브라우저가 파일 열어버리는 사고 방지
-    document.addEventListener("dragover", (e)=>{
-      if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes("Files")) e.preventDefault();
-    }, { passive:false });
+      function personKey(name, birth6) {
+        return normalizeName(name) + "|" + String(birth6 ?? "").trim();
+      }
 
-    document.addEventListener("drop", (e)=>{
-      const inZone = e.target && e.target.closest && e.target.closest(".drop-card, .drop-all-zone");
-      if (!inZone) e.preventDefault();
-    }, { passive:false });
-  }
+      function keyToParts(k) {
+        const [n, b] = String(k || "").split("|");
+        return { name: n || "", birth6: b || "" };
+      }
 
-  function setupDragAndDrop(){
-    const inputs = [
-      el.fPension, el.fHealth,
-      el.fGoyongWorker, el.fSanjaeWorker,
-      el.fGoyongSpecial, el.fSanjaeSpecial,
-      el.fHr
-    ].filter(Boolean);
+      function parseMoney(v) {
+        if (v == null) return 0;
+        if (typeof v === "number" && isFinite(v)) return Math.round(v);
+        const s = String(v).trim();
+        if (!s || s.toLowerCase() === "nan") return 0;
+        const cleaned = s.replace(/,/g, "");
+        const num = Number(cleaned);
+        return isFinite(num) ? Math.round(num) : 0;
+      }
 
-    inputs.forEach(input=>{
-      updatePickedLabel(input);
-      input.addEventListener("change", ()=>{
-        input.__pickedFile = (input.files && input.files[0]) || null;
-        updatePickedLabel(input);
-      });
-      const card = input.closest(".card");
-      if (card) wireDropCard(card, input);
-    });
+      function fmtMoney(n) {
+        const x = (typeof n === "number" && isFinite(n)) ? n : parseMoney(n);
+        return x.toLocaleString("ko-KR");
+      }
 
-    if (el.dropAllZone) wireDropAllZone(el.dropAllZone, inputs);
-  }
+      function safeTextDecoder(label) {
+        try { return new TextDecoder(label); } catch (_) { return null; }
+      }
 
-  setupDragAndDrop();
-
-  // ---------------------------
-  // main flow
-  // ---------------------------
-  el.btnRun.addEventListener("click", async ()=>{
-    clearLog();
-    el.btnDownloadMain.disabled = true;
-    el.btnDownloadReport.disabled = true;
-    lastMain = { blob:null, filename:null };
-    lastReport = { blob:null, filename:null };
-
-    // clear previews
-    el.preview1.innerHTML = "";
-    el.preview2.innerHTML = "";
-    el.preview3.innerHTML = "";
-    el.repMissPension.innerHTML = "";
-    el.repMissHealth.innerHTML = "";
-    el.repUnmatchPension.innerHTML = "";
-    el.repUnmatchHealth.innerHTML = "";
-    el.repMissHr.innerHTML = "";
-    el.repDupKeys.innerHTML = "";
-
-    function reqFile(inputEl, label){
-      const f = (inputEl.files && inputEl.files[0]) || inputEl.__pickedFile || null;
-      if (!f) throw new Error(`필수 파일 누락: ${label}`);
-      return f;
-    }
-
-    let fPension, fHealth, fGW, fSW, fGS, fSS, fHR;
-    try{
-      fPension = reqFile(el.fPension, "국민연금");
-      fHealth = reqFile(el.fHealth, "건강/요양");
-      fGW = reqFile(el.fGoyongWorker, "고용(근로자)");
-      fSW = reqFile(el.fSanjaeWorker, "산재(근로자)");
-      fGS = reqFile(el.fGoyongSpecial, "고용(특수)");
-      fSS = reqFile(el.fSanjaeSpecial, "산재(특수)");
-      fHR = reqFile(el.fHr, "인사기록");
-    } catch(e){
-      log(String(e.message || e));
-      return;
-    }
-
-    log("📥 파일 파싱 중...");
-
-    let pension, health, hr, goyW, sanW, goyS, sanS;
-    try{
-      pension = await parsePension(fPension);
-      log(`- 국민연금: ${pension.map.size}명`);
-    } catch(e){
-      log(`❌ 국민연금 파싱 실패: ${e}`);
-      return;
-    }
-
-    try{
-      health = await parseHealthNursing(fHealth);
-      log(`- 건강/요양: ${health.map.size}명`);
-    } catch(e){
-      log(`❌ 건강/요양 파싱 실패: ${e}`);
-      return;
-    }
-
-    try{
-      hr = await parseHr(fHR);
-      log(`- 인사기록: ${hr.map.size}명`);
-    } catch(e){
-      log(`❌ 인사기록 파싱 실패: ${e}`);
-      return;
-    }
-
-    try{
-      goyW = await parseKcomwelGoyong(fGW);
-      sanW = await parseKcomwelSanjae(fSW);
-      goyS = await parseKcomwelGoyong(fGS);
-      sanS = await parseKcomwelSanjae(fSS);
-      log(`- 고용(근로자): ${goyW.length}행 / 산재(근로자): ${sanW.length}행`);
-      log(`- 고용(특수): ${goyS.length}행 / 산재(특수): ${sanS.length}행`);
-    } catch(e){
-      log(`❌ 고용/산재 파싱 실패: ${e}`);
-      return;
-    }
-
-    log("\n🧠 집계 중...");
-
-    // ---------------------------
-    // 중복키 모음
-    // ---------------------------
-    const dupKeys = [];
-    dupKeys.push(...pension.dup);
-    dupKeys.push(...health.dup);
-    dupKeys.push(...hr.dup);
-
-    // ---------------------------
-    // 시트1(일반) 집계 베이스
-    // ---------------------------
-    const people = new Map(); // key -> agg
-    function ensureAgg(name, birth6){
-      const k = personKey(name, birth6);
-      if (!people.has(k)){
-        people.set(k, {
-          name: String(name??"").trim(),
-          birth6: String(birth6??"").trim(),
-          wage: 0,
-
-          pensionRaw: 0,
-          pensionP: 0,
-          pensionO: 0,
-
-          healthTotal: 0,
-          nursingTotal: 0,
-          healthP: 0,
-          healthO: 0,
-          nursingP: 0,
-          nursingO: 0,
-
-          goyP: 0,
-          goyO1: 0,
-          goyO2: 0,
-
-          sanjaeO: 0,
+      async function readFileAsArrayBuffer(file) {
+        return await new Promise((resolve, reject) => {
+          const fr = new FileReader();
+          fr.onerror = () => reject(fr.error);
+          fr.onload = () => resolve(fr.result);
+          fr.readAsArrayBuffer(file);
         });
       }
-      return people.get(k);
-    }
 
-    // 고용/산재(근로자)에서 일반만
-    for (const r of goyW){
-      if (normalizeWorkerKind(r.type) !== "일반") continue;
-      const a = ensureAgg(r.name, r.birth6);
-      a.wage = Math.max(a.wage, r.wage || 0);
-      a.goyP += r.goyEmp;
-      a.goyO1 += r.goyEr1;
-      a.goyO2 += r.goyEr2;
-    }
-    for (const r of sanW){
-      if (normalizeWorkerKind(r.type) !== "일반") continue;
-      const a = ensureAgg(r.name, r.birth6);
-      a.wage = Math.max(a.wage, r.wage || 0);
-      a.sanjaeO += r.sanjae;
-    }
-
-    const peopleKeys = new Set(Array.from(people.keys()));
-
-    // ---------------------------
-    // 국민연금/건강요양 매칭 + 누락/미매칭 리포트
-    // ---------------------------
-    const missPension = [];
-    const missHealth = [];
-
-    for (const a of people.values()){
-      const k = personKey(a.name, a.birth6);
-
-      if (pension.map.has(k)) a.pensionRaw = pension.map.get(k);
-      else missPension.push({ key:k, name:a.name, birth6:a.birth6 });
-
-      if (health.map.has(k)){
-        const hv = health.map.get(k);
-        a.healthTotal = hv.healthTotal || 0;
-        a.nursingTotal = hv.nursingTotal || 0;
-        // 보수 보완(국민연금 자동 판단에 도움)
-        a.wage = Math.max(a.wage, hv.wage || 0);
-      } else {
-        missHealth.push({ key:k, name:a.name, birth6:a.birth6 });
+      async function readFileAsTextEuckr(file) {
+        const ab = await readFileAsArrayBuffer(file);
+        const u8 = new Uint8Array(ab);
+        const decEucKr = safeTextDecoder("euc-kr");
+        const decUtf8 = safeTextDecoder("utf-8");
+        if (decEucKr) return decEucKr.decode(u8);
+        if (decUtf8) return decUtf8.decode(u8);
+        return String.fromCharCode(...u8);
       }
-    }
 
-    // NHIS 미매칭(시트1 일반에 없음)
-    const unmatchPension = [];
-    for (const [k,amt] of pension.map.entries()){
-      if (!peopleKeys.has(k)){
-        const p = keyToParts(k);
-        unmatchPension.push({ key:k, name:p.name, birth6:p.birth6, amount: amt });
+      function sheetToRowsAOA(sheet) {
+        return XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: null });
       }
-    }
 
-    const unmatchHealth = [];
-    for (const [k,v] of health.map.entries()){
-      if (!peopleKeys.has(k)){
-        const p = keyToParts(k);
-        unmatchHealth.push({
-          key:k,
-          name:p.name,
-          birth6:p.birth6,
-          healthTotal: v.healthTotal || 0,
-          nursingTotal: v.nursingTotal || 0
+      // ---------- parsers ----------
+      async function parseCsvToObjects(file) {
+        const text = await readFileAsTextEuckr(file);
+        const wb = XLSX.read(text, { type: "string" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const aoa = sheetToRowsAOA(ws);
+        if (!aoa || aoa.length < 2) return [];
+
+        const headers = aoa[0].map(h => String(h ?? "").trim());
+        const out = [];
+        for (let i = 1; i < aoa.length; i++) {
+          const row = aoa[i];
+          if (!row || row.every(v => v == null || String(v).trim() === "")) continue;
+          const obj = {};
+          for (let c = 0; c < headers.length; c++) {
+            obj[headers[c] || `COL${c}`] = row[c];
+          }
+          out.push(obj);
+        }
+        return out;
+      }
+
+      async function parseXlsxFirstSheetAOA(file) {
+        const ab = await readFileAsArrayBuffer(file);
+        const wb = XLSX.read(new Uint8Array(ab), { type: "array", cellDates: true });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        return sheetToRowsAOA(ws);
+      }
+
+      function findColIndexTwoHeader(h1, h2, groupLike, subLike) {
+        const gl = String(groupLike).toLowerCase();
+        const sl = String(subLike).toLowerCase();
+
+        let lastGroup = "";
+        for (let c = 0; c < Math.max(h1.length, h2.length); c++) {
+          const gRaw = h1[c];
+          if (gRaw != null && String(gRaw).trim() !== "") lastGroup = String(gRaw).replace(/\s+/g, "").trim();
+          const sRaw = h2[c];
+          const g = lastGroup.toLowerCase();
+          const s = String(sRaw ?? "").replace(/\s+/g, "").toLowerCase();
+
+          if (g.includes(gl) && s.includes(sl)) return c;
+        }
+        return -1;
+      }
+
+      function findColIndexOneHeader(h, like) {
+        const lk = String(like).toLowerCase();
+        for (let c = 0; c < h.length; c++) {
+          const v = String(h[c] ?? "").replace(/\s+/g, "").toLowerCase();
+          if (v.includes(lk)) return c;
+        }
+        return -1;
+      }
+
+      async function parseKcomwelGoyong(file) {
+        const aoa = await parseXlsxFirstSheetAOA(file);
+        if (!aoa || aoa.length < 4) return [];
+
+        const h1 = aoa[0] || [];
+        const h2 = aoa[1] || [];
+
+        const idxType = findColIndexOneHeader(h1, "근로자구분");
+        const idxName = findColIndexOneHeader(h1, "근로자명");
+        const idxBirth = findColIndexOneHeader(h1, "생년월일");
+        const idxWage = findColIndexOneHeader(h1, "월평균보수");
+
+        // "보험료합계(①+②+③)" 구간의 세부 컬럼들
+        const idxEmp = findColIndexTwoHeader(h1, h2, "보험료합계", "근로자실업");
+        const idxEr1 = findColIndexTwoHeader(h1, h2, "보험료합계", "사업주실업");
+        const idxEr2 = findColIndexTwoHeader(h1, h2, "보험료합계", "사업주고안");
+
+        const rows = [];
+        for (let r = 2; r < aoa.length; r++) {
+          const row = aoa[r];
+          if (!row) continue;
+
+          const name = row[idxName];
+          if (name == null || String(name).trim() === "") continue;
+
+          const type = row[idxType];
+          const birth6 = birth6FromBirthCell(row[idxBirth]);
+          const wage = parseMoney(row[idxWage]);
+
+          rows.push({
+            type: String(type ?? "").trim(),
+            name: String(name ?? "").trim(),
+            birth6,
+            wage,
+            goyEmp: parseMoney(row[idxEmp]),
+            goyEr1: parseMoney(row[idxEr1]),
+            goyEr2: parseMoney(row[idxEr2]),
+          });
+        }
+        return rows;
+      }
+
+      async function parseKcomwelSanjae(file) {
+        const aoa = await parseXlsxFirstSheetAOA(file);
+        if (!aoa || aoa.length < 3) return [];
+
+        const h = aoa[0] || [];
+        const idxType = findColIndexOneHeader(h, "근로자구분");
+        const idxName = findColIndexOneHeader(h, "근로자명");
+        const idxBirth = findColIndexOneHeader(h, "생년월일");
+        const idxWage = findColIndexOneHeader(h, "월평균보수");
+        const idxPremium = findColIndexOneHeader(h, "보험료합계");
+
+        const rows = [];
+        for (let r = 1; r < aoa.length; r++) {
+          const row = aoa[r];
+          if (!row) continue;
+
+          const name = row[idxName];
+          if (name == null || String(name).trim() === "") continue;
+
+          const type = row[idxType];
+          const birth6 = birth6FromBirthCell(row[idxBirth]);
+          const wage = parseMoney(row[idxWage]);
+
+          rows.push({
+            type: String(type ?? "").trim(),
+            name: String(name ?? "").trim(),
+            birth6,
+            wage,
+            sanjae: parseMoney(row[idxPremium]),
+          });
+        }
+        return rows;
+      }
+
+      async function parseHr(file) {
+        const aoa = await parseXlsxFirstSheetAOA(file);
+        if (!aoa || aoa.length < 2) return [];
+
+        const headers = (aoa[0] || []).map(v => String(v ?? "").trim());
+        const idxName = headers.findIndex(h => h.includes("성명"));
+        const idxJumin = headers.findIndex(h => h.includes("주민번호"));
+        const idxJob = headers.findIndex(h => h.includes("직종"));
+
+        const out = [];
+        for (let r = 1; r < aoa.length; r++) {
+          const row = aoa[r];
+          if (!row) continue;
+          const name = row[idxName];
+          if (name == null || String(name).trim() === "") continue;
+          const jumin = row[idxJumin];
+          const birth6 = birth6FromJumin(jumin);
+          const job = row[idxJob];
+
+          out.push({
+            name: String(name ?? "").trim(),
+            birth6,
+            job: String(job ?? "").trim(),
+          });
+        }
+        return out;
+      }
+
+      // ---------- business rules ----------
+      function normalizeWorkerKind(s) {
+        const t = String(s ?? "").replace(/\s+/g, "");
+        if (t.includes("일반")) return "일반";
+        if (t.includes("특수")) return "특수";
+        if (t.includes("노무") || t.includes("제공자")) return "특수";
+        return t || "미분류";
+      }
+
+      function decideSplitMode(mode, amount, wage, thresholdRatio) {
+        if (!amount) return "personal";
+        if (mode === "total") return "total";
+        if (mode === "personal") return "personal";
+        // auto
+        if (wage && wage > 0) {
+          const ratio = amount / wage;
+          return ratio > thresholdRatio ? "total" : "personal";
+        }
+        return "total";
+      }
+
+      function splitHalf(amount) {
+        const a = parseMoney(amount);
+        const left = Math.floor(a / 2);
+        const right = a - left;
+        return [left, right];
+      }
+
+      // ---------- rendering ----------
+      function renderPreview(container, headers, rows, limit = 30, opts = {}) {
+        const showFooterTotals = !!opts.showFooterTotals;
+        const safe = rows.slice(0, limit);
+
+        const sums = new Array(headers.length).fill(0);
+        if (showFooterTotals) {
+          for (const r of rows) {
+            for (let c = 0; c < headers.length; c++) {
+              if (c === 0) continue; // 연번 제외
+              const v = r[c];
+              if (typeof v === "number" && isFinite(v)) sums[c] += v;
+            }
+          }
+        }
+
+        const tbl = document.createElement("table");
+        tbl.className = "sheetlike";
+
+        const thead = document.createElement("thead");
+        const trh = document.createElement("tr");
+        headers.forEach(h => {
+          const th = document.createElement("th");
+          th.textContent = h;
+          trh.appendChild(th);
         });
+        thead.appendChild(trh);
+        tbl.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
+        safe.forEach(r => {
+          const tr = document.createElement("tr");
+          r.forEach((v) => {
+            const td = document.createElement("td");
+            if (typeof v === "number" && isFinite(v)) {
+              td.textContent = fmtMoney(v);
+              td.className = "numeric";
+            } else {
+              td.textContent = (v == null ? "" : String(v));
+            }
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+        tbl.appendChild(tbody);
+
+        if (showFooterTotals) {
+          const tfoot = document.createElement("tfoot");
+          const trf = document.createElement("tr");
+          for (let c = 0; c < headers.length; c++) {
+            const td = document.createElement("td");
+            if (c === 1) {
+              td.textContent = "합계";
+              td.style.fontWeight = "800";
+            } else if (c === 0) {
+              td.textContent = "";
+            } else if (typeof sums[c] === "number" && isFinite(sums[c]) && sums[c] !== 0) {
+              td.textContent = fmtMoney(sums[c]);
+              td.className = "numeric";
+              td.style.fontWeight = "800";
+            } else {
+              td.textContent = "";
+            }
+            trf.appendChild(td);
+          }
+          tfoot.appendChild(trf);
+          tbl.appendChild(tfoot);
+        }
+
+        container.innerHTML = "";
+        container.appendChild(tbl);
+
+        const note = document.createElement("p");
+        note.className = "muted";
+        note.textContent = `총 ${rows.length}행 중 ${safe.length}행 미리보기`;
+        container.appendChild(note);
       }
-    }
 
-    // ---------------------------
-    // 국민연금 개인/기관 분리 (건강/요양은 고정 1:1)
-    // ---------------------------
-    const pensionMode = el.optPensionMode.value;
+      // ---------- excel helpers ----------
+      function applyNumberFormats(ws, headerRowIdx = 0) {
+        const ref = ws["!ref"];
+        if (!ref) return;
+        const range = XLSX.utils.decode_range(ref);
+        for (let R = range.s.r; R <= range.e.r; R++) {
+          for (let C = range.s.c; C <= range.e.c; C++) {
+            const addr = XLSX.utils.encode_cell({ r: R, c: C });
+            const cell = ws[addr];
+            if (!cell) continue;
+            if (R === headerRowIdx) continue;
+            if (cell.t === "n") cell.z = "#,##0";
+          }
+        }
+      }
 
-    for (const a of people.values()){
-      // 국민연금
-      const pSplit = decidePensionSplitMode(pensionMode, a.pensionRaw, a.wage, 0.06);
-      if (a.pensionRaw){
-        if (pSplit === "total"){
-          const [pp, po] = splitHalf(a.pensionRaw);
-          a.pensionP = pp; a.pensionO = po;
+      function setColWidths(ws, widths) {
+        ws["!cols"] = widths.map(w => ({ wch: w }));
+      }
+
+      function aoaToSheet(headers, rows) {
+        const aoa = [headers, ...rows];
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        applyNumberFormats(ws, 0);
+        return ws;
+      }
+
+      function workbookToBlob(wb) {
+        const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+        return new Blob([wbout], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      }
+
+      function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+      }
+
+      function buildReportWorkbook(report) {
+        // report: { arrays + counts }
+        const aoa = [];
+
+        aoa.push(["누락/충돌 리포트"]);
+        aoa.push([]);
+        aoa.push(["항목", "건수"]);
+        aoa.push(["시트1(일반) 국민연금 누락", report.missPension.length]);
+        aoa.push(["시트1(일반) 건강보험 누락", report.missHealth.length]);
+        aoa.push(["NHIS 국민연금 미매칭(시트1 외)", report.unmatchPension.length]);
+        aoa.push(["NHIS 건강보험 미매칭(시트1 외)", report.unmatchHealth.length]);
+        aoa.push(["시트2 후보 중 HR 미존재로 제외", report.missHr.length]);
+        aoa.push(["중복키 감지(전체)", report.dupKeys.length]);
+
+        aoa.push([]);
+        aoa.push(["[1] 시트1(일반) 국민연금 누락"]);
+        aoa.push(["연번", "성명", "생년월일6", "키"]);
+        report.missPension.forEach((r, i) => aoa.push([i + 1, r.name, r.birth6, r.key]));
+
+        aoa.push([]);
+        aoa.push(["[2] 시트1(일반) 건강보험 누락"]);
+        aoa.push(["연번", "성명", "생년월일6", "키"]);
+        report.missHealth.forEach((r, i) => aoa.push([i + 1, r.name, r.birth6, r.key]));
+
+        aoa.push([]);
+        aoa.push(["[3] NHIS 국민연금 미매칭(시트1 일반에 없음)"]);
+        aoa.push(["연번", "성명", "생년월일6", "금액(합산)", "키"]);
+        report.unmatchPension.forEach((r, i) => aoa.push([i + 1, r.name, r.birth6, r.amount, r.key]));
+
+        aoa.push([]);
+        aoa.push(["[4] NHIS 건강보험 미매칭(시트1 일반에 없음)"]);
+        aoa.push(["연번", "성명", "생년월일6", "금액(합산)", "키"]);
+        report.unmatchHealth.forEach((r, i) => aoa.push([i + 1, r.name, r.birth6, r.amount, r.key]));
+
+        aoa.push([]);
+        aoa.push(["[5] 시트2 후보 중 HR 미존재로 제외"]);
+        aoa.push(["연번", "성명", "생년월일6", "산재보험료(기관)", "키"]);
+        report.missHr.forEach((r, i) => aoa.push([i + 1, r.name, r.birth6, r.sanjaeOrg, r.key]));
+
+        aoa.push([]);
+        aoa.push(["[6] 중복키 감지(이름+생년월일6)"]);
+        aoa.push(["연번", "데이터셋", "성명", "생년월일6", "건수", "금액합(가능시)", "키"]);
+        report.dupKeys.forEach((r, i) => aoa.push([i + 1, r.dataset, r.name, r.birth6, r.count, r.sum ?? "", r.key]));
+
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        // 숫자 포맷(요약/금액 열에만 적용되도록 전체 적용)
+        applyNumberFormats(ws, -1);
+
+        setColWidths(ws, [6, 22, 14, 16, 16, 16, 26]);
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "누락_충돌_리포트");
+        return wb;
+      }
+
+      // ---------- main ----------
+      el.btnRun.addEventListener("click", async () => {
+        clearLog();
+        el.btnDownload.disabled = true;
+        el.btnDownloadReport.disabled = true;
+
+        lastWorkbookBlob = null;
+        lastFilename = null;
+        lastReportBlob = null;
+        lastReportFilename = null;
+
+        // reset UI tables
+        el.preview1.innerHTML = "";
+        el.preview2.innerHTML = "";
+        el.preview3.innerHTML = "";
+
+        el.repMissPension.innerHTML = "";
+        el.repMissHealth.innerHTML = "";
+        el.repUnmatchPension.innerHTML = "";
+        el.repUnmatchHealth.innerHTML = "";
+        el.repMissHr.innerHTML = "";
+        el.repDupKeys.innerHTML = "";
+
+        const warnings = [];
+
+        function reqFile(inputEl, label) {
+          const f = inputEl.files && inputEl.files[0];
+          if (!f) warnings.push(`누락: ${label}`);
+          return f || null;
+        }
+
+        const fPension = reqFile(el.fPensionCsv, "국민연금 CSV");
+        const fHealth = reqFile(el.fHealthCsv, "건강보험 CSV");
+        const fGoyW = reqFile(el.fGoyongWorker, "고용보험(근로자) xlsx");
+        const fSanW = reqFile(el.fSanjaeWorker, "산재보험(근로자) xlsx");
+        const fGoyS = reqFile(el.fGoyongSpecial, "고용보험(특수) xlsx");
+        const fSanS = reqFile(el.fSanjaeSpecial, "산재보험(특수) xlsx");
+        const fHr = reqFile(el.fHrXlsx, "공무직 인사기록 xlsx");
+
+        if (warnings.length) {
+          log("필수 파일 누락:");
+          warnings.forEach(w => log(" - " + w));
+          log("\n누락 파일을 업로드한 뒤 다시 실행하세요.");
+          el.kpiWarnings.textContent = String(warnings.length);
+          return;
+        }
+
+        log("파일 읽는 중...");
+
+        // Parse all
+        let pensionRows = [];
+        let healthRows = [];
+        let goyWorker = [];
+        let sanWorker = [];
+        let goySpecial = [];
+        let sanSpecial = [];
+        let hrRows = [];
+
+        try { pensionRows = await parseCsvToObjects(fPension); log(`- 국민연금 CSV: ${pensionRows.length}행`); }
+        catch (e) { log(`국민연금 CSV 파싱 실패: ${e}`); return; }
+
+        try { healthRows = await parseCsvToObjects(fHealth); log(`- 건강보험 CSV: ${healthRows.length}행`); }
+        catch (e) { log(`건강보험 CSV 파싱 실패: ${e}`); return; }
+
+        try { goyWorker = await parseKcomwelGoyong(fGoyW); log(`- 고용보험(근로자): ${goyWorker.length}행`); }
+        catch (e) { log(`고용보험(근로자) xlsx 파싱 실패: ${e}`); return; }
+
+        try { sanWorker = await parseKcomwelSanjae(fSanW); log(`- 산재보험(근로자): ${sanWorker.length}행`); }
+        catch (e) { log(`산재보험(근로자) xlsx 파싱 실패: ${e}`); return; }
+
+        try { goySpecial = await parseKcomwelGoyong(fGoyS); log(`- 고용보험(특수): ${goySpecial.length}행`); }
+        catch (e) { log(`고용보험(특수) xlsx 파싱 실패: ${e}`); return; }
+
+        try { sanSpecial = await parseKcomwelSanjae(fSanS); log(`- 산재보험(특수): ${sanSpecial.length}행`); }
+        catch (e) { log(`산재보험(특수) xlsx 파싱 실패: ${e}`); return; }
+
+        try { hrRows = await parseHr(fHr); log(`- 공무직 인사기록: ${hrRows.length}행`); }
+        catch (e) { log(`공무직 인사기록 xlsx 파싱 실패: ${e}`); return; }
+
+        log("\n매칭/집계 중...");
+
+        // ---------- Build maps (with duplicate detection) ----------
+        const dupKeys = []; // {dataset, key, name, birth6, count, sum?}
+
+        // 국민연금: key -> {sum, count}
+        const pensionAgg = new Map();
+        for (const r of pensionRows) {
+          const name = r["가입자명"] ?? r["성명"] ?? r["이름"] ?? "";
+          const birth6 = birth6FromJumin(r["주민번호"] ?? r["주민등록번호"] ?? "");
+          const amt = parseMoney(r["결정보험료"] ?? r["보험료"] ?? 0);
+          if (!normalizeName(name) || !birth6) continue;
+
+          const k = personKey(name, birth6);
+          const cur = pensionAgg.get(k) || { sum: 0, count: 0 };
+          cur.sum += amt;
+          cur.count += 1;
+          pensionAgg.set(k, cur);
+        }
+        const pensionMap = new Map();
+        for (const [k, v] of pensionAgg.entries()) {
+          pensionMap.set(k, v.sum);
+          if (v.count > 1) {
+            const p = keyToParts(k);
+            dupKeys.push({ dataset: "국민연금CSV", key: k, name: p.name, birth6: p.birth6, count: v.count, sum: v.sum });
+          }
+        }
+
+        // 건강보험: key -> {sum, count}, + wage map
+        const healthAgg = new Map();
+        const healthWageMap = new Map();
+        for (const r of healthRows) {
+          const name = r["성명"] ?? r["가입자명"] ?? r["이름"] ?? "";
+          const birth6 = birth6FromJumin(r["주민번호"] ?? r["주민등록번호"] ?? "");
+          const a = parseMoney(r["고지보험료"] ?? 0);
+          const b = parseMoney(r["고지보험료.1"] ?? 0);
+          const sum = a + b;
+          if (!normalizeName(name) || !birth6) continue;
+
+          const k = personKey(name, birth6);
+          const cur = healthAgg.get(k) || { sum: 0, count: 0 };
+          cur.sum += sum;
+          cur.count += 1;
+          healthAgg.set(k, cur);
+
+          const wage = parseMoney(r["보수월액"] ?? 0);
+          if (wage) {
+            const prev = healthWageMap.get(k) || 0;
+            healthWageMap.set(k, Math.max(prev, wage));
+          }
+        }
+        const healthMap = new Map();
+        for (const [k, v] of healthAgg.entries()) {
+          healthMap.set(k, v.sum);
+          if (v.count > 1) {
+            const p = keyToParts(k);
+            dupKeys.push({ dataset: "건강보험CSV", key: k, name: p.name, birth6: p.birth6, count: v.count, sum: v.sum });
+          }
+        }
+
+        // HR map: key -> row, duplicate warn
+        const hrMap = new Map();
+        const hrCount = new Map();
+        for (const r of hrRows) {
+          if (!normalizeName(r.name) || !r.birth6) continue;
+          const k = personKey(r.name, r.birth6);
+          const cnt = (hrCount.get(k) || 0) + 1;
+          hrCount.set(k, cnt);
+          if (!hrMap.has(k)) hrMap.set(k, r);
+        }
+        for (const [k, cnt] of hrCount.entries()) {
+          if (cnt > 1) {
+            const p = keyToParts(k);
+            dupKeys.push({ dataset: "인사기록", key: k, name: p.name, birth6: p.birth6, count: cnt, sum: "" });
+          }
+        }
+
+        // ---------- Aggregate general (sheet1 base) ----------
+        const people = new Map(); // key -> agg object
+
+        function ensureAgg(name, birth6) {
+          const k = personKey(name, birth6);
+          if (!people.has(k)) {
+            people.set(k, {
+              name: String(name ?? "").trim(),
+              birth6: String(birth6 ?? "").trim(),
+              wage: 0,
+
+              pensionRaw: 0,
+              healthRaw: 0,
+
+              pensionPersonal: 0,
+              pensionOrg: 0,
+              healthPersonal: 0,
+              healthOrg: 0,
+
+              goyPersonal: 0,
+              goyOrg1: 0,
+              goyOrg2: 0,
+
+              sanjaeOrg: 0,
+
+              kind: "미분류",
+            });
+          }
+          return people.get(k);
+        }
+
+        // ingest goy/sanjae (근로자)
+        for (const r of goyWorker) {
+          const kind = normalizeWorkerKind(r.type);
+          if (kind !== "일반") continue;
+          const a = ensureAgg(r.name, r.birth6);
+          a.kind = "일반";
+          a.wage = Math.max(a.wage, r.wage || 0);
+          a.goyPersonal += r.goyEmp;
+          a.goyOrg1 += r.goyEr1;
+          a.goyOrg2 += r.goyEr2;
+        }
+
+        for (const r of sanWorker) {
+          const kind = normalizeWorkerKind(r.type);
+          if (kind !== "일반") continue;
+          const a = ensureAgg(r.name, r.birth6);
+          a.kind = "일반";
+          a.wage = Math.max(a.wage, r.wage || 0);
+          a.sanjaeOrg += r.sanjae;
+        }
+
+        // ---------- attach pension/health to general + missing lists ----------
+        const missPension = [];
+        const missHealth = [];
+
+        for (const a of people.values()) {
+          const k = personKey(a.name, a.birth6);
+
+          if (pensionMap.has(k)) a.pensionRaw = pensionMap.get(k);
+          else missPension.push({ key: k, name: a.name, birth6: a.birth6 });
+
+          if (healthMap.has(k)) a.healthRaw = healthMap.get(k);
+          else missHealth.push({ key: k, name: a.name, birth6: a.birth6 });
+
+          // wage fallback: 건강보험 CSV 보수월액
+          if (!a.wage || a.wage <= 0) {
+            const hw = healthWageMap.get(k) || 0;
+            if (hw) a.wage = hw;
+          }
+        }
+
+        log(`- 시트1 후보(일반) 인원: ${people.size}명`);
+        log(`- 국민연금 누락(시트1 기준): ${missPension.length}명`);
+        log(`- 건강보험 누락(시트1 기준): ${missHealth.length}명`);
+
+        // ---------- NHIS unmatched lists ----------
+        const peopleKeys = new Set(Array.from(people.keys()));
+        const unmatchPension = [];
+        for (const [k, amt] of pensionMap.entries()) {
+          if (!peopleKeys.has(k)) {
+            const p = keyToParts(k);
+            unmatchPension.push({ key: k, name: p.name, birth6: p.birth6, amount: amt });
+          }
+        }
+        const unmatchHealth = [];
+        for (const [k, amt] of healthMap.entries()) {
+          if (!peopleKeys.has(k)) {
+            const p = keyToParts(k);
+            unmatchHealth.push({ key: k, name: p.name, birth6: p.birth6, amount: amt });
+          }
+        }
+
+        // ---------- split pension/health into personal/org ----------
+        const pensionMode = el.optPensionMode.value;
+        const healthMode = el.optHealthMode.value;
+
+        for (const a of people.values()) {
+          const pAmt = a.pensionRaw;
+          const hAmt = a.healthRaw;
+
+          const pSplit = decideSplitMode(pensionMode, pAmt, a.wage, 0.06);
+          if (pAmt) {
+            if (pSplit === "total") {
+              const [pp, po] = splitHalf(pAmt);
+              a.pensionPersonal = pp;
+              a.pensionOrg = po;
+            } else {
+              a.pensionPersonal = parseMoney(pAmt);
+              a.pensionOrg = parseMoney(pAmt);
+            }
+          }
+
+          const hSplit = decideSplitMode(healthMode, hAmt, a.wage, 0.06);
+          if (hAmt) {
+            if (hSplit === "total") {
+              const [hp, ho] = splitHalf(hAmt);
+              a.healthPersonal = hp;
+              a.healthOrg = ho;
+            } else {
+              a.healthPersonal = parseMoney(hAmt);
+              a.healthOrg = parseMoney(hAmt);
+            }
+          }
+        }
+
+        // ---------- Build Sheet1 rows ----------
+        const sheet1Headers = [
+          "연번", "근로자 성명",
+          "국민연금(개인)", "국민연금(기관)",
+          "건강보험료(개인)", "건강보험료(기관)",
+          "고용보험료(개인)", "고용보험료(기관1)", "고용보험료(기관2)",
+          "산재보험료(기관)",
+          "개인부담금 합계", "기관부담금 합계"
+        ];
+
+        const sheet1List = Array.from(people.values())
+          .sort((a, b) => (a.name || "").localeCompare(b.name || "", "ko"));
+
+        const sheet1Rows = sheet1List.map((a, i) => {
+          const personalSum = a.pensionPersonal + a.healthPersonal + a.goyPersonal;
+          const orgSum = a.pensionOrg + a.healthOrg + a.goyOrg1 + a.goyOrg2 + a.sanjaeOrg;
+          return [
+            i + 1,
+            a.name,
+            a.pensionPersonal, a.pensionOrg,
+            a.healthPersonal, a.healthOrg,
+            a.goyPersonal, a.goyOrg1, a.goyOrg2,
+            a.sanjaeOrg,
+            personalSum,
+            orgSum
+          ];
+        });
+
+        // ---------- Build Sheet2 ----------
+        const sheet2Headers = ["연번", "공무직 성명", "직종", "산재보험료(기관)", "기관부담금 합계"];
+        const sheet2Candidates = sheet1List.filter(a => {
+          const goyTotal = a.goyPersonal + a.goyOrg1 + a.goyOrg2;
+          return goyTotal === 0 && a.sanjaeOrg > 0;
+        });
+
+        const sheet2Filtered = [];
+        const missHr = []; // report list
+        for (const a of sheet2Candidates) {
+          const k = personKey(a.name, a.birth6);
+          const hr = hrMap.get(k);
+          if (!hr) {
+            missHr.push({ key: k, name: a.name, birth6: a.birth6, sanjaeOrg: a.sanjaeOrg });
+            continue;
+          }
+          sheet2Filtered.push({
+            name: a.name,
+            job: hr.job || "",
+            sanjae: a.sanjaeOrg
+          });
+        }
+
+        const sheet2Rows = sheet2Filtered
+          .sort((a, b) => (a.name || "").localeCompare(b.name || "", "ko"))
+          .map((r, i) => [i + 1, r.name, r.job, r.sanjae, r.sanjae]);
+
+        log(`- 시트2 후보(산재만): ${sheet2Candidates.length}명`);
+        log(`- 시트2 HR 미존재로 제외: ${missHr.length}명`);
+        log(`- 시트2 최종(공무직 산재): ${sheet2Rows.length}명`);
+
+        // ---------- Build Sheet3 ----------
+        const special = new Map();
+
+        function ensureSpecial(name, birth6) {
+          const k = personKey(name, birth6);
+          if (!special.has(k)) {
+            special.set(k, {
+              name: String(name ?? "").trim(),
+              birth6: String(birth6 ?? "").trim(),
+              goyPersonal: 0,
+              goyOrg1: 0,
+              goyOrg2: 0,
+              sanjaeOrg: 0,
+            });
+          }
+          return special.get(k);
+        }
+
+        for (const r of goySpecial) {
+          const kind = normalizeWorkerKind(r.type);
+          if (kind !== "특수") continue;
+          const a = ensureSpecial(r.name, r.birth6);
+          a.goyPersonal += r.goyEmp;
+          a.goyOrg1 += r.goyEr1;
+          a.goyOrg2 += r.goyEr2;
+        }
+
+        for (const r of sanSpecial) {
+          const a = ensureSpecial(r.name, r.birth6);
+          a.sanjaeOrg += r.sanjae;
+        }
+
+        const sheet3Headers = [
+          "연번", "특수고용근로자 성명",
+          "고용보험료(개인)", "고용보험료(기관1)", "고용보험료(기관2)",
+          "산재보험료(기관)",
+          "개인부담금 합계", "기관부담금 합계"
+        ];
+
+        const sheet3List = Array.from(special.values())
+          .sort((a, b) => (a.name || "").localeCompare(b.name || "", "ko"));
+
+        const sheet3Rows = sheet3List.map((a, i) => {
+          const personalSum = a.goyPersonal;
+          const orgSum = a.goyOrg1 + a.goyOrg2 + a.sanjaeOrg;
+          return [
+            i + 1,
+            a.name,
+            a.goyPersonal, a.goyOrg1, a.goyOrg2,
+            a.sanjaeOrg,
+            personalSum,
+            orgSum
+          ];
+        });
+
+        // ---------- Render previews (with footer totals option) ----------
+        const showTotals = el.optPreviewTotals.checked;
+
+        renderPreview(el.preview1, sheet1Headers, sheet1Rows, 30, { showFooterTotals: showTotals });
+        renderPreview(el.preview2, sheet2Headers, sheet2Rows, 30, { showFooterTotals: showTotals });
+        renderPreview(el.preview3, sheet3Headers, sheet3Rows, 30, { showFooterTotals: showTotals });
+
+        // ---------- Render report tables ----------
+        function renderReportTable(container, headers, rows) {
+          renderPreview(container, headers, rows, 30, { showFooterTotals: false });
+        }
+
+        const repMissHeaders = ["연번", "성명", "생년월일6", "키"];
+        renderReportTable(
+          el.repMissPension,
+          repMissHeaders,
+          missPension
+            .sort((a,b)=>a.name.localeCompare(b.name,"ko"))
+            .map((r,i)=>[i+1, r.name, r.birth6, r.key])
+        );
+        renderReportTable(
+          el.repMissHealth,
+          repMissHeaders,
+          missHealth
+            .sort((a,b)=>a.name.localeCompare(b.name,"ko"))
+            .map((r,i)=>[i+1, r.name, r.birth6, r.key])
+        );
+
+        const repUnmatchHeaders = ["연번", "성명", "생년월일6", "금액(합산)", "키"];
+        renderReportTable(
+          el.repUnmatchPension,
+          repUnmatchHeaders,
+          unmatchPension
+            .sort((a,b)=>a.name.localeCompare(b.name,"ko"))
+            .map((r,i)=>[i+1, r.name, r.birth6, r.amount, r.key])
+        );
+        renderReportTable(
+          el.repUnmatchHealth,
+          repUnmatchHeaders,
+          unmatchHealth
+            .sort((a,b)=>a.name.localeCompare(b.name,"ko"))
+            .map((r,i)=>[i+1, r.name, r.birth6, r.amount, r.key])
+        );
+
+        const repMissHrHeaders = ["연번", "성명", "생년월일6", "산재보험료(기관)", "키"];
+        renderReportTable(
+          el.repMissHr,
+          repMissHrHeaders,
+          missHr
+            .sort((a,b)=>a.name.localeCompare(b.name,"ko"))
+            .map((r,i)=>[i+1, r.name, r.birth6, r.sanjaeOrg, r.key])
+        );
+
+        const repDupHeaders = ["연번", "데이터셋", "성명", "생년월일6", "건수", "금액합(가능시)", "키"];
+        renderReportTable(
+          el.repDupKeys,
+          repDupHeaders,
+          dupKeys
+            .sort((a,b)=>(a.dataset+a.name).localeCompare(b.dataset+b.name,"ko"))
+            .map((r,i)=>[i+1, r.dataset, r.name, r.birth6, r.count, r.sum ?? "", r.key])
+        );
+
+        // ---------- KPIs ----------
+        el.kpiSheet1.textContent = String(sheet1Rows.length);
+        el.kpiSheet2.textContent = String(sheet2Rows.length);
+        el.kpiSheet3.textContent = String(sheet3Rows.length);
+
+        el.pillMissPension.textContent = String(missPension.length);
+        el.pillMissHealth.textContent = String(missHealth.length);
+        el.pillUnmatchPension.textContent = String(unmatchPension.length);
+        el.pillUnmatchHealth.textContent = String(unmatchHealth.length);
+        el.pillDupKeys.textContent = String(dupKeys.length);
+
+        // warnings count: 누락/미매칭/중복키/HR미존재를 합산(대략적인 경고 규모 지표)
+        const warnCount = missPension.length + missHealth.length + unmatchPension.length + unmatchHealth.length + missHr.length + dupKeys.length;
+        el.kpiWarnings.textContent = String(warnCount);
+
+        // ---------- Build main workbook ----------
+        const ws1 = aoaToSheet(sheet1Headers, sheet1Rows);
+        const ws2 = aoaToSheet(sheet2Headers, sheet2Rows);
+        const ws3 = aoaToSheet(sheet3Headers, sheet3Rows);
+
+        setColWidths(ws1, [6, 14, 16, 16, 16, 16, 16, 16, 16, 16, 18, 18]);
+        setColWidths(ws2, [6, 14, 18, 16, 18]);
+        setColWidths(ws3, [6, 18, 16, 16, 16, 16, 18, 18]);
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws1, "일반_종합");
+        XLSX.utils.book_append_sheet(wb, ws2, "공무직_산재");
+        XLSX.utils.book_append_sheet(wb, ws3, "특수_방과후");
+
+        // (옵션) 메인에 리포트 시트 포함
+        const reportObj = {
+          missPension,
+          missHealth,
+          unmatchPension,
+          unmatchHealth,
+          missHr,
+          dupKeys,
+        };
+
+        const reportWb = buildReportWorkbook(reportObj);
+        const reportWsName = reportWb.SheetNames[0];
+        const reportWs = reportWb.Sheets[reportWsName];
+
+        if (el.optIncludeReportSheet.checked) {
+          XLSX.utils.book_append_sheet(wb, reportWs, "누락_충돌");
+        }
+
+        const blob = workbookToBlob(wb);
+
+        // filenames
+        const now = new Date();
+        const y = String(now.getFullYear());
+        const m = String(now.getMonth() + 1).padStart(2, "0");
+        const d = String(now.getDate()).padStart(2, "0");
+        const filename = `사회보험료_고지내역_집계_${y}${m}${d}.xlsx`;
+        const reportFilename = `사회보험료_누락충돌_리포트_${y}${m}${d}.xlsx`;
+
+        lastWorkbookBlob = blob;
+        lastFilename = filename;
+
+        lastReportBlob = workbookToBlob(reportWb);
+        lastReportFilename = reportFilename;
+
+        log("\n집계 완료");
+        log(`- 메인 다운로드 파일명: ${filename}`);
+        log(`- 리포트 다운로드 파일명: ${reportFilename}`);
+        if (el.optIncludeReportSheet.checked) {
+          log(`- 메인 엑셀에 '누락_충돌' 시트를 포함했습니다(총 4시트).`);
         } else {
-          a.pensionP = parseMoney(a.pensionRaw);
-          a.pensionO = parseMoney(a.pensionRaw);
+          log(`- 메인 엑셀은 3시트 유지(리포트는 별도 다운로드).`);
         }
-      }
 
-      // 건강/요양: 산출+고지+정산 합의 결과를 무조건 1:1 분배
-      if (a.healthTotal){
-        const [hp, ho] = splitHalf(a.healthTotal);
-        a.healthP = hp; a.healthO = ho;
-      }
-      if (a.nursingTotal){
-        const [np, no] = splitHalf(a.nursingTotal);
-        a.nursingP = np; a.nursingO = no;
-      }
-    }
+        el.btnDownload.disabled = false;
+        el.btnDownloadReport.disabled = false;
+      });
 
-    // ---------------------------
-    // 시트1 생성
-    // ---------------------------
-    const s1Headers = [
-      "연번","근로자 성명",
-      "국민연금(개인)","국민연금(기관)",
-      "건강보험료(개인)","건강보험료(기관)",
-      "요양보험료(개인)","요양보험료(기관)",
-      "근로자실업급여보험료(개인)","사업주실업급여보험료(기관)","사업주고안직능보험료(기관)",
-      "산재보험료(기관)",
-      "개인부담금 합계","기관부담금 합계"
-    ];
+      el.btnDownload.addEventListener("click", () => {
+        if (!lastWorkbookBlob || !lastFilename) return;
+        downloadBlob(lastWorkbookBlob, lastFilename);
+      });
 
-    const s1List = Array.from(people.values())
-      .sort((a,b)=>(a.name||"").localeCompare(b.name||"","ko"));
+      el.btnDownloadReport.addEventListener("click", () => {
+        if (!lastReportBlob || !lastReportFilename) return;
+        downloadBlob(lastReportBlob, lastReportFilename);
+      });
 
-    const s1Rows = s1List.map((a,i)=>{
-      const personalSum =
-        a.pensionP + a.healthP + a.nursingP + a.goyP;
-
-      const orgSum =
-        a.pensionO + a.healthO + a.nursingO + a.goyO1 + a.goyO2 + a.sanjaeO;
-
-      return [
-        i+1,
-        a.name,
-        a.pensionP, a.pensionO,
-        a.healthP, a.healthO,
-        a.nursingP, a.nursingO,
-        a.goyP, a.goyO1, a.goyO2,
-        a.sanjaeO,
-        personalSum,
-        orgSum
-      ];
-    });
-
-    // ---------------------------
-    // 시트2: 산재만 + HR 존재
-    // ---------------------------
-    const s2Headers = ["연번","공무직 성명","직종","산재보험료(기관)","기관부담금 합계"];
-    const s2Candidates = s1List.filter(a => (a.goyP+a.goyO1+a.goyO2) === 0 && a.sanjaeO > 0);
-
-    const missHr = [];
-    const s2Rows = s2Candidates
-      .map(a=>{
-        const k = personKey(a.name, a.birth6);
-        const h = hr.map.get(k);
-        if (!h){
-          missHr.push({ key:k, name:a.name, birth6:a.birth6, sanjaeOrg:a.sanjaeO });
-          return null;
-        }
-        return { name:a.name, job:h.job||"", sanjae:a.sanjaeO };
-      })
-      .filter(Boolean)
-      .sort((a,b)=>(a.name||"").localeCompare(b.name||"","ko"))
-      .map((r,i)=>[i+1, r.name, r.job, r.sanjae, r.sanjae]);
-
-    // ---------------------------
-    // 시트3: 특수 집계
-    // ---------------------------
-    const special = new Map();
-    function ensureSpecial(name, birth6){
-      const k = personKey(name, birth6);
-      if (!special.has(k)){
-        special.set(k, { name:String(name??"").trim(), birth6:String(birth6??"").trim(), goyP:0, goyO1:0, goyO2:0, sanjaeO:0 });
-      }
-      return special.get(k);
-    }
-
-    for (const r of goyS){
-      if (normalizeWorkerKind(r.type) !== "특수") continue;
-      const a = ensureSpecial(r.name, r.birth6);
-      a.goyP += r.goyEmp;
-      a.goyO1 += r.goyEr1;
-      a.goyO2 += r.goyEr2;
-    }
-    for (const r of sanS){
-      const a = ensureSpecial(r.name, r.birth6);
-      a.sanjaeO += r.sanjae;
-    }
-
-    const s3Headers = [
-      "연번","특수고용근로자 성명",
-      "근로자실업급여보험료(개인)","사업주실업급여보험료(기관)","사업주고안직능보험료(기관)",
-      "산재보험료(기관)",
-      "개인부담금 합계","기관부담금 합계"
-    ];
-
-    const s3List = Array.from(special.values())
-      .sort((a,b)=>(a.name||"").localeCompare(b.name||"","ko"));
-
-    const s3Rows = s3List.map((a,i)=>{
-      const personalSum = a.goyP;
-      const orgSum = a.goyO1 + a.goyO2 + a.sanjaeO;
-      return [i+1, a.name, a.goyP, a.goyO1, a.goyO2, a.sanjaeO, personalSum, orgSum];
-    });
-
-    // ---------------------------
-    // 미리보기(틀고정 + 합계 Footer)
-    // ---------------------------
-    const showTotals = el.optPreviewTotals.checked;
-    renderPreview(el.preview1, s1Headers, s1Rows, 30, { showFooterTotals: showTotals });
-    renderPreview(el.preview2, s2Headers, s2Rows, 30, { showFooterTotals: showTotals });
-    renderPreview(el.preview3, s3Headers, s3Rows, 30, { showFooterTotals: showTotals });
-
-    // ---------------------------
-    // 리포트 테이블 렌더링
-    // ---------------------------
-    renderPreview(
-      el.repMissPension,
-      ["연번","성명","생년월일6","키"],
-      missPension.sort((a,b)=>a.name.localeCompare(b.name,"ko")).map((r,i)=>[i+1,r.name,r.birth6,r.key]),
-      30,
-      { showFooterTotals:false }
-    );
-
-    renderPreview(
-      el.repMissHealth,
-      ["연번","성명","생년월일6","키"],
-      missHealth.sort((a,b)=>a.name.localeCompare(b.name,"ko")).map((r,i)=>[i+1,r.name,r.birth6,r.key]),
-      30,
-      { showFooterTotals:false }
-    );
-
-    renderPreview(
-      el.repUnmatchPension,
-      ["연번","성명","생년월일6","금액(합산)","키"],
-      unmatchPension.sort((a,b)=>a.name.localeCompare(b.name,"ko")).map((r,i)=>[i+1,r.name,r.birth6,r.amount,r.key]),
-      30,
-      { showFooterTotals:false }
-    );
-
-    renderPreview(
-      el.repUnmatchHealth,
-      ["연번","성명","생년월일6","건강합","요양합","키"],
-      unmatchHealth.sort((a,b)=>a.name.localeCompare(b.name,"ko")).map((r,i)=>[i+1,r.name,r.birth6,r.healthTotal,r.nursingTotal,r.key]),
-      30,
-      { showFooterTotals:false }
-    );
-
-    renderPreview(
-      el.repMissHr,
-      ["연번","성명","생년월일6","산재보험료(기관)","키"],
-      missHr.sort((a,b)=>a.name.localeCompare(b.name,"ko")).map((r,i)=>[i+1,r.name,r.birth6,r.sanjaeOrg,r.key]),
-      30,
-      { showFooterTotals:false }
-    );
-
-    renderPreview(
-      el.repDupKeys,
-      ["연번","데이터셋","성명","생년월일6","건수","금액합(가능시)","키"],
-      dupKeys.sort((a,b)=>(a.dataset+a.name).localeCompare(b.dataset+b.name,"ko")).map((r,i)=>[i+1,r.dataset,r.name,r.birth6,r.count,r.sum ?? "",r.key]),
-      30,
-      { showFooterTotals:false }
-    );
-
-    // ---------------------------
-    // KPI/경고
-    // ---------------------------
-    el.kpiS1.textContent = String(s1Rows.length);
-    el.kpiS2.textContent = String(s2Rows.length);
-    el.kpiS3.textContent = String(s3Rows.length);
-
-    el.pillMissPension.textContent = String(missPension.length);
-    el.pillMissHealth.textContent = String(missHealth.length);
-    el.pillUnmatchPension.textContent = String(unmatchPension.length);
-    el.pillUnmatchHealth.textContent = String(unmatchHealth.length);
-    el.pillDupKeys.textContent = String(dupKeys.length);
-
-    const warnCount = missPension.length + missHealth.length + unmatchPension.length + unmatchHealth.length + missHr.length + dupKeys.length;
-    el.kpiWarn.textContent = String(warnCount);
-
-    // ---------------------------
-    // 메인 엑셀 생성(3시트 + 옵션 리포트)
-    // ---------------------------
-    const ws1 = aoaToSheet(s1Headers, s1Rows);
-    const ws2 = aoaToSheet(s2Headers, s2Rows);
-    const ws3 = aoaToSheet(s3Headers, s3Rows);
-
-    // 열 너비
-    setColWidths(ws1, [6, 14, 14,14, 14,14, 14,14, 18,18,18, 16, 18,18]);
-    setColWidths(ws2, [6, 14, 18, 16, 18]);
-    setColWidths(ws3, [6, 18, 18,18,18, 16, 18,18]);
-
-    // 틀고정(상단 1행 + 왼쪽 2열)
-    applyFreeze(ws1, 2, 1);
-    applyFreeze(ws2, 2, 1);
-    applyFreeze(ws3, 2, 1);
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws1, "일반_종합");
-    XLSX.utils.book_append_sheet(wb, ws2, "공무직_산재");
-    XLSX.utils.book_append_sheet(wb, ws3, "특수_방과후");
-
-    const reportObj = {
-      missPension,
-      missHealth,
-      unmatchPension,
-      unmatchHealth,
-      missHr,
-      dupKeys
-    };
-
-    const reportWb = buildReportWorkbook(reportObj);
-    const reportWs = reportWb.Sheets[reportWb.SheetNames[0]];
-
-    if (el.optIncludeReportSheet.checked){
-      XLSX.utils.book_append_sheet(wb, reportWs, "누락_충돌");
-      applyFreeze(reportWs, 0, 1);
-    }
-
-    const mainBlob = workbookToBlob(wb);
-    const repBlob = workbookToBlob(reportWb);
-
-    const now = new Date();
-    const y = String(now.getFullYear());
-    const m = String(now.getMonth()+1).padStart(2,"0");
-    const d = String(now.getDate()).padStart(2,"0");
-
-    lastMain = { blob: mainBlob, filename: `사회보험료_고지내역_집계_${y}${m}${d}.xlsx` };
-    lastReport = { blob: repBlob, filename: `사회보험료_누락충돌_리포트_${y}${m}${d}.xlsx` };
-
-    log("\n✅ 집계 완료");
-    log(`- 시트1(일반): ${s1Rows.length}명`);
-    log(`- 시트2(공무직 산재만): ${s2Rows.length}명`);
-    log(`- 시트3(특수): ${s3Rows.length}명`);
-    log(`- 누락/미매칭/중복키 경고 총합(지표): ${warnCount}`);
-    if (el.optIncludeReportSheet.checked) log("- 메인 엑셀에 '누락_충돌' 시트를 포함(총 4시트)");
-    else log("- 메인 엑셀은 3시트 유지(리포트는 별도 다운로드)");
-
-    el.btnDownloadMain.disabled = false;
-    el.btnDownloadReport.disabled = false;
-  });
-
-  el.btnDownloadMain.addEventListener("click", ()=>{
-    if (!lastMain.blob || !lastMain.filename) return;
-    downloadBlob(lastMain.blob, lastMain.filename);
-  });
-
-  el.btnDownloadReport.addEventListener("click", ()=>{
-    if (!lastReport.blob || !lastReport.filename) return;
-    downloadBlob(lastReport.blob, lastReport.filename);
-  });
-
-})();
-</script>
+    })();
+  </script>
 <script src="/static/disable-copy.js"></script>
 <script src="/static/footer.js"></script>
 <script src="/static/global-loader.js?v=1"></script>
