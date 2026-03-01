@@ -733,6 +733,27 @@
     ];
     const REGION_17 = REGION_18.filter((r) => r !== "강원특별자치도교육청");
 
+
+    // ✅ "원주문막초등학교" / "원주 문막초등학교"처럼 (시/군) 없이 지역명이 붙는 케이스 대응
+    // - REGION_17(시군구) 기준으로 접두 지역명을 떼어내고, 나머지가 '학교 마스터'에 매칭될 때만 적용하는 방식으로 안전하게 처리합니다.
+    const REGION_17_SORTED = REGION_17.slice().sort((a, b) => b.length - a.length);
+
+    function splitLeadingRegionPrefixLoose(text) {
+      const t = normalizeText(text);
+      if (!t) return null;
+      const noSpace = t.replace(/\s+/g, "");
+      for (const r of REGION_17_SORTED) {
+        const rn = String(r || "").replace(/\s+/g, "");
+        if (!rn) continue;
+        if (noSpace.startsWith(rn) && noSpace.length > rn.length) {
+          const rest = noSpace.slice(rn.length);
+          if (!rest) continue;
+          return { region: r, rest };
+        }
+      }
+      return null;
+    }
+
     const LOCAL_GOV_SERIES = [
       "지방교육행정",
       "지방시설관리",
@@ -1167,6 +1188,15 @@
       cands.push(t0.replace(/\s*및\s*병설유치원/g, "").replace(/병설유치원/g, ""));
       cands.push(t0.replace(/병설유치원/g, ""));
 
+      // ✅ 지역명 접두어(시/군 없이) 제거 케이스도 후보에 추가: "원주문막초등학교", "원주 문막초등학교"
+      const split = splitLeadingRegionPrefixLoose(t0);
+      if (split && split.rest) {
+        cands.push(split.rest);
+        cands.push(split.rest.replace(/\s*및\s*병설유치원/g, ""));
+        cands.push(split.rest.replace(/\s*및\s*병설유치원/g, "").replace(/병설유치원/g, ""));
+        cands.push(split.rest.replace(/병설유치원/g, ""));
+      }
+
       for (const c of cands) {
         const key = normalizeSchoolKey(c);
         if (!key) continue;
@@ -1265,6 +1295,17 @@
         if (rest && REGION_17.includes(regionWord)) t = rest;
       }
 
+      // 행정구역 접두어 제거(시/군 없이): "원주문막초등학교", "원주 문막초등학교"
+      // - 접두 지역명(예: 원주)을 떼어낸 나머지가 학교 마스터에 매칭될 때만 교정합니다(춘천중학교 같은 실제 학교명 오인 방지).
+      const splitLoose = splitLeadingRegionPrefixLoose(t);
+      if (splitLoose && splitLoose.rest) {
+        const baseTry = resolveSchoolBaseName(splitLoose.rest);
+        if (baseTry) {
+          const realRegion = SCHOOL_MASTER.baseRegion.get(baseTry) || "";
+          if (!realRegion || realRegion === splitLoose.region) t = baseTry;
+        }
+      }
+
       // 다시 한번 약칭 확장
       const ex2 = expandShortOrgName(t);
       if (ex2) t = ex2;
@@ -1295,6 +1336,17 @@
           const baseTry = resolveSchoolBaseName(rest);
           const restNoSpace = rest.replace(/\s+/g, "");
           if (baseTry || isSchoolLike(rest) || /^[가-힣0-9]{1,30}(초|중|고|유|별유)$/.test(restNoSpace)) candidate = rest;
+        }
+      }
+
+      // 1.2) "원주문막초등학교" / "원주 문막초등학교" 같이 (시/군) 없이 지역명이 붙는 케이스 제거
+      // - 접두 지역명(예: 원주)을 떼어낸 나머지가 학교 마스터에 매칭될 때만 canonical(대표 학교명)로 교정합니다.
+      const splitLoose = splitLeadingRegionPrefixLoose(candidate);
+      if (splitLoose && splitLoose.rest) {
+        const baseTry2 = resolveSchoolBaseName(splitLoose.rest);
+        if (baseTry2) {
+          const realRegion = SCHOOL_MASTER.baseRegion.get(baseTry2) || "";
+          if (!realRegion || realRegion === splitLoose.region) candidate = baseTry2;
         }
       }
 
@@ -2343,9 +2395,38 @@
       if (defaultValue !== undefined && defaultValue !== null) selectEl.value = defaultValue;
     }
 
+    function buildEntityOptionSearchText(opt) {
+      const label = String(opt?.label ?? "");
+      const value = String(opt?.value ?? "");
+      const parsed = parseEntityValue(value);
+
+      if (!parsed) return label;
+
+      const kind = parsed.kind;
+      const name = parsed.name || "";
+      let region = parsed.region || "";
+
+      if (kind === "school") {
+        // 단일 옵션이어도 "지역명+학교명", "지역명 학교명" 형태로 검색이 되게 region을 보강
+        if (!region) region = SCHOOL_MASTER.baseRegion.get(name) || "";
+        const combo1 = region ? `${region}${name}` : "";
+        const combo2 = region ? `${region} ${name}` : "";
+        return [label, name, region, combo1, combo2].filter(Boolean).join(" ");
+      }
+
+      if (kind === "inst") {
+        const combo1 = region ? `${region}${name}` : "";
+        const combo2 = region ? `${region} ${name}` : "";
+        return [label, name, region, combo1, combo2].filter(Boolean).join(" ");
+      }
+
+      return label;
+    }
+
     function applyEntitySelectSearch() {
       if (!el.entitySelectSearch) return;
-      const q = normalizeText(el.entitySelectSearch.value).toLowerCase();
+      const qRaw = normalizeText(el.entitySelectSearch.value);
+      const qKey = normalizeMatchKey(qRaw);
 
       // ✅ 드롭박스 검색은 "2) 학교/기관명" 옵션 탐색에 집중
       const sel = el.entityName;
@@ -2354,8 +2435,8 @@
       const prev = sel.value;
 
       let list = sel._allOptions;
-      if (q) {
-        list = list.filter((o) => String(o.label || "").toLowerCase().includes(q));
+      if (qKey) {
+        list = list.filter((o) => normalizeMatchKey(buildEntityOptionSearchText(o)).includes(qKey));
         // 현재 선택값은 검색 결과에 없더라도 상단에 유지
         if (prev && !list.some((o) => String(o.value) === String(prev))) {
           const keep = sel._allOptions.find((o) => String(o.value) === String(prev));
@@ -2375,9 +2456,9 @@
       if (prev && [...sel.options].some((o) => o.value === prev)) sel.value = prev;
 
       // ✅ 매칭이 1개면 자동 선택 + 즉시 조회 갱신(전체 조회 제외)
-      if (q && !sel.disabled) {
+      if (qKey && !sel.disabled) {
         const matches = sel._allOptions.filter(
-          (o) => String(o.label || "").toLowerCase().includes(q) && String(o.value) !== "__ALL__"
+          (o) => normalizeMatchKey(buildEntityOptionSearchText(o)).includes(qKey) && String(o.value) !== "__ALL__"
         );
         if (matches.length === 1) {
           const v = matches[0].value;
