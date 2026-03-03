@@ -1051,3 +1051,836 @@ section[id]{
 .dash-details[open] .dash-summary{
   margin-bottom: 12px;
 }
+
+/* ===================================================================
+   ✅ EduSprout Local UI Kit (No CDN / No @import)
+   - 목표: shadcn/WebAwesome 계열의 “정돈된 컴포넌트 감성”을
+     순수 CSS만으로 제공 (당신의 기존 style.css 위에 얹는 확장팩)
+   - 사용:
+     1) 기본은 기존 .btn/.section/.card 그대로 유지
+     2) 추가 컴포넌트는 .ui-* 클래스 사용
+     3) 레트로-모던 테마: <html data-ui-theme="retro">
+   =================================================================== */
+
+/* ---------------------------
+   1) Design Tokens
+   --------------------------- */
+:root{
+  /* surfaces */
+  --ui-bg: #ffffff;
+  --ui-fg: #111111;
+
+  --ui-muted: #f9fafb;
+  --ui-muted-fg: #6b7280;
+
+  --ui-card: #ffffff;
+  --ui-card-fg: #111111;
+
+  --ui-popover: #ffffff;
+  --ui-popover-fg: #111111;
+
+  /* borders */
+  --ui-border: #e5e7eb;
+  --ui-border-strong: #d1d5db;
+  --ui-input: #d9d9e3;
+
+  /* ring / focus */
+  --ui-ring: rgba(180, 180, 208, 0.65);
+  --ui-ring-soft: rgba(180, 180, 208, 0.25);
+
+  /* radius */
+  --ui-radius: 12px;
+  --ui-radius-sm: 10px;
+  --ui-radius-pill: 999px;
+
+  /* shadows */
+  --ui-shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+  --ui-shadow-md: 0 12px 34px rgba(0,0,0,0.14);
+
+  /* motion */
+  --ui-duration: 140ms;
+  --ui-ease: cubic-bezier(.2,.8,.2,1);
+
+  /* semantic colors */
+  --ui-brand: #111111;
+  --ui-brand-fg: #ffffff;
+
+  --ui-accent: var(--periwinkle-700, #666BD1);
+
+  --ui-danger: #dc2626;
+  --ui-danger-bg: #fee2e2;
+  --ui-danger-border: #fecaca;
+
+  --ui-success: #15803d;
+  --ui-success-bg: #dcfce7;
+  --ui-success-border: #bbf7d0;
+
+  --ui-warning: #b45309;
+  --ui-warning-bg: #ffedd5;
+  --ui-warning-border: #fed7aa;
+
+  --ui-info: #2563eb;
+  --ui-info-bg: #dbeafe;
+  --ui-info-border: #bfdbfe;
+}
+
+/* 레트로-모던 테마: “살짝 두툼한 보더 + 종이 느낌 + 그림자” */
+html[data-ui-theme="retro"]{
+  --ui-bg: #fffdf7;
+  --ui-muted: #fbf7ef;
+  --ui-border: #1f2937;
+  --ui-border-strong: #111111;
+  --ui-input: #1f2937;
+
+  --ui-shadow-sm: 0 2px 0 rgba(17,17,17,0.18);
+  --ui-shadow-md: 0 10px 0 rgba(17,17,17,0.18), 0 30px 80px rgba(0,0,0,0.20);
+
+  --ui-ring: rgba(17,17,17,0.40);
+  --ui-ring-soft: rgba(17,17,17,0.18);
+}
+
+/* 레트로 모드에서 기존 카드들도 살짝 보정(선택) */
+html[data-ui-theme="retro"] body{
+  background: var(--ui-bg);
+}
+html[data-ui-theme="retro"] .section,
+html[data-ui-theme="retro"] .card,
+html[data-ui-theme="retro"] .tool-card,
+html[data-ui-theme="retro"] .callout{
+  border-color: var(--ui-border);
+  box-shadow: var(--ui-shadow-sm);
+}
+
+/* ---------------------------
+   2) Accessibility / Focus
+   --------------------------- */
+:where(a, button, summary, [role="button"], [tabindex]:not([tabindex="-1"])):focus-visible{
+  outline: 2px solid var(--ui-ring);
+  outline-offset: 2px;
+  border-radius: calc(var(--ui-radius-sm) + 2px);
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{
+    scroll-behavior: auto !important;
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* 스크린리더 전용 */
+.ui-sr-only{
+  position:absolute !important;
+  width:1px !important;
+  height:1px !important;
+  padding:0 !important;
+  margin:-1px !important;
+  overflow:hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space:nowrap !important;
+  border:0 !important;
+}
+
+/* ---------------------------
+   3) Utilities (가벼운 것만)
+   --------------------------- */
+.ui-stack{ display:grid; gap: 10px; }
+.ui-stack.sm{ gap: 6px; }
+.ui-stack.lg{ gap: 16px; }
+
+.ui-inline{ display:inline-flex; align-items:center; gap: 8px; }
+.ui-inline.wrap{ flex-wrap: wrap; }
+
+.ui-divider{
+  height: 1px;
+  background: var(--ui-border);
+  border: 0;
+  margin: 16px 0;
+}
+
+.ui-muted{ color: var(--ui-muted-fg); }
+.ui-center{ text-align:center; }
+.ui-right{ text-align:right; }
+
+.ui-w-full{ width:100%; }
+.ui-max-w-sm{ max-width: 360px; }
+.ui-max-w-md{ max-width: 560px; }
+.ui-max-w-lg{ max-width: 760px; }
+
+/* ---------------------------
+   4) Buttons
+   --------------------------- */
+:where(.ui-btn, a.ui-btn, button.ui-btn){
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  padding: 10px 14px;
+  border-radius: var(--ui-radius);
+  border: 1px solid var(--ui-border-strong);
+  background: #fff;
+  color: var(--ui-fg);
+
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1.1;
+  cursor: pointer;
+
+  transition:
+    background-color var(--ui-duration) var(--ui-ease),
+    border-color var(--ui-duration) var(--ui-ease),
+    transform 60ms ease,
+    box-shadow var(--ui-duration) var(--ui-ease);
+}
+
+:where(.ui-btn):hover{ background: #f3f4f6; }
+:where(.ui-btn):active{ transform: translateY(1px); }
+
+:where(.ui-btn)[disabled],
+:where(.ui-btn).is-disabled,
+:where(.ui-btn)[aria-disabled="true"]{
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* variants */
+.ui-btn.brand{
+  background: var(--ui-brand);
+  color: var(--ui-brand-fg);
+  border-color: var(--ui-brand);
+}
+.ui-btn.brand:hover{ background: #000; }
+
+.ui-btn.ghost{
+  background: var(--ui-muted);
+  border-color: var(--ui-border-strong);
+}
+.ui-btn.ghost:hover{ background: #eef2ff; }
+
+.ui-btn.soft{
+  background: #fff;
+  border-color: var(--ui-border);
+  box-shadow: var(--ui-shadow-sm);
+}
+.ui-btn.soft:hover{ background: #fafafa; }
+
+.ui-btn.danger{
+  background: var(--ui-danger);
+  color: #fff;
+  border-color: var(--ui-danger);
+}
+.ui-btn.danger:hover{ filter: brightness(0.95); }
+
+.ui-btn.success{
+  background: var(--ui-success);
+  color: #fff;
+  border-color: var(--ui-success);
+}
+.ui-btn.success:hover{ filter: brightness(0.95); }
+
+/* sizes */
+.ui-btn.sm{ padding: 8px 10px; border-radius: var(--ui-radius-sm); font-size: 0.95rem; }
+.ui-btn.lg{ padding: 12px 18px; font-size: 1.05rem; }
+.ui-btn.pill{ border-radius: var(--ui-radius-pill); }
+.ui-btn.block{ width: 100%; justify-content: flex-start; }
+
+/* icon button */
+.ui-btn.icon{
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: var(--ui-radius-pill);
+}
+
+/* ---------------------------
+   5) Inputs / Fields
+   --------------------------- */
+.ui-field{
+  display: grid;
+  gap: 6px;
+}
+.ui-label{
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: #374151;
+}
+.ui-help{
+  font-size: 0.9rem;
+  color: var(--ui-muted-fg);
+}
+.ui-error{
+  font-size: 0.9rem;
+  color: var(--ui-danger);
+}
+
+:where(.ui-input, .ui-textarea, .ui-select){
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--ui-radius);
+  border: 1px solid var(--ui-input);
+  background: var(--ui-muted);
+  color: var(--ui-fg);
+
+  outline: none;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.02);
+  transition:
+    background-color var(--ui-duration) var(--ui-ease),
+    border-color var(--ui-duration) var(--ui-ease),
+    box-shadow var(--ui-duration) var(--ui-ease);
+}
+
+:where(.ui-input, .ui-textarea, .ui-select):focus{
+  border-color: color-mix(in srgb, var(--ui-ring) 70%, #b4b4d0);
+  box-shadow: 0 0 0 2px var(--ui-ring-soft);
+  background: #fff;
+}
+
+:where(.ui-input, .ui-textarea, .ui-select)[disabled]{
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.ui-textarea{ min-height: 120px; resize: vertical; }
+
+/* select arrow (pure CSS) */
+.ui-select{
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2.2em;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #6b7280 50%),
+    linear-gradient(135deg, #6b7280 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 52%,
+    calc(100% - 12px) 52%;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+}
+
+/* error state */
+.ui-field[data-state="error"] :where(.ui-input, .ui-textarea, .ui-select){
+  border-color: var(--ui-danger);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ui-danger) 25%, transparent);
+  background: #fff;
+}
+
+/* ---------------------------
+   6) Card / Panel
+   --------------------------- */
+.ui-card{
+  border: 1px solid var(--ui-border);
+  background: var(--ui-card);
+  color: var(--ui-card-fg);
+  border-radius: var(--ui-radius);
+  box-shadow: var(--ui-shadow-sm);
+  overflow: hidden;
+}
+.ui-card.pad{ padding: 14px 16px; }
+.ui-card-header{
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--ui-border);
+  background: #fafafa;
+}
+.ui-card-title{
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: #111;
+}
+.ui-card-body{ padding: 14px 16px; }
+.ui-card-footer{
+  padding: 14px 16px;
+  border-top: 1px solid var(--ui-border);
+  background: #fafafa;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+/* ---------------------------
+   7) Badge / Tag
+   --------------------------- */
+.ui-badge{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--ui-radius-pill);
+  border: 1px solid var(--ui-border);
+  background: var(--ui-muted);
+  color: #374151;
+  font-weight: 800;
+  font-size: 0.86rem;
+  line-height: 1.1;
+}
+.ui-badge.brand{
+  border-color: var(--ui-brand);
+  background: var(--ui-brand);
+  color: #fff;
+}
+.ui-badge.danger{
+  border-color: var(--ui-danger-border);
+  background: var(--ui-danger-bg);
+  color: var(--ui-danger);
+}
+.ui-badge.success{
+  border-color: var(--ui-success-border);
+  background: var(--ui-success-bg);
+  color: var(--ui-success);
+}
+.ui-badge.warning{
+  border-color: var(--ui-warning-border);
+  background: var(--ui-warning-bg);
+  color: var(--ui-warning);
+}
+.ui-badge.info{
+  border-color: var(--ui-info-border);
+  background: var(--ui-info-bg);
+  color: var(--ui-info);
+}
+
+/* chip 느낌의 태그 */
+.ui-tag{
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 10px;
+  border-radius: var(--ui-radius-pill);
+  border: 1px solid var(--ui-border-strong);
+  background: #fff;
+  font-weight: 800;
+  font-size: 0.92rem;
+}
+.ui-tag:hover{ background: #f3f4f6; }
+
+/* ---------------------------
+   8) Alert
+   --------------------------- */
+.ui-alert{
+  border: 1px solid var(--ui-border);
+  background: var(--ui-muted);
+  border-radius: var(--ui-radius);
+  padding: 12px 14px;
+}
+.ui-alert .ui-alert-title{
+  margin: 0 0 6px;
+  font-weight: 900;
+  color: #111;
+  font-size: 1rem;
+}
+.ui-alert .ui-alert-desc{
+  margin: 0;
+  color: #4b5563;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.ui-alert.info{
+  border-color: var(--ui-info-border);
+  background: var(--ui-info-bg);
+}
+.ui-alert.warning{
+  border-color: var(--ui-warning-border);
+  background: var(--ui-warning-bg);
+}
+.ui-alert.danger{
+  border-color: var(--ui-danger-border);
+  background: var(--ui-danger-bg);
+}
+.ui-alert.success{
+  border-color: var(--ui-success-border);
+  background: var(--ui-success-bg);
+}
+
+/* ---------------------------
+   9) Tabs (ARIA 패턴 스타일)
+   --------------------------- */
+.ui-tabs{ display: grid; gap: 10px; }
+.ui-tablist{
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.ui-tab{
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--ui-border-strong);
+  background: #fff;
+  color: #111;
+  border-radius: var(--ui-radius-pill);
+  padding: 8px 10px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.ui-tab:hover{ background: #f3f4f6; }
+
+.ui-tab[aria-selected="true"]{
+  background: var(--ui-brand);
+  color: var(--ui-brand-fg);
+  border-color: var(--ui-brand);
+}
+
+.ui-tabpanel{
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  background: #fff;
+  padding: 14px 16px;
+  box-shadow: var(--ui-shadow-sm);
+}
+
+/* ---------------------------
+   10) Accordion (details 기반)
+   --------------------------- */
+details.ui-accordion{
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  background: var(--ui-muted);
+  overflow: hidden;
+}
+details.ui-accordion > summary{
+  cursor: pointer;
+  list-style: none;
+  padding: 10px 12px;
+  font-weight: 900;
+  color: #111;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+details.ui-accordion > summary::-webkit-details-marker{ display: none; }
+details.ui-accordion > summary::before{
+  content: "▸";
+  font-weight: 900;
+}
+details.ui-accordion[open] > summary::before{ content: "▾"; }
+details.ui-accordion > .ui-accordion-body{
+  border-top: 1px solid var(--ui-border);
+  background: #fff;
+  padding: 12px;
+}
+
+/* ---------------------------
+   11) Dropdown (details 기반, JS 없이)
+   --------------------------- */
+details.ui-dropdown{
+  position: relative;
+  display: inline-block;
+}
+details.ui-dropdown > summary{
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+details.ui-dropdown > summary::-webkit-details-marker{ display:none; }
+
+/* summary를 버튼처럼 보이게 */
+details.ui-dropdown > summary.ui-btn,
+details.ui-dropdown > summary .ui-btn{
+  display: inline-flex;
+}
+
+.ui-menu{
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 220px;
+  z-index: 1000;
+
+  background: var(--ui-popover);
+  color: var(--ui-popover-fg);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  box-shadow: var(--ui-shadow-md);
+  padding: 6px;
+  display: none;
+}
+
+details.ui-dropdown[open] > .ui-menu{
+  display: block;
+  animation: ui-pop var(--ui-duration) var(--ui-ease);
+}
+
+.ui-menu-item{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-align: left;
+  cursor: pointer;
+}
+.ui-menu-item:hover{ background: #f3f4f6; }
+
+.ui-menu-sep{
+  height: 1px;
+  background: var(--ui-border);
+  margin: 6px 2px;
+}
+
+/* ---------------------------
+   12) Tooltip (data-tooltip)
+   --------------------------- */
+[data-tooltip]{
+  position: relative;
+}
+[data-tooltip]::after{
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  transform: translateX(-50%) translateY(4px);
+  opacity: 0;
+  pointer-events: none;
+
+  background: rgba(17,17,17,0.92);
+  color: #fff;
+  padding: 6px 8px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 16px 46px rgba(0,0,0,0.25);
+  transition: opacity var(--ui-duration) var(--ui-ease), transform var(--ui-duration) var(--ui-ease);
+}
+[data-tooltip]::before{
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 4px);
+  transform: translateX(-50%) translateY(4px);
+  opacity: 0;
+  pointer-events: none;
+
+  width: 10px;
+  height: 10px;
+  background: rgba(17,17,17,0.92);
+  transform: translateX(-50%) rotate(45deg);
+  border-radius: 2px;
+  transition: opacity var(--ui-duration) var(--ui-ease), transform var(--ui-duration) var(--ui-ease);
+}
+
+[data-tooltip]:hover::after,
+[data-tooltip]:hover::before,
+[data-tooltip]:focus-visible::after,
+[data-tooltip]:focus-visible::before{
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ---------------------------
+   13) Dialog (native <dialog>)
+   --------------------------- */
+dialog.ui-dialog{
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  padding: 0;
+  width: min(560px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  box-shadow: var(--ui-shadow-md);
+  overflow: hidden;
+}
+
+dialog.ui-dialog::backdrop{
+  background: rgba(0,0,0,0.55);
+}
+
+dialog.ui-dialog[open]{
+  animation: ui-pop var(--ui-duration) var(--ui-ease);
+}
+
+.ui-dialog-header{
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--ui-border);
+  background: #fafafa;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.ui-dialog-title{
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: #111;
+}
+.ui-dialog-body{
+  padding: 14px 16px;
+}
+.ui-dialog-footer{
+  padding: 14px 16px;
+  border-top: 1px solid var(--ui-border);
+  background: #fafafa;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ---------------------------
+   14) CSS-only Modal (옵션: :target 패턴)
+   --------------------------- */
+/*
+  사용 예:
+  <a class="ui-btn" href="#m1">열기</a>
+  <section id="m1" class="ui-modal">
+    <a class="ui-modal-backdrop" href="#"></a>
+    <div class="ui-modal-panel"> ... </div>
+  </section>
+*/
+.ui-modal{
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+.ui-modal:target{ display: flex; }
+
+.ui-modal-backdrop{
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+}
+
+.ui-modal-panel{
+  position: relative;
+  width: min(560px, calc(100vw - 24px));
+  border-radius: var(--ui-radius);
+  border: 1px solid var(--ui-border);
+  background: #fff;
+  box-shadow: var(--ui-shadow-md);
+  overflow: hidden;
+  animation: ui-pop var(--ui-duration) var(--ui-ease);
+}
+
+/* ---------------------------
+   15) Toast (스타일만 제공, 생성/제거는 JS가 담당)
+   --------------------------- */
+.ui-toast-region{
+  position: fixed;
+  z-index: 30000;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  pointer-events: none;
+}
+.ui-toast-region.br{ right: 0; bottom: 0; }
+.ui-toast-region.tr{ right: 0; top: 0; }
+.ui-toast-region.bl{ left: 0; bottom: 0; }
+.ui-toast-region.tl{ left: 0; top: 0; }
+
+.ui-toast{
+  pointer-events: auto;
+  width: min(360px, calc(100vw - 24px));
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  background: #fff;
+  box-shadow: var(--ui-shadow-md);
+  padding: 12px 12px;
+  animation: ui-slide-in var(--ui-duration) var(--ui-ease);
+}
+
+.ui-toast-title{
+  margin: 0 0 4px;
+  font-weight: 900;
+  color: #111;
+  font-size: 0.98rem;
+}
+.ui-toast-desc{
+  margin: 0;
+  font-size: 0.92rem;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.ui-toast.info{ border-color: var(--ui-info-border); }
+.ui-toast.success{ border-color: var(--ui-success-border); }
+.ui-toast.warning{ border-color: var(--ui-warning-border); }
+.ui-toast.danger{ border-color: var(--ui-danger-border); }
+
+/* ---------------------------
+   16) Skeleton / Spinner
+   --------------------------- */
+.ui-skeleton{
+  border-radius: 10px;
+  background: linear-gradient(90deg, #f3f4f6 0%, #e5e7eb 40%, #f3f4f6 80%);
+  background-size: 220% 100%;
+  animation: ui-shimmer 1.2s ease-in-out infinite;
+}
+
+.ui-spinner{
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 2px solid rgba(0,0,0,0.12);
+  border-top-color: rgba(0,0,0,0.55);
+  animation: ui-spin 800ms linear infinite;
+}
+
+/* ---------------------------
+   17) Code / KBD (도구 사이트 감성)
+   --------------------------- */
+.ui-code{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.92rem;
+  padding: 0.2em 0.45em;
+  border-radius: 10px;
+  background: #f3f4f6;
+  border: 1px solid var(--ui-border);
+}
+.ui-kbd{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.88rem;
+  padding: 0.2em 0.45em;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid var(--ui-border-strong);
+  box-shadow: 0 2px 0 rgba(17,17,17,0.14);
+}
+
+/* ---------------------------
+   18) Animations
+   --------------------------- */
+@keyframes ui-pop{
+  from{ transform: translateY(6px) scale(0.98); opacity: 0.6; }
+  to{ transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes ui-slide-in{
+  from{ transform: translateY(10px); opacity: 0.6; }
+  to{ transform: translateY(0); opacity: 1; }
+}
+
+@keyframes ui-shimmer{
+  0%{ background-position: 200% 0; }
+  100%{ background-position: -200% 0; }
+}
+
+@keyframes ui-spin{
+  to{ transform: rotate(360deg); }
+}
+
+/* ---------------------------
+   19) Print (필요한 최소만)
+   --------------------------- */
+@media print{
+  .ui-toast-region{ display:none !important; }
+  details.ui-dropdown > .ui-menu{ display:none !important; }
+  [data-tooltip]::before,
+  [data-tooltip]::after{ display:none !important; }
+}
