@@ -1053,332 +1053,254 @@ section[id]{
 }
 
 /* =========================================================
-   ✅ 레트로(90s GUI) 테마 추가 (2026.3.3)
-   ---------------------------------------------------------
-   목적: 회계업무 보조용 "계산기 상세페이지"에만 레트로 UI 적용
-   사용법: 해당 페이지의 <body>에 class="theme-retro"만 추가하면 끝.
-   예) <body class="theme-retro"> ... </body>
-
-   옵션(선택):
-   - CRT 느낌 약간: <body class="theme-retro theme-crt">
-   - CRT 강도 조절: 아래 --crt-opacity 값 수정
-
-   ※ 기존 메인(index) 등 다른 페이지는 영향 최소화(스코프: body.theme-retro)
+   ✅ 레트로 감성 + 직관성 업그레이드 (2026.3.3)
+   - footer.js에서 html[data-theme] 값을 "retro" / "classic" 으로 토글
+   - 기본값은 "retro"
    ========================================================= */
 
-/* 레트로 테마 전용 변수 */
-:root{
-  --retro-bg: #c9c9c9;            /* 윈도우95-ish 배경 */
-  --retro-panel: #e7e7e7;         /* 패널/섹션 배경 */
-  --retro-panel-2: #f4f4f4;       /* 카드/인풋 배경 */
-  --retro-text: #111;
-  --retro-muted: #3f3f3f;
-
-  --retro-accent: #0a246a;        /* 딥 네이비(타이틀바) */
-  --retro-accent-2: #008080;      /* 청록(강조) */
-  --retro-accent-3: #7f00ff;      /* 보라(포인트) */
-
-  --retro-border-dark: #404040;   /* 음영 */
-  --retro-border-mid:  #8a8a8a;   /* 중간톤 */
-  --retro-border-light:#ffffff;   /* 하이라이트 */
-
-  --retro-radius: 0px;            /* 레트로는 각진 맛 */
-  --retro-outline: 2px dashed #111;
-
-  --retro-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
-    Tahoma, "MS Sans Serif", Roboto, "Apple SD Gothic Neo", "Noto Sans KR",
-    "맑은 고딕", sans-serif;
-
-  --crt-opacity: 0.06;
+/* -------------------------------
+   0) 직관성: 빠른 이동(칩) 현재 위치 표시 (공통)
+   ------------------------------- */
+.chip.is-active,
+.chip[aria-current="location"]{
+  border-color: #111;
+  background: #eef2ff;
 }
 
-/* -----------------------------
-   레트로 스코프 시작
-   ----------------------------- */
-body.theme-retro{
-  background: var(--retro-bg);
-  color: var(--retro-text);
-  font-family: var(--retro-font);
+/* 키보드 포커스 가시성(공통) */
+.chip:focus-visible{
+  outline: 2px solid rgba(17, 17, 17, 0.35);
+  outline-offset: 2px;
 }
 
-/* 링크는 “밑줄 + 호버 반전”이 레트로 국룰 */
-body.theme-retro a{
-  text-decoration: underline;
-  text-underline-offset: 3px;
+/* -------------------------------
+   1) 푸터: 테마 토글 UI (공통)
+   ------------------------------- */
+.site-footer .footer-tools{
+  margin-top: 14px;
 }
-body.theme-retro a:hover{
-  background: #000;
+.site-footer .theme-switch{
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.site-footer .btn.btn-theme{
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 0.95rem;
+}
+.site-footer .btn.btn-theme.is-active{
+  background: #111;
   color: #fff;
-  text-decoration: none;
+  border-color: #111;
+}
+.site-footer .footer-hint{
+  margin-top: 8px;
 }
 
-/* 페이지 컨테이너: 종이(장부) 느낌 살짝 */
-body.theme-retro .container{
-  background: transparent;
+/* =========================================================
+   2) 레트로 테마 (html[data-theme="retro"])
+   - 너무 과하면 업무 사이트에서 피로해지니, '레트로 감성'은 살리고
+     가독성/정확도(실무)를 우선으로 조절
+   ========================================================= */
+
+html[data-theme="retro"]{
+  color-scheme: light;
 }
 
-/* 섹션/카드/콜아웃: 베벨(3D) 패널 */
-body.theme-retro .section,
-body.theme-retro .tool-card,
-body.theme-retro .card,
-body.theme-retro .callout,
-body.theme-retro .shot-details{
-  border-radius: var(--retro-radius);
-  background: var(--retro-panel);
-  border: 2px solid var(--retro-border-mid);
-  border-color:
-    var(--retro-border-light)
-    var(--retro-border-dark)
-    var(--retro-border-dark)
-    var(--retro-border-light);
-  box-shadow: none;
+html[data-theme="retro"] body{
+  /* 색 변수(레트로-문구/종이 느낌) */
+  --retro-bg: #fff5d8;          /* 따뜻한 종이색 */
+  --retro-surface: #fffdf1;     /* 카드 배경 */
+  --retro-surface-2: #ffffff;   /* 버튼/입력 기본 */
+  --retro-ink: #121212;         /* 본문 텍스트 */
+  --retro-muted: #48505c;       /* 설명 텍스트 */
+  --retro-border: #161616;      /* 굵은 라인 */
+  --retro-shadow: rgba(22, 22, 22, 0.55);
+  --retro-focus: rgba(56, 189, 248, 0.55);
+  --retro-accent: #ff5d8f;
+
+  /* 레트로 배경(얇은 그리드 + 잉크 번짐 느낌 라이트 버전) */
+  background:
+    linear-gradient(rgba(22,22,22,0.035) 1px, transparent 1px) 0 0 / 22px 22px,
+    linear-gradient(90deg, rgba(22,22,22,0.035) 1px, transparent 1px) 0 0 / 22px 22px,
+    radial-gradient(circle at 10% 0%, rgba(255, 184, 107, 0.26), transparent 45%),
+    radial-gradient(circle at 90% 18%, rgba(124, 131, 255, 0.18), transparent 52%),
+    var(--retro-bg);
+
+  color: var(--retro-ink);
+  background-attachment: fixed;
 }
 
-body.theme-retro .card{
-  background: var(--retro-panel-2);
+/* 본문/보조텍스트 톤 정리 */
+html[data-theme="retro"] body p,
+html[data-theme="retro"] body li,
+html[data-theme="retro"] body div,
+html[data-theme="retro"] body span{
+  color: #1f2937;
 }
-
-/* 섹션 내부 hr: 점선으로 바꾸면 “구분선” 감성이 딱 */
-body.theme-retro hr{
-  border: 0;
-  border-top: 2px dotted var(--retro-border-dark);
-  opacity: 1;
-}
-
-/* 헤딩: 타이틀바 느낌 */
-body.theme-retro .section > h2:first-child,
-body.theme-retro .section > h3:first-child,
-body.theme-retro .tool-card .tool-title{
-  display: inline-block;
-  padding: 4px 10px;
-  margin-bottom: 12px;
-  background: var(--retro-accent);
-  color: #fff;
-  border: 2px solid var(--retro-border-mid);
-  border-color:
-    var(--retro-border-light)
-    var(--retro-border-dark)
-    var(--retro-border-dark)
-    var(--retro-border-light);
-  border-radius: var(--retro-radius);
-  letter-spacing: 0.2px;
-}
-
-/* 메인 H1도 살짝 레트로하게(과하지 않게) */
-body.theme-retro h1{
-  letter-spacing: 0.4px;
-}
-
-/* muted 텍스트 */
-body.theme-retro .muted{
+html[data-theme="retro"] body .muted{
   color: var(--retro-muted);
 }
 
-/* -----------------------------
-   버튼: Windows 95식 베벨 버튼
-   ----------------------------- */
-body.theme-retro .btn{
-  border-radius: var(--retro-radius);
-  background: var(--retro-panel);
-  color: var(--retro-text);
-  border: 2px solid var(--retro-border-mid);
-  border-color:
-    var(--retro-border-light)
-    var(--retro-border-dark)
-    var(--retro-border-dark)
-    var(--retro-border-light);
-  box-shadow: none;
-  text-decoration: none; /* 버튼 안 텍스트 밑줄 제거 */
+/* 헤딩/컨트롤: 모노스페이스로 레트로 감성(본문은 그대로) */
+html[data-theme="retro"] body h1,
+html[data-theme="retro"] body h2,
+html[data-theme="retro"] body h3,
+html[data-theme="retro"] body h4,
+html[data-theme="retro"] body .btn,
+html[data-theme="retro"] body .chip,
+html[data-theme="retro"] body summary,
+html[data-theme="retro"] body th{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", "Apple SD Gothic Neo", "Noto Sans KR", "맑은 고딕", monospace;
+  letter-spacing: -0.01em;
 }
 
-body.theme-retro .btn:hover{
-  background: #fdfdfd;
+html[data-theme="retro"] body h1,
+html[data-theme="retro"] body h2{
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.06);
 }
 
-body.theme-retro .btn:active{
-  /* 눌림 효과: 베벨 뒤집기 */
-  border-color:
-    var(--retro-border-dark)
-    var(--retro-border-light)
-    var(--retro-border-light)
-    var(--retro-border-dark);
-  transform: translateY(1px);
+/* 섹션/카드: 굵은 라인 + 오프셋 섀도(90s 윈도우/잡지 느낌) */
+html[data-theme="retro"] .section,
+html[data-theme="retro"] .card,
+html[data-theme="retro"] .tool-card,
+html[data-theme="retro"] .callout,
+html[data-theme="retro"] .shot-details,
+html[data-theme="retro"] .dl-shot{
+  background: var(--retro-surface);
+  border: 2px solid var(--retro-border);
+  box-shadow: 6px 6px 0 var(--retro-shadow);
 }
 
-body.theme-retro .btn:focus-visible{
-  outline: var(--retro-outline);
-  outline-offset: 3px;
+/* 대시보드 summary/접기영역도 살짝 레트로하게 */
+html[data-theme="retro"] .dash-summary,
+html[data-theme="retro"] .shot-summary{
+  background: rgba(255,255,255,0.72);
+  border: 2px solid var(--retro-border);
 }
 
-/* primary: 타이틀바 네이비 버튼 */
-body.theme-retro .btn.primary{
-  background: var(--retro-accent);
+/* 버튼: 눌리는 3D 느낌(과하지 않게) */
+html[data-theme="retro"] .btn{
+  border: 2px solid var(--retro-border);
+  border-radius: 10px;
+  background: var(--retro-surface-2);
+  box-shadow: 4px 4px 0 var(--retro-shadow);
+  transition:
+    transform 0.07s ease,
+    box-shadow 0.07s ease,
+    background-color 0.15s ease,
+    filter 0.15s ease;
+}
+
+html[data-theme="retro"] .btn:hover{
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 var(--retro-shadow);
+  filter: saturate(1.02);
+}
+
+html[data-theme="retro"] .btn:active{
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--retro-shadow);
+}
+
+html[data-theme="retro"] .btn.primary{
+  background: #111;
   color: #fff;
+  border-color: #111;
 }
 
-/* ghost는 그냥 “밝은 회색 패널 버튼”으로 */
-body.theme-retro .btn.ghost{
-  background: #f2f2f2;
-  border-color:
-    var(--retro-border-light)
-    var(--retro-border-dark)
-    var(--retro-border-dark)
-    var(--retro-border-light);
+/* 칩도 동일한 '툭'한 느낌 */
+html[data-theme="retro"] .chip{
+  border: 2px solid var(--retro-border);
+  background: rgba(255,255,255,0.85);
+  box-shadow: 3px 3px 0 var(--retro-shadow);
 }
 
-/* 파스텔 팔레트 버튼은 레트로 하이라이트 컬러로 재해석(선택) */
-body.theme-retro .btn.pastel-yellow{ background:#fff2a6; }
-body.theme-retro .btn.pastel-blue{ background:#b8dcff; }
-body.theme-retro .btn.paste-pink{ background:#ffc9de; }
-body.theme-retro .btn.pastel-mint{ background:#bff7e6; }
-body.theme-retro .btn.pastel-green{ background:#d7ffb0; }
-body.theme-retro .btn.pastel-orange{ background:#ffd3a6; }
-body.theme-retro .btn.pastel-red{ background:#ffb6b6; }
-body.theme-retro .btn.pastel-purple{ background:#dbc6ff; }
-body.theme-retro .btn.pastel-grey{ background:#eaeaea; border-color: var(--retro-border-mid); }
-body.theme-retro .btn.pastel-teal{ background:#b7f3f0; }
-
-/* -----------------------------
-   인풋/셀렉트/텍스트에어리어: 인셋(파인) 느낌
-   ----------------------------- */
-body.theme-retro input[type="text"],
-body.theme-retro input[type="number"],
-body.theme-retro input[type="time"],
-body.theme-retro input[type="date"],
-body.theme-retro select,
-body.theme-retro textarea{
-  border-radius: var(--retro-radius);
-  background: #fff;
-  border: 2px solid var(--retro-border-mid);
-  border-color:
-    var(--retro-border-dark)
-    var(--retro-border-light)
-    var(--retro-border-light)
-    var(--retro-border-dark);
-  box-shadow: none;
+html[data-theme="retro"] .chip:hover{
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--retro-shadow);
 }
 
-body.theme-retro input:focus,
-body.theme-retro select:focus,
-body.theme-retro textarea:focus{
-  outline: var(--retro-outline);
+html[data-theme="retro"] .chip.is-active,
+html[data-theme="retro"] .chip[aria-current="location"]{
+  background: rgba(56,189,248,0.18);
+  border-color: var(--retro-border);
+}
+html[data-theme="retro"] .chip.is-active::after,
+html[data-theme="retro"] .chip[aria-current="location"]::after{
+  content: "●";
+  font-size: 0.7em;
+  margin-left: 6px;
+  color: var(--retro-accent);
+}
+
+/* 입력 UI: 종이 위 펜 느낌(테두리 강조) */
+html[data-theme="retro"] input[type="text"],
+html[data-theme="retro"] input[type="number"],
+html[data-theme="retro"] input[type="time"],
+html[data-theme="retro"] input[type="date"],
+html[data-theme="retro"] select,
+html[data-theme="retro"] textarea{
+  border: 2px solid var(--retro-border);
+  background: rgba(255,255,255,0.72);
+  box-shadow: inset 2px 2px 0 rgba(0,0,0,0.06);
+}
+
+html[data-theme="retro"] input:focus,
+html[data-theme="retro"] select:focus,
+html[data-theme="retro"] textarea:focus{
+  outline: 3px solid var(--retro-focus);
   outline-offset: 2px;
-  border-color:
-    var(--retro-border-dark)
-    var(--retro-border-light)
-    var(--retro-border-light)
-    var(--retro-border-dark);
+  border-color: var(--retro-border);
+  box-shadow: inset 2px 2px 0 rgba(0,0,0,0.05);
 }
 
-/* 숫자 입력은 장부처럼 우측 정렬 유지 */
-body.theme-retro .numeric{ text-align: right; }
-
-/* -----------------------------
-   칩/빠른이동: 각진 토큰
-   ----------------------------- */
-body.theme-retro .chip{
-  border-radius: 999px; /* 칩은 둥글어도 레트로에 어울림 */
-  background: #efefef;
-  border: 2px solid var(--retro-border-mid);
-  border-color:
-    var(--retro-border-light)
-    var(--retro-border-dark)
-    var(--retro-border-dark)
-    var(--retro-border-light);
-  text-decoration: none;
-}
-body.theme-retro .chip:hover{
-  background: #000;
-  color: #fff;
+/* 구분선: 점선으로 레트로 느낌 */
+html[data-theme="retro"] hr{
+  border: 0;
+  border-top: 2px dashed rgba(22,22,22,0.35);
+  opacity: 1;
 }
 
-/* -----------------------------
-   테이블: 선 굵게 + 헤더 음영
-   ----------------------------- */
-body.theme-retro .sheetlike th,
-body.theme-retro .sheetlike td{
-  border: 2px solid var(--retro-border-mid);
-  padding: 8px 10px;
+/* 표: 약간 두꺼운 선 + 헤더 배경 강조 */
+html[data-theme="retro"] .sheetlike th,
+html[data-theme="retro"] .sheetlike td{
+  border-color: rgba(22,22,22,0.35);
+}
+html[data-theme="retro"] .sheetlike th{
+  background: rgba(255, 93, 143, 0.10);
 }
 
-body.theme-retro .sheetlike th{
-  background: #dcdcdc;
+/* 푸터도 카드처럼 보이게 */
+html[data-theme="retro"] .site-footer{
+  background: var(--retro-surface);
+  border-top: 2px solid var(--retro-border);
 }
 
-/* -----------------------------
-   푸터/헤더: 패널화
-   ----------------------------- */
-body.theme-retro .site-header,
-body.theme-retro .site-footer{
-  background: var(--retro-panel);
-  border-top: 2px solid var(--retro-border-mid);
-  border-bottom: 2px solid var(--retro-border-mid);
-  border-color:
-    var(--retro-border-light)
-    var(--retro-border-dark)
-    var(--retro-border-dark)
-    var(--retro-border-light);
+/* 레트로 모드에서 테마 버튼 active는 포인트 컬러 */
+html[data-theme="retro"] .site-footer .btn.btn-theme.is-active{
+  background: var(--retro-accent);
+  color: #111;
+  border-color: var(--retro-border);
 }
 
-/* -----------------------------
-   CRT 오버레이(선택)
-   ----------------------------- */
-@media print{
-  body.theme-retro::before{ display:none !important; }
+/* 모바일에서 빠른이동을 조금 더 '툴바'처럼 (너무 강하면 피곤하니 약하게) */
+@media (max-width: 640px){
+  html[data-theme="retro"] .quick-nav{
+    position: sticky;
+    top: 8px;
+    z-index: 1000;
+    backdrop-filter: blur(6px);
+  }
 }
 
-body.theme-retro.theme-crt{
-  position: relative;
-}
-
-body.theme-retro.theme-crt::before{
-  content:"";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 2147483645;
-  opacity: var(--crt-opacity);
-  /* 스캔라인 + 아주 약한 노이즈 */
-  background:
-    repeating-linear-gradient(
-      to bottom,
-      rgba(0,0,0,0.75) 0px,
-      rgba(0,0,0,0.75) 1px,
-      rgba(255,255,255,0.25) 2px,
-      rgba(255,255,255,0.25) 3px
-    );
-  mix-blend-mode: multiply;
-}
-
-/* -----------------------------
-   레트로용 추가 유틸(선택)
-   ----------------------------- */
-
-/* “장부 스탬프” 같은 뱃지 */
-body.theme-retro .retro-badge{
-  display: inline-block;
-  padding: 2px 8px;
-  font-weight: 800;
-  border-radius: 999px;
-  background: #000;
-  color: #fff;
-}
-
-/* 에러/주의 텍스트 */
-body.theme-retro .retro-warn{
-  color: #b00020;
-  font-weight: 800;
-}
-
-/* 결과 강조 박스(계산 결과 표시용) */
-body.theme-retro .retro-result{
-  border-radius: var(--retro-radius);
-  padding: 10px 12px;
-  background: #fff;
-  border: 2px solid var(--retro-border-mid);
-  border-color:
-    var(--retro-border-dark)
-    var(--retro-border-light)
-    var(--retro-border-light)
-    var(--retro-border-dark);
+/* 모바일에서는 fixed 배경이 버벅일 수 있어 스크롤로 */
+@media (max-width: 640px){
+  html[data-theme="retro"] body{
+    background-attachment: scroll;
+  }
 }
