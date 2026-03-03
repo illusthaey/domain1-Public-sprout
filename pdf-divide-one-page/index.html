@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PDF 여러개 1페이지씩 분리 저장</title>
+  <title>PDF 여러 페이지 → 1페이지씩 분리 저장</title>
 
   <link rel="icon" href="/static/favicon.ico" />
   <link rel="stylesheet" href="/static/style.css" />
 
-  <!-- drop-zone / 파일목록 / 결과 UI를 위한 최소 추가 스타일 -->
+  
   <style>
     .drop-zone{
       border: 2px dashed #cbd5e1;
@@ -83,29 +83,23 @@
 </head>
 
 <body>
-  <header class="site-header">
-    <div class="shell">
-      <h1>PDF 여러개 1페이지씩 분리 저장</h1>
-      <p class="subtitle">
-        PDF를 여러 개 올리고(드래그&드롭 가능), 각 페이지를 <span class="accent">1페이지짜리 PDF</span>로 분리합니다.
-        <br/>※ 모든 처리는 브라우저(로컬)에서만 수행됩니다.
-      </p>
-    </div>
-  </header>
 
   <main class="container">
+
+    <h1>PDF 여러 페이지 → 1페이지씩 분리 저장 기능</h1>
+
     <section class="section">
-      <h2>1) PDF 추가</h2>
+      <h2>1. PDF 파일 업로드</h2>
+        <p class="muted hint local-small">
+          ·PDF 파일 여러개 한 번에 처리 가능함. 
+        </p>
+      <hr/>
 
       <div id="dropZone" class="drop-zone">
         <div class="local-large" style="font-weight:700; color:#111;">여기에 PDF 파일을 드래그&드롭</div>
-        <p class="muted hint local-small">
-          여러 개 한 번에 가능 · 또는 아래 버튼으로 선택
-        </p>
-
         <div class="row gap" style="justify-content:center; margin-top:10px;">
           <button id="btnPick" class="btn pastel-blue" type="button">파일 선택</button>
-          <button id="btnClearFiles" class="btn pastel-grey" type="button" disabled>목록 비우기</button>
+          <button id="btnClearFiles" class="btn pastel-grey" type="button" disabled>전체 삭제</button>
         </div>
 
         <input id="fileInput" type="file" accept="application/pdf" multiple hidden />
