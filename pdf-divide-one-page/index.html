@@ -114,10 +114,11 @@
       </div>
     </section>
 
+    
     <section class="section">
-      <h2>2) 분리 옵션</h2>
-      <p class="muted local-small" style="margin-top:0;">
-        아래 옵션은 <strong>모든 PDF에 동일하게 적용</strong>됩니다. (끝 페이지를 비우면 각 파일의 마지막 페이지까지 자동)
+      <h2>2. 페이지 분리하기</h2>
+      <p class="muted">
+        ·아래 옵션은 모든 PDF에 동일하게 적용됩니다.
       </p>
 
       <div class="grid three">
@@ -127,12 +128,12 @@
         </div>
 
         <div class="field">
-          <div class="muted local-small">끝 페이지 (비우면 자동)</div>
-          <input id="endPage" type="number" min="1" placeholder="자동(각 파일 총페이지)" />
+          <div class="muted local-small">끝 페이지</div>
+          <input id="endPage" type="number" min="1" placeholder="자동(총 페이지수)" />
         </div>
 
         <div class="field">
-          <div class="muted local-small">페이지번호 자리수 (비우면 자동)</div>
+          <div class="muted local-small">페이지번호 자리수(선택)</div>
           <input id="padDigits" type="number" min="1" placeholder="예: 3 → 001" />
         </div>
       </div>
@@ -140,15 +141,12 @@
       <div class="grid three" style="margin-top:12px;">
         <div class="field">
           <div class="muted local-small">전체 접두어(선택)</div>
-          <input id="globalPrefix" type="text" placeholder="예: 분리본 → 분리본_원본파일_p001.pdf" />
+          <input id="globalPrefix" type="text" placeholder="예: 분리 → 분리_원본파일_p001.pdf" />
         </div>
 
         <div class="field">
-          <div class="muted local-small">동시 작업 수 (병렬 분리)</div>
+          <div class="muted local-small">PDF 파일 여러개 올린 경우 병렬 분리 작업 수</div>
           <input id="concurrency" type="number" min="1" max="4" value="2" />
-          <p class="muted local-small" style="margin-top:8px;">
-            PC 사양/파일 크기에 따라 1~2가 안정적입니다.
-          </p>
         </div>
 
         <div class="field">
