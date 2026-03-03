@@ -3,11 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>근로자 사회보험료 계산기</title>
-
-
-<link rel="icon" href="/static/favicon.ico" />
-  <link rel="stylesheet" href="/static/style.css" />
+  <title>사회보험료 요율 계산기 (2025/2026/직접입력)</title>
   <style>
     :root{
       --bg:#ffffff; --text:#111; --muted:#666; --line:#e5e7eb; --soft:#f8fafc;
@@ -19,7 +15,7 @@
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Noto Sans KR", "맑은 고딕", sans-serif;
       line-height:1.5;
     }
-    .wrap{ max-width:1100px; margin:0 auto; padding:22px 16px 40px; }
+    .wrap{ max-width:1180px; margin:0 auto; padding:22px 16px 40px; }
     h1{ margin:6px 0 10px; font-size:1.65rem; text-align:center; }
     .sub{ margin:0 0 16px; text-align:center; color:var(--muted); font-size:.98rem; }
 
@@ -34,8 +30,12 @@
       align-items:end;
     }
     .field{ grid-column: span 3; min-width:0; }
-    .field.wide{ grid-column: span 6; }
-    .field.narrow{ grid-column: span 2; }
+    .field.wide{ grid-column: span 12; }
+    .field.n2{ grid-column: span 2; }
+    .field.n3{ grid-column: span 3; }
+    .field.n4{ grid-column: span 4; }
+    .field.n6{ grid-column: span 6; }
+
     .field label{ display:block; font-size:.9rem; color:#222; margin:0 0 6px; font-weight:650; }
     select, input[type="text"]{
       width:100%;
@@ -52,6 +52,7 @@
       box-shadow: 0 0 0 2px rgba(180,180,208,.25);
       background:#fff;
     }
+
     .btnrow{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:flex-end; margin-top:10px; }
     button{
       appearance:none;
@@ -89,7 +90,7 @@
     }
     table{
       border-collapse:collapse;
-      min-width: 1200px;
+      min-width: 1280px;
       width:100%;
       font-size:.95rem;
     }
@@ -147,9 +148,12 @@
       font-size:.9em;
     }
 
-    @media (max-width: 900px){
-      .field{ grid-column: span 6; }
-      .field.narrow{ grid-column: span 6; }
+    .inline-help{ font-size:.86rem; color:#666; margin-top:6px; }
+    .hide{ display:none !important; }
+
+    @media (max-width: 980px){
+      .field, .field.n2, .field.n3, .field.n4, .field.n6{ grid-column: span 6; }
+      .field.wide{ grid-column: span 12; }
       .btnrow{ justify-content:stretch; }
       button{ flex:1; }
     }
@@ -157,38 +161,81 @@
 </head>
 <body>
   <div class="wrap">
-    <h1>근로자 사회보험료 계산기</h1>
-    <p class="muted">
-      ·산재보험요율은 개발자 학교 기준으로 고정해둠. 2026년 요율로 기본 세팅
+    <h1>사회보험료 요율 계산기 (직장가입자)</h1>
+    <p class="sub">
+      5명 보수월액을 한 번에 입력하고, 방향키로 엑셀처럼 이동합니다.
+      (<span class="kbd">↑↓←→</span> / <span class="kbd">Enter</span>는 아래로)
+      · 모든 결과는 <b>10원 미만 절사</b> 고정
     </p>
 
     <div class="panel">
       <div class="grid">
-        <div class="field narrow">
-          <label for="year">요율 연도</label>
+        <div class="field n2">
+          <label for="year">연도/프리셋</label>
           <select id="year">
-            <option value="2025">2025년</option>
-            <option value="2026">2026년</option>
+            <option value="2025">2025년 (기본값 불러오기)</option>
+            <option value="2026" selected>2026년 (기본값 불러오기)</option>
+            <option value="custom">직접입력(커스텀)</option>
           </select>
+          <div class="inline-help">
+            연도 선택 시 아래 요율이 그 연도 기본값으로 채워집니다.<br/>
+            커스텀은 마지막 커스텀 값이 유지됩니다.
+          </div>
         </div>
 
-        <div class="field narrow">
-          <label for="eiExtra">고용보험 고안·직능(사업주만)</label>
+        <div class="field n2">
+          <label for="rateNps">국민연금 총요율(%)</label>
+          <input id="rateNps" type="text" inputmode="decimal" />
+        </div>
+
+        <div class="field n2">
+          <label for="rateHi">건강보험 총요율(%)</label>
+          <input id="rateHi" type="text" inputmode="decimal" />
+        </div>
+
+        <div class="field n3">
+          <label for="rateLtcOfHi">장기요양(건강보험료 대비)(%)</label>
+          <input id="rateLtcOfHi" type="text" inputmode="decimal" />
+        </div>
+
+        <div class="field n3">
+          <label for="rateLtcSalary">장기요양(보수 대비)(%)</label>
+          <input id="rateLtcSalary" type="text" inputmode="decimal" />
+        </div>
+
+        <div class="field n2">
+          <label for="rateEiEmp">고용(실업급여) 근로자(%)</label>
+          <input id="rateEiEmp" type="text" inputmode="decimal" />
+        </div>
+
+        <div class="field n2">
+          <label for="rateEiEr">고용(실업급여) 사업주(%)</label>
+          <input id="rateEiEr" type="text" inputmode="decimal" />
+        </div>
+
+        <div class="field n3">
+          <label for="eiExtra">고용 고안·직능(사업주만)</label>
           <select id="eiExtra">
             <option value="0.0025">0.25% (상시 150인 미만)</option>
             <option value="0.0045">0.45% (150인 이상 우선지원대상)</option>
             <option value="0.0065">0.65% (150~999인, 우선지원 제외)</option>
             <option value="0.0085" selected>0.85% (1000인 이상/국가지자체)</option>
+            <option value="custom">직접입력</option>
           </select>
         </div>
 
-        <div class="field narrow">
+        <div class="field n2" id="eiExtraCustomWrap">
+          <label for="eiExtraCustom">고안·직능 직접입력(%)</label>
+          <input id="eiExtraCustom" type="text" inputmode="decimal" value="0.85" />
+        </div>
+
+        <div class="field n2">
           <label for="wcDefault">기본 산재요율(%) (사업주)</label>
           <input id="wcDefault" type="text" inputmode="decimal" value="0.966" />
         </div>
 
         <div class="field wide">
-          <label>현재 적용 요율(자동)</label>
+          <label>현재 적용 요율(자동 요약)</label>
           <div class="ratebox" id="rateSummary"></div>
         </div>
       </div>
@@ -200,8 +247,8 @@
       </div>
 
       <div class="note">
-        • 붙여넣기: 표 셀 클릭 후 엑셀처럼 <span class="kbd">탭/줄바꿈</span> 포함 데이터를 그대로 붙여넣으면 여러 칸이 채워집니다.<br/>
-        • 실제 4대보험은 상·하한/부과기준 등으로 차이가 날 수 있어요(이 도구는 “요율 기반 빠른 계산”).
+        • 붙여넣기: 표에서 셀 클릭 후 엑셀처럼 <span class="kbd">탭/줄바꿈</span> 포함 데이터를 붙여넣으면 여러 칸이 채워집니다.<br/>
+        • 이 계산기는 “요율 기반 빠른 계산”입니다. 실제 고지/공단 계산은 상·하한/부과기준에 따라 달라질 수 있습니다.
       </div>
     </div>
 
@@ -261,32 +308,46 @@
 
 <script>
 (() => {
-  // ====== 요율 데이터(직장가입자 기준) ======
-  // - 장기요양은 "건강보험료의 몇 %"로 계산(연도별 비율 사용)
-  const RATE_BY_YEAR = {
+  // ==============================
+  // 0) 기본값(연도 프리셋)
+  // ==============================
+  const PRESET = {
     "2025": {
-      npsTotal: 0.09,      // 국민연금 총요율
-      hiTotal: 0.0709,     // 건강보험 총요율
-      ltcOfHi: 0.1295,     // 장기요양 = 건강보험료 * 12.95%
-      eiUnempEmp: 0.009,   // 고용보험(실업급여) 근로자
-      eiUnempEr : 0.009    // 고용보험(실업급여) 사업주
+      npsPct: 9.0,
+      hiPct: 7.09,
+      ltcOfHiPct: 12.95, // 장기요양 = 건강보험료 * 12.95%
+      eiEmpPct: 0.9,
+      eiErPct: 0.9
     },
     "2026": {
-      npsTotal: 0.095,     // 국민연금 총요율
-      hiTotal: 0.0719,     // 건강보험 총요율
-      ltcOfHi: 0.1314,     // 장기요양 = 건강보험료 * 13.14% (0.9448%/7.19%와 동일)
-      eiUnempEmp: 0.009,
-      eiUnempEr : 0.009
+      npsPct: 9.5,
+      hiPct: 7.19,
+      ltcOfHiPct: 13.14, // 보수 대비 0.9448% 수준(7.19 * 13.14 / 100)
+      eiEmpPct: 0.9,
+      eiErPct: 0.9
     }
   };
 
-  const N = 5;
+  const N = 5; // 인원
 
   const els = {
     year: document.getElementById("year"),
+
+    rateNps: document.getElementById("rateNps"),
+    rateHi: document.getElementById("rateHi"),
+    rateLtcOfHi: document.getElementById("rateLtcOfHi"),
+    rateLtcSalary: document.getElementById("rateLtcSalary"),
+    rateEiEmp: document.getElementById("rateEiEmp"),
+    rateEiEr: document.getElementById("rateEiEr"),
+
     eiExtra: document.getElementById("eiExtra"),
+    eiExtraCustomWrap: document.getElementById("eiExtraCustomWrap"),
+    eiExtraCustom: document.getElementById("eiExtraCustom"),
+
     wcDefault: document.getElementById("wcDefault"),
+
     rateSummary: document.getElementById("rateSummary"),
+
     tbody: document.getElementById("tbody"),
     btnClear: document.getElementById("btnClear"),
     btnFillDemo: document.getElementById("btnFillDemo"),
@@ -298,21 +359,16 @@
     "sum_ei_e","sum_ei_er","sum_wc_er","sum_emp","sum_er","sum_total"
   ].reduce((acc,id)=> (acc[id]=document.getElementById(id), acc), {});
 
-  // 계산 결과를 엑셀 다운로드에 재사용
+  // 엑셀 다운로드용 상태
   const state = {
-    rows: Array.from({length:N}, () => ({
-      no: "", name:"", salary: NaN, wcPct: NaN,
-      nps_e:NaN, nps_er:NaN,
-      hi_e:NaN,  hi_er:NaN,
-      ltc_e:NaN, ltc_er:NaN,
-      ei_e:NaN,  ei_er:NaN,
-      wc_er:NaN,
-      sum_emp:NaN, sum_er:NaN, sum_total:NaN
-    })),
-    sums: {}
+    rows: Array.from({length:N}, () => ({})),
+    sums: {},
+    rates: {}
   };
 
-  // ====== 유틸 ======
+  // ==============================
+  // 1) 유틸
+  // ==============================
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   const floor10 = (x) => (isFinite(x) ? Math.floor(x/10)*10 : NaN); // 10원 미만 절사
 
@@ -330,7 +386,6 @@
       .trim();
   }
 
-  // "300만원" / "3,000,000" / "1.2억" 정도를 가볍게 처리
   function parseWon(s){
     const t = cleanNumberText(s);
     if (!t) return NaN;
@@ -338,6 +393,7 @@
     let mult = 1;
     let u = t;
 
+    // 아주 가볍게 단위 처리
     if (u.includes("억")) { mult *= 100000000; u = u.replace(/억/g,""); }
     if (u.includes("만")) { mult *= 10000; u = u.replace(/만/g,""); }
 
@@ -348,6 +404,7 @@
     return num * mult;
   }
 
+  // "7.19" -> 0.0719 (decimal)
   function parsePercent(s){
     const t = (s ?? "").toString().trim().replace(/[%\s]/g,"");
     if (!t) return NaN;
@@ -355,24 +412,153 @@
     return isFinite(n) ? (n / 100) : NaN;
   }
 
+  function pctStr(x, digits=4){
+    if (!isFinite(x)) return "";
+    // x는 "퍼센트 값" (예: 7.19)
+    return Number(x).toFixed(digits).replace(/\.?0+$/,"");
+  }
+
   function setInputCommaOnBlur(input, kind){
     input.addEventListener("focus", () => {
-      input.value = cleanNumberText(input.value);
+      if (kind === "pct"){
+        input.value = (input.value ?? "").toString().replace(/[%\s]/g,"").replace(/,/g,"");
+      } else {
+        input.value = cleanNumberText(input.value);
+      }
       setTimeout(() => input.select(), 0);
     });
+
     input.addEventListener("blur", () => {
       if (!input.value.trim()) return;
+
       if (kind === "won") {
         const n = parseWon(input.value);
         input.value = isFinite(n) ? fmtWon(n) : input.value;
       } else if (kind === "pct") {
         const p = parsePercent(input.value);
-        if (isFinite(p)) input.value = (p*100).toFixed(3).replace(/\.?0+$/,"");
+        if (isFinite(p)) {
+          // %로 다시 보여주기
+          const val = p * 100;
+          input.value = Number(val.toFixed(4)).toString();
+        }
       }
     });
   }
 
-  // ====== 시트 생성 ======
+  function numOr0(x){ return isFinite(x) ? x : 0; }
+
+  // ==============================
+  // 2) 장기요양 2칸 자동 연동
+  // ==============================
+  let ltcSyncLock = false;
+
+  function syncLtc(from){
+    if (ltcSyncLock) return;
+    ltcSyncLock = true;
+
+    const hi = parsePercent(els.rateHi.value); // decimal
+    const ratio = parsePercent(els.rateLtcOfHi.value); // decimal (건보료 대비)
+    const total = parsePercent(els.rateLtcSalary.value); // decimal (보수 대비)
+
+    if (from === "hiRatio" || from === "hi"){
+      // ratio가 있으면 -> total 갱신
+      if (isFinite(hi) && hi > 0 && isFinite(ratio)){
+        const salaryPct = hi * ratio * 100; // % 값
+        els.rateLtcSalary.value = Number(salaryPct.toFixed(4)).toString();
+      }
+      // ratio가 없고 total이 있으면 -> ratio 갱신(hi 변경 시)
+      else if (from === "hi" && isFinite(hi) && hi > 0 && isFinite(total)){
+        const ratioPct = (total / hi) * 100; // % 값
+        els.rateLtcOfHi.value = Number(ratioPct.toFixed(4)).toString();
+      }
+    }
+
+    if (from === "salary"){
+      if (isFinite(hi) && hi > 0 && isFinite(total)){
+        const ratioPct = (total / hi) * 100; // % 값
+        els.rateLtcOfHi.value = Number(ratioPct.toFixed(4)).toString();
+      }
+    }
+
+    ltcSyncLock = false;
+  }
+
+  // ==============================
+  // 3) EI 고안·직능: 직접입력 토글
+  // ==============================
+  function refreshEiExtraUi(){
+    const isCustom = els.eiExtra.value === "custom";
+    els.eiExtraCustomWrap.classList.toggle("hide", !isCustom);
+    if (isCustom){
+      // 비어있으면 기본값 넣어주기
+      if (!els.eiExtraCustom.value.trim()){
+        els.eiExtraCustom.value = "0.85";
+      }
+    }
+  }
+
+  function getEiExtraDecimal(){
+    if (els.eiExtra.value === "custom"){
+      return numOr0(parsePercent(els.eiExtraCustom.value));
+    }
+    return Number(els.eiExtra.value || 0);
+  }
+
+  // ==============================
+  // 4) 프리셋/커스텀 저장
+  // ==============================
+  function captureRates(){
+    return {
+      nps: els.rateNps.value,
+      hi: els.rateHi.value,
+      ltcOfHi: els.rateLtcOfHi.value,
+      ltcSalary: els.rateLtcSalary.value,
+      eiEmp: els.rateEiEmp.value,
+      eiEr: els.rateEiEr.value,
+      eiExtraSelect: els.eiExtra.value,
+      eiExtraCustom: els.eiExtraCustom.value,
+      wcDefault: els.wcDefault.value
+    };
+  }
+
+  function applyRates(obj){
+    if (!obj) return;
+    els.rateNps.value = obj.nps ?? "";
+    els.rateHi.value = obj.hi ?? "";
+    els.rateLtcOfHi.value = obj.ltcOfHi ?? "";
+    els.rateLtcSalary.value = obj.ltcSalary ?? "";
+    els.rateEiEmp.value = obj.eiEmp ?? "";
+    els.rateEiEr.value = obj.eiEr ?? "";
+    els.eiExtra.value = obj.eiExtraSelect ?? "0.0085";
+    els.eiExtraCustom.value = obj.eiExtraCustom ?? "0.85";
+    els.wcDefault.value = obj.wcDefault ?? "0.966";
+    refreshEiExtraUi();
+    syncLtc("hi"); // 혹시 일관성 맞추기
+  }
+
+  let customSaved = null;
+
+  function applyPresetYear(y){
+    const p = PRESET[y];
+    if (!p) return;
+
+    els.rateNps.value = pctStr(p.npsPct, 4);
+    els.rateHi.value = pctStr(p.hiPct, 4);
+    els.rateLtcOfHi.value = pctStr(p.ltcOfHiPct, 4);
+    syncLtc("hiRatio");
+
+    els.rateEiEmp.value = pctStr(p.eiEmpPct, 4);
+    els.rateEiEr.value = pctStr(p.eiErPct, 4);
+
+    // 산재/고안직능은 별도(요청 기본 유지)
+    els.wcDefault.value = els.wcDefault.value?.trim() ? els.wcDefault.value : "0.966";
+    if (!els.eiExtra.value) els.eiExtra.value = "0.0085";
+    refreshEiExtraUi();
+  }
+
+  // ==============================
+  // 5) 시트 생성(5명)
+  // ==============================
   function buildSheet(){
     els.tbody.innerHTML = "";
     for (let r=0; r<N; r++){
@@ -418,8 +604,6 @@
       inp.addEventListener("input", recalcAll);
     }
 
-    setInputCommaOnBlur(els.wcDefault, "pct");
-
     bindKeyboardNav();
     bindPasteFill();
   }
@@ -428,7 +612,9 @@
     return document.querySelector(`input[data-cell="1"][data-row="${row}"][data-col="${col}"]`);
   }
 
-  // ====== 키보드 네비게이션(엑셀 느낌) ======
+  // ==============================
+  // 6) 키보드 네비게이션(엑셀 느낌)
+  // ==============================
   function caretAtEdge(input, dir){
     try{
       const start = input.selectionStart ?? 0;
@@ -493,7 +679,9 @@
     }
   }
 
-  // ====== 붙여넣기(탭/줄바꿈)로 여러 셀 채우기 ======
+  // ==============================
+  // 7) 붙여넣기(탭/줄바꿈)
+  // ==============================
   function bindPasteFill(){
     const inputs = [...document.querySelectorAll('input[data-cell="1"]')];
     for (const inp of inputs){
@@ -528,31 +716,73 @@
     }
   }
 
-  // ====== 요율 요약 ======
-  function setRateSummary(){
-    const y = els.year.value;
-    const r = RATE_BY_YEAR[y];
-    const eiExtra = Number(els.eiExtra.value || 0);
+  // ==============================
+  // 8) 요율 읽기/요약
+  // ==============================
+  function getRates(){
+    const nps = numOr0(parsePercent(els.rateNps.value));
+    const hi  = numOr0(parsePercent(els.rateHi.value));
+    const ltcOfHi = numOr0(parsePercent(els.rateLtcOfHi.value));
+    const ltcSalary = hi * ltcOfHi; // decimal (보수 대비)
+    const eiEmp = numOr0(parsePercent(els.rateEiEmp.value));
+    const eiEr  = numOr0(parsePercent(els.rateEiEr.value));
+    const eiExtra = numOr0(getEiExtraDecimal());
+    const wcDefault = numOr0(parsePercent(els.wcDefault.value));
+
+    return {
+      nps, hi, ltcOfHi, ltcSalary, eiEmp, eiEr, eiExtra, wcDefault
+    };
+  }
+
+  function setRateSummary(r){
+    const yearMode = els.year.value === "custom"
+      ? "직접입력"
+      : (els.year.value + "년");
+
+    const eiExtraPct = (r.eiExtra * 100);
+    const ltcSalaryPct = (r.ltcSalary * 100);
 
     els.rateSummary.innerHTML = `
-      <div>국민연금: <code>${(r.npsTotal*100).toFixed(2)}%</code> (근로자 ${(r.npsTotal*50).toFixed(2)}% / 사업주 ${(r.npsTotal*50).toFixed(2)}%)</div>
-      <div>건강보험: <code>${(r.hiTotal*100).toFixed(2)}%</code> (근로자 ${(r.hiTotal*50).toFixed(3)}% / 사업주 ${(r.hiTotal*50).toFixed(3)}%)</div>
-      <div>장기요양: <code>${(r.ltcOfHi*100).toFixed(2)}%</code> (건강보험료에 곱함, 근로자/사업주 50:50)</div>
-      <div>고용보험(실업급여): <code>1.80%</code> (근로자 0.90% / 사업주 0.90%) + 고안·직능(사업주만) <code>${(eiExtra*100).toFixed(2)}%</code></div>
-      <div style="margin-top:6px;color:#666;">※ 모든 결과: <b>10원 미만 절사</b> · 산재는 업종별이므로 요율(%)을 직접 입력</div>
+      <div><b>모드</b>: <code>${yearMode}</code> · <b>절사</b>: <code>10원 미만 절사</code></div>
+      <div>국민연금: <code>${(r.nps*100).toFixed(4).replace(/\.?0+$/,"")}%</code> (근로자 ${(r.nps*50).toFixed(4).replace(/\.?0+$/,"")}% / 사업주 ${(r.nps*50).toFixed(4).replace(/\.?0+$/,"")}%)</div>
+      <div>건강보험: <code>${(r.hi*100).toFixed(4).replace(/\.?0+$/,"")}%</code> (근로자 ${(r.hi*50).toFixed(4).replace(/\.?0+$/,"")}% / 사업주 ${(r.hi*50).toFixed(4).replace(/\.?0+$/,"")}%)</div>
+      <div>장기요양: <code>${(r.ltcOfHi*100).toFixed(4).replace(/\.?0+$/,"")}%</code> × 건강보험료 (보수 대비 <code>${ltcSalaryPct.toFixed(4).replace(/\.?0+$/,"")}%</code>)</div>
+      <div>고용(실업급여): 근로자 <code>${(r.eiEmp*100).toFixed(4).replace(/\.?0+$/,"")}%</code> / 사업주 <code>${(r.eiEr*100).toFixed(4).replace(/\.?0+$/,"")}%</code> + 고안·직능(사업주) <code>${eiExtraPct.toFixed(4).replace(/\.?0+$/,"")}%</code></div>
+      <div>산재(사업주): 기본 <code>${(r.wcDefault*100).toFixed(4).replace(/\.?0+$/,"")}%</code> (개인별 산재요율 칸으로 덮어쓰기 가능)</div>
     `;
   }
 
-  // ====== 계산 ======
+  // ==============================
+  // 9) 계산
+  // ==============================
   function recalcAll(){
-    setRateSummary();
+    refreshEiExtraUi();
 
-    const y = els.year.value;
-    const rate = RATE_BY_YEAR[y];
+    // 장기요양 연동(입력 도중 깨질 수 있으니)
+    // - hi 바뀌면 total 갱신
+    // - ratio 바뀌면 total 갱신
+    // - total 바뀌면 ratio 갱신
+    // 이 함수는 각 input 이벤트에서 호출되지만, 여기서도 한 번 더 안전하게 맞춰줌.
+    // (락이 있어서 무한루프는 없음)
+    syncLtc("hi");
 
-    const eiExtra = Number(els.eiExtra.value || 0);
-    const wcDefaultPct = parsePercent(els.wcDefault.value);
-    const wcDefault = isFinite(wcDefaultPct) ? wcDefaultPct : 0;
+    const rate = getRates();
+    setRateSummary(rate);
+
+    // 엑셀 다운로드용 rates 저장
+    state.rates = {
+      mode: els.year.value,
+      npsPct: rate.nps*100,
+      hiPct: rate.hi*100,
+      ltcOfHiPct: rate.ltcOfHi*100,
+      ltcSalaryPct: rate.ltcSalary*100,
+      eiEmpPct: rate.eiEmp*100,
+      eiErPct: rate.eiEr*100,
+      eiExtraPct: rate.eiExtra*100,
+      wcDefaultPct: rate.wcDefault*100
+    };
+
+    const wcDefault = rate.wcDefault;
 
     const sums = {
       nps_e:0, nps_er:0, hi_e:0, hi_er:0, ltc_e:0, ltc_er:0,
@@ -571,38 +801,28 @@
 
       const valid = isFinite(salary) && salary > 0;
 
-      // 원시 계산
-      const nps_e_raw  = valid ? salary * (rate.npsTotal/2) : NaN;
-      const nps_er_raw = valid ? salary * (rate.npsTotal/2) : NaN;
+      // 국민연금
+      const nps_e  = valid ? floor10(salary * (rate.nps/2)) : NaN;
+      const nps_er = valid ? floor10(salary * (rate.nps/2)) : NaN;
 
-      const hi_total_raw = valid ? salary * rate.hiTotal : NaN;
-      const hi_e_raw   = valid ? (hi_total_raw/2) : NaN;
-      const hi_er_raw  = valid ? (hi_total_raw/2) : NaN;
+      // 건강보험
+      const hi_total = valid ? (salary * rate.hi) : NaN;
+      const hi_e  = valid ? floor10(hi_total/2) : NaN;
+      const hi_er = valid ? floor10(hi_total/2) : NaN;
 
-      const ltc_total_raw = valid ? (hi_total_raw * rate.ltcOfHi) : NaN;
-      const ltc_e_raw  = valid ? (ltc_total_raw/2) : NaN;
-      const ltc_er_raw = valid ? (ltc_total_raw/2) : NaN;
+      // 장기요양: 건강보험료 * (장기요양 비율)
+      const ltc_total = valid ? (hi_total * rate.ltcOfHi) : NaN;
+      const ltc_e  = valid ? floor10(ltc_total/2) : NaN;
+      const ltc_er = valid ? floor10(ltc_total/2) : NaN;
 
-      const ei_e_raw   = valid ? salary * (rate.eiUnempEmp) : NaN;
-      const ei_er_raw  = valid ? salary * (rate.eiUnempEr + eiExtra) : NaN;
+      // 고용보험
+      const ei_e  = valid ? floor10(salary * rate.eiEmp) : NaN;
+      const ei_er = valid ? floor10(salary * (rate.eiEr + rate.eiExtra)) : NaN;
 
-      const wc_er_raw  = valid ? salary * wcRate : NaN;
+      // 산재(사업주)
+      const wc_er = valid ? floor10(salary * wcRate) : NaN;
 
-      // 10원 미만 절사(각 항목별)
-      const nps_e  = floor10(nps_e_raw);
-      const nps_er = floor10(nps_er_raw);
-
-      const hi_e   = floor10(hi_e_raw);
-      const hi_er  = floor10(hi_er_raw);
-
-      const ltc_e  = floor10(ltc_e_raw);
-      const ltc_er = floor10(ltc_er_raw);
-
-      const ei_e   = floor10(ei_e_raw);
-      const ei_er  = floor10(ei_er_raw);
-
-      const wc_er  = floor10(wc_er_raw);
-
+      // 합계
       const empSum = valid ? (nps_e + hi_e + ltc_e + ei_e) : NaN;
       const erSum  = valid ? (nps_er + hi_er + ltc_er + ei_er + wc_er) : NaN;
       const total  = valid ? (empSum + erSum) : NaN;
@@ -632,12 +852,12 @@
       add("wc_er", wc_er);
       add("emp", empSum); add("er", erSum); add("total", total);
 
-      // state 저장(엑셀 다운로드용)
+      // state 저장(엑셀용)
       state.rows[r] = {
         no: r+1,
         name,
         salary: valid ? salary : NaN,
-        wcPct: isFinite(wcOver) ? (wcOver*100) : (wcDefault*100),
+        wcPct: (isFinite(wcOver) ? (wcOver*100) : (wcDefault*100)),
         nps_e, nps_er, hi_e, hi_er, ltc_e, ltc_er, ei_e, ei_er, wc_er,
         sum_emp: empSum, sum_er: erSum, sum_total: total
       };
@@ -658,9 +878,16 @@
     sumIds.sum_total.textContent  = fmtWon(sums.total);
 
     state.sums = {...sums};
+
+    // 커스텀 모드면 커스텀값 저장
+    if (els.year.value === "custom"){
+      customSaved = captureRates();
+    }
   }
 
-  // ====== 엑셀(SpreadsheetML 2003) 다운로드 ======
+  // ==============================
+  // 10) 엑셀(SpreadsheetML 2003) 다운로드
+  // ==============================
   function xmlEscape(s){
     return (s ?? "").toString()
       .replace(/&/g,"&amp;")
@@ -682,11 +909,6 @@
   }
 
   function buildExcelXml(){
-    const y = els.year.value;
-    const eiExtra = Number(els.eiExtra.value||0);
-    const wcDefaultPct = parsePercent(els.wcDefault.value);
-    const wcDefault = isFinite(wcDefaultPct) ? wcDefaultPct : 0;
-
     const header = [
       "No","이름","보수월액(원)","산재요율(%)",
       "국민연금(근로자)","국민연금(사업주)",
@@ -697,47 +919,68 @@
       "합계(근로자)","합계(사업주)","총부담"
     ];
 
+    const r = state.rates || {};
+    const modeLabel = (els.year.value === "custom") ? "직접입력" : (els.year.value + "년");
+
     let rowsXml = "";
 
-    // 제목/설정 행
     rowsXml += `<Row>
-      ${cellXml(`사회보험료 계산 결과 (${y}년)`, "String", "sTitle")}
+      ${cellXml(`사회보험료 계산 결과 (${modeLabel})`, "String", "sTitle")}
       ${Array.from({length: header.length-1}, ()=>cellXml("", "String", "sTitle")).join("")}
     </Row>`;
-    rowsXml += `<Row>
-      ${cellXml(`고안·직능(사업주): ${(eiExtra*100).toFixed(2)}%`, "String", "sMeta")}
-      ${cellXml(`기본 산재요율: ${(wcDefault*100).toFixed(3)}%`, "String", "sMeta")}
-      ${Array.from({length: header.length-2}, ()=>cellXml("", "String", "sMeta")).join("")}
-    </Row>`;
-    rowsXml += `<Row>${Array.from({length: header.length}, ()=>cellXml("", "String", "sMeta")).join("")}</Row>`;
 
-    // 헤더
+    rowsXml += `<Row>
+      ${cellXml(`절사: 10원 미만 절사`, "String", "sMeta")}
+      ${cellXml(`국민연금: ${Number((r.npsPct??0).toFixed(4))}%`, "String", "sMeta")}
+      ${cellXml(`건강보험: ${Number((r.hiPct??0).toFixed(4))}%`, "String", "sMeta")}
+      ${cellXml(`장기요양(건보대비): ${Number((r.ltcOfHiPct??0).toFixed(4))}%`, "String", "sMeta")}
+      ${cellXml(`장기요양(보수대비): ${Number((r.ltcSalaryPct??0).toFixed(4))}%`, "String", "sMeta")}
+      ${cellXml("", "String", "sMeta")}
+      ${cellXml("", "String", "sMeta")}
+      ${cellXml("", "String", "sMeta")}
+      ${cellXml("", "String", "sMeta")}
+      ${cellXml("", "String", "sMeta")}
+      ${cellXml("", "String", "sMeta")}
+      ${cellXml("", "String", "sMeta")}
+      ${cellXml("", "String", "sMeta")}
+      ${cellXml("", "String", "sMeta")}
+      ${cellXml("", "String", "sMeta")}
+      ${cellXml("", "String", "sMeta")}
+    </Row>`;
+
+    rowsXml += `<Row>
+      ${cellXml(`고용(실업급여) 근로자: ${Number((r.eiEmpPct??0).toFixed(4))}%`, "String", "sMeta")}
+      ${cellXml(`고용(실업급여) 사업주: ${Number((r.eiErPct??0).toFixed(4))}%`, "String", "sMeta")}
+      ${cellXml(`고안·직능(사업주): ${Number((r.eiExtraPct??0).toFixed(4))}%`, "String", "sMeta")}
+      ${cellXml(`산재 기본: ${Number((r.wcDefaultPct??0).toFixed(4))}%`, "String", "sMeta")}
+      ${Array.from({length: header.length-4}, ()=>cellXml("", "String", "sMeta")).join("")}
+    </Row>`;
+
+    rowsXml += `<Row>${Array.from({length: header.length}, ()=>cellXml("", "String", "sMeta")).join("")}</Row>`;
     rowsXml += `<Row>${header.map(h=>cellXml(h,"String","sHeader")).join("")}</Row>`;
 
-    // 데이터
-    for (const r of state.rows){
+    for (const row of state.rows){
       rowsXml += `<Row>
-        ${cellXml(r.no, "Number", "sCenter")}
-        ${cellXml(r.name, "String", "sText")}
-        ${cellXml(isFinite(r.salary)? r.salary : "", "Number", "sNum")}
-        ${cellXml(isFinite(r.wcPct)? Number(r.wcPct.toFixed(3)) : "", "Number", "sPct")}
+        ${cellXml(row.no, "Number", "sCenter")}
+        ${cellXml(row.name, "String", "sText")}
+        ${cellXml(isFinite(row.salary)? row.salary : "", "Number", "sNum")}
+        ${cellXml(isFinite(row.wcPct)? Number(row.wcPct.toFixed(4)) : "", "Number", "sPct")}
 
-        ${cellXml(r.nps_e, "Number", "sNum")}
-        ${cellXml(r.nps_er, "Number", "sNum")}
-        ${cellXml(r.hi_e, "Number", "sNum")}
-        ${cellXml(r.hi_er, "Number", "sNum")}
-        ${cellXml(r.ltc_e, "Number", "sNum")}
-        ${cellXml(r.ltc_er, "Number", "sNum")}
-        ${cellXml(r.ei_e, "Number", "sNum")}
-        ${cellXml(r.ei_er, "Number", "sNum")}
-        ${cellXml(r.wc_er, "Number", "sNum")}
-        ${cellXml(r.sum_emp, "Number", "sNumBold")}
-        ${cellXml(r.sum_er, "Number", "sNumBold")}
-        ${cellXml(r.sum_total, "Number", "sNumBold")}
+        ${cellXml(row.nps_e, "Number", "sNum")}
+        ${cellXml(row.nps_er, "Number", "sNum")}
+        ${cellXml(row.hi_e, "Number", "sNum")}
+        ${cellXml(row.hi_er, "Number", "sNum")}
+        ${cellXml(row.ltc_e, "Number", "sNum")}
+        ${cellXml(row.ltc_er, "Number", "sNum")}
+        ${cellXml(row.ei_e, "Number", "sNum")}
+        ${cellXml(row.ei_er, "Number", "sNum")}
+        ${cellXml(row.wc_er, "Number", "sNum")}
+        ${cellXml(row.sum_emp, "Number", "sNumBold")}
+        ${cellXml(row.sum_er, "Number", "sNumBold")}
+        ${cellXml(row.sum_total, "Number", "sNumBold")}
       </Row>`;
     }
 
-    // 합계
     const s = state.sums || {};
     rowsXml += `<Row>
       ${cellXml("합계", "String", "sHeader")}
@@ -799,7 +1042,7 @@
       <NumberFormat ss:Format="#,##0"/>
     </Style>
     <Style ss:ID="sPct">
-      <NumberFormat ss:Format="0.000"/>
+      <NumberFormat ss:Format="0.0000"/>
     </Style>
     <Style ss:ID="sSum">
       <Font ss:Bold="1" ss:Color="#FFFFFF"/>
@@ -824,9 +1067,9 @@
     const url = URL.createObjectURL(blob);
 
     const a = document.createElement("a");
-    const y = els.year.value;
+    const modeLabel = (els.year.value === "custom") ? "직접입력" : els.year.value;
     a.href = url;
-    a.download = `사회보험료_계산결과_${y}.xls`;
+    a.download = `사회보험료_계산결과_${modeLabel}.xls`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -834,7 +1077,65 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  // ====== 버튼 ======
+  // ==============================
+  // 11) 이벤트 바인딩
+  // ==============================
+  function bindRateInputs(){
+    const pctInputs = [
+      els.rateNps, els.rateHi, els.rateLtcOfHi, els.rateLtcSalary,
+      els.rateEiEmp, els.rateEiEr, els.eiExtraCustom, els.wcDefault
+    ];
+    for (const el of pctInputs) setInputCommaOnBlur(el, "pct");
+
+    // 개별 입력 이벤트
+    els.rateHi.addEventListener("input", () => { syncLtc("hi"); recalcAll(); });
+    els.rateLtcOfHi.addEventListener("input", () => { syncLtc("hiRatio"); recalcAll(); });
+    els.rateLtcSalary.addEventListener("input", () => { syncLtc("salary"); recalcAll(); });
+
+    [els.rateNps, els.rateEiEmp, els.rateEiEr, els.wcDefault].forEach(el => {
+      el.addEventListener("input", recalcAll);
+    });
+
+    els.eiExtra.addEventListener("change", () => {
+      // 직접입력으로 바꾸면 현재 선택값을 custom 입력에 옮겨주기
+      if (els.eiExtra.value === "custom"){
+        // 직전 값이 숫자였다면 그걸 %로
+        const prev = Number(els.eiExtra.dataset.prev || 0.0085);
+        els.eiExtraCustom.value = Number((prev*100).toFixed(4)).toString();
+      }
+      recalcAll();
+    });
+
+    els.eiExtra.addEventListener("change", refreshEiExtraUi);
+    els.eiExtraCustom.addEventListener("input", recalcAll);
+
+    // prev tracking
+    els.eiExtra.addEventListener("change", () => {
+      if (els.eiExtra.value !== "custom"){
+        els.eiExtra.dataset.prev = els.eiExtra.value;
+      }
+    });
+  }
+
+  // 연도 선택
+  els.year.addEventListener("change", () => {
+    const v = els.year.value;
+
+    if (v === "custom"){
+      if (customSaved) applyRates(customSaved);
+      refreshEiExtraUi();
+      recalcAll();
+      return;
+    }
+
+    // 프리셋 선택 시: 현재 커스텀을 저장해두면 왔다갔다 편함
+    if (!customSaved) customSaved = captureRates();
+
+    applyPresetYear(v);
+    recalcAll();
+  });
+
+  // 버튼
   els.btnClear.addEventListener("click", () => {
     [...document.querySelectorAll('input[data-cell="1"]')].forEach(i => i.value = "");
     recalcAll();
@@ -859,21 +1160,26 @@
 
   els.btnDownloadXls.addEventListener("click", downloadExcel);
 
-  // ====== 상단 컨트롤 변경 이벤트 ======
-  [els.year, els.eiExtra].forEach(el => el.addEventListener("change", recalcAll));
-  els.wcDefault.addEventListener("input", recalcAll);
+  // ==============================
+  // 12) 초기화
+  // ==============================
+  function init(){
+    buildSheet();
+    bindRateInputs();
 
-  // ====== 초기화 ======
-  buildSheet();
-  setRateSummary();
-  recalcAll();
-  getCellInput(0,0)?.focus();
+    // EI 커스텀 입력칸 기본 숨김(선택값이 0.85%라서)
+    refreshEiExtraUi();
+
+    // 기본 연도: 2026 프리셋 적용
+    applyPresetYear("2026");
+    els.year.value = "2026";
+
+    recalcAll();
+    getCellInput(0,0)?.focus();
+  }
+
+  init();
 })();
 </script>
-<script src="/static/disable-copy.js"></script>
-<script src="/static/footer.js"></script>
-<script src="/static/global-loader.js?v=1"></script>
-
-
 </body>
 </html>
