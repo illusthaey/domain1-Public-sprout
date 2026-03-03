@@ -3,31 +3,26 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PDF 1페이지씩 분리 저장</title>
+  <title>PDF 여러장 → 1페이지씩 분리 저장</title>
 
   <link rel="icon" href="/static/favicon.ico" />
   <link rel="stylesheet" href="/static/style.css" />
 
-  <!-- (선택) 사이트 공통 footer/UI 쓰면 주석 해제
-  <script defer src="/static/footer.js"></script>
-  <script defer src="/static/global-loader.js"></script>
-  -->
 </head>
 
 <body>
   <header class="site-header">
     <div class="shell">
-      <h1>PDF 1페이지씩 분리 저장</h1>
-      <p class="subtitle">
-        PDF를 올리면 각 페이지를 <span class="accent">1페이지짜리 PDF</span>로 분리해서 개별 저장(다운로드)할 수 있습니다.
-        <br/>※ 모든 처리는 브라우저(로컬)에서만 수행됩니다.
+      <h1>PDF 여러장 → 1페이지씩 분리 저장</h1>
+      <p class="muted">
+        ·PDF파일 업로드하면 1페이지씩 분리해서 개별 PDF파일로 저장해줌
       </p>
     </div>
   </header>
 
   <main class="container">
     <section class="section">
-      <h2>1) PDF 선택</h2>
+      <h2>1. PDF 파일 선택</h2>
 
       <div class="grid two">
         <div class="field">
@@ -39,7 +34,7 @@
         <div class="field">
           <div class="muted local-small">파일명 접두어(선택)</div>
           <input id="prefix" type="text" placeholder="비우면 원본 파일명 사용" />
-          <p class="muted local-small" style="margin-top:8px;">
+          <p class="muted">
             예: <code>보고서</code> → <code>보고서_p001.pdf</code>, <code>보고서_p002.pdf</code> …
           </p>
         </div>
