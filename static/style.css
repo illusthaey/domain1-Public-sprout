@@ -948,9 +948,9 @@ section[id]{
   scroll-margin-top: 16px;
 }
 
-/* index 전용 배경(카드 구분감 ↑) */
+/* ✅ index 전용 배경: 흰색으로 고정 */
 .page-index{
-  background: #f6f7fb;
+  background: #fff;
 }
 
 /* 상단 헤드 */
