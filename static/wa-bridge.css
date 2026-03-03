@@ -1,0 +1,40 @@
+/* /static/wa-bridge.css */
+/* 목적: Web Awesome(wa-*) 컴포넌트가 기존 /static/style.css 톤과 공존하도록 토큰만 연결 */
+
+/* W:contentReference[oaicite:10]{index=10}사를 쓰므로 기존 CSS와 충돌 위험이 낮음 */
+:root {
+
+  --wa-color-surface-raised: #fff;
+  --wa-color-surface-default: #fff;
+  --wa-color-surface-lowered: #f9fafb;
+  --wa-color-surface-border: #e5e7eb;
+
+  --wa-color-text-normal: #111;
+  --wa-color-text-quiet: #4b5563;
+  --wa-color-text-link: var(--periwinkle-700, #4f46e5);
+
+  --wa-color-focus: #b4b4d0;
+  --wa-focus-ring-width: 0.125rem;  /* 2px */
+  --wa-focus-ring-offset: 0.125rem; /* 2px */
+
+
+  --wa-border-radius-m: 0.75rem; /* 12px */
+  --wa-border-radius-l: 0.75rem; /* 12px */
+
+
+  --wa-color-neutral-border-loud: #d9d9e3;
+  --wa-color-neutral-border-normal: #e5e7eb;
+  --wa-color-neutral-border-quiet: #eef2f7;
+
+
+  --wa-color-brand-fill-loud: #111;
+  --wa-color-brand-border-loud: #111;
+  --wa-color-brand-on-loud: #fff;
+
+
+  --wa-form-control-border-radius: 0.75rem; /* 12px */
+  --wa-form-control-label-color: #374151;
+  --wa-form-control-placeholder-color: #6b7280;
+  --wa-form-control-padding-inline: 1em;
+  --wa-form-control-padding-block: 0.65em;
+}
