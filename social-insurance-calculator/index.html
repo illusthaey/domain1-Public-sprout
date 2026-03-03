@@ -241,14 +241,10 @@
 
       <div class="btnrow">
         <button class="ghost" id="btnClear">입력 지우기</button>
-        <button class="ghost" id="btnFillDemo">예시값 채우기</button>
+        <button class="ghost" id="btnFillDemo">기본값 채우기</button>
         <button class="primary" id="btnDownloadXls">엑셀(.xls) 다운로드</button>
       </div>
 
-      <div class="note">
-        • 붙여넣기: 표에서 셀 클릭 후 엑셀처럼 <span class="kbd">탭/줄바꿈</span> 포함 데이터를 붙여넣으면 여러 칸이 채워집니다.<br/>
-        • 이 계산기는 “요율 기반 빠른 계산”입니다. 실제 고지/공단 계산은 상·하한/부과기준에 따라 달라질 수 있습니다.
-      </div>
     </div>
 
     <div class="panel">
@@ -1143,11 +1139,11 @@
 
   els.btnFillDemo.addEventListener("click", () => {
     const demo = [
-      ["홍길동","3,000,000",""],
-      ["김철수","2,400,000",""],
-      ["이영희","4,200,000",""],
-      ["박민지","5,500,000",""],
-      ["최준호","3,800,000",""]
+      ["신경호","7,000,000",""],
+      ["김기현","5,000,000",""],
+      ["김성진","5,000,000",""],
+      ["장진호","5,000,000",""],
+      ["고주무","1,800,000",""]
     ];
     for (let r=0; r<N; r++){
       getCellInput(r,0).value = demo[r][0];
@@ -1180,5 +1176,9 @@
   init();
 })();
 </script>
+
+  <script src="/static/disable-copy.js"></script>
+<script src="/static/footer.js"></script>
+<script src="/static/global-loader.js?v=1"></script>
 </body>
 </html>
