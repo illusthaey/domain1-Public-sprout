@@ -2,9 +2,7 @@
 // 사이트 공통 스크립트 모음 (우클릭 방지)
 
 (function () {
-  // -----------------------------
-  // 1. 도메인 체크
-  //    - 허용한 호스트에서만 보호 기능 켜기
+  // ---------------------------:contentReference[oaicite:11]{index=11}- 허용한 호스트에서만 보호 기능 켜기
   // -----------------------------
   const host = location.hostname || "";
   const allowed = [
@@ -28,7 +26,6 @@
   try {
     document.title += " •";
   } catch (_) {}
-
 
   // -----------------------------
   // 3. 우클릭 / 선택 / 드래그 막기
@@ -72,11 +69,7 @@
       }
 
       // Ctrl + Shift + (I, J, C, K)
-      if (
-        e.ctrlKey &&
-        e.shiftKey &&
-        ["i", "j", "c", "k"].includes(k)
-      ) {
+      if (e.ctrlKey && e.shiftKey && ["i", "j", "c", "k"].includes(k)) {
         e.preventDefault();
         return;
       }
@@ -123,5 +116,60 @@
   // window.addEventListener("load", () => {
   //   console.log("global-loader.js loaded");
   // });
+
+  // -----------------------------
+  // 8. UI Kit: Web Awesome (옵션 / 충돌 최소화)
+  //    - 페이지에 <wa-*> 컴포넌트가 있거나
+  //    - <html data-ui-kit="wa"> 또는 <body data-ui-kit="wa"> 가 있으면
+  //      /static/wa-kit.js를 주입해서 테마/로더를 "필요할 때만" 로드
+  // -----------------------------
+  try {
+    const waSelector = [
+      "wa-button",
+      "wa-dialog",
+      "wa-input",
+      "wa-textarea",
+      "wa-select",
+      "wa-checkbox",
+      "wa-switch",
+      "wa-radio",
+      "wa-radio-group",
+      "wa-dropdown",
+      "wa-popup",
+      "wa-tooltip",
+      "wa-details",
+      "wa-card",
+      "wa-alert",
+      "wa-badge",
+      "wa-tag"
+    ].join(",");
+
+    const wantsWA =
+      (document.documentElement?.dataset?.uiKit === "wa") ||
+      (document.body?.dataset?.uiKit === "wa") ||
+      !!document.querySelector(waSelector);
+
+    if (wantsWA) {
+      const id = "wa-kit-js";
+      if (!document.getElementById(id)) {
+        const s = document.createElement("script");
+        s.id = id;
+        s.src = "/static/wa-kit.js?v=1";
+        s.defer = true;
+        s.onload = () => {
+          try {
+            if (window.WAKit && typeof window.WAKit.auto === "function") {
+              window.WAKit.auto();
+            }
+          } catch (_) {}
+        };
+        (document.head || document.documentElement).appendChild(s);
+      } else {
+        if (window.WAKit && typeof window.WAKit.auto === "function") {
+          window.WAKit.auto();
+        }
+      }
+    }
+  } catch (_) {}
 
 })();
