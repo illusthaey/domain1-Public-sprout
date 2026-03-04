@@ -4,56 +4,63 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>교육공무직 통상임금 계산기</title>
-  <link rel="stylesheet" href="/static/style.css">
   <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans KR',sans-serif;color:#111;background:#fff;margin:0}
+    :root{
+      --fg:#111; --muted:#444; --line:#e5e5e5; --bg:#fff; --chip:#f7f7f7;
+      --radius:16px;
+    }
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans KR',sans-serif;color:var(--fg);background:var(--bg);margin:0}
     .wrap{max-width:960px;margin:24px auto;padding:0 16px}
-    h1{font-size:1.75rem;margin:8px 0 14px}
-    .card{border:1px solid #e5e5e5;border-radius:16px;padding:16px;margin:12px 0;overflow:hidden}
+    h1{font-size:1.75rem;margin:8px 0 8px}
+    h2{font-size:1.1rem;margin:0 0 10px}
+    hr{border:none;border-top:1px solid var(--line);margin:14px 0}
+    .card{border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin:12px 0;overflow:hidden}
     .row{display:flex;gap:12px;flex-wrap:wrap}
     .col{flex:1 1 240px;min-width:240px}
     label{display:block;font-weight:600;margin-bottom:6px}
     select,input[type=number],input[type=date]{width:100%;padding:10px 12px;border:1px solid #d0d0d0;border-radius:12px;font-size:1rem;box-sizing:border-box}
     .allow-row{display:grid;grid-template-columns:1fr 180px;align-items:center;gap:10px;margin:8px 0}
     .allow-row input{max-width:180px}
-    .muted{color:#444;font-size:.92rem}
+    .muted{color:var(--muted);font-size:.92rem;line-height:1.45}
+    .chip{display:inline-block;background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:.85rem;margin-left:8px}
     .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .out{font-size:1.1rem;font-weight:700}
+    .out{font-size:1.1rem;font-weight:800}
     .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
     a.btn,button.btn{display:inline-block;padding:10px 14px;border:1px solid #222;border-radius:12px;color:#111;text-decoration:none;font-weight:700;background:#fff;cursor:pointer}
-    footer{text-align:center;margin:24px 0;color:#444}
     .disabled{background:#fafafa;color:#777}
+    .warn{background:#fff8e1;border:1px solid #f3d48b;border-radius:14px;padding:10px 12px;margin-top:10px}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+    footer{text-align:center;margin:24px 0;color:var(--muted)}
   </style>
-
-<link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
+  <main class="wrap">
+    <h1>
+      교육공무직 통상임금 계산기
+      <span id="note" class="chip"></span>
+    </h1>
+    <div class="muted" id="subNote"></div>
+    <hr/>
 
-
-  <main class="container" style="max-width:880px; margin:0 auto; padding:24px 16px;">
-
-    <div class="wrap">
-    <h1>교육공무직 통상임금 계산기 <span id="note" class="muted"></span></h1>
-<hr/>
-
-
-<!-- ================================ 구분선 ================================ -->
-
-    <section class="section">
+    <section class="card">
       <h2>사용 방법 안내</h2>
-      <p class="muted">
-        ·직종 선택하면 관련 수당 자동으로 입력됨<br/>
-        ·2025.03.01.일자 이후 보수표 반영함 <br/>
-        ·최초 임용일 입력하면 근속연수 및 근속수당 자동 산정됨.<br/>
-        ·최초 임용일을 입력하지 않고 근속연수를 수기 입력하는 것도 가능함. <br/>
-        <br/>
-      </p>
+      <div class="muted">
+        · <b>근무지(학교/기관)</b>와 <b>통상임금 계산 시점</b>을 입력하면 해당 날짜에 적용되는 <b>스냅샷(보수표/지침)</b>이 자동 선택됩니다.<br/>
+        · 최초 임용일을 입력하면 <b>근속연수</b>가 자동 산정됩니다(미입력 시 수동 입력 가능).<br/>
+        · 수당 금액은 보수표·지침의 “월 환산액/월 지급액” 기본값이 자동 입력되며, 필요하면 직접 수정 가능합니다.<br/>
+        · 시급(통상임금)은 <b>월 통상임금 ÷ 월 통상임금 산정시간</b>으로 계산하고, 결과는 <b>원 단위 절사(내림)</b>합니다.
+      </div>
+      <div class="warn muted" style="margin-top:12px;">
+        ⚠️ 이 계산기는 보수표/업무처리요령 기반 <b>산정 보조</b>용입니다. 실제 지급은 근로계약, 재직/근무요건, 인사·급여 처리 기준에 따라 달라질 수 있습니다.
+      </div>
     </section>
 
-<!-- ================================ 구분선 ================================ -->
-    
     <div class="card">
       <div class="row">
+        <div class="col">
+          <label>근무지</label>
+          <select id="workplace"></select>
+        </div>
         <div class="col">
           <label>직종</label>
           <select id="job"></select>
@@ -71,15 +78,21 @@
           <label>근속연수</label>
           <input id="years" type="number" min="0" step="1" value="0" />
         </div>
+        <div class="col">
+          <label>월 통상임금 산정시간</label>
+          <input id="monthlyHours" type="number" min="1" step="1" value="209" />
+          <div class="muted" id="hoursHint" style="margin-top:6px;"></div>
+        </div>
       </div>
-      <p class="muted">최초 임용일 입력 시 근속연수 자동 계산.</p>
+      <p class="muted">· 최초 임용일 입력 시 근속연수 자동 계산 · 단시간/특수 케이스는 산정시간을 직접 조정할 수 있습니다.</p>
       <div class="btns">
         <button class="btn" id="resetBtn" type="button">초기화</button>
       </div>
     </div>
 
     <div class="card">
-      <h2 style="font-size:1.1rem;margin:0 0 10px">적용 수당 금액 (월)</h2>
+      <h2>적용 수당 금액 (월)</h2>
+      <div class="muted" id="allowHint" style="margin:6px 0 12px;"></div>
       <div id="allowBox"></div>
     </div>
 
@@ -90,17 +103,478 @@
       <div><div class="muted">시급(통상임금)</div><div class="out" id="outHourly">-</div></div>
     </div>
 
-    <div class="btns">
-      <a class="btn" href="/">메인으로 돌아가기</a>
-    </div>
-  </div>
-
+    <footer class="muted">
+      데이터: 2025 스냅샷(기존) + 2026 보수표(학교/기관) 반영 · 단일 HTML(내장 JS)
+    </footer>
   </main>
-  
-  <script src="app.js"></script>
-<script src="/static/global-loader.js?v=1"></script>
-<script src="/static/footer.js"></script>
-<script src="/static/disable-copy.js"></script>
 
+<script>
+/* ===========================
+   데이터 로딩 (경로 폴백)
+=========================== */
+async function loadData(){
+  const urls = ['data.json', './data.json', '/ordinary-wage/data.json'];
+  let lastErr = null;
+  for(const u of urls){
+    try{
+      const r = await fetch(u + '?v=' + Date.now());
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      const txt = await r.text();
+      return JSON.parse(txt.replace(/\\bNaN\\b/g,'0'));
+    }catch(e){
+      console.warn('[ordinary-wage] data.json 로딩 실패:', u, e);
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error('data.json 로딩 실패');
+}
+
+/* ===========================
+   유틸
+=========================== */
+function money(n){
+  return (Math.round(n)||0).toLocaleString();
+}
+function parseYmd(s){
+  if(!s) return null;
+  const m = s.match(/(\\d{4})-(\\d{2})-(\\d{2})/);
+  if(!m) return null;
+  return new Date(Number(m[1]), Number(m[2])-1, Number(m[3]));
+}
+function ymdKey(s){
+  // YYYY-MM-DD -> number comparable
+  if(!s) return 0;
+  return Number(s.replaceAll('-',''));
+}
+function calcYears(startDateStr, calcDateStr){
+  const s = parseYmd(startDateStr);
+  const b = parseYmd(calcDateStr);
+  if(!s || !b) return null;
+  let y = b.getFullYear() - s.getFullYear();
+  const anniv = new Date(b.getFullYear(), s.getMonth(), s.getDate());
+  if(b < anniv) y -= 1;
+  return Math.max(0, y);
+}
+function isApplied(flag){
+  // 보수표 표기: ×(미적용), 그 외(○/△/◎ 등)는 적용으로 처리
+  if(flag == null) return false;
+  const f = String(flag).trim();
+  return f !== '' && f !== '×' && f.toLowerCase() !== 'nan';
+}
+function truncTo10(n){
+  return Math.floor((Number(n)||0)/10)*10;
+}
+
+/* ===========================
+   통상임금 산입 대상 수당(화이트리스트)
+   - 2026 지침 반영: 식생활지도수당 추가
+=========================== */
+const ALLOWANCE_NAMES = [
+  "정액급식비",
+  "교무행정사(직무수당)",
+  "위험수당",
+  "급식운영수당",
+  "식생활지도수당",
+  "면허가산수당",
+  "기술정보수당",
+  "특수업무수당",
+  "특수교육지원수당",
+  "정기상여금",
+  "명절휴가비"
+];
+
+/* ===========================
+   스냅샷 선택
+=========================== */
+function normalizeData(raw){
+  // 새로운 구조: {meta, snapshots:[...]}
+  // 구 구조: {meta, snapshot:{fixedAmounts, jobs}}
+  if(raw && Array.isArray(raw.snapshots)) return raw;
+
+  if(raw && raw.snapshot && Array.isArray(raw.snapshot.jobs)){
+    const effective = (raw.meta && raw.meta.사용스냅샷) ? raw.meta.사용스냅샷 : '1900.01.01';
+    const effYmd = effective.replaceAll('.','-').trim();
+    return {
+      meta: raw.meta || {},
+      snapshots: [{
+        id: 'legacy-' + effective,
+        workplace: '공통',
+        effectiveDate: effYmd,
+        label: effective + ' (legacy)',
+        amounts: raw.snapshot.fixedAmounts || {},
+        rules: { hourlyDivisorFullTime: raw.meta?.월통상임금산정시간 || 209 },
+        jobs: raw.snapshot.jobs || []
+      }]
+    };
+  }
+  return {meta:{}, snapshots:[]};
+}
+
+function selectSnapshot(data, workplace, calcDateStr){
+  const key = ymdKey(calcDateStr);
+  const snaps = data.snapshots || [];
+  let best = null;
+
+  for(const s of snaps){
+    const wk = s.workplace || '공통';
+    if(!(wk === workplace || wk === '공통')) continue;
+    const sKey = ymdKey(s.effectiveDate);
+    if(sKey <= key){
+      if(!best) best = s;
+      else{
+        const bKey = ymdKey(best.effectiveDate);
+        if(sKey > bKey) best = s;
+        else if(sKey === bKey){
+          // 같은 날짜면 선택 근무지(학교/기관)가 공통보다 우선
+          if(best.workplace === '공통' && wk === workplace) best = s;
+        }
+      }
+    }
+  }
+  // 계산일 이전 스냅샷이 없다면: 해당 근무지의 가장 이른 스냅샷
+  if(!best){
+    const candidates = snaps.filter(s => (s.workplace===workplace || s.workplace==='공통'));
+    best = candidates.sort((a,b)=> ymdKey(a.effectiveDate)-ymdKey(b.effectiveDate))[0] || null;
+  }
+  return best;
+}
+
+/* ===========================
+   산정시간(분모) 기본값
+   - 지침 명시: 209(상시근무), 130(1일5시간), 156(1일6시간)
+   - 방과후전담사는 단시간(5시간)로 많이 쓰여 130 기본값으로 처리
+=========================== */
+function defaultMonthlyHoursForJob(job){
+  const name = job?.직종 || '';
+  if(name.includes('초등돌봄전담사')) return 156;
+  if(name.includes('단시간')) return 130;
+  if(name.includes('방과후전담사')) return 130;
+  // 확장용(반일제/시간제 등)
+  if(name.includes('반일제')) return 104;
+  return 209;
+}
+
+/* ===========================
+   근속수당 (스냅샷 rules 기반)
+   - 기본: 1년 이상부터 지급
+   - rate/cap은 스냅샷마다 다를 수 있음
+=========================== */
+function computeTenureAmount(years, snapshot){
+  const y = Math.max(0, Math.floor(Number(years||0)));
+  if(y < 1) return 0;
+
+  const rate = Number(snapshot?.rules?.tenureRate || 40000);
+  const capYears = Number(snapshot?.rules?.tenureCapYears || 23);
+  const yy = Math.min(y, capYears);
+  return yy * rate;
+}
+
+/* ===========================
+   수당 기본값 계산
+=========================== */
+function getDefaultAllowanceAmount(name, snapshot, job){
+  const amounts = snapshot?.amounts || {};
+  const base = Number(job?.기본급 || 0);
+
+  if(name === '면허가산수당'){
+    // 지침: 기본급의 5% (원 단위 절사/10원 단위 절사 관행 반영)
+    // → 2026 영양사 기본급 2,344,500의 5% = 117,225 → 117,220
+    return truncTo10(base * 0.05);
+  }
+
+  if(name === '특수업무수당'){
+    // 지침 예시: 학교도서관사서/교육복지사 등 2만원(기본값)
+    // 구육성회직원(특수업무수당 5만원) 등 특이 케이스는 필요시 수기 조정
+    return Number(amounts[name] || 20000);
+  }
+
+  // 나머지는 스냅샷 amounts 그대로
+  return Number(amounts[name] || 0);
+}
+
+/* ===========================
+   수당 입력칸 구성
+=========================== */
+function rebuildAllowanceInputs(box, snapshot, job){
+  box.innerHTML='';
+  const 적용 = job?.적용 || {};
+
+  for(const name of ALLOWANCE_NAMES){
+    const flag = (적용 && (name in 적용)) ? 적용[name] : '×';
+    const applied = isApplied(flag);
+
+    const row = document.createElement('div');
+    row.className='allow-row';
+
+    const lab = document.createElement('label');
+    // 표기: (적용/미적용) + 원문 플래그(○/△/◎)
+    const flagText = (flag == null) ? '' : String(flag).trim();
+    const suffix = applied ? ' (적용' + (flagText && flagText!=='○' ? ' ' + flagText : '') + ')' : ' (미적용)';
+    lab.textContent = name + suffix;
+
+    const inp = document.createElement('input');
+    inp.type='number';
+    inp.min='0';
+    inp.step='1';
+    inp.dataset.name = name;
+
+    if(!applied){
+      inp.value = 0;
+      inp.disabled = true;
+      inp.classList.add('disabled');
+    }else{
+      inp.value = getDefaultAllowanceAmount(name, snapshot, job);
+    }
+
+    row.appendChild(lab);
+    row.appendChild(inp);
+    box.appendChild(row);
+  }
+}
+
+/* ===========================
+   값 읽기
+=========================== */
+function readAllowMap(allowBox){
+  const m = {};
+  allowBox.querySelectorAll('input[type=number]').forEach(i=>{
+    if(!i.disabled){
+      m[i.dataset.name] = Number(i.value || 0);
+    }
+  });
+  return m;
+}
+
+document.addEventListener('DOMContentLoaded', async ()=>{
+  const note = document.getElementById('note');
+  const subNote = document.getElementById('subNote');
+  const workplaceSel = document.getElementById('workplace');
+  const jobSel = document.getElementById('job');
+  const yearsInp = document.getElementById('years');
+  const startDateInp = document.getElementById('startDate');
+  const calcDateInp = document.getElementById('calcDate');
+  const yearsMode = document.getElementById('yearsMode');
+  const monthlyHoursInp = document.getElementById('monthlyHours');
+  const hoursHint = document.getElementById('hoursHint');
+  const allowHint = document.getElementById('allowHint');
+
+  const allowBox = document.getElementById('allowBox');
+  const outBase = document.getElementById('outBase');
+  const outTenure = document.getElementById('outTenure');
+  const outSum = document.getElementById('outSum');
+  const outHourly = document.getElementById('outHourly');
+  const resetBtn = document.getElementById('resetBtn');
+
+  // 데이터 로딩
+  let raw;
+  try{
+    raw = await loadData();
+  }catch(e){
+    console.error('[ordinary-wage] 데이터 로딩 실패:', e);
+    workplaceSel.innerHTML = '<option>데이터 로딩 실패 (F12→Console 확인)</option>';
+    jobSel.innerHTML = '<option>데이터 로딩 실패</option>';
+    return;
+  }
+  const data = normalizeData(raw);
+
+  // 기본 calcDate = 오늘
+  const today = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  calcDateInp.value = today.getFullYear() + '-' + pad(today.getMonth()+1) + '-' + pad(today.getDate());
+
+  // 근무지 옵션 만들기 (공통 제외)
+  const workplaces = Array.from(new Set((data.snapshots||[]).map(s=>s.workplace).filter(w=>w && w!=='공통')));
+  workplaces.sort((a,b)=> (a==='학교'?-1:1)); // 학교 우선 정렬(살짝 취향)
+  if(workplaces.length === 0) workplaces.push('학교');
+
+  workplaceSel.innerHTML = '';
+  for(const w of workplaces){
+    const op=document.createElement('option');
+    op.value=w; op.textContent=w;
+    workplaceSel.appendChild(op);
+  }
+  workplaceSel.value = workplaces.includes('학교') ? '학교' : workplaces[0];
+
+  function syncYearsMode(){
+    if(startDateInp.value){
+      yearsInp.disabled = true;
+      yearsInp.classList.add('disabled');
+      yearsMode.textContent = '입사일 기준 자동 계산 중';
+    }else{
+      yearsInp.disabled = false;
+      yearsInp.classList.remove('disabled');
+      yearsMode.textContent = '미입력시 근속연수 수동 입력 가능';
+    }
+  }
+
+  function getCurrentSnapshot(){
+    return selectSnapshot(data, workplaceSel.value, calcDateInp.value);
+  }
+
+  function getCurrentJobs(snapshot){
+    return (snapshot && Array.isArray(snapshot.jobs)) ? snapshot.jobs : [];
+  }
+
+  function populateJobs(snapshot){
+    const jobs = getCurrentJobs(snapshot);
+    const prev = jobSel.value;
+
+    jobSel.innerHTML = '';
+    for(const j of jobs){
+      if(!j || !j.직종) continue;
+      const op=document.createElement('option');
+      op.value = j.직종;
+      op.textContent = j.직종;
+      jobSel.appendChild(op);
+    }
+    if(jobSel.options.length === 0){
+      jobSel.innerHTML = '<option>직종 데이터 없음</option>';
+      return;
+    }
+    // 이전 선택 유지 시도
+    const hasPrev = Array.from(jobSel.options).some(o=>o.value===prev);
+    jobSel.value = hasPrev ? prev : jobSel.options[0].value;
+  }
+
+  function syncMonthlyHours(job){
+    const auto = defaultMonthlyHoursForJob(job);
+    // 사용자가 직접 입력했을 수도 있으니, "자동값"과 동일할 때만 덮어쓴다.
+    // (초기/스냅샷 변경 시에는 덮어씀)
+    monthlyHoursInp.value = auto;
+    hoursHint.textContent = '기본값 자동(상시 209 / 1일5시간 130 / 1일6시간 156) · 필요시 직접 수정';
+  }
+
+  function updateHeader(snapshot){
+    if(!snapshot){
+      note.textContent = '스냅샷 없음';
+      subNote.textContent = '';
+      return;
+    }
+    const wk = snapshot.workplace || '공통';
+    note.textContent = (snapshot.label || snapshot.effectiveDate || '-') + ' · ' + wk;
+
+    // 데이터 메모
+    const src = snapshot.source ? ' / ' + snapshot.source : '';
+    subNote.textContent = '적용 스냅샷: ' + (snapshot.id || '-') + src;
+  }
+
+  function onContextChange(rebuild=true){
+    const snapshot = getCurrentSnapshot();
+    updateHeader(snapshot);
+
+    // 직종 목록
+    populateJobs(snapshot);
+
+    // 선택 직종
+    const jobs = getCurrentJobs(snapshot);
+    const job = jobs.find(j=>j.직종 === jobSel.value) || jobs[0];
+
+    // 수당 입력칸
+    if(rebuild){
+      rebuildAllowanceInputs(allowBox, snapshot, job);
+    }
+
+    // 자동 산정시간
+    syncMonthlyHours(job);
+
+    // 힌트
+    allowHint.textContent = '표시된 수당만 통상임금 산정에 합산됩니다(가족수당/맞춤형복지 등은 제외).';
+
+    recalc(); // 최종 계산
+  }
+
+  // 정기상여금: 1년 미만은 0(기본) 처리
+  function syncBonusEligibility(snapshot, job){
+    const years = Number(yearsInp.value || 0);
+    const bonusInput = allowBox.querySelector('input[data-name="정기상여금"]');
+    if(!bonusInput) return;
+
+    const flag = job?.적용?.["정기상여금"];
+    const applied = isApplied(flag);
+
+    if(!applied){
+      bonusInput.value = 0;
+      bonusInput.disabled = true;
+      bonusInput.classList.add('disabled');
+      return;
+    }
+
+    if(years < 1){
+      bonusInput.value = 0;
+      bonusInput.disabled = true;
+      bonusInput.classList.add('disabled');
+    }else{
+      // years >= 1이면 활성화
+      if(bonusInput.disabled){
+        bonusInput.disabled = false;
+        bonusInput.classList.remove('disabled');
+        // 0이면 기본값을 다시 채워줌(기존 입력이 있으면 유지)
+        if(Number(bonusInput.value||0) === 0){
+          bonusInput.value = getDefaultAllowanceAmount("정기상여금", snapshot, job);
+        }
+      }
+    }
+  }
+
+  function recalc(){
+    const snapshot = getCurrentSnapshot();
+    if(!snapshot) return;
+    const jobs = getCurrentJobs(snapshot);
+    if(!jobs.length) return;
+
+    const job = jobs.find(j=>j.직종 === jobSel.value) || jobs[0];
+
+    // 입사일 입력 시 자동 근속연수 계산
+    if(startDateInp.value){
+      const y = calcYears(startDateInp.value, calcDateInp.value);
+      if(y != null) yearsInp.value = y;
+    }
+    syncYearsMode();
+
+    // 상여금 지급요건(기본): 1년 미만이면 0 처리
+    syncBonusEligibility(snapshot, job);
+
+    const years = Number(yearsInp.value || 0);
+    const tAmt = computeTenureAmount(years, snapshot);
+
+    const base = Number(job.기본급 || 0);
+    const allowMap = readAllowMap(allowBox);
+
+    const sum = base + tAmt + Object.values(allowMap).reduce((a,b)=>a+b,0);
+
+    const divisor = Math.max(1, Math.floor(Number(monthlyHoursInp.value || 209)));
+    const hourly = Math.floor(sum / divisor);
+
+    outBase.textContent = money(base);
+
+    const rate = Number(snapshot?.rules?.tenureRate || 40000);
+    const cap = Number(snapshot?.rules?.tenureCapYears || 23);
+    outTenure.textContent = money(tAmt) + ` (연 ${money(rate)}원, 상한 ${cap}년, 1년 이상부터)`;
+
+    outSum.textContent = money(sum);
+    outHourly.textContent = money(hourly);
+  }
+
+  // 이벤트
+  workplaceSel.addEventListener('change', ()=> onContextChange(true));
+  jobSel.addEventListener('change', ()=> onContextChange(true));
+  calcDateInp.addEventListener('input', ()=> onContextChange(true)); // 날짜가 바뀌면 스냅샷이 바뀔 수 있어 재구성
+  yearsInp.addEventListener('input', recalc);
+  startDateInp.addEventListener('input', recalc);
+  allowBox.addEventListener('input', recalc);
+  monthlyHoursInp.addEventListener('input', recalc);
+
+  resetBtn.addEventListener('click', ()=>{
+    yearsInp.value = 0;
+    startDateInp.value = '';
+    const now = new Date();
+    calcDateInp.value = now.getFullYear() + '-' + (String(now.getMonth()+1).padStart(2,'0')) + '-' + (String(now.getDate()).padStart(2,'0'));
+    onContextChange(true);
+  });
+
+  // 최초 렌더
+  onContextChange(true);
+});
+</script>
 </body>
 </html>
