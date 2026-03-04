@@ -1,0 +1,1465 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>교직원 급식비 산정 및 에듀파인 업로드 서식 생성기</title>
+  <link rel="icon" href="/static/favicon.ico" />
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    :root{
+      --bg:#ffffff;
+      --ink:#111827;
+      --muted:#6b7280;
+      --line:#e5e7eb;
+      --card:#f9fafb;
+      --focus:#2563eb33;
+      --active:#2563eb;
+      --computed:#f3f4f6;
+      --warn:#b45309;
+      --ok:#047857;
+      --bad:#b91c1c;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Noto Sans KR", "맑은 고딕", sans-serif;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family:var(--sans);
+      background:var(--bg);
+      color:var(--ink);
+      line-height:1.5;
+    }
+    header{
+      position:sticky;
+      top:0;
+      z-index:20;
+      background:#fff;
+      border-bottom:1px solid var(--line);
+    }
+    .wrap{
+      max-width:1080px;
+      margin:0 auto;
+      padding:18px 16px;
+    }
+    h1{
+      margin:0 0 6px;
+      font-size:20px;
+      font-weight:800;
+    }
+    .sub{
+      margin:0;
+      color:var(--muted);
+      font-size:13px;
+    }
+    main .wrap{ padding-top:16px; padding-bottom:44px; }
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:12px;
+    }
+    .card{
+      border:1px solid var(--line);
+      background:var(--card);
+      border-radius:14px;
+      padding:14px 14px;
+    }
+    .card h2{
+      margin:0 0 10px;
+      font-size:16px;
+      font-weight:800;
+    }
+    .row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:flex-end;
+    }
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      min-width:160px;
+    }
+    .field label{
+      font-size:12px;
+      color:var(--muted);
+      font-weight:700;
+    }
+    input[type="text"], input[type="number"], select{
+      padding:10px 12px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:#fff;
+      outline:none;
+      min-width:0;
+    }
+    input:focus, select:focus{
+      box-shadow:0 0 0 3px var(--focus);
+      border-color:#93c5fd;
+    }
+    .btns{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      align-items:center;
+    }
+    button{
+      appearance:none;
+      border:1px solid #111827;
+      background:#fff;
+      color:#111827;
+      padding:10px 12px;
+      border-radius:12px;
+      font-weight:800;
+      cursor:pointer;
+      user-select:none;
+    }
+    button:hover{ background:#f3f4f6; }
+    button.primary{
+      background:#111827;
+      color:#fff;
+      border-color:#111827;
+    }
+    button.primary:hover{ background:#0b1220; }
+    button.ghost{
+      border-color:#d1d5db;
+      background:#fff;
+      color:#111827;
+    }
+    button.warn{
+      border-color:#b45309;
+      color:#b45309;
+    }
+    .note{
+      margin:10px 0 0;
+      color:var(--muted);
+      font-size:13px;
+    }
+    .note code{
+      font-family:var(--mono);
+      font-size:12px;
+      background:#fff;
+      border:1px solid var(--line);
+      padding:2px 6px;
+      border-radius:8px;
+    }
+
+    /* Sheet-like grid */
+    .sheetWrap{
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:#fff;
+      overflow:auto;
+      max-width:100%;
+    }
+    table.sheet{
+      border-collapse:collapse;
+      min-width:980px;
+      width:100%;
+      font-size:14px;
+    }
+    .sheet thead th{
+      position:sticky;
+      top:0;
+      z-index:5;
+      background:#f8fafc;
+      border-bottom:1px solid var(--line);
+      padding:10px 8px;
+      text-align:center;
+      font-weight:900;
+      white-space:nowrap;
+    }
+    .sheet td{
+      border-top:1px solid var(--line);
+      border-right:1px solid var(--line);
+      padding:0;
+      vertical-align:middle;
+      background:#fff;
+    }
+    .sheet tr td:last-child,
+    .sheet thead tr th:last-child{
+      border-right:none;
+    }
+
+    .cell{
+      padding:10px 8px;
+      min-height:38px;
+      outline:none;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .cell[contenteditable="true"]{
+      cursor:text;
+    }
+    .cell.numeric{ text-align:right; font-variant-numeric: tabular-nums; }
+    .cell.center{ text-align:center; }
+    .cell.computed{
+      background:var(--computed);
+      color:#111827;
+    }
+    .cell.active{
+      box-shadow: inset 0 0 0 2px var(--active);
+      background:#eff6ff;
+    }
+    .cell.computed.active{
+      background:#e5e7eb;
+    }
+    /* contenteditable placeholder */
+    .cell[contenteditable="true"]:empty::before{
+      content: attr(data-ph);
+      color:#9ca3af;
+    }
+
+    tfoot td{
+      position:sticky;
+      bottom:0;
+      z-index:4;
+      background:#f8fafc;
+      font-weight:900;
+      border-top:2px solid #111827;
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:#fff;
+      color:var(--muted);
+      font-size:12px;
+      font-weight:800;
+    }
+
+    .log{
+      font-family:var(--mono);
+      background:#0b1220;
+      color:#e5e7eb;
+      border-radius:14px;
+      padding:12px;
+      border:1px solid #111827;
+      max-height:220px;
+      overflow:auto;
+      font-size:12px;
+      line-height:1.55;
+      white-space:pre-wrap;
+    }
+    .log .ok{ color:#34d399; }
+    .log .warn{ color:#fbbf24; }
+    .log .bad{ color:#fb7185; }
+
+    @media (max-width: 720px){
+      .field{ min-width: 140px; }
+      table.sheet{ min-width: 920px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>교직원 급식비 산정 및 에듀파인 업로드 서식 생성기</h1>
+      <p class="muted">
+        ·파일 3개로 저장해줌. 교직원 급식비 징수내역 1부/ 에듀파인 업로드 서식 식품비 1부, 운영비 1부. 
+      </p>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap">
+      <div class="grid">
+
+        <section class="card">
+          <h2>1) 파일 불러오기 (선택)</h2>
+          <div class="row">
+            <div class="field" style="min-width:320px;flex:1">
+              <label>징수내역/명단 엑셀 (.xlsx) 업로드</label>
+              <input id="fileRoster" type="file" accept=".xlsx,.xls" />
+            </div>
+
+            <div class="field" style="min-width:240px">
+              <label>불러올 시트(월) 선택</label>
+              <select id="sheetSelect" disabled>
+                <option value="">(엑셀 업로드 후 선택)</option>
+              </select>
+            </div>
+
+            <div class="btns">
+              <button id="btnImportSheet" class="primary" disabled>선택 시트 불러오기</button>
+              <button id="btnClearAll" class="ghost">전체 초기화</button>
+            </div>
+          </div>
+
+          <hr style="border:none;border-top:1px solid var(--line);margin:14px 0;" />
+
+          <div class="row">
+            <div class="field" style="min-width:320px;flex:1">
+              <label>에듀파인 식품비 업로드용 템플릿(.xlsx) (선택)</label>
+              <input id="fileTplFood" type="file" accept=".xlsx,.xls" />
+            </div>
+            <div class="field" style="min-width:320px;flex:1">
+              <label>에듀파인 운영비 업로드용 템플릿(.xlsx) (선택)</label>
+              <input id="fileTplOp" type="file" accept=".xlsx,.xls" />
+            </div>
+          </div>
+
+          <p class="note">
+            템플릿을 안 올려도 됩니다. 이 경우 도구가
+            <code>학교대상수납요구서식</code> 시트를 새로 만들어 표준 컬럼(선택, *주/야, *계열, *학과, *학년, *반, *번호, *성명, *대상금액)으로 생성합니다.
+          </p>
+        </section>
+
+        <section class="card">
+          <h2>2) 기본값 입력 (단가·급식일수·파일명)</h2>
+
+          <div class="row">
+            <div class="field">
+              <label>대상월(파일명용)</label>
+              <input id="inpMonth" type="text" placeholder="예: 2025-12" />
+            </div>
+            <div class="field">
+              <label>급식일수(기본값)</label>
+              <input id="inpDays" type="number" min="0" step="1" placeholder="예: 22" />
+            </div>
+            <div class="field">
+              <label>식품비 단가(1일)</label>
+              <input id="inpFoodUnit" type="number" min="0" step="1" placeholder="예: 3990" />
+            </div>
+            <div class="field">
+              <label>운영비 단가(1일)</label>
+              <input id="inpOpUnit" type="number" min="0" step="1" placeholder="예: 440" />
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px">
+            <div class="field" style="min-width:260px;flex:1">
+              <label>징수기간(선택)</label>
+              <input id="inpPeriod" type="text" placeholder="예: 12.1.~12.31." />
+            </div>
+            <div class="field" style="min-width:220px">
+              <label>이체일(선택)</label>
+              <input id="inpTransfer" type="text" placeholder="예: 2025.12.8.(월)" />
+            </div>
+
+            <div class="btns">
+              <span class="pill" title="엑셀의 ROUNDDOWN(…,-1)처럼 10원 단위 절사">
+                ⤵︎ 10원 단위 절사 규칙 적용
+              </span>
+              <button id="btnRecalc" class="primary">재계산</button>
+              <button id="btnApplyDefaultDays" class="ghost">빈 급식일수에 기본값 적용</button>
+            </div>
+          </div>
+
+          <p class="note">
+            급식일수 칸이 비어 있으면 “기본값 급식일수”를 사용합니다. (엑셀에서 <code>=$D$3</code> 참조하던 느낌을 웹에서 흉내낸 동작)
+          </p>
+        </section>
+
+        <section class="card">
+          <h2>3) 교직원 명단 편집 (방향키로 이동)</h2>
+
+          <div class="btns" style="margin-bottom:10px">
+            <button id="btnAddRow">행 추가</button>
+            <button id="btnDelRow" class="warn">현재 행 삭제</button>
+            <button id="btnSortName" class="ghost">성명 가나다 정렬</button>
+            <span class="pill">방향키: 이동 · Enter: 아래 · Tab: 오른쪽 · 붙여넣기: Ctrl+V</span>
+          </div>
+
+          <div class="sheetWrap" aria-label="교직원 급식비 입력 그리드">
+            <table class="sheet" role="grid" aria-readonly="false">
+              <thead>
+                <tr id="gridHead"></tr>
+              </thead>
+              <tbody id="gridBody"></tbody>
+              <tfoot>
+                <tr id="gridFoot"></tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <p class="note">
+            금액(식품비/운영비/합계)은 자동 계산(회색 셀)입니다. 수정하려면 <b>급식일수</b> 또는 <b>단가</b>를 바꾸세요.
+          </p>
+        </section>
+
+        <section class="card">
+          <h2>4) 다운로드</h2>
+          <div class="btns">
+            <button id="btnDlSummary" class="primary">① 징수내역 집계 엑셀 다운로드</button>
+            <button id="btnDlFood" class="primary">② 에듀파인 식품비 업로드 엑셀 다운로드</button>
+            <button id="btnDlOp" class="primary">③ 에듀파인 운영비 업로드 엑셀 다운로드</button>
+          </div>
+
+          <p class="note">
+            모든 계산/변환은 <b>브라우저 내부</b>에서만 수행됩니다(서버 업로드 없음).
+            단, 이 HTML은 엑셀 처리 라이브러리(SheetJS)를 CDN으로 불러옵니다.
+          </p>
+        </section>
+
+        <section class="card">
+          <h2>로그</h2>
+          <div id="log" class="log" aria-live="polite"></div>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- SheetJS (XLSX) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <script>
+  (function(){
+    "use strict";
+
+    // ==========
+    // Utilities
+    // ==========
+    const $ = (sel, el=document) => el.querySelector(sel);
+    const $$ = (sel, el=document) => Array.from(el.querySelectorAll(sel));
+
+    const logEl = $("#log");
+    function log(msg, level="ok"){
+      const cls = level === "bad" ? "bad" : (level === "warn" ? "warn" : "ok");
+      const t = new Date();
+      const stamp = `${String(t.getHours()).padStart(2,"0")}:${String(t.getMinutes()).padStart(2,"0")}:${String(t.getSeconds()).padStart(2,"0")}`;
+      logEl.innerHTML += `<div class="${cls}">[${stamp}] ${escapeHtml(msg)}</div>`;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+    function escapeHtml(s){
+      return String(s)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+    function asNumber(v){
+      if (typeof v === "number" && Number.isFinite(v)) return v;
+      if (typeof v === "string"){
+        const s = v.replaceAll(",","").trim();
+        if (!s) return null;
+        if (/^-?\d+(\.\d+)?$/.test(s)) return Number(s);
+      }
+      return null;
+    }
+    function toInt(v, fallback=0){
+      const n = asNumber(v);
+      if (n === null) return fallback;
+      return Math.round(n);
+    }
+    function normText(v){
+      return String(v ?? "").replace(/\s+/g,"").trim();
+    }
+    function roundDown10(x){
+      // Excel ROUNDDOWN(x, -1) 대응: 10원 단위 절사 (양수 전제)
+      const n = Number(x);
+      if (!Number.isFinite(n)) return 0;
+      return Math.floor(n / 10) * 10;
+    }
+    function parseDays(raw, defaultDays){
+      // raw가 숫자면 그대로, 문자열이면 "22-3" 또는 "=$D$3-3" 같은 간단식도 처리
+      if (raw === null || raw === undefined) return defaultDays;
+      if (typeof raw === "number" && Number.isFinite(raw)) return Math.max(0, Math.round(raw));
+
+      let s = String(raw).trim();
+      if (!s) return defaultDays;
+
+      // "22일" 같은 케이스
+      if (/^\d+\s*일$/.test(s)) return Math.max(0, parseInt(s,10));
+
+      if (s.startsWith("=")) s = s.slice(1);
+
+      // 흔한 참조 치환: $D$3 / D3 를 defaultDays로 치환
+      s = s.replace(/\$?D\$?3/gi, String(defaultDays));
+      s = s.replace(/\bD3\b/gi, String(defaultDays));
+
+      // 안전한 표현식만 허용
+      if (!/^[0-9+\-*/().\s]+$/.test(s)){
+        // 그래도 숫자 하나라도 있으면 그걸 씀
+        const m = s.match(/(\d+)/);
+        return m ? Math.max(0, parseInt(m[1],10)) : defaultDays;
+      }
+
+      try{
+        const val = Function(`"use strict"; return (${s});`)();
+        const n = Number(val);
+        if (!Number.isFinite(n)) return defaultDays;
+        return Math.max(0, Math.round(n));
+      }catch(_){
+        const m = s.match(/(\d+)/);
+        return m ? Math.max(0, parseInt(m[1],10)) : defaultDays;
+      }
+    }
+
+    // ==========
+    // State
+    // ==========
+    const COLS = [
+      { key:"no",    label:"순번",   editable:false, cls:"center" },
+      { key:"name",  label:"성명",   editable:true,  cls:"" },
+      { key:"job",   label:"직종",   editable:true,  cls:"" },
+      { key:"days",  label:"급식일수", editable:true, cls:"numeric", ph:"(기본값)" },
+      { key:"food",  label:"식품비", editable:false, cls:"numeric computed" },
+      { key:"op",    label:"운영비", editable:false, cls:"numeric computed" },
+      { key:"total", label:"금액",   editable:false, cls:"numeric computed" },
+      { key:"note",  label:"비고",   editable:true,  cls:"" },
+    ];
+
+    const state = {
+      rows: [],
+      active: { r: 0, c: 1 }, // default focus: name
+      rosterWb: null,
+      rosterBuf: null,
+      tplFoodBuf: null,
+      tplOpBuf: null,
+    };
+
+    // ==========
+    // DOM refs
+    // ==========
+    const fileRoster = $("#fileRoster");
+    const sheetSelect = $("#sheetSelect");
+    const btnImportSheet = $("#btnImportSheet");
+    const btnClearAll = $("#btnClearAll");
+
+    const fileTplFood = $("#fileTplFood");
+    const fileTplOp = $("#fileTplOp");
+
+    const inpMonth = $("#inpMonth");
+    const inpDays = $("#inpDays");
+    const inpFoodUnit = $("#inpFoodUnit");
+    const inpOpUnit = $("#inpOpUnit");
+    const inpPeriod = $("#inpPeriod");
+    const inpTransfer = $("#inpTransfer");
+
+    const btnRecalc = $("#btnRecalc");
+    const btnApplyDefaultDays = $("#btnApplyDefaultDays");
+
+    const btnAddRow = $("#btnAddRow");
+    const btnDelRow = $("#btnDelRow");
+    const btnSortName = $("#btnSortName");
+
+    const gridHead = $("#gridHead");
+    const gridBody = $("#gridBody");
+    const gridFoot = $("#gridFoot");
+
+    const btnDlSummary = $("#btnDlSummary");
+    const btnDlFood = $("#btnDlFood");
+    const btnDlOp = $("#btnDlOp");
+
+    // ==========
+    // Grid render
+    // ==========
+    function renderHeader(){
+      gridHead.innerHTML = "";
+      for (let c=0; c<COLS.length; c++){
+        const th = document.createElement("th");
+        th.textContent = COLS[c].label;
+        gridHead.appendChild(th);
+      }
+    }
+
+    function renderFooter(){
+      gridFoot.innerHTML = "";
+      const tds = [];
+      for (let c=0; c<COLS.length; c++){
+        const td = document.createElement("td");
+        const div = document.createElement("div");
+        div.className = "cell " + (COLS[c].cls || "");
+        div.setAttribute("contenteditable","false");
+
+        if (c === 0){
+          div.textContent = "합계";
+          div.classList.add("center");
+        }else if (COLS[c].key === "food" || COLS[c].key === "op" || COLS[c].key === "total"){
+          div.textContent = "0";
+          div.classList.add("numeric","computed");
+          div.dataset.sumKey = COLS[c].key;
+        }else{
+          div.textContent = "";
+        }
+        td.appendChild(div);
+        tds.push(td);
+      }
+      tds.forEach(td => gridFoot.appendChild(td));
+    }
+
+    function renderBody(){
+      gridBody.innerHTML = "";
+
+      for (let r=0; r<state.rows.length; r++){
+        const tr = document.createElement("tr");
+
+        for (let c=0; c<COLS.length; c++){
+          const col = COLS[c];
+          const td = document.createElement("td");
+
+          const div = document.createElement("div");
+          div.className = "cell " + (col.cls || "");
+          div.dataset.row = String(r);
+          div.dataset.col = String(c);
+          div.tabIndex = 0;
+
+          if (col.editable){
+            div.setAttribute("contenteditable","true");
+            if (col.ph) div.setAttribute("data-ph", col.ph);
+          }else{
+            div.setAttribute("contenteditable","false");
+            div.classList.add("computed");
+          }
+
+          // initial value
+          const val = state.rows[r][col.key] ?? "";
+          div.textContent = (val === null || val === undefined) ? "" : String(val);
+
+          td.appendChild(div);
+          tr.appendChild(td);
+        }
+
+        gridBody.appendChild(tr);
+      }
+
+      // activate cell
+      focusCell(state.active.r, state.active.c, false);
+      syncNoColumn();
+      recalcAll();
+    }
+
+    function getCell(r,c){
+      return gridBody.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+    }
+
+    function clearActiveClass(){
+      $$(".cell.active", gridBody).forEach(el => el.classList.remove("active"));
+    }
+
+    function focusCell(r,c, scroll=true){
+      const rr = Math.max(0, Math.min(state.rows.length-1, r));
+      const cc = Math.max(0, Math.min(COLS.length-1, c));
+      state.active = { r: rr, c: cc };
+
+      const cell = getCell(rr,cc);
+      if (!cell) return;
+
+      clearActiveClass();
+      cell.classList.add("active");
+      cell.focus({ preventScroll: !scroll });
+
+      if (scroll){
+        // keep cell in view (gentle)
+        const wrap = $(".sheetWrap");
+        const rect = cell.getBoundingClientRect();
+        const wrect = wrap.getBoundingClientRect();
+        if (rect.top < wrect.top + 40) wrap.scrollTop -= (wrect.top + 40 - rect.top);
+        if (rect.bottom > wrect.bottom - 40) wrap.scrollTop += (rect.bottom - (wrect.bottom - 40));
+        if (rect.left < wrect.left + 20) wrap.scrollLeft -= (wrect.left + 20 - rect.left);
+        if (rect.right > wrect.right - 20) wrap.scrollLeft += (rect.right - (wrect.right - 20));
+      }
+    }
+
+    function syncNoColumn(){
+      for (let i=0; i<state.rows.length; i++){
+        state.rows[i].no = i+1;
+        const cell = getCell(i,0);
+        if (cell) cell.textContent = String(i+1);
+      }
+    }
+
+    // ==========
+    // Recalc
+    // ==========
+    let recalcTimer = null;
+
+    function scheduleRecalc(){
+      if (recalcTimer) cancelAnimationFrame(recalcTimer);
+      recalcTimer = requestAnimationFrame(() => {
+        recalcAll();
+        recalcTimer = null;
+      });
+    }
+
+    function recalcAll(){
+      const defaultDays = toInt(inpDays.value, 0);
+      const foodUnit = toInt(inpFoodUnit.value, 0);
+      const opUnit = toInt(inpOpUnit.value, 0);
+
+      let sumFood = 0, sumOp = 0, sumTotal = 0;
+
+      for (let i=0; i<state.rows.length; i++){
+        const row = state.rows[i];
+
+        const days = parseDays(row.days, defaultDays);
+        row._daysNum = days;
+
+        const food = roundDown10(days * foodUnit);
+        const op = days * opUnit; // 운영비는 원 단위 그대로(엑셀 수식처럼)
+        const total = roundDown10(food + op);
+
+        row.food = food;
+        row.op = op;
+        row.total = total;
+
+        sumFood += food;
+        sumOp += op;
+        sumTotal += total;
+
+        // reflect to DOM (computed columns + no)
+        const cFood = getCell(i, 4);
+        const cOp = getCell(i, 5);
+        const cTotal = getCell(i, 6);
+        if (cFood) cFood.textContent = String(food);
+        if (cOp) cOp.textContent = String(op);
+        if (cTotal) cTotal.textContent = String(total);
+
+        // 순번
+        const cNo = getCell(i, 0);
+        if (cNo) cNo.textContent = String(i+1);
+      }
+
+      // footer
+      $$(".cell[data-sum-key]", gridFoot).forEach(el => {
+        const k = el.dataset.sumKey;
+        if (k === "food") el.textContent = String(sumFood);
+        if (k === "op") el.textContent = String(sumOp);
+        if (k === "total") el.textContent = String(sumTotal);
+      });
+    }
+
+    // ==========
+    // Grid events (arrow navigation + paste)
+    // ==========
+    function bindGridEvents(){
+      gridBody.addEventListener("focusin", (e) => {
+        const cell = e.target.closest(".cell");
+        if (!cell) return;
+        const r = toInt(cell.dataset.row, 0);
+        const c = toInt(cell.dataset.col, 0);
+        focusCell(r,c,false);
+      });
+
+      gridBody.addEventListener("keydown", (e) => {
+        const cell = e.target.closest(".cell");
+        if (!cell) return;
+
+        const r = toInt(cell.dataset.row, 0);
+        const c = toInt(cell.dataset.col, 0);
+
+        const key = e.key;
+
+        // Tab / Enter / Arrows: spreadsheet navigation
+        if (key === "Tab"){
+          e.preventDefault();
+          focusCell(r, e.shiftKey ? (c-1) : (c+1), true);
+          return;
+        }
+        if (key === "Enter"){
+          e.preventDefault();
+          focusCell(r+1, c, true);
+          return;
+        }
+        if (key === "ArrowUp" || key === "ArrowDown" || key === "ArrowLeft" || key === "ArrowRight"){
+          e.preventDefault();
+          if (key === "ArrowUp") focusCell(r-1, c, true);
+          if (key === "ArrowDown") focusCell(r+1, c, true);
+          if (key === "ArrowLeft") focusCell(r, c-1, true);
+          if (key === "ArrowRight") focusCell(r, c+1, true);
+          return;
+        }
+
+        // Delete clears cell (editable only)
+        if (key === "Delete" && !e.ctrlKey && !e.metaKey){
+          const col = COLS[c];
+          if (col && col.editable){
+            e.preventDefault();
+            cell.textContent = "";
+            updateStateFromCell(cell);
+            scheduleRecalc();
+          }
+        }
+      });
+
+      gridBody.addEventListener("input", (e) => {
+        const cell = e.target.closest(".cell");
+        if (!cell) return;
+        updateStateFromCell(cell);
+        scheduleRecalc();
+      });
+
+      gridBody.addEventListener("paste", (e) => {
+        const cell = e.target.closest(".cell");
+        if (!cell) return;
+
+        const startR = toInt(cell.dataset.row, 0);
+        const startC = toInt(cell.dataset.col, 0);
+
+        const text = (e.clipboardData || window.clipboardData).getData("text");
+        if (!text) return;
+
+        // 우리가 붙여넣기 처리: 탭/줄바꿈 테이블
+        e.preventDefault();
+
+        const rows = text.replace(/\r/g,"").split("\n");
+        const matrix = rows
+          .filter(r => r.length > 0)
+          .map(r => r.split("\t"));
+
+        for (let dr=0; dr<matrix.length; dr++){
+          const rr = startR + dr;
+          if (rr >= state.rows.length) break;
+
+          for (let dc=0; dc<matrix[dr].length; dc++){
+            const cc = startC + dc;
+            if (cc >= COLS.length) break;
+
+            if (!COLS[cc].editable) continue;
+
+            const target = getCell(rr, cc);
+            if (!target) continue;
+
+            target.textContent = matrix[dr][dc];
+            updateStateFromCell(target);
+          }
+        }
+        scheduleRecalc();
+      });
+    }
+
+    function updateStateFromCell(cell){
+      const r = toInt(cell.dataset.row, 0);
+      const c = toInt(cell.dataset.col, 0);
+      const col = COLS[c];
+      if (!col || !col.editable) return;
+
+      const v = cell.textContent.trim();
+      if (!state.rows[r]) return;
+
+      state.rows[r][col.key] = v;
+    }
+
+    // ==========
+    // Row operations
+    // ==========
+    function addRow(prefill={}){
+      state.rows.push({
+        no: state.rows.length + 1,
+        name: prefill.name ?? "",
+        job: prefill.job ?? "",
+        days: prefill.days ?? "", // 빈 값이면 기본 급식일수 사용
+        food: 0, op: 0, total: 0,
+        note: prefill.note ?? ""
+      });
+      renderBody();
+      focusCell(state.rows.length-1, 1, true);
+      log(`행 추가 완료 (총 ${state.rows.length}명)`);
+    }
+
+    function delActiveRow(){
+      if (state.rows.length === 0) return;
+      const r = state.active.r;
+      if (r < 0 || r >= state.rows.length) return;
+
+      const victim = state.rows[r]?.name ? ` (${state.rows[r].name})` : "";
+      state.rows.splice(r, 1);
+
+      const nextR = Math.min(r, state.rows.length-1);
+      renderBody();
+      if (state.rows.length > 0) focusCell(nextR, state.active.c, true);
+      log(`현재 행 삭제 완료${victim} (잔여 ${state.rows.length}명)`, "warn");
+    }
+
+    function sortByName(){
+      state.rows.sort((a,b) => String(a.name ?? "").localeCompare(String(b.name ?? ""), "ko"));
+      renderBody();
+      focusCell(0, 1, true);
+      log("성명 가나다 정렬 완료");
+    }
+
+    function applyDefaultDaysToBlank(){
+      const def = toInt(inpDays.value, 0);
+      if (!def){
+        log("기본 급식일수가 비어 있어 적용할 수 없습니다.", "warn");
+        return;
+      }
+      for (const r of state.rows){
+        if (!String(r.days ?? "").trim()){
+          r.days = String(def);
+        }
+      }
+      renderBody();
+      log("빈 급식일수 칸에 기본값을 입력했습니다.");
+    }
+
+    // ==========
+    // Excel IO
+    // ==========
+    function readFileAsArrayBuffer(file){
+      return new Promise((resolve,reject) => {
+        const fr = new FileReader();
+        fr.onload = () => resolve(fr.result);
+        fr.onerror = () => reject(fr.error);
+        fr.readAsArrayBuffer(file);
+      });
+    }
+
+    function guessLatestMonthSheet(sheetNames){
+      // "2025년 12월" 같이 파싱되면 최신값 선택, 아니면 첫 번째
+      const parsed = [];
+      for (const s of sheetNames){
+        const m = String(s).match(/(\d{4})\s*년\s*(\d{1,2})\s*월/);
+        if (m){
+          parsed.push({ name:s, y: parseInt(m[1],10), m: parseInt(m[2],10) });
+        }
+      }
+      if (parsed.length === 0) return sheetNames[0] || "";
+      parsed.sort((a,b) => (a.y*100 + a.m) - (b.y*100 + b.m));
+      return parsed[parsed.length-1].name;
+    }
+
+    function parseRosterFromSheet(ws){
+      const aoa = XLSX.utils.sheet_to_json(ws, { header:1, defval:"" });
+
+      // defaults: 급식일수/식품비단가/운영비단가/이체일/징수기간/title
+      const defaults = {
+        title: "",
+        days: null,
+        foodUnit: null,
+        opUnit: null,
+        transfer: "",
+        period: "",
+      };
+
+      // title: first meaningful string
+      for (let r=0; r<Math.min(aoa.length, 5); r++){
+        for (let c=0; c<aoa[r].length; c++){
+          if (typeof aoa[r][c] === "string" && aoa[r][c].includes("교직원") && aoa[r][c].includes("급식")){
+            defaults.title = aoa[r][c].trim();
+            break;
+          }
+        }
+        if (defaults.title) break;
+      }
+
+      function findNumericRightOf(label, maxRows=20){
+        for (let r=0; r<Math.min(aoa.length, maxRows); r++){
+          const row = aoa[r] || [];
+          for (let c=0; c<row.length; c++){
+            const v = row[c];
+            if (typeof v === "string" && v.includes(label)){
+              for (let k=c+1; k<Math.min(row.length, c+8); k++){
+                const num = asNumber(row[k]);
+                if (num !== null) return Math.round(num);
+                if (typeof row[k] === "string"){
+                  const m = row[k].match(/(\d+)\s*일/);
+                  if (m) return parseInt(m[1],10);
+                }
+              }
+            }
+          }
+        }
+        return null;
+      }
+
+      // 급식일수: label 근처 숫자 / "(22일)"에서 추출
+      defaults.days = findNumericRightOf("급식일수", 30);
+
+      // 단가: 상단 "식품비/운영비" 옆 숫자 찾기
+      defaults.foodUnit = findNumericRightOf("식품비", 15);
+      defaults.opUnit = findNumericRightOf("운영비", 15);
+
+      // 이체일 / 징수기간
+      function findTextRightOf(label, maxRows=30){
+        for (let r=0; r<Math.min(aoa.length, maxRows); r++){
+          const row = aoa[r] || [];
+          for (let c=0; c<row.length; c++){
+            const v = row[c];
+            if (typeof v === "string" && v.includes(label)){
+              for (let k=c+1; k<Math.min(row.length, c+8); k++){
+                if (typeof row[k] === "string" && row[k].trim()){
+                  return row[k].trim();
+                }
+              }
+            }
+          }
+        }
+        return "";
+      }
+      defaults.transfer = findTextRightOf("이체일", 30);
+      defaults.period = findTextRightOf("징수 기간", 30);
+
+      // header row find (성명/직종/순번/급식일수/비고)
+      let headerR = -1;
+      for (let r=0; r<aoa.length; r++){
+        const row = aoa[r] || [];
+        const joined = row.map(normText).join("|");
+        if (joined.includes("성명") && joined.includes("직종") && joined.includes("순번")){
+          headerR = r;
+          break;
+        }
+      }
+
+      // fallback: simple roster ("성명" only)
+      if (headerR === -1){
+        for (let r=0; r<aoa.length; r++){
+          const row = aoa[r] || [];
+          const joined = row.map(normText).join("|");
+          if (joined.includes("성명") && (joined.includes("급식일수") || joined.includes("일수") || joined.includes("직종"))){
+            headerR = r;
+            break;
+          }
+        }
+      }
+
+      if (headerR === -1){
+        // maybe Edufine template: column "* 성명"
+        const firstRow = (aoa[0] || []).map(String);
+        const idxName = firstRow.findIndex(x => String(x).includes("* 성명") || String(x).includes("성명"));
+        const idxAmount = firstRow.findIndex(x => String(x).includes("* 대상금액"));
+        if (idxName >= 0){
+          const rows = [];
+          for (let r=1; r<aoa.length; r++){
+            const name = String((aoa[r] || [])[idxName] ?? "").trim();
+            if (!name) continue;
+            rows.push({ no: rows.length+1, name, job:"", days:"", food:0, op:0, total:0, note:"" });
+          }
+          return { defaults, rows };
+        }
+        return { defaults, rows: [] };
+      }
+
+      const header = aoa[headerR] || [];
+      const nameCol = header.findIndex(v => normText(v) === "성명" || String(v).includes("성명"));
+      const jobCol = header.findIndex(v => normText(v) === "직종" || String(v).includes("직종"));
+      const noCol = header.findIndex(v => normText(v) === "순번" || String(v).includes("순번"));
+      let daysCol = header.findIndex(v => {
+        const t = normText(v);
+        return (t.includes("급식") && t.includes("일수")) || t === "급식일수";
+      });
+      const noteCol = header.findIndex(v => normText(v).includes("비고"));
+
+      // some layouts have "급식\n일수" in header row: daysCol should work.
+      if (daysCol < 0){
+        // look next row
+        const maybe = aoa[headerR+1] || [];
+        daysCol = maybe.findIndex(v => {
+          const t = normText(v);
+          return (t.includes("급식") && t.includes("일수")) || t === "급식일수";
+        });
+      }
+
+      // data starts: headerR+1 or headerR+2 (if next row contains 식품비/운영비/금액)
+      let startR = headerR + 1;
+      const nextRow = aoa[headerR+1] || [];
+      const nextJoined = nextRow.map(normText).join("|");
+      if (nextJoined.includes("식품비") && nextJoined.includes("운영비")) startR = headerR + 2;
+
+      const rows = [];
+      for (let r=startR; r<aoa.length; r++){
+        const row = aoa[r] || [];
+        const rowJoined = row.map(normText).join("|");
+
+        if (rowJoined.includes("합계") || rowJoined.includes("합   계") || rowJoined.includes("합계(원)") ){
+          break;
+        }
+
+        const name = String(row[nameCol] ?? "").trim();
+        if (!name) continue;
+
+        const job = jobCol >= 0 ? String(row[jobCol] ?? "").trim() : "";
+        const note = noteCol >= 0 ? String(row[noteCol] ?? "").trim() : "";
+
+        const daysRaw = daysCol >= 0 ? row[daysCol] : "";
+        const daysStr = (daysRaw === null || daysRaw === undefined) ? "" : String(daysRaw).trim();
+
+        rows.push({
+          no: rows.length+1,
+          name,
+          job,
+          days: daysStr, // 비면 기본값 사용
+          food: 0,
+          op: 0,
+          total: 0,
+          note
+        });
+      }
+
+      return { defaults, rows };
+    }
+
+    function applyDefaultsIfEmpty(def){
+      if (def.days !== null && def.days !== undefined && !String(inpDays.value || "").trim()){
+        inpDays.value = String(def.days);
+      }
+      if (def.foodUnit !== null && def.foodUnit !== undefined && !String(inpFoodUnit.value || "").trim()){
+        inpFoodUnit.value = String(def.foodUnit);
+      }
+      if (def.opUnit !== null && def.opUnit !== undefined && !String(inpOpUnit.value || "").trim()){
+        inpOpUnit.value = String(def.opUnit);
+      }
+      if (def.period && !String(inpPeriod.value || "").trim()){
+        inpPeriod.value = def.period;
+      }
+      if (def.transfer && !String(inpTransfer.value || "").trim()){
+        inpTransfer.value = def.transfer;
+      }
+      if (def.title && !String(inpMonth.value || "").trim()){
+        // title에서 "2025년 12월" 같은 걸 추출해서 month 기본값으로
+        const m = def.title.match(/(\d{4})\s*년\s*(\d{1,2})\s*월/);
+        if (m){
+          const mm = String(m[2]).padStart(2,"0");
+          inpMonth.value = `${m[1]}-${mm}`;
+        }
+      }
+    }
+
+    // ==========
+    // Export builders
+    // ==========
+    function getFileBase(){
+      const m = (inpMonth.value || "").trim();
+      if (m) return m.replaceAll(".","").replaceAll("/","-").replaceAll(" ","");
+      // fallback: YYYY-MM of today
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth()+1).padStart(2,"0");
+      return `${yyyy}-${mm}`;
+    }
+
+    function ensureHasRows(){
+      const usable = state.rows.filter(r => String(r.name ?? "").trim()).length;
+      if (!usable){
+        log("명단이 비어 있습니다. 먼저 행을 추가하거나 엑셀을 불러오세요.", "bad");
+        return false;
+      }
+      return true;
+    }
+
+    function buildSummaryWorkbook(){
+      const base = getFileBase();
+      const title = `교직원 급식비 징수내역 집계 (${base})`;
+      const defaultDays = toInt(inpDays.value, 0);
+      const foodUnit = toInt(inpFoodUnit.value, 0);
+      const opUnit = toInt(inpOpUnit.value, 0);
+      const period = (inpPeriod.value || "").trim();
+      const transfer = (inpTransfer.value || "").trim();
+
+      const header = ["순번","성명","직종","급식일수","식품비","운영비","금액","비고"];
+
+      const aoa = [];
+      aoa.push([title]);
+      aoa.push([]);
+      aoa.push(["급식일수(기본값)", defaultDays, "", "식품비 단가", foodUnit, "", "운영비 단가", opUnit]);
+      aoa.push(["징수기간", period, "", "이체일", transfer]);
+      aoa.push([]);
+      aoa.push(header);
+
+      let sumFood=0, sumOp=0, sumTotal=0;
+      const rows = state.rows
+        .filter(r => String(r.name ?? "").trim())
+        .map((r, idx) => {
+          const days = parseDays(r.days, defaultDays);
+          const food = roundDown10(days * foodUnit);
+          const op = days * opUnit;
+          const total = roundDown10(food + op);
+          sumFood += food; sumOp += op; sumTotal += total;
+          return [idx+1, r.name, r.job || "", days, food, op, total, r.note || ""];
+        });
+
+      rows.forEach(r => aoa.push(r));
+      aoa.push(["합계","","","", sumFood, sumOp, sumTotal, ""]);
+
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+      ws["!cols"] = [
+        { wch: 6 },   // 순번
+        { wch: 12 },  // 성명
+        { wch: 18 },  // 직종
+        { wch: 10 },  // 일수
+        { wch: 12 },  // 식품비
+        { wch: 12 },  // 운영비
+        { wch: 12 },  // 금액
+        { wch: 30 },  // 비고
+      ];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "징수내역집계");
+      return { wb, filename: `${base}_교직원급식비_징수내역집계.xlsx` };
+    }
+
+    function buildEdufineWorkbook(kind){
+      // kind: "food" | "op"
+      const base = getFileBase();
+      const sheetName = "학교대상수납요구서식";
+
+      const defaultDays = toInt(inpDays.value, 0);
+      const foodUnit = toInt(inpFoodUnit.value, 0);
+      const opUnit = toInt(inpOpUnit.value, 0);
+
+      const header = ["선택","* 주/야","* 계열","* 학과","* 학년","* 반","* 번호","* 성명","* 대상금액"];
+
+      const amountByName = new Map();
+      for (const r of state.rows){
+        const name = String(r.name ?? "").trim();
+        if (!name) continue;
+        const days = parseDays(r.days, defaultDays);
+        const food = roundDown10(days * foodUnit);
+        const op = days * opUnit;
+        const val = (kind === "food") ? food : op;
+        amountByName.set(name, val);
+      }
+
+      // If template uploaded, read it and keep its row order & any other columns.
+      let tplBuf = (kind === "food") ? state.tplFoodBuf : state.tplOpBuf;
+      let aoa = null;
+
+      if (tplBuf){
+        try{
+          const tplWb = XLSX.read(tplBuf, { type:"array" });
+          const sname = tplWb.SheetNames.includes(sheetName) ? sheetName : tplWb.SheetNames[0];
+          const ws = tplWb.Sheets[sname];
+          aoa = XLSX.utils.sheet_to_json(ws, { header:1, defval:"" });
+
+          // ensure header at row 1
+          if (!aoa.length) aoa = [header];
+          // if first row doesn't resemble header, replace
+          const first = (aoa[0] || []).map(String).join("|");
+          if (!first.includes("* 성명") || !first.includes("* 대상금액")){
+            aoa[0] = header;
+          }
+
+          // fill amounts
+          const seen = new Set();
+          for (let r=1; r<aoa.length; r++){
+            const row = aoa[r] || [];
+            const name = String(row[7] ?? "").trim();
+            if (!name) continue;
+
+            // 기본값 보정 (학년/반이 비어있으면 교직원)
+            if (!String(row[4] ?? "").trim()) row[4] = "교직원";
+            if (!String(row[5] ?? "").trim()) row[5] = "교직원";
+
+            row[8] = amountByName.has(name) ? amountByName.get(name) : (row[8] || 0);
+            aoa[r] = row;
+            seen.add(name);
+          }
+
+          // append missing names
+          for (const [name, amount] of amountByName.entries()){
+            if (seen.has(name)) continue;
+            aoa.push([ "", "", "", "", "교직원", "교직원", "", name, amount ]);
+          }
+
+        }catch(err){
+          log(`템플릿을 읽는 중 오류가 발생하여 표준 양식으로 새로 생성합니다: ${err}`, "warn");
+          aoa = null;
+        }
+      }
+
+      if (!aoa){
+        // build from scratch
+        aoa = [header];
+        for (const [name, amount] of amountByName.entries()){
+          aoa.push([ "", "", "", "", "교직원", "교직원", "", name, amount ]);
+        }
+      }
+
+      const wsOut = XLSX.utils.aoa_to_sheet(aoa);
+      wsOut["!cols"] = [
+        { wch: 8 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
+        { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 14 }, { wch: 12 }
+      ];
+
+      const wbOut = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wbOut, wsOut, sheetName);
+
+      const label = (kind === "food") ? "식품비" : "운영비";
+      return { wb: wbOut, filename: `${base}_에듀파인_교직원_${label}.xlsx` };
+    }
+
+    // ==========
+    // Handlers
+    // ==========
+    fileRoster.addEventListener("change", async () => {
+      const file = fileRoster.files && fileRoster.files[0];
+      if (!file) return;
+
+      if (!window.XLSX){
+        log("XLSX 라이브러리를 불러오지 못했습니다. (CDN 차단 여부 확인)", "bad");
+        return;
+      }
+
+      try{
+        const buf = await readFileAsArrayBuffer(file);
+        state.rosterBuf = buf;
+        state.rosterWb = XLSX.read(buf, { type:"array" });
+
+        sheetSelect.innerHTML = "";
+        for (const name of state.rosterWb.SheetNames){
+          const opt = document.createElement("option");
+          opt.value = name;
+          opt.textContent = name;
+          sheetSelect.appendChild(opt);
+        }
+
+        sheetSelect.disabled = false;
+        btnImportSheet.disabled = false;
+
+        const picked = guessLatestMonthSheet(state.rosterWb.SheetNames);
+        sheetSelect.value = picked;
+
+        log(`명단/징수내역 엑셀 로드 완료: "${file.name}" (시트 ${state.rosterWb.SheetNames.length}개)`);
+        log(`추천 시트 자동 선택: "${picked}"`);
+
+      }catch(err){
+        log(`엑셀 로드 실패: ${err}`, "bad");
+      }
+    });
+
+    btnImportSheet.addEventListener("click", () => {
+      if (!state.rosterWb) return;
+
+      const sname = sheetSelect.value;
+      if (!sname){
+        log("시트를 선택하세요.", "warn");
+        return;
+      }
+
+      const ws = state.rosterWb.Sheets[sname];
+      if (!ws){
+        log("선택한 시트를 찾을 수 없습니다.", "bad");
+        return;
+      }
+
+      const parsed = parseRosterFromSheet(ws);
+      if (!parsed.rows.length){
+        log("이 시트에서 교직원 명단을 찾지 못했습니다. (성명/직종/급식일수 헤더가 있는지 확인)", "warn");
+        return;
+      }
+
+      applyDefaultsIfEmpty(parsed.defaults);
+      state.rows = parsed.rows;
+
+      renderBody();
+      log(`시트 "${sname}"에서 교직원 ${state.rows.length}명 불러오기 완료`);
+    });
+
+    fileTplFood.addEventListener("change", async () => {
+      const file = fileTplFood.files && fileTplFood.files[0];
+      if (!file) { state.tplFoodBuf = null; return; }
+      try{
+        state.tplFoodBuf = await readFileAsArrayBuffer(file);
+        log(`식품비 템플릿 로드 완료: "${file.name}"`);
+      }catch(err){
+        state.tplFoodBuf = null;
+        log(`식품비 템플릿 로드 실패: ${err}`, "bad");
+      }
+    });
+
+    fileTplOp.addEventListener("change", async () => {
+      const file = fileTplOp.files && fileTplOp.files[0];
+      if (!file) { state.tplOpBuf = null; return; }
+      try{
+        state.tplOpBuf = await readFileAsArrayBuffer(file);
+        log(`운영비 템플릿 로드 완료: "${file.name}"`);
+      }catch(err){
+        state.tplOpBuf = null;
+        log(`운영비 템플릿 로드 실패: ${err}`, "bad");
+      }
+    });
+
+    btnClearAll.addEventListener("click", () => {
+      state.rows = [];
+      state.active = { r:0, c:1 };
+      state.rosterWb = null;
+      state.rosterBuf = null;
+      state.tplFoodBuf = null;
+      state.tplOpBuf = null;
+
+      fileRoster.value = "";
+      fileTplFood.value = "";
+      fileTplOp.value = "";
+
+      sheetSelect.innerHTML = `<option value="">(엑셀 업로드 후 선택)</option>`;
+      sheetSelect.disabled = true;
+      btnImportSheet.disabled = true;
+
+      inpMonth.value = "";
+      inpDays.value = "";
+      inpFoodUnit.value = "";
+      inpOpUnit.value = "";
+      inpPeriod.value = "";
+      inpTransfer.value = "";
+
+      renderBody();
+      log("전체 초기화 완료", "warn");
+    });
+
+    btnRecalc.addEventListener("click", () => {
+      recalcAll();
+      log("재계산 완료");
+    });
+
+    btnApplyDefaultDays.addEventListener("click", () => {
+      applyDefaultDaysToBlank();
+    });
+
+    btnAddRow.addEventListener("click", () => addRow());
+    btnDelRow.addEventListener("click", () => delActiveRow());
+    btnSortName.addEventListener("click", () => sortByName());
+
+    // download buttons
+    btnDlSummary.addEventListener("click", () => {
+      if (!ensureHasRows()) return;
+      const { wb, filename } = buildSummaryWorkbook();
+      XLSX.writeFile(wb, filename);
+      log(`다운로드 생성: ${filename}`);
+    });
+
+    btnDlFood.addEventListener("click", () => {
+      if (!ensureHasRows()) return;
+      const { wb, filename } = buildEdufineWorkbook("food");
+      XLSX.writeFile(wb, filename);
+      log(`다운로드 생성: ${filename}`);
+    });
+
+    btnDlOp.addEventListener("click", () => {
+      if (!ensureHasRows()) return;
+      const { wb, filename } = buildEdufineWorkbook("op");
+      XLSX.writeFile(wb, filename);
+      log(`다운로드 생성: ${filename}`);
+    });
+
+    // ==========
+    // Init
+    // ==========
+    function init(){
+      renderHeader();
+      renderFooter();
+
+      // start with a few blank rows (편의)
+      state.rows = [
+        { no:1, name:"", job:"", days:"", food:0, op:0, total:0, note:"" },
+        { no:2, name:"", job:"", days:"", food:0, op:0, total:0, note:"" },
+        { no:3, name:"", job:"", days:"", food:0, op:0, total:0, note:"" },
+      ];
+      renderBody();
+      bindGridEvents();
+
+      log("준비 완료. 엑셀을 업로드하거나 표에서 직접 입력하세요.");
+      if (!window.XLSX){
+        log("주의: XLSX 라이브러리가 로드되지 않았습니다(CDN 차단 가능).", "warn");
+      }
+    }
+
+    init();
+  })();
+  </script>
+
+
+  
+<script src="/static/footer.js"></script>
+<script src="/static/global-loader.js?v=1"></script>
+</body>
+</html>
