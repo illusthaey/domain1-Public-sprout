@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>학교운동부 지도자 수익자부담금 예산 분배기</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="shell">
+      <h1>학교운동부 지도자 수익자부담금 예산 분배기</h1>
+      <p class="sub">
+        ·순환함수 발생으로 수치해석으로 근사치 구함.<br/>
+        ·계약서 상 규정: 수익자부담금 보수 지급에 따른 추가적인 발생분에 대한 재원 역시 수익자부담으로 한다.<br/>
+        ·추가발생분: 통상임금 미산입함. (개발자의 근무지 기준)<br/>
+        ·추가발생분에 퇴직연금이랑 연차미사용 수당도 미반영됨. (아래에 항목은 있으나 0원으로 표시되게 함)<br/>
+      </p>
+    </div>
+  </header>
+
+  <main class="shell">
+    <!-- 입력 영역 -->
+    <section class="card">
+      <h2>1. 기본 정보 입력</h2>
+
+      <div class="grid two">
+        <div>
+          <label for="students">학생 수</label>
+          <input id="students" type="number" min="0" step="1" value="7" />
+          <p class="muted small">예: 7명</p>
+        </div>
+
+        <div>
+          <label for="unitFee">1인당 징수 금액</label>
+          <input id="unitFee" type="number" min="0" step="10000" value="200000" />
+          <p class="muted small">기본: 200,000원</p>
+        </div>
+      </div>
+
+      <!-- ✅ 요율 연도 선택 (2025/2026) -->
+      <div style="margin-top:12px">
+        <label for="rateYear">사회보험 요율 연도</label>
+        <select id="rateYear">
+          <option value="2025" selected>2025년</option>
+          <option value="2026">2026년</option>
+        </select>
+        <p id="rateSummary" class="muted small" style="margin-top:6px"></p>
+      </div>
+
+      <!-- 버튼 검정색. btn-primary -->
+      <button class="btn-primary" type="button" onclick="handleCalculate()">
+        계산하기
+      </button>
+
+      <p class="muted small" style="margin-top:6px">
+        ·개발자 소속 학교 기준으로 계산합니다.
+      </p>
+    </section>
+
+    <!-- 결과 영역 -->
+    <section class="card" style="overflow-x:auto;">
+      <h2>예산 분배 내역 산출 결과</h2>
+      <p id="iterInfo" class="muted small">계산하기 버튼 눌러야 결과 나옴</p>
+
+      <table class="simple-table">
+        <tbody>
+          <tr>
+            <th>수익자부담금 총 징수 금액</th>
+            <td id="totalCollected">0원</td>
+          </tr>
+
+          <tr>
+            <th>국민연금 (개인부담금)</th>
+            <td id="pensionEmp">0원</td>
+          </tr>
+          <tr>
+            <th>국민연금 (기관부담금)</th>
+            <td id="pensionOrg">0원</td>
+          </tr>
+
+          <tr>
+            <th>건강보험 (개인부담금)</th>
+            <td id="healthEmp">0원</td>
+          </tr>
+          <tr>
+            <th>건강보험 (기관부담금)</th>
+            <td id="healthOrg">0원</td>
+          </tr>
+
+          <tr>
+            <th>장기요양보험 (개인부담금)</th>
+            <td id="longtermEmp">0원</td>
+          </tr>
+          <tr>
+            <th>장기요양보험 (기관부담금)</th>
+            <td id="longtermOrg">0원</td>
+          </tr>
+
+          <tr>
+            <th>고용보험 (개인부담금)</th>
+            <td id="employEmp">0원</td>
+          </tr>
+          <tr>
+            <th>고용보험 (기관부담금)</th>
+            <td id="employOrg">0원</td>
+          </tr>
+
+          <tr>
+            <th>산재보험 (기관부담금)</th>
+            <td id="accidentOrg">0원</td>
+          </tr>
+
+          <tr>
+            <th>퇴직연금 적립금 (DC형)</th>
+            <td id="retirement">0원</td>
+          </tr>
+          <tr>
+            <th>연차 미사용 수당 증가분</th>
+            <td id="annualLeave">0원</td>
+          </tr>
+
+          <tr>
+            <th>사회보험료 개인부담금 합계</th>
+            <td id="sumEmp">0원</td>
+          </tr>
+          <tr>
+            <th>사회보험료 기관부담금 합계</th>
+            <td id="sumOrg">0원</td>
+          </tr>
+
+          <tr>
+            <th>각종 공제금액 합계</th>
+            <td id="totalDeductions">0원</td>
+          </tr>
+          <tr>
+            <th>강사 실수령액 (수치해석 근사치)</th>
+            <td id="netPay">0원</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 메모 영역 -->
+    <section class="card">
+      <h2>참고 사항</h2>
+      <p class="muted small">
+        ·공제액과 실수령액이 서로 영향을 주는 순환식을 반복 계산해서 근사치 계산한 값임.<br />
+        ·개발자가 근무 중인 학교 기준으로 만들었음.<br />
+        ·<span id="rateNote"></span><br />
+        ·원단위 절삭함.<br />
+      </p>
+    </section>
+
+    <a href="/" class="btn">메인으로 돌아가기</a>
+  </main>
+
+  <script>
+    // ========================
+    //  원단위 절삭 / DOM 헬퍼
+    // ========================
+    function round10(v) {
+      const n = Number(v) || 0;
+      return Math.floor(n / 10) * 10;
+    }
+    function $(id) {
+      return document.getElementById(id);
+    }
+    function formatWon(v) {
+      const n = Number(v) || 0;
+      return n.toLocaleString("ko-KR") + "원";
+    }
+    function pct(v, digits = 2) {
+      return (v * 100).toFixed(digits) + "%";
+    }
+
+    // ========================
+    //  ✅ 연도별 요율 테이블
+    //  (유지보수 포인트: 여기만 추가/수정)
+    // ========================
+    const RATE_TABLE = {
+      "2025": {
+        // 국민연금: 총 9% (기관:개인 1:1)
+        pension_total: 0.09,
+
+        // 건강보험: 총 7.09% (기관:개인 1:1)
+        health_total: 0.0709,
+
+        // 장기요양보험: 소득 대비 0.9182% (건보료 대비 12.95%)
+        longterm_income: 0.009182,
+
+        // 고용보험(실업급여): 근로자 0.9%, 사업주 0.9%
+        employ_unemp_emp: 0.009,
+        employ_unemp_org: 0.009,
+
+        // 고용보험(고용안정·직업능력개발): 사업주 추가요율
+        // (국가/지자체 또는 1,000인 이상 기준 0.85% 가정 → 사업주 합계 1.75%)
+        employ_stability_org: 0.0085,
+
+        // 산재보험(기관): 업종·개별실적에 따라 상이 (기존값 유지)
+        accident_org: 0.00966
+      },
+
+      "2026": {
+        // 국민연금: 총 9.5% (기관:개인 1:1)
+        pension_total: 0.095,
+
+        // 건강보험: 총 7.19% (기관:개인 1:1)
+        health_total: 0.0719,
+
+        // 장기요양보험: 소득 대비 0.9448% (건보료 대비 약 13.14%)
+        longterm_income: 0.009448,
+
+        // 고용보험: 동일 가정
+        employ_unemp_emp: 0.009,
+        employ_unemp_org: 0.009,
+        employ_stability_org: 0.0085,
+
+        // 산재보험: 동일 (필요시 수정)
+        accident_org: 0.00966
+      }
+    };
+
+    function getSelectedYear() {
+      return String($("rateYear").value || "2025");
+    }
+
+    function getRates(year) {
+      const cfg = RATE_TABLE[String(year)];
+      if (!cfg) throw new Error("지원하지 않는 연도: " + year);
+
+      const pension_half = cfg.pension_total / 2;
+      const health_half = cfg.health_total / 2;
+
+      // 장기요양 보험료 = 건강보험료 × (장기요양보험료율 / 건강보험료율)
+      const longterm_factor = cfg.longterm_income / cfg.health_total;
+
+      // 고용보험(사업주) = 실업급여(0.9) + 고안·직능개발(규모별)
+      const employ_org = cfg.employ_unemp_org + cfg.employ_stability_org;
+
+      return {
+        pension_emp: pension_half,
+        pension_org: pension_half,
+
+        health_emp: health_half,
+        health_org: health_half,
+
+        longterm_factor: longterm_factor,
+
+        employ_emp: cfg.employ_unemp_emp,
+        employ_org: employ_org,
+
+        accident_org: cfg.accident_org,
+
+        meta: {
+          year: String(year),
+          pension_total: cfg.pension_total,
+          pension_half: pension_half,
+          health_total: cfg.health_total,
+          health_half: health_half,
+          longterm_income: cfg.longterm_income,
+          longterm_factor: longterm_factor,
+          employ_emp: cfg.employ_unemp_emp,
+          employ_org: employ_org,
+          accident_org: cfg.accident_org
+        }
+      };
+    }
+
+    // ========================
+    //  ✅ 순환식 반복 계산
+    // ========================
+    function calcCoachDistribution(studentCount, unitFee, rates) {
+      const totalCollectedRaw = studentCount * unitFee;
+
+      if (studentCount <= 0 || unitFee <= 0) {
+        return {
+          totalCollected: 0,
+          netPay: 0,
+          pensionEmp: 0,
+          pensionOrg: 0,
+          healthEmp: 0,
+          healthOrg: 0,
+          longtermEmp: 0,
+          longtermOrg: 0,
+          employEmp: 0,
+          employOrg: 0,
+          accidentOrg: 0,
+          retirement: 0,
+          annualLeave: 0,
+          sumEmp: 0,
+          sumOrg: 0,
+          totalDeductions: 0,
+          iterations: 0
+        };
+      }
+
+      const totalCollected = round10(totalCollectedRaw);
+
+      // 초기 추정: 징수금의 60% 정도를 실수령액으로 가정
+      let netPay = totalCollected * 0.6;
+      let lastNetPay = 0;
+
+      const maxIter = 80;
+      const tolerance = 10; // 10원 이하 변화면 수렴된 걸로 본다
+      let iterations = 0;
+
+      let pensionEmp, pensionOrg;
+      let healthEmp, healthOrg;
+      let longtermEmp, longtermOrg;
+      let employEmp, employOrg;
+      let accidentOrg;
+
+      // 통상임금 미산입이므로 0 고정
+      let retirement = 0;
+      let annualLeave = 0;
+
+      let totalDeductions, sumEmp, sumOrg;
+
+      for (let i = 0; i < maxIter; i++) {
+        iterations = i + 1;
+
+        // 기준 보수월액: 일단 실수령액 기준으로 단순화
+        const base = netPay;
+
+        // 국민연금
+        pensionEmp = round10(base * rates.pension_emp);
+        pensionOrg = round10(base * rates.pension_org);
+
+        // 건강보험
+        healthEmp = round10(base * rates.health_emp);
+        healthOrg = round10(base * rates.health_org);
+
+        // 장기요양보험 (건강보험료를 기준으로)
+        longtermEmp = round10(healthEmp * rates.longterm_factor);
+        longtermOrg = round10(healthOrg * rates.longterm_factor);
+
+        // 고용보험
+        employEmp = round10(base * rates.employ_emp);
+        employOrg = round10(base * rates.employ_org);
+
+        // 산재보험
+        accidentOrg = round10(base * rates.accident_org);
+
+        // 개인부담금 합계 (사회보험 개인부담)
+        sumEmp =
+          pensionEmp +
+          healthEmp +
+          longtermEmp +
+          employEmp;
+
+        // 기관부담금 합계 (사회보험 + 산재)
+        sumOrg =
+          pensionOrg +
+          healthOrg +
+          longtermOrg +
+          employOrg +
+          accidentOrg;
+
+        // 공제합계 = 사회보험 개인부담 + 사회보험 기관부담
+        totalDeductions = round10(sumEmp + sumOrg);
+
+        // 새 실수령액 = 징수금 - 공제합계
+        lastNetPay = netPay;
+        netPay = round10(totalCollected - totalDeductions);
+
+        if (Math.abs(netPay - lastNetPay) < tolerance) {
+          break;
+        }
+      }
+
+      return {
+        totalCollected,
+        netPay,
+        pensionEmp,
+        pensionOrg,
+        healthEmp,
+        healthOrg,
+        longtermEmp,
+        longtermOrg,
+        employEmp,
+        employOrg,
+        accidentOrg,
+        retirement,   // 항상 0
+        annualLeave,  // 항상 0
+        sumEmp,
+        sumOrg,
+        totalDeductions,
+        iterations
+      };
+    }
+
+    // ========================
+    //  화면 갱신
+    // ========================
+    function updateView(result) {
+      $("totalCollected").textContent = formatWon(result.totalCollected);
+
+      $("pensionEmp").textContent = formatWon(result.pensionEmp);
+      $("pensionOrg").textContent = formatWon(result.pensionOrg);
+
+      $("healthEmp").textContent = formatWon(result.healthEmp);
+      $("healthOrg").textContent = formatWon(result.healthOrg);
+
+      $("longtermEmp").textContent = formatWon(result.longtermEmp);
+      $("longtermOrg").textContent = formatWon(result.longtermOrg);
+
+      $("employEmp").textContent = formatWon(result.employEmp);
+      $("employOrg").textContent = formatWon(result.employOrg);
+
+      $("accidentOrg").textContent = formatWon(result.accidentOrg);
+
+      $("retirement").textContent = formatWon(result.retirement);
+      $("annualLeave").textContent = formatWon(result.annualLeave);
+
+      $("sumEmp").textContent = formatWon(result.sumEmp);
+      $("sumOrg").textContent = formatWon(result.sumOrg);
+
+      $("totalDeductions").textContent = formatWon(result.totalDeductions);
+      $("netPay").textContent = formatWon(result.netPay);
+
+      $("iterInfo").textContent =
+        result.iterations > 0
+          ? `반복 계산 ${result.iterations}회 수행 (10원 단위 수렴)`
+          : "계산하기 버튼 눌러야 결과 나옴";
+    }
+
+    // ========================
+    //  요율 안내 텍스트 갱신
+    // ========================
+    function renderRateTexts() {
+      const year = getSelectedYear();
+      const meta = getRates(year).meta;
+
+      $("rateSummary").textContent =
+        `선택 요율(${year}년): ` +
+        `국민연금 ${pct(meta.pension_total, 2)}(개인/기관 각 ${pct(meta.pension_half, 2)}), ` +
+        `건강보험 ${pct(meta.health_total, 2)}(각 ${(meta.health_half * 100).toFixed(3)}%), ` +
+        `장기요양(소득대비) ${pct(meta.longterm_income, 4)}(건보료 대비 ${pct(meta.longterm_factor, 2)}), ` +
+        `고용보험 개인 0.9%, 기관 ${pct(getRates(year).employ_org, 2)}, ` +
+        `산재(기본값) ${pct(meta.accident_org, 3)}`;
+
+      $("rateNote").innerHTML =
+        `사회보험 요율(${year}년 선택 기준): ` +
+        `국민연금 ${pct(meta.pension_total, 2)} (기관:개인 1:1) / ` +
+        `건강보험 ${pct(meta.health_total, 2)} (1:1) / ` +
+        `장기요양보험(소득대비) ${pct(meta.longterm_income, 4)} ` +
+        `(건보료 대비 ${pct(meta.longterm_factor, 2)}, 1:1) / ` +
+        `고용보험 개인 0.9%, 기관 ${pct(getRates(year).employ_org, 2)} / ` +
+        `산재보험(기관, 기본값) ${pct(meta.accident_org, 3)}`;
+    }
+
+    // ========================
+    //  버튼에서 호출할 함수
+    // ========================
+    function handleCalculate() {
+      const students = parseInt($("students").value || "0", 10);
+      const unitFee = parseInt($("unitFee").value || "0", 10);
+
+      const year = getSelectedYear();
+      const rates = getRates(year);
+
+      const result = calcCoachDistribution(students, unitFee, rates);
+      updateView(result);
+    }
+
+    // ========================
+    //  초기화
+    // ========================
+    function maybeRecalcIfAlreadyCalculated() {
+      const iterText = $("iterInfo").textContent || "";
+      if (iterText.includes("반복 계산")) {
+        handleCalculate();
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      renderRateTexts();
+
+      $("rateYear").addEventListener("change", () => {
+        renderRateTexts();
+        maybeRecalcIfAlreadyCalculated();
+      });
+    });
+  </script>
+
+  <!-- 기존 사이트 공통 스크립트 유지 -->
+  <script src="/static/global-loader.js?v=1"></script>
+  <script src="/static/footer.js"></script>
+  <script src="/static/disable-copy.js"></script>
+</body>
+</html>
