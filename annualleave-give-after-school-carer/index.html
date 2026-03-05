@@ -61,7 +61,10 @@
 
 <hr/>
       <h3>전환 정보</h3>
-      <p class="muted">·출근율 및 근무일수 산정할 때 분모·분자에서 <b>토요일(무급휴일)은 제외</b>함</p>
+      <p class="muted">
+        ·출근율 및 근무일수 산정할 때 분모·분자에서 <b>토요일(무급휴일)은 제외</b>함<br/>
+        ·전환 일자 입력하면 자동 산정됨.
+      </p>
           <div class="grid two">
             <label class="stack">
               <span class="mini">직종 전환 일자</span>
@@ -69,21 +72,17 @@
             </label>
 
             <label class="stack">
-              <span class="mini">전환 후 근무 유형 (자동산출)</span>
-              <input type="text" value="전일제(일 8시간/ 주 40시간)" disabled />
+              <span class="mini">전환 후 근무 유형</span>
+              <input type="text" value="늘봄학교전담사: 전일제(주40시간)" disabled />
             </label>
           </div>
-        </div>
 
         <div class="card">
-          <h3 class="local-h3 local-tight">자동 산정 정보</h3>
-
-          <div id="autoInfo" class="msg">
-            전환일자를 입력하면 자동 산정 정보가 표시됩니다.
-          </div>
+          <h3>자동 산정 정보</h3>
+          <hr/>
 
           <div class="mini" style="margin-top:8px;">
-            <span class="kbd">전환 첫 부여일</span>은 “전환일자 이후 처음 오는 3/1”로 자동 설정합니다.
+            <span class="kbd">전환 첫 부여일</span>은 직종전환 일자 이후 처음 오는 3.1.일자로 자동 설정했음.
           </div>
         </div>
     </section>
