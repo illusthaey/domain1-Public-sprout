@@ -1304,3 +1304,9 @@ html[data-theme="retro"] .site-footer .btn.btn-theme.is-active{
     background-attachment: scroll;
   }
 }
+
+
+/* ✅ retro 모드: 섹션 카드(.section) 배경만 순백으로 */
+html[data-theme="retro"] .section{
+  background: #fff;
+}
