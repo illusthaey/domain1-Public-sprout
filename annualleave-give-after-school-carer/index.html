@@ -3,13 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>늘봄전담사 직종전환(전환 첫해) 연차 계산기</title>
+  <title>늘봄학교전담사 직종전환 첫해 연차 부여일수 계산기</title>
 
-  <!-- 프로젝트 공통 스타일 -->
+
+<link rel="icon" href="/static/favicon.ico" />
   <link rel="stylesheet" href="/static/style.css" />
-
-  <!-- (선택) 프로젝트 공통 보호 스크립트: 허용 도메인에서만 동작 -->
-  <script src="/static/global-loader.js" defer></script>
 
   <style>
     /* 이 페이지 전용: style.css 위에 얹는 최소 보강 */
@@ -51,37 +49,18 @@
 </head>
 
 <body>
-  <a class="skip-link" href="#main">본문 바로가기</a>
-
-  <header class="site-header">
-    <div class="shell">
-      <h1>늘봄학교전담사 직종전환자 연차 계산기 (전환 첫해)</h1>
-      <p class="subtitle">
-        ·직종 전환이 <b>회계연도 중간</b>에 발생한 경우, <b>전환 첫 부여(다음 3/1)</b> 연차를 전환 전·후 근무를 비례하여 <b>시간</b>으로 산정합니다.<br/>
-        ·다음 회계연도(그 다음 3/1)부터는 늘봄전담사(1일 8시간) 기준으로 <b>일</b> 단위 정상 부여합니다.<br/>
-        ·이 계산기는 <b>결근/휴직/제외기간</b> 등 출근율 변동 요소를 반영하지 않는 “기본 산식” 계산기입니다.
-      </p>
-    </div>
-  </header>
-
-  <main id="main" class="container">
-
-    <nav class="quick-nav section" aria-label="빠른 이동">
-      <h2 class="local-h2">빠른 이동</h2>
-      <div class="chip-row">
-        <a class="chip" href="#cond">1) 계산 조건</a>
-        <a class="chip" href="#single">2) 단일 계산</a>
-        <a class="chip" href="#batch">3) 일괄 계산</a>
-        <a class="chip" href="#help">4) 산식/기준</a>
-      </div>
-    </nav>
+  
+      <h1>늘봄학교전담사 직종전환 첫해 연차 부여일수 계산기</h1>
+      <p class="muted">
+        ·직종 전환이 <b>회계연도 중간</b>에 발생한 경우, 전환 전/후 근무를 비례하여 <b>시간</b>으로 산정함 <br/>
+        ·다음 회계연도 연차부터는 <b>일</b> 단위로 정상 부여 (전일제 상시근로자) <br/>
+        ·이 계산기는 결근, 휴직, 제외기간 등 출근율 변동 요소는 반영하지 않음.
 
     <section id="cond" class="section">
-      <h2>1) 계산 조건</h2>
+      <h2>1. 계산 조건</h2>
 
-      <div class="grid two">
-        <div class="card">
-          <h3 class="local-h3 local-tight">전환 정보</h3>
+<hr/>
+      <h3>전환 정보</h3>
 
           <div class="grid two">
             <label class="stack">
@@ -115,7 +94,6 @@
             <span class="kbd">전환 첫 부여일</span>은 “전환일자 이후 처음 오는 3/1”로 자동 설정합니다.
           </div>
         </div>
-      </div>
     </section>
 
     <section id="single" class="section">
