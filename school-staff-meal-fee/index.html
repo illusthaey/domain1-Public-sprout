@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>교직원 급식비 산정 · 에듀파인 업로드 엑셀 생성기</title>
+  <title>교직원 급식비 집계 및 에듀파인 업로드 파일 생성기</title>
 
 
 <link rel="icon" href="/static/favicon.ico" />
@@ -341,8 +341,9 @@
 <header>
   <div class="wrap">
     <h1>교직원 급식비 산정 · 에듀파인 업로드 엑셀 생성기</h1>
-    <p class="sub">
-      엑셀에서 셀 복사 → 표에 바로 Ctrl+V(자동 행 확장) · 헤더/순번/성명 틀고정 · 결과 3개 엑셀 다운로드(집계/식품비/운영비)
+    <p class="muted">
+      ·엑셀 파일에 이름 써서 셀 복사하고 화면에 복붙하면 자동으로 입력됨 <br/>
+      ·결과 엑셀 파일은 급식비 산정내역 1부 및 에듀파인 업로드 서식 2부 (식품비/운영비) 생성됨
     </p>
   </div>
 </header>
@@ -352,66 +353,59 @@
     <div class="grid">
 
       <section class="card">
-        <h2>1) 기본값 입력</h2>
+        <h2>1. 기본값 입력</h2>
 
         <div class="row">
           <div class="field">
-            <label>대상월(파일명용)</label>
+            <label>징수 월</label>
             <input id="inpMonth" type="text" placeholder="예: 2025-12" />
           </div>
           <div class="field">
-            <label>급식일수(기본값)</label>
+            <label>급식 일수 (기본값)</label>
             <input id="inpDays" type="number" min="0" step="1" placeholder="예: 22" />
           </div>
           <div class="field">
-            <label>식품비 단가(1일)</label>
+            <label>식품비 단가</label>
             <input id="inpFoodUnit" type="number" min="0" step="1" placeholder="예: 3990" />
           </div>
           <div class="field">
-            <label>운영비 단가(1일)</label>
+            <label>운영비 단가</label>
             <input id="inpOpUnit" type="number" min="0" step="1" placeholder="예: 440" />
           </div>
           <div class="field">
-            <label>1식 단가(자동)</label>
+            <label>1식 단가 (식품비+운영비)</label>
             <input id="inpMealUnit" type="text" readonly value="0" />
           </div>
         </div>
 
         <div class="row" style="margin-top:10px">
           <div class="field" style="min-width:260px;flex:1">
-            <label>징수기간(선택)</label>
-            <input id="inpPeriod" type="text" placeholder="예: 12.1.~12.31." />
+            <label>징수기간 입력</label>
+            <input id="inpPeriod" type="text" placeholder="예: 2026.3.1.~2026.3.31." />
           </div>
           <div class="field" style="min-width:220px">
-            <label>이체일(선택)</label>
-            <input id="inpTransfer" type="text" placeholder="예: 2025.12.8.(월)" />
+            <label>출금 예정 일자</label>
+            <input id="inpTransfer" type="text" placeholder="예: 2026.3.10." />
           </div>
 
           <div class="btns">
-            <span class="pill" title="원본 엑셀 규칙: 식품비/총액은 10원 단위 절사, 운영비는 절사 없음">
-              10원 단위 절사 규칙(원본)
-            </span>
-            <button id="btnRecalc" class="primary">재계산</button>
-            <button id="btnApplyDefaultDays" class="ghost">빈 급식일수에 기본값 적용</button>
+            <button id="btnRecalc" class="primary">계산하기</button>
+            <button id="btnApplyDefaultDays" class="ghost">급식일수 일괄 적용</button>
           </div>
         </div>
 
-        <p class="note">
-          급식일수 칸이 비어 있으면 “기본값 급식일수”를 사용합니다.
-          급식일수에 <code>=$D$3-3</code> 같은 형태도 붙여넣으면 자동 계산됩니다.
-        </p>
       </section>
 
       <section class="card">
-        <h2>2) 명단 입력(엑셀 → 붙여넣기)</h2>
+        <h2>2. 징수 대상자 명단 입력</h2>
 
         <div class="row" style="align-items:flex-start">
           <div class="field" style="flex:1; min-width:320px">
-            <label>엑셀에서 복사한 표를 그대로 Ctrl+V (예: 성명/직종/급식일수)</label>
+            <label>엑셀에서 복사하고 여기에 붙여넣기 가능합니다.</label>
             <textarea id="taPaste" placeholder="예시)
 성명	직종	급식일수
-홍길동	교사	=$D$3
-김철수	행정실무사	=$D$3-2
+신경호	교사	=$D$3
+김성진	행정실무사	=$D$3-2
 
 ※ 헤더(성명/직종/급식일수)가 포함돼도 자동으로 건너뜁니다.
 ※ 열이 1개면 '성명', 2~4개면 자동 매핑합니다."></textarea>
