@@ -91,49 +91,42 @@
 
     <section id="single" class="section">
       <h2>2. 계산하기 </h2>
+      <hr/>
 
-      <div class="grid two">
         <div class="card">
           <h3>수동으로 입력</h3>
 
           <div class="grid two">
             <label class="stack">
-              <span class="mini">성명(선택)</span>
-              <input type="text" id="sName" placeholder="홍길동" />
+              <span class="mini">성명</span>
+              <input type="text" id="sName" placeholder="김강원" />
             </label>
 
             <label class="stack">
-              <span class="mini">최초임용일(필수)</span>
+              <span class="mini">최초 임용일</span>
               <input type="date" id="sHire" />
             </label>
           </div>
 
           <div class="grid two" style="margin-top:10px;">
             <label class="stack">
-              <span class="mini">전환 전 직종(예시)</span>
+              <span class="mini">전환 전 직종(</span>
               <select id="sPrevJob">
-                <option value="aft">방과후전담사 (일 5시간 · 주 25시간)</option>
-                <option value="care">초등돌봄전담사 (일 6시간 · 주 30시간)</option>
-                <option value="custom">직접 입력(주 유급시간)</option>
+                <option value="aft">방과후전담사 (일 5시간/ 주 25시간)</option>
+                <option value="care">초등돌봄전담사 (일 6시간/ 주 30시간)</option>
+                <option value="custom">기타 직종</option>
               </select>
             </label>
 
             <label class="stack">
-              <span class="mini">전환 전 주 유급시간(필수)</span>
+              <span class="mini">전환 전 주 유급 근무시간</span>
               <input type="number" id="sWeeklyHours" min="1" max="40" step="0.5" class="right" />
-              <div class="mini">예: 방과후 25 / 돌봄 30</div>
             </label>
           </div>
 
           <div class="row gap" style="margin-top:12px;">
-            <button class="btn primary" id="btnCalcSingle" type="button">단일 계산</button>
-            <button class="btn" id="btnAddToBatch" type="button">일괄 목록에 추가</button>
-            <button class="btn ghost" id="btnResetSingle" type="button">입력 초기화</button>
-          </div>
-
-          <div class="mini" style="margin-top:10px;">
-            ·전환 전 직종이 위 2개가 아닌 경우에도 <b>주 유급시간</b>만 맞으면 산식 계산은 가능합니다.<br/>
-            ·다만, 실제 적용은 각 시도교육청 지침·편람 우선입니다.
+            <button class="btn primary" id="btnCalcSingle" type="button">계산하기</button>
+            <button class="btn ghost" id="btnResetSingle" type="button">초기화하기</button>
           </div>
         </div>
 
