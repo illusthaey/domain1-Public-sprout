@@ -111,8 +111,8 @@
 <body>
   <div class="wrap">
     <h1>연차일수 계산기 (간단 버전)</h1>
-    <p class="sub">
-      입력: <b>최초임용일</b>, <b>직종</b> (상시/방학중비상시).<br/>
+    <p class="muted">
+      ·입력: <b>최초임용일</b>, <b>직종</b> (상시/방학중비상시).<br/>
       <b>방학중비상시 직종</b>을 고르면 <b>출근율(80% 이상/미만)</b> 드롭박스가 활성화됩니다.
       <span class="mono" id="periodInfo"></span>
     </p>
@@ -153,15 +153,15 @@
             <div>부여 기준일: <b class="mono" id="grantText"></b></div>
             <div>산정기간: <b class="mono" id="spanText"></b></div>
             <div class="hint">
-              다른 연도로 계산하려면 코드 상단의 <span class="mono">PERIOD_START / PERIOD_END / GRANT_DATE</span>만 수정하세요.
+              ※ 개발자 메모 - 다른 연도로 계산하려면 코드 상단의 <span class="mono">PERIOD_START / PERIOD_END / GRANT_DATE</span> 수정
             </div>
           </div>
         </div>
       </div>
 
       <div class="row">
-        <button class="btn primary" id="calcBtn" type="button">계산</button>
-        <button class="btn" id="resetBtn" type="button">초기화</button>
+        <button class="btn primary" id="calcBtn" type="button">계산하기</button>
+        <button class="btn" id="resetBtn" type="button">초기화하기</button>
       </div>
     </div>
 
@@ -174,8 +174,9 @@
       </table>
 
       <div class="hint" style="margin-top:10px;">
-        ※ 1년 미만(근속 0년) 계산은 “개근”을 가정한 단순 계산입니다(결근/휴직/휴업 등 반영 없음).<br/>
-        ※ 방학중비상시의 “최대 9일(개근월수)” 아이디어는 방학 달을 묶어 산정하는 예시를 반영한 단순화 버전입니다.
+        ※ 검증용 계산기라서 단순화했습니다. <br/>
+        - 1년 미만(근속 0년) 계산은 출근실적 개근을 가정한 단순 계산임. 결근, 휴직, 휴업 등 반영 없음.<br/>
+        - 방학중비상시의 최대 9일(개근월수)은 방학 달을 묶어 산정하는 예시를 반영한 단순화 버전임. 
       </div>
     </div>
   </div>
