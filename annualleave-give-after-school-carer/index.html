@@ -84,7 +84,7 @@
       </section>
 
     <section id="single" class="section">
-      <h2>2. 계산하기 </h2>
+      <h2>2. 근로자 정보 입력 </h2>
       <hr/>
 
         <div class="card">
@@ -119,61 +119,39 @@
           </div>
 
           <div class="row gap" style="margin-top:12px;">
-            <button class="btn primary" id="btnCalcSingle" type="button">계산하기</button>
-            <button class="btn ghost" id="btnResetSingle" type="button">초기화하기</button>
-          </div>
-        </div>
-
-      <hr/>
-      
-        <div class="card">
-          <h3>2-2) 계산 결과</h3>
-
-          <div id="singleDetail" class="table-wrap hidden">
-            <table class="sheetlike table-compact">
-              <tbody id="singleDetailBody"></tbody>
-            </table>
+            <button class="btn primary" id="btnCalcSingle" type="button">조회 명단에 추가하기</button>
+            <button class="btn ghost" id="btnResetSingle" type="button">삭제하기</button>
           </div>
         </div>
     </section>
 
-    <section id="batch" class="section">
-      <h2>3) 일괄 계산</h2>
+<section class="section">
 
-      <div class="grid two">
-        <div class="card">
-          <h3 class="local-h3 local-tight">목록 관리</h3>
+  <h2>3. 계산 결과 조회</h2>
+  
+          <p class="muted">
+            ·회계연도 중간에 직종 전환한 경우 첫 해에 시간 단위 부여가 기본이며 <b>소수점 첫째 자리</b>로 표시함 (둘째 자리에서 반올림)<br/>
+          </p>
+  <hr/>
 
-          <div class="row gap">
-            <button class="btn" id="btnLoadExample" type="button">예시 5명 불러오기(2024.8.1 전환)</button>
-            <button class="btn" id="btnClearBatch" type="button">목록 전체 삭제</button>
-          </div>
-
-          <div class="row gap" style="margin-top:10px;">
+          <div class="card">
+            <button class="btn" id="btnCalcSingle" type="button">계산 결과 보기</button>
             <button class="btn primary" id="btnDownloadCsv" type="button">결과 CSV 다운로드</button>
+            <button class="btn" id="btnClearBatch" type="button">초기화하기</button>
           </div>
-
-          <div id="batchMsg" class="msg warn" style="margin-top:12px;">
-            목록이 비어 있습니다. 단일 입력에서 <b>일괄 목록에 추가</b>를 눌러 쌓을 수 있습니다.
-          </div>
-        </div>
-
-        <div class="card">
-          <h3 class="local-h3 local-tight">일괄 결과표</h3>
 
           <div class="table-wrap">
             <table class="sheetlike table-compact" id="batchTable">
               <thead>
                 <tr>
-                  <th class="nowrap">No</th>
+                  <th class="nowrap">연번</th>
                   <th class="nowrap">성명</th>
-                  <th class="nowrap">최초임용일</th>
-                  <th class="nowrap">전환 전(주 유급)</th>
+                  <th class="nowrap">최초 임용일</th>
+                  <th class="nowrap">전환 전 주 유급 근로시간</th>
 
-                  <th class="nowrap right">전환 첫 부여(시간)</th>
-                  <th class="nowrap right">전환 첫 부여(일 환산)</th>
-                  <th class="nowrap right">다음 3/1 부여(일)</th>
-
+                  <th class="nowrap right">전환 후 첫 부여 연차(기본: 시간 단위)</th>
+                  <th class="nowrap right">전환 후 첫 부여 연차(일 환산)</th>
+                  <th class="nowrap right">다음 3.1.일자 부여 연차(일 단위)</th>
                   <th class="nowrap center">삭제</th>
                 </tr>
               </thead>
@@ -181,12 +159,6 @@
             </table>
           </div>
 
-          <div class="mini">
-            ·시간은 <b>소수점 첫째 자리</b>(둘째 자리 반올림)로 표시합니다.<br/>
-            ·“일 환산”은 <b>시간 ÷ 8</b> 기준입니다.
-          </div>
-        </div>
-      </div>
     </section>
 
     <section id="help" class="section">
