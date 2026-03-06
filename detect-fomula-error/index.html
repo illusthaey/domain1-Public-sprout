@@ -1,0 +1,1183 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>엑셀 수식 깨짐 탐지기</title>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --ink: #111827;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --primary: #111827;
+      --primary-weak: #eef2ff;
+      --warn: #92400e;
+      --warn-bg: #fff7ed;
+      --danger: #991b1b;
+      --danger-bg: #fef2f2;
+      --ok: #065f46;
+      --ok-bg: #ecfdf5;
+      --shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.55;
+    }
+
+    .wrap {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 2rem;
+      line-height: 1.2;
+    }
+
+    p { margin: 0; }
+
+    .lead {
+      color: #374151;
+      margin-bottom: 18px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+      margin-bottom: 16px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .grid.controls {
+      grid-template-columns: 1.4fr 0.9fr 0.9fr;
+      align-items: end;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+    }
+
+    .field label,
+    .small-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .dropzone {
+      border: 2px dashed #c7d2fe;
+      border-radius: 14px;
+      padding: 18px;
+      background: #fafbff;
+      transition: 0.15s ease;
+    }
+
+    .dropzone.dragover {
+      border-color: #4f46e5;
+      background: #eef2ff;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    input[type="file"],
+    input[type="number"],
+    button,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      padding: 11px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    .checks {
+      display: grid;
+      gap: 8px;
+      font-size: 0.95rem;
+      color: #374151;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid #111827;
+      background: #111827;
+      color: white;
+      border-radius: 12px;
+      padding: 11px 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn:hover { filter: brightness(0.95); }
+    .btn.secondary {
+      background: white;
+      color: #111827;
+      border-color: #d1d5db;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .hint {
+      margin-top: 8px;
+      padding: 12px 13px;
+      border-radius: 12px;
+      background: #f9fafb;
+      color: #374151;
+      font-size: 0.93rem;
+      border: 1px solid #eef2f7;
+    }
+
+    .status {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #3730a3;
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 10px;
+    }
+
+    .kpis {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      margin-top: 6px;
+    }
+
+    .kpi {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      background: #fff;
+    }
+
+    .kpi .num {
+      font-size: 1.55rem;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .kpi .lbl {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .pill.high { background: var(--danger-bg); color: var(--danger); }
+    .pill.medium { background: var(--warn-bg); color: var(--warn); }
+    .pill.low { background: #eff6ff; color: #1d4ed8; }
+    .pill.ok { background: var(--ok-bg); color: var(--ok); }
+
+    .sheet-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    .sheet-card {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      background: #fff;
+    }
+
+    .sheet-card h3 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+      line-height: 1.35;
+      word-break: break-all;
+    }
+
+    .sheet-stat {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 6px;
+      font-size: 0.92rem;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .toolbar .left,
+    .toolbar .right {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 999px;
+      background: white;
+      font-size: 0.9rem;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .chip.active {
+      background: #eef2ff;
+      border-color: #4f46e5;
+      color: #3730a3;
+      font-weight: 700;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: white;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1200px;
+    }
+
+    th, td {
+      padding: 12px 10px;
+      border-bottom: 1px solid #eef2f7;
+      vertical-align: top;
+      font-size: 0.94rem;
+      text-align: left;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: #f9fafb;
+      z-index: 1;
+      font-size: 0.9rem;
+    }
+
+    tr:hover td { background: #fcfcff; }
+
+    code, pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+
+    .formula {
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 0.87rem;
+      line-height: 1.45;
+      background: #f9fafb;
+      border: 1px solid #eef2f7;
+      border-radius: 10px;
+      padding: 8px 9px;
+    }
+
+    .empty {
+      padding: 28px 16px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    details summary {
+      cursor: pointer;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .footer-note {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 980px) {
+      .grid.controls { grid-template-columns: 1fr; }
+      .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 640px) {
+      .wrap { padding: 18px 12px 36px; }
+      h1 { font-size: 1.6rem; }
+      .kpis { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>엑셀 수식 깨짐 탐지기</h1>
+    <p class="lead">
+      엑셀 파일을 브라우저에서 바로 읽어, 주변 수식 패턴과 다른 셀·수식이 빠진 셀·오류 값을 가진 셀을 찾아줍니다.
+      반복 복사형 수식에서 특히 잘 잡습니다.
+    </p>
+
+    <div class="card">
+      <div class="grid controls">
+        <div class="field">
+          <label for="fileInput">엑셀 파일</label>
+          <div id="dropzone" class="dropzone">
+            <div class="row" style="justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-weight: 700; margin-bottom: 4px;">파일을 끌어놓거나 선택하세요</div>
+                <div class="muted">지원: .xlsx, .xls, .xlsm, .xlsb, .ods</div>
+              </div>
+              <input id="fileInput" type="file" accept=".xlsx,.xls,.xlsm,.xlsb,.ods" />
+            </div>
+          </div>
+          <div id="selectedFile" class="muted">선택된 파일 없음</div>
+        </div>
+
+        <div class="field">
+          <label for="maxGap">이웃 탐색 반경</label>
+          <input id="maxGap" type="number" min="1" max="5" step="1" value="2" />
+          <div class="muted">좌우/상하 몇 칸까지 같은 패턴을 볼지 정합니다.</div>
+        </div>
+
+        <div class="field">
+          <div class="small-title">옵션</div>
+          <div class="checks">
+            <label><input id="detectOverwritten" type="checkbox" checked /> 수식이 값/텍스트로 덮인 셀도 찾기</label>
+            <label><input id="detectBlankGap" type="checkbox" checked /> 수식 사이에 한 칸 빈 셀도 찾기</label>
+            <label><input id="strictBarrier" type="checkbox" checked /> 숫자/텍스트가 끼면 같은 구간으로 보지 않기</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top: 14px;">
+        <button id="scanBtn" class="btn">검사 시작</button>
+        <button id="downloadCsvBtn" class="btn secondary" disabled>결과 CSV 다운로드</button>
+        <button id="copyJsonBtn" class="btn secondary" disabled>결과 JSON 복사</button>
+      </div>
+
+      <div class="hint">
+        이 도구는 <strong>계산값을 다시 계산해서 맞다/틀리다를 판정</strong>하는 방식이 아니라,
+        <strong>셀 기준 상대참조 패턴</strong>을 정규화해서 주변과 다른 셀을 찾는 방식입니다.
+        그래서 복사형 수식에는 강하지만, 의도적으로 다른 합계행·누계·특수 예외행은 “의심”으로 잡힐 수 있습니다.
+      </div>
+    </div>
+
+    <div id="statusHost"></div>
+    <div id="summaryHost"></div>
+    <div id="sheetHost"></div>
+    <div id="resultHost"></div>
+
+    <div class="footer-note">
+      브라우저에서 처리하므로 원본 파일은 서버로 전송되지 않습니다. 아주 큰 파일은 시간이 조금 걸릴 수 있습니다.
+    </div>
+  </div>
+
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script>
+    const ui = {
+      fileInput: document.getElementById('fileInput'),
+      dropzone: document.getElementById('dropzone'),
+      selectedFile: document.getElementById('selectedFile'),
+      maxGap: document.getElementById('maxGap'),
+      detectOverwritten: document.getElementById('detectOverwritten'),
+      detectBlankGap: document.getElementById('detectBlankGap'),
+      strictBarrier: document.getElementById('strictBarrier'),
+      scanBtn: document.getElementById('scanBtn'),
+      downloadCsvBtn: document.getElementById('downloadCsvBtn'),
+      copyJsonBtn: document.getElementById('copyJsonBtn'),
+      statusHost: document.getElementById('statusHost'),
+      summaryHost: document.getElementById('summaryHost'),
+      sheetHost: document.getElementById('sheetHost'),
+      resultHost: document.getElementById('resultHost')
+    };
+
+    let currentFile = null;
+    let lastFindings = [];
+    let lastSummary = null;
+
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function setStatus(text) {
+      ui.statusHost.innerHTML = text
+        ? `<div class="status">${escapeHtml(text)}</div>`
+        : '';
+    }
+
+    function colToNum(col) {
+      let n = 0;
+      const s = String(col || '').toUpperCase();
+      for (let i = 0; i < s.length; i++) n = n * 26 + (s.charCodeAt(i) - 64);
+      return n;
+    }
+
+    function numToCol(n) {
+      let s = '';
+      let x = Number(n);
+      while (x > 0) {
+        const m = (x - 1) % 26;
+        s = String.fromCharCode(65 + m) + s;
+        x = Math.floor((x - 1) / 26);
+      }
+      return s || 'A';
+    }
+
+    function parseA1(addr) {
+      const m = /^(\$?)([A-Z]{1,3})(\$?)(\d+)$/i.exec(String(addr || ''));
+      if (!m) return null;
+      return {
+        colAbs: !!m[1],
+        col: colToNum(m[2]),
+        rowAbs: !!m[3],
+        row: Number(m[4])
+      };
+    }
+
+    function a1FromParts(parts) {
+      if (!parts) return '#REF!';
+      if (parts.row < 1 || parts.col < 1) return '#REF!';
+      return `${parts.colAbs ? '$' : ''}${numToCol(parts.col)}${parts.rowAbs ? '$' : ''}${parts.row}`;
+    }
+
+    function maskDoubleQuotedStrings(formula) {
+      const bag = [];
+      const text = String(formula || '').replace(/"(?:[^"]|"")*"/g, (m) => {
+        const key = `\u0007${bag.length}\u0007`;
+        bag.push(m);
+        return key;
+      });
+      return { text, bag };
+    }
+
+    function unmaskDoubleQuotedStrings(text, bag) {
+      return String(text || '').replace(/\u0007(\d+)\u0007/g, (_, i) => bag[Number(i)] ?? '');
+    }
+
+    const REF_RE = /((?:(?:\[[^\]]+\])?(?:'[^']*(?:''[^']*)*'|[A-Za-z0-9_\u00A0-\uFFFF.]+)!)?)(\$?[A-Z]{1,3}\$?\d+)(?::(\$?[A-Z]{1,3}\$?\d+))?/g;
+
+    function mapFormulaRefs(formula, mapper) {
+      const raw = String(formula || '').replace(/^=/, '');
+      const { text, bag } = maskDoubleQuotedStrings(raw);
+      const mapped = text.replace(REF_RE, (full, prefix, a, b) => mapper(prefix || '', a, b));
+      return unmaskDoubleQuotedStrings(mapped, bag);
+    }
+
+    function normalizeRefForHost(addr, hostRow, hostCol) {
+      const p = parseA1(addr);
+      if (!p) return addr;
+      const rTok = p.rowAbs ? `R${p.row}` : `R[${p.row - hostRow}]`;
+      const cTok = p.colAbs ? `C${p.col}` : `C[${p.col - hostCol}]`;
+      return `${rTok}${cTok}`;
+    }
+
+    function normalizeFormula(formula, hostRow, hostCol) {
+      return mapFormulaRefs(formula, (prefix, a, b) => {
+        const left = normalizeRefForHost(a, hostRow, hostCol);
+        const right = b ? ':' + normalizeRefForHost(b, hostRow, hostCol) : '';
+        return `${prefix}${left}${right}`;
+      });
+    }
+
+    function shiftRef(addr, dRow, dCol) {
+      const p = parseA1(addr);
+      if (!p) return addr;
+      const next = {
+        rowAbs: p.rowAbs,
+        colAbs: p.colAbs,
+        row: p.rowAbs ? p.row : p.row + dRow,
+        col: p.colAbs ? p.col : p.col + dCol
+      };
+      return a1FromParts(next);
+    }
+
+    function shiftFormulaToCell(formula, fromRow, fromCol, toRow, toCol) {
+      const dRow = toRow - fromRow;
+      const dCol = toCol - fromCol;
+      return mapFormulaRefs(formula, (prefix, a, b) => {
+        const left = shiftRef(a, dRow, dCol);
+        const right = b ? ':' + shiftRef(b, dRow, dCol) : '';
+        return `${prefix}${left}${right}`;
+      });
+    }
+
+    function cellDisplay(cell) {
+      if (!cell) return '';
+      if (cell.w != null && String(cell.w) !== '') return String(cell.w);
+      if (cell.v == null) return '';
+      return String(cell.v);
+    }
+
+    function isMeaningfulCell(cell) {
+      if (!cell) return false;
+      if (cell.f) return true;
+      if (cell.v == null) return false;
+      if (typeof cell.v === 'string' && cell.v.trim() === '') return false;
+      return true;
+    }
+
+    function isExplicitErrorCell(meta) {
+      const text = `${meta.formula || ''} ${meta.display || ''}`.toUpperCase();
+      return meta.isFormula && (
+        meta.type === 'e' ||
+        /#REF!|#VALUE!|#DIV\/0!|#NAME\?|#N\/A|#NULL!|#NUM!|#SPILL!|#CALC!/.test(text)
+      );
+    }
+
+    function keyOf(sheet, row, col) {
+      return `${sheet}::${row}::${col}`;
+    }
+
+    function addrOf(row, col) {
+      return XLSX.utils.encode_cell({ r: row - 1, c: col - 1 });
+    }
+
+    function nearestFormula(map, sheetName, row, col, dRow, dCol, maxGap, strictBarrier) {
+      for (let step = 1; step <= maxGap; step++) {
+        const next = map.get(keyOf(sheetName, row + dRow * step, col + dCol * step));
+        if (!next) continue;
+        if (next.isFormula) return { ...next, step };
+        if (strictBarrier && next.isMeaningful) return null;
+      }
+      return null;
+    }
+
+    function addOrMergeFinding(store, finding) {
+      const id = `${finding.sheet}@@${finding.addr}`;
+      if (!store.has(id)) {
+        store.set(id, {
+          ...finding,
+          axes: new Set(finding.axes || []),
+          evidence: Array.isArray(finding.evidence) ? [...finding.evidence] : [],
+          expectedSet: new Set((finding.expected || []).filter(Boolean)),
+          flags: new Set(finding.flags || [])
+        });
+        return;
+      }
+      const cur = store.get(id);
+      (finding.axes || []).forEach((x) => cur.axes.add(x));
+      (finding.evidence || []).forEach((x) => { if (!cur.evidence.includes(x)) cur.evidence.push(x); });
+      (finding.expected || []).forEach((x) => { if (x) cur.expectedSet.add(x); });
+      (finding.flags || []).forEach((x) => cur.flags.add(x));
+      if (finding.explicitError) cur.explicitError = true;
+      if (!cur.currentFormula && finding.currentFormula) cur.currentFormula = finding.currentFormula;
+      if (!cur.currentValue && finding.currentValue) cur.currentValue = finding.currentValue;
+    }
+
+    function makeMeta(sheetName, row, col, cell) {
+      const addr = addrOf(row, col);
+      const formula = cell && cell.f ? String(cell.f) : '';
+      return {
+        sheet: sheetName,
+        row,
+        col,
+        addr,
+        cell,
+        type: cell?.t || '',
+        formula,
+        isFormula: !!formula,
+        display: cellDisplay(cell),
+        isMeaningful: isMeaningfulCell(cell),
+        sig: formula ? normalizeFormula(formula, row, col) : ''
+      };
+    }
+
+    function sameExpected(a, b) {
+      return String(a || '').trim() === String(b || '').trim();
+    }
+
+    async function analyzeWorkbook(file, opts) {
+      setStatus('파일을 읽는 중…');
+      const buffer = await file.arrayBuffer();
+      const wb = XLSX.read(buffer, { cellFormula: true, cellText: true, xlfn: true });
+
+      const map = new Map();
+      const sheets = [];
+      let formulaCellCount = 0;
+      let meaningfulCellCount = 0;
+
+      for (const sheetName of wb.SheetNames) {
+        setStatus(`시트 준비 중… ${sheetName}`);
+        await new Promise((r) => setTimeout(r, 0));
+        const ws = wb.Sheets[sheetName];
+        const rangeText = ws['!ref'] || 'A1:A1';
+        const range = XLSX.utils.decode_range(rangeText);
+        const formulaCells = [];
+        const nonFormulaMeaningfulCells = [];
+        const formulaIndexRow = new Map();
+        const formulaIndexCol = new Map();
+
+        const keys = Object.keys(ws).filter((k) => !k.startsWith('!'));
+        for (const addr of keys) {
+          const decoded = XLSX.utils.decode_cell(addr);
+          const row = decoded.r + 1;
+          const col = decoded.c + 1;
+          const meta = makeMeta(sheetName, row, col, ws[addr]);
+          map.set(keyOf(sheetName, row, col), meta);
+          if (meta.isMeaningful) meaningfulCellCount++;
+          if (meta.isFormula) {
+            formulaCells.push(meta);
+            formulaCellCount++;
+            if (!formulaIndexRow.has(row)) formulaIndexRow.set(row, []);
+            if (!formulaIndexCol.has(col)) formulaIndexCol.set(col, []);
+            formulaIndexRow.get(row).push(meta);
+            formulaIndexCol.get(col).push(meta);
+          } else if (meta.isMeaningful) {
+            nonFormulaMeaningfulCells.push(meta);
+          }
+        }
+
+        for (const arr of formulaIndexRow.values()) arr.sort((a, b) => a.col - b.col);
+        for (const arr of formulaIndexCol.values()) arr.sort((a, b) => a.row - b.row);
+
+        sheets.push({
+          sheetName,
+          ws,
+          range,
+          formulaCells,
+          nonFormulaMeaningfulCells,
+          formulaIndexRow,
+          formulaIndexCol
+        });
+      }
+
+      const findingsMap = new Map();
+      const sheetStats = [];
+
+      for (const sheet of sheets) {
+        setStatus(`검사 중… ${sheet.sheetName}`);
+        await new Promise((r) => setTimeout(r, 0));
+        let localFindings = 0;
+
+        for (const meta of sheet.formulaCells) {
+          const left = nearestFormula(map, meta.sheet, meta.row, meta.col, 0, -1, opts.maxGap, opts.strictBarrier);
+          const right = nearestFormula(map, meta.sheet, meta.row, meta.col, 0, 1, opts.maxGap, opts.strictBarrier);
+          const up = nearestFormula(map, meta.sheet, meta.row, meta.col, -1, 0, opts.maxGap, opts.strictBarrier);
+          const down = nearestFormula(map, meta.sheet, meta.row, meta.col, 1, 0, opts.maxGap, opts.strictBarrier);
+
+          const explicitError = isExplicitErrorCell(meta);
+          if (explicitError) {
+            addOrMergeFinding(findingsMap, {
+              sheet: meta.sheet,
+              row: meta.row,
+              col: meta.col,
+              addr: meta.addr,
+              currentFormula: '=' + meta.formula,
+              currentValue: meta.display,
+              explicitError: true,
+              axes: [],
+              expected: [],
+              evidence: ['수식 자체 또는 캐시된 값에 Excel 오류 표시가 있습니다.'],
+              flags: ['explicit-error']
+            });
+          }
+
+          if (left && right && left.sig === right.sig && meta.sig !== left.sig) {
+            const e1 = shiftFormulaToCell(left.formula, left.row, left.col, meta.row, meta.col);
+            const e2 = shiftFormulaToCell(right.formula, right.row, right.col, meta.row, meta.col);
+            addOrMergeFinding(findingsMap, {
+              sheet: meta.sheet,
+              row: meta.row,
+              col: meta.col,
+              addr: meta.addr,
+              currentFormula: '=' + meta.formula,
+              currentValue: meta.display,
+              explicitError: false,
+              axes: ['row'],
+              expected: sameExpected(e1, e2) ? [e1] : [e1, e2],
+              evidence: [`행 기준 좌우 패턴 일치 셀 ${left.addr} / ${right.addr} 와 다릅니다.`],
+              flags: ['pattern-mismatch']
+            });
+          }
+
+          if (up && down && up.sig === down.sig && meta.sig !== up.sig) {
+            const e1 = shiftFormulaToCell(up.formula, up.row, up.col, meta.row, meta.col);
+            const e2 = shiftFormulaToCell(down.formula, down.row, down.col, meta.row, meta.col);
+            addOrMergeFinding(findingsMap, {
+              sheet: meta.sheet,
+              row: meta.row,
+              col: meta.col,
+              addr: meta.addr,
+              currentFormula: '=' + meta.formula,
+              currentValue: meta.display,
+              explicitError: false,
+              axes: ['col'],
+              expected: sameExpected(e1, e2) ? [e1] : [e1, e2],
+              evidence: [`열 기준 상하 패턴 일치 셀 ${up.addr} / ${down.addr} 와 다릅니다.`],
+              flags: ['pattern-mismatch']
+            });
+          }
+        }
+
+        if (opts.detectOverwritten) {
+          for (const meta of sheet.nonFormulaMeaningfulCells) {
+            const left = nearestFormula(map, meta.sheet, meta.row, meta.col, 0, -1, opts.maxGap, opts.strictBarrier);
+            const right = nearestFormula(map, meta.sheet, meta.row, meta.col, 0, 1, opts.maxGap, opts.strictBarrier);
+            const up = nearestFormula(map, meta.sheet, meta.row, meta.col, -1, 0, opts.maxGap, opts.strictBarrier);
+            const down = nearestFormula(map, meta.sheet, meta.row, meta.col, 1, 0, opts.maxGap, opts.strictBarrier);
+
+            if (left && right && left.sig === right.sig) {
+              const e1 = shiftFormulaToCell(left.formula, left.row, left.col, meta.row, meta.col);
+              const e2 = shiftFormulaToCell(right.formula, right.row, right.col, meta.row, meta.col);
+              addOrMergeFinding(findingsMap, {
+                sheet: meta.sheet,
+                row: meta.row,
+                col: meta.col,
+                addr: meta.addr,
+                currentFormula: '',
+                currentValue: meta.display,
+                explicitError: false,
+                axes: ['row'],
+                expected: sameExpected(e1, e2) ? [e1] : [e1, e2],
+                evidence: [`행 기준 좌우 수식 패턴은 같은데 현재 셀은 수식이 아닙니다. (${left.addr} / ${right.addr})`],
+                flags: ['missing-or-overwritten']
+              });
+            }
+
+            if (up && down && up.sig === down.sig) {
+              const e1 = shiftFormulaToCell(up.formula, up.row, up.col, meta.row, meta.col);
+              const e2 = shiftFormulaToCell(down.formula, down.row, down.col, meta.row, meta.col);
+              addOrMergeFinding(findingsMap, {
+                sheet: meta.sheet,
+                row: meta.row,
+                col: meta.col,
+                addr: meta.addr,
+                currentFormula: '',
+                currentValue: meta.display,
+                explicitError: false,
+                axes: ['col'],
+                expected: sameExpected(e1, e2) ? [e1] : [e1, e2],
+                evidence: [`열 기준 상하 수식 패턴은 같은데 현재 셀은 수식이 아닙니다. (${up.addr} / ${down.addr})`],
+                flags: ['missing-or-overwritten']
+              });
+            }
+          }
+        }
+
+        if (opts.detectBlankGap) {
+          for (const [row, arr] of sheet.formulaIndexRow.entries()) {
+            for (let i = 0; i < arr.length - 1; i++) {
+              const a = arr[i];
+              const b = arr[i + 1];
+              if (b.col - a.col !== 2) continue;
+              if (a.sig !== b.sig) continue;
+              const mid = map.get(keyOf(sheet.sheetName, row, a.col + 1));
+              if (mid && mid.isMeaningful) continue;
+              addOrMergeFinding(findingsMap, {
+                sheet: sheet.sheetName,
+                row,
+                col: a.col + 1,
+                addr: addrOf(row, a.col + 1),
+                currentFormula: '',
+                currentValue: '',
+                explicitError: false,
+                axes: ['row'],
+                expected: [shiftFormulaToCell(a.formula, a.row, a.col, row, a.col + 1)],
+                evidence: [`행 기준으로 ${a.addr} 와 ${b.addr} 사이에 수식 한 칸이 비어 보입니다.`],
+                flags: ['blank-gap']
+              });
+            }
+          }
+
+          for (const [col, arr] of sheet.formulaIndexCol.entries()) {
+            for (let i = 0; i < arr.length - 1; i++) {
+              const a = arr[i];
+              const b = arr[i + 1];
+              if (b.row - a.row !== 2) continue;
+              if (a.sig !== b.sig) continue;
+              const mid = map.get(keyOf(sheet.sheetName, a.row + 1, col));
+              if (mid && mid.isMeaningful) continue;
+              addOrMergeFinding(findingsMap, {
+                sheet: sheet.sheetName,
+                row: a.row + 1,
+                col,
+                addr: addrOf(a.row + 1, col),
+                currentFormula: '',
+                currentValue: '',
+                explicitError: false,
+                axes: ['col'],
+                expected: [shiftFormulaToCell(a.formula, a.row, a.col, a.row + 1, col)],
+                evidence: [`열 기준으로 ${a.addr} 와 ${b.addr} 사이에 수식 한 칸이 비어 보입니다.`],
+                flags: ['blank-gap']
+              });
+            }
+          }
+        }
+
+        for (const entry of findingsMap.values()) {
+          if (entry.sheet === sheet.sheetName) localFindings++;
+        }
+
+        sheetStats.push({
+          sheetName: sheet.sheetName,
+          formulaCells: sheet.formulaCells.length,
+          meaningfulCells: sheet.formulaCells.length + sheet.nonFormulaMeaningfulCells.length,
+          findings: localFindings,
+          usedRange: XLSX.utils.encode_range(sheet.range)
+        });
+      }
+
+      const findings = Array.from(findingsMap.values()).map((item) => {
+        const axes = Array.from(item.axes);
+        const flags = Array.from(item.flags);
+        const expected = Array.from(item.expectedSet).filter(Boolean);
+        let issue = '주변 패턴과 다른 수식';
+        if (item.explicitError) issue = 'Excel 오류 값/참조 오류';
+        else if (flags.includes('missing-or-overwritten') || flags.includes('blank-gap')) issue = '수식 누락/값 덮어씀 의심';
+
+        let confidence = '보통';
+        let confidenceRank = 2;
+        if (item.explicitError || axes.length >= 2) {
+          confidence = '높음';
+          confidenceRank = 3;
+        } else if (flags.includes('blank-gap')) {
+          confidence = '보통';
+          confidenceRank = 2;
+        } else if (axes.length === 1) {
+          confidence = '보통';
+          confidenceRank = 2;
+        } else {
+          confidence = '낮음';
+          confidenceRank = 1;
+        }
+
+        return {
+          sheet: item.sheet,
+          addr: item.addr,
+          row: item.row,
+          col: item.col,
+          issue,
+          confidence,
+          confidenceRank,
+          axes: axes.join(', '),
+          currentFormula: item.currentFormula,
+          currentValue: item.currentValue,
+          expectedFormula: expected.join(' || '),
+          evidence: item.evidence.join(' / '),
+          flags: flags.join(', ')
+        };
+      }).sort((a, b) => {
+        if (b.confidenceRank !== a.confidenceRank) return b.confidenceRank - a.confidenceRank;
+        if (a.sheet !== b.sheet) return a.sheet.localeCompare(b.sheet, 'ko');
+        if (a.row !== b.row) return a.row - b.row;
+        return a.col - b.col;
+      });
+
+      return {
+        workbookName: file.name,
+        sheetCount: wb.SheetNames.length,
+        formulaCellCount,
+        meaningfulCellCount,
+        findings,
+        sheetStats
+      };
+    }
+
+    function renderSummary(summary) {
+      const high = summary.findings.filter((x) => x.confidence === '높음').length;
+      const medium = summary.findings.filter((x) => x.confidence === '보통').length;
+      const errorCount = summary.findings.filter((x) => x.issue === 'Excel 오류 값/참조 오류').length;
+
+      ui.summaryHost.innerHTML = `
+        <div class="card">
+          <div class="toolbar">
+            <div class="left">
+              <div style="font-weight: 800; font-size: 1.05rem;">검사 요약</div>
+              <span class="pill ${summary.findings.length ? 'medium' : 'ok'}">${summary.findings.length ? '의심 셀 발견' : '이상 패턴 없음'}</span>
+            </div>
+            <div class="right muted">파일: ${escapeHtml(summary.workbookName)}</div>
+          </div>
+          <div class="kpis">
+            <div class="kpi"><div class="num">${summary.sheetCount.toLocaleString('ko-KR')}</div><div class="lbl">시트 수</div></div>
+            <div class="kpi"><div class="num">${summary.formulaCellCount.toLocaleString('ko-KR')}</div><div class="lbl">수식 셀 수</div></div>
+            <div class="kpi"><div class="num">${summary.findings.length.toLocaleString('ko-KR')}</div><div class="lbl">의심 셀 수</div></div>
+            <div class="kpi"><div class="num">${high.toLocaleString('ko-KR')}</div><div class="lbl">높음 신뢰도</div></div>
+            <div class="kpi"><div class="num">${errorCount.toLocaleString('ko-KR')}</div><div class="lbl">명시적 오류(#REF! 등)</div></div>
+          </div>
+          <div class="hint" style="margin-top: 14px;">
+            “의심”은 확정 오류가 아니라 패턴 이탈 신호입니다. 합계행, 누계, 예외 처리 행/열은 사람이 한 번 더 보는 게 맞습니다.
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSheetStats(summary) {
+      ui.sheetHost.innerHTML = `
+        <div class="card">
+          <div style="font-weight: 800; font-size: 1.05rem; margin-bottom: 12px;">시트별 현황</div>
+          <div class="sheet-grid">
+            ${summary.sheetStats.map((s) => `
+              <div class="sheet-card">
+                <h3>${escapeHtml(s.sheetName)}</h3>
+                <div class="muted">사용 범위: ${escapeHtml(s.usedRange)}</div>
+                <div class="sheet-stat"><span>수식 셀</span><strong>${s.formulaCells.toLocaleString('ko-KR')}</strong></div>
+                <div class="sheet-stat"><span>의심 셀</span><strong>${s.findings.toLocaleString('ko-KR')}</strong></div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderResults(summary) {
+      const findings = summary.findings;
+      if (!findings.length) {
+        ui.resultHost.innerHTML = `
+          <div class="card">
+            <div class="empty">눈에 띄는 패턴 이탈 셀을 찾지 못했습니다.</div>
+          </div>
+        `;
+        return;
+      }
+
+      const sheetButtons = ['전체', ...Array.from(new Set(findings.map((x) => x.sheet)))];
+      ui.resultHost.innerHTML = `
+        <div class="card">
+          <div class="toolbar">
+            <div class="left">
+              <div style="font-weight: 800; font-size: 1.05rem;">의심 셀 목록</div>
+              <span class="pill medium">총 ${findings.length.toLocaleString('ko-KR')}건</span>
+            </div>
+            <div class="right muted">헤더를 기준으로 정렬된 표입니다.</div>
+          </div>
+          <div class="toolbar" style="margin-top: -2px;">
+            <div class="left" id="sheetFilters">
+              ${sheetButtons.map((name, idx) => `<button type="button" class="chip ${idx === 0 ? 'active' : ''}" data-sheet="${escapeHtml(name)}">${escapeHtml(name)}</button>`).join('')}
+            </div>
+            <div class="right">
+              <span class="pill high">높음</span>
+              <span class="pill medium">보통</span>
+              <span class="pill low">낮음</span>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>시트</th>
+                  <th>셀</th>
+                  <th>이슈</th>
+                  <th>신뢰도</th>
+                  <th>현재 수식</th>
+                  <th>현재 값</th>
+                  <th>예상 수식</th>
+                  <th>근거</th>
+                </tr>
+              </thead>
+              <tbody id="resultTbody">
+                ${findings.map((row) => rowToHtml(row)).join('')}
+              </tbody>
+            </table>
+          </div>
+          <details style="margin-top: 12px;">
+            <summary>판정 기준 간단 설명</summary>
+            <div class="muted">
+              좌우 또는 상하 이웃 수식의 상대참조 패턴이 서로 같은데 현재 셀이 다르면 “패턴 이탈”로 보고,
+              그 자리에 수식이 없으면 “수식 누락/값 덮어씀 의심”으로 표시합니다.
+            </div>
+          </details>
+        </div>
+      `;
+
+      const chips = Array.from(document.querySelectorAll('#sheetFilters .chip'));
+      chips.forEach((chip) => {
+        chip.addEventListener('click', () => {
+          chips.forEach((c) => c.classList.remove('active'));
+          chip.classList.add('active');
+          const sheet = chip.dataset.sheet;
+          const filtered = sheet === '전체' ? findings : findings.filter((x) => x.sheet === sheet);
+          document.getElementById('resultTbody').innerHTML = filtered.map((row) => rowToHtml(row)).join('');
+        });
+      });
+    }
+
+    function rowToHtml(row) {
+      const pillClass = row.confidence === '높음' ? 'high' : row.confidence === '보통' ? 'medium' : 'low';
+      return `
+        <tr>
+          <td>${escapeHtml(row.sheet)}</td>
+          <td><strong>${escapeHtml(row.addr)}</strong><div class="muted">R${row.row} C${row.col}</div></td>
+          <td>${escapeHtml(row.issue)}</td>
+          <td><span class="pill ${pillClass}">${escapeHtml(row.confidence)}</span></td>
+          <td>${row.currentFormula ? `<div class="formula"><code>${escapeHtml(row.currentFormula)}</code></div>` : '<span class="muted">(수식 없음)</span>'}</td>
+          <td>${row.currentValue ? `<div class="formula"><code>${escapeHtml(row.currentValue)}</code></div>` : '<span class="muted">(빈 셀)</span>'}</td>
+          <td>${row.expectedFormula ? `<div class="formula"><code>=${escapeHtml(row.expectedFormula)}</code></div>` : '<span class="muted">(추정 불가)</span>'}</td>
+          <td>${escapeHtml(row.evidence)}</td>
+        </tr>
+      `;
+    }
+
+    function toCsv(rows) {
+      const header = ['sheet', 'addr', 'row', 'col', 'issue', 'confidence', 'currentFormula', 'currentValue', 'expectedFormula', 'evidence'];
+      const lines = [header.join(',')];
+      for (const row of rows) {
+        const vals = header.map((k) => {
+          const raw = row[k] == null ? '' : String(row[k]);
+          const esc = raw.replace(/"/g, '""');
+          return `"${esc}"`;
+        });
+        lines.push(vals.join(','));
+      }
+      return '\uFEFF' + lines.join('\n');
+    }
+
+    function downloadText(filename, text, mime) {
+      const blob = new Blob([text], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function refreshSelectedFileText() {
+      ui.selectedFile.textContent = currentFile
+        ? `선택된 파일: ${currentFile.name}`
+        : '선택된 파일 없음';
+    }
+
+    async function runScan() {
+      if (!currentFile) {
+        alert('먼저 엑셀 파일을 선택해 주세요.');
+        return;
+      }
+
+      ui.scanBtn.disabled = true;
+      ui.downloadCsvBtn.disabled = true;
+      ui.copyJsonBtn.disabled = true;
+      ui.summaryHost.innerHTML = '';
+      ui.sheetHost.innerHTML = '';
+      ui.resultHost.innerHTML = '';
+
+      try {
+        const opts = {
+          maxGap: Math.max(1, Math.min(5, Number(ui.maxGap.value) || 2)),
+          detectOverwritten: ui.detectOverwritten.checked,
+          detectBlankGap: ui.detectBlankGap.checked,
+          strictBarrier: ui.strictBarrier.checked
+        };
+
+        const summary = await analyzeWorkbook(currentFile, opts);
+        lastSummary = summary;
+        lastFindings = summary.findings;
+        renderSummary(summary);
+        renderSheetStats(summary);
+        renderResults(summary);
+        ui.downloadCsvBtn.disabled = false;
+        ui.copyJsonBtn.disabled = false;
+        setStatus(`검사 완료: 의심 셀 ${summary.findings.length.toLocaleString('ko-KR')}건`);
+      } catch (err) {
+        console.error(err);
+        setStatus('오류가 발생했습니다. 파일 형식 또는 시트 구조를 확인해 주세요.');
+        ui.resultHost.innerHTML = `
+          <div class="card">
+            <div class="empty">오류 메시지: ${escapeHtml(err?.message || String(err))}</div>
+          </div>
+        `;
+      } finally {
+        ui.scanBtn.disabled = false;
+      }
+    }
+
+    ui.fileInput.addEventListener('change', (e) => {
+      currentFile = e.target.files?.[0] || null;
+      refreshSelectedFileText();
+    });
+
+    ['dragenter', 'dragover'].forEach((evtName) => {
+      ui.dropzone.addEventListener(evtName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        ui.dropzone.classList.add('dragover');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach((evtName) => {
+      ui.dropzone.addEventListener(evtName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        ui.dropzone.classList.remove('dragover');
+      });
+    });
+
+    ui.dropzone.addEventListener('drop', (e) => {
+      const file = e.dataTransfer?.files?.[0] || null;
+      if (!file) return;
+      currentFile = file;
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      ui.fileInput.files = dt.files;
+      refreshSelectedFileText();
+    });
+
+    ui.scanBtn.addEventListener('click', runScan);
+
+    ui.downloadCsvBtn.addEventListener('click', () => {
+      if (!lastFindings.length) return;
+      const base = (currentFile?.name || 'result').replace(/\.[^.]+$/, '');
+      downloadText(`${base}_formula_findings.csv`, toCsv(lastFindings), 'text/csv;charset=utf-8');
+    });
+
+    ui.copyJsonBtn.addEventListener('click', async () => {
+      if (!lastSummary) return;
+      const payload = JSON.stringify(lastSummary, null, 2);
+      try {
+        await navigator.clipboard.writeText(payload);
+        alert('결과 JSON을 클립보드에 복사했습니다.');
+      } catch (_) {
+        alert('클립보드 복사에 실패했습니다. 브라우저 권한을 확인해 주세요.');
+      }
+    });
+
+    refreshSelectedFileText();
+  </script>
+</body>
+</html>
