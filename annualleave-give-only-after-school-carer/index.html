@@ -1,0 +1,1469 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>늘봄학교전담사 직종전환 첫해 연차 부여일수 계산기</title>
+
+  <link rel="icon" href="/static/favicon.ico" />
+  <link rel="stylesheet" href="/static/style.css" />
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+
+  <style>
+    .msg { border:1px solid #e5e7eb; border-radius:12px; padding:10px 12px; background:#fafafa; }
+    .msg.ok { border-color:#b7eb8f; background:#f6ffed; }
+    .msg.warn { border-color:#ffd666; background:#fffbe6; }
+    .msg.err { border-color:#ffccc7; background:#fff2f0; }
+    .mini { font-size:0.95rem; color:#555; }
+    .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size:0.95rem; background:#f3f4f6; border:1px solid #e5e7eb; padding:1px 6px; border-radius:6px; }
+    .right { text-align:right; }
+    .center { text-align:center; }
+    .nowrap { white-space:nowrap; }
+    .hidden { display:none !important; }
+    .stack { display:flex; flex-direction:column; gap:8px; }
+    .pill { display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid #ddd; background:#fff; font-size:0.92rem; }
+    .pill strong { font-weight:800; }
+
+    .table-wrap { width:100%; max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; margin:12px 0; padding-bottom:6px; }
+    table.sheetlike { width:100%; border-collapse:collapse; background:#fff; }
+    table.sheetlike th, table.sheetlike td { border:1px solid #e5e7eb; padding:8px 10px; font-size:1rem; }
+    table.sheetlike th { background:#f9fafb; font-weight:700; }
+    .table-compact th, .table-compact td { padding:6px 8px; font-size:0.98rem; }
+
+    .callout {
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .callout ul { margin: 8px 0 0; }
+
+    .dropzone {
+      border: 2px dashed #d4d4d8;
+      border-radius: 14px;
+      padding: 14px 16px;
+      background: #fafafa;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .dropzone:hover { background:#f3f4f6; }
+    .dropzone.dragover {
+      border-color: #111;
+      background: #eef2ff;
+    }
+    .dz-title { font-weight: 700; color:#111; margin:0 0 4px; }
+    .dz-desc { margin:0; color:#555; font-size:0.95rem; }
+
+    .note-list {
+      margin: 8px 0 0;
+      padding-left: 18px;
+    }
+    .note-list li {
+      font-size: 0.95rem;
+      color: #555;
+    }
+  </style>
+</head>
+
+<body class="page-index">
+  <main class="container">
+    <h1>늘봄학교전담사 직종전환 첫해 연차 부여일수 계산기</h1>
+
+    <p class="muted">
+      · 직종 전환이 <b>회계연도 중간</b>에 발생한 경우, 전환 전/후 근무를 비례하여 <b>시간</b>으로 산정함<br/>
+      · 다음 회계연도 연차부터는 <b>일</b> 단위로 정상 부여 (전일제 상시근로자)<br/>
+      · 이 계산기는 결근, 휴직, 제외기간 등 출근율 변동 요소는 반영하지 않음
+    </p>
+
+    <nav class="quick-nav" aria-label="빠른 이동">
+      <div class="chip-row">
+        <a class="chip" href="#cond">1. 계산 조건</a>
+        <a class="chip" href="#upload">2. 엑셀 업로드</a>
+        <a class="chip" href="#single">3. 근로자 입력</a>
+        <a class="chip" href="#result">4. 결과 조회</a>
+        <a class="chip" href="#help">5. 상세 산정 내역</a>
+      </div>
+    </nav>
+
+    <section id="cond" class="section">
+      <h2>1. 계산 조건</h2>
+      <p class="muted">
+        · 출근율 및 근무일수 산정할 때 분모·분자에서 <b>토요일(무급휴일)은 제외</b>함<br/>
+        · 전환 일자 입력하면 산정기간/기준일수/전환 전·후 일수를 자동 산정함<br/>
+        · 엑셀 업로드 시 행별 <b>직종전환 일자</b>가 있으면 그 값을 우선 사용하고, 비어 있으면 여기 입력한 값을 기본값으로 사용함
+      </p>
+      <hr/>
+
+      <div class="card">
+        <div class="grid two">
+          <label class="stack">
+            <span class="mini"><b>기본 직종 전환 일자</b></span>
+            <input type="date" id="convDate" />
+          </label>
+
+          <label class="stack">
+            <span class="mini"><b>전환 후: 늘봄학교전담사 (고정값)</b></span>
+            <input type="text" value="전일제(주40시간)" disabled />
+          </label>
+        </div>
+
+        <div class="mini" style="margin-top:8px;">
+          <span class="kbd">전환 첫 부여일</span>은 직종전환 일자 이후 처음 오는 <b>3.1.</b>로 자동 설정했음.
+        </div>
+
+        <div id="autoInfo" class="msg" style="margin-top:12px;"></div>
+      </div>
+    </section>
+
+    <section id="upload" class="section">
+      <h2>2. 엑셀 업로드</h2>
+      <p class="muted">
+        · 첫 번째 시트의 헤더를 읽어서 대상자를 자동 등록함<br/>
+        · 권장 헤더: <b>이름(선택가능)</b>, <b>직종 전환 전 직종</b>, <b>전환 전 직종 주 유급 근무시간</b>, <b>최초임용일</b>, <b>직종전환 일자</b>
+      </p>
+      <hr/>
+
+      <div class="card">
+        <div class="grid two">
+          <div class="stack">
+            <div class="dropzone" id="batchDropzone">
+              <p class="dz-title">엑셀 파일 업로드하기</p>
+              <p class="dz-desc">.xlsx / .xls / .csv 가능 · 드래그 & 드롭 가능</p>
+            </div>
+            <input type="file" id="batchFile" class="hidden" accept=".xlsx,.xls,.csv" />
+            <div class="mini">※ 파일을 고른 뒤 <b>엑셀 불러오기</b>를 누르면 현재 조회 명단을 파일 내용으로 교체합니다.</div>
+          </div>
+
+          <div class="callout">
+            <div><b>업로드 양식 안내</b></div>
+            <ul class="note-list">
+              <li>이름은 비워도 됨</li>
+              <li>직종은 예: 초등돌봄전담사 / 방과후전담사 / 방과후전담사(단시간) / 기타 직종</li>
+              <li>초등돌봄전담사(30시간), 방과후전담사(25시간)는 주 유급시간이 비어 있어도 자동 보정</li>
+              <li>방과후전담사(단시간)은 특례 분기로 계산하며, 주 유급시간은 비어 있어도 계산 가능</li>
+              <li>직종전환 일자가 비어 있으면 상단 기본 직종 전환 일자를 사용</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="row gap" style="margin-top:12px;">
+          <button class="btn primary" id="btnLoadBatchFile" type="button">엑셀 불러오기</button>
+          <button class="btn" id="btnDownloadTemplateCsv" type="button">업로드 양식 CSV</button>
+          <button class="btn" id="btnDownloadTemplateXlsx" type="button">업로드 양식 엑셀</button>
+        </div>
+
+        <div id="uploadMsg" class="msg warn" style="margin-top:12px;">
+          엑셀 파일을 선택하면 조회 명단으로 한 번에 올릴 수 있습니다.
+        </div>
+      </div>
+    </section>
+
+    <section id="single" class="section">
+      <h2>3. 근로자 정보 입력</h2>
+      <hr/>
+
+      <div class="card">
+        <h3>3-1) 개별 근로자 수기 입력</h3>
+
+        <div class="grid two">
+          <label class="stack">
+            <span class="mini">성명</span>
+            <input type="text" id="sName" placeholder="김강원" />
+          </label>
+
+          <label class="stack">
+            <span class="mini">최초 임용일</span>
+            <input type="date" id="sHire" />
+          </label>
+        </div>
+
+        <div class="grid two" style="margin-top:10px;">
+          <label class="stack">
+            <span class="mini">전환 전 직종</span>
+            <select id="sPrevJob">
+              <option value="aft">방과후전담사 (일 5시간 / 주 25시간)</option>
+              <option value="care">초등돌봄전담사 (일 6시간 / 주 30시간)</option>
+              <option value="aftpart">방과후전담사(단시간) (주 15시간 미만 / 특례 분기)</option>
+              <option value="custom">기타 직종</option>
+            </select>
+          </label>
+
+          <label class="stack">
+            <span class="mini">전환 전 주 유급 근무시간</span>
+            <input type="number" id="sWeeklyHours" min="1" max="40" step="0.5" class="right" />
+          </label>
+        </div>
+
+        <div class="row gap" style="margin-top:12px;">
+          <button class="btn primary" id="btnAddToBatch" type="button">조회 명단에 추가하기</button>
+          <button class="btn ghost" id="btnResetSingle" type="button">삭제하기</button>
+        </div>
+
+        <div id="singleMsg" class="msg warn" style="margin-top:12px;">
+          전환일자를 확인한 뒤, 근로자 정보를 입력하고 <b>조회 명단에 추가하기</b>를 눌러주세요.
+        </div>
+      </div>
+
+      <div id="singleDetail" class="card hidden">
+        <h3>3-2) 개인별 산정 상세(최근 추가 대상)</h3>
+        <div class="table-wrap">
+          <table class="sheetlike table-compact">
+            <tbody id="singleDetailBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="result" class="section">
+      <h2>4. 계산 결과 조회</h2>
+
+      <p class="muted">
+        · 회계연도 중간에 직종 전환한 경우 일반 직종은 첫 적용 회계연도에 <b>시간 단위</b> 부여가 기본이며 <b>소수점 첫째 자리</b>로 표시함 (둘째 자리에서 반올림)<br/>
+        · <b>방과후전담사(단시간)</b>은 2024.8.1. 직종전환 특례표에 따라 별도 계산함<br/>
+        · 엑셀 업로드 결과는 <b>행별 직종전환 일자</b>로 계산함
+      </p>
+      <hr/>
+
+      <div class="card">
+        <div class="row gap">
+          <button class="btn" id="btnRenderBatch" type="button">계산 결과 보기</button>
+          <button class="btn primary" id="btnDownloadXlsx" type="button">결과 엑셀 다운로드</button>
+          <button class="btn" id="btnDownloadCsv" type="button">결과 CSV 다운로드</button>
+          <button class="btn" id="btnClearBatch" type="button">초기화하기</button>
+        </div>
+
+        <div id="batchMsg" class="msg warn" style="margin-top:12px;">
+          목록이 비어 있습니다. 위에서 <b>조회 명단에 추가하기</b> 또는 <b>엑셀 불러오기</b>로 대상자를 먼저 쌓아주세요.
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="sheetlike table-compact" id="batchTable">
+          <thead>
+            <tr>
+              <th class="nowrap">연번</th>
+              <th class="nowrap">성명</th>
+              <th class="nowrap">전환 전 직종</th>
+              <th class="nowrap">최초 임용일</th>
+              <th class="nowrap">직종전환 일자</th>
+              <th class="nowrap">전환 전 주 유급 근로시간</th>
+              <th class="nowrap">첫 적용 회계연도</th>
+              <th class="nowrap right">첫 적용 연차(시간)</th>
+              <th class="nowrap right">첫 적용 연차(일 환산)</th>
+              <th class="nowrap">다음 회계연도</th>
+              <th class="nowrap right">다음 회계연도 연차(일)</th>
+              <th class="nowrap">비고</th>
+              <th class="nowrap center">삭제</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="help" class="section">
+      <h2>5. 상세 산정 내역</h2>
+
+      <div class="card">
+        <h3>기본 및 가산일수 알림</h3>
+        <div class="msg">
+          <div>· 기본 일수: <b>15일</b></div>
+          <div>· 근속연수 가산: <b>3년 이상 1일</b>, 이후 <b>매 2년마다 1일 추가</b></div>
+          <div>· 연차 부여일수 상한: <b>최대 25일</b></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>전환 후 첫 연차 부여(시간 단위) 산출 내역</h3>
+        <div class="msg">
+          <div style="margin-bottom:8px;">
+            · 회계연도 중 직종 전환 후 첫 부여 시,<br/>
+            산정기간(전년도 3.1. ~ 당해 2.28.)을 <b>전환 전</b>과 <b>전환 후</b>로 나눠 비례 계산 후 합산함.
+          </div>
+
+          <div class="callout">
+            <div><b>전환 전 (예: 방과후/돌봄)</b></div>
+            <div class="mini">
+              (기준일수) × (전환 전 주 유급 근무시간/40) × (전환 전 근무일수/연간 기준일수) × 8시간
+            </div>
+          </div>
+
+          <div class="callout" style="margin-top:10px;">
+            <div><b>전환 후 (늘봄학교전담사: 전일제, 상시)</b></div>
+            <div class="mini">
+              (기준일수) × (전환 후 근무일수/연간 기준일수) × 8시간
+            </div>
+          </div>
+
+          <div class="mini" style="margin-top:10px;">
+            ※ 근무일수/연간 기준일수는 모두 <b>토요일 제외</b> 일수로 계산함<br/>
+            ※ 이 카드의 산식은 <b>초등돌봄전담사·방과후전담사</b> 일반 비례식에 해당함
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>방과후전담사(단시간) 직종전환 특례</h3>
+        <div class="msg">
+          <div>· <b>2024회계연도</b>: 직종전환일 이전은 연차 미발생, 2024.8.1. 이후 <b>개근 월수만큼 총 7일</b> 발생</div>
+          <div>· <b>2025회계연도</b>: 2025.3.1.~2025.7.31. <b>4일</b> + 2025.8.1.~2026.2.28. <b>비례휴가 8.7일</b> = <b>총 12.7일</b></div>
+          <div>· <b>2026·2027회계연도</b>: 기본 15일</div>
+          <div>· <b>2028회계연도 이후</b>: 기본 15일 + 재직 2년마다 1일 가산</div>
+          <div class="mini" style="margin-top:8px;">※ 재직 연수 기산일은 최초임용일이 아니라 <b>직종전환일</b>입니다.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>직종전환 다음 회계연도 근무 실적에 따른 연차 부여</h3>
+        <div class="msg">
+          <div>· 늘봄전담사 전일제(1일 8시간) 기준으로 <b>일 단위 정상 부여</b></div>
+          <div>· 기본 15일 + 근속 가산일수 적용 (최종 상한: 25일)</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const $ = (sel) => document.querySelector(sel);
+
+      function setMsg(el, cls, html) {
+        if (!el) return;
+        el.className = `msg ${cls || ""}`.trim();
+        el.innerHTML = html;
+      }
+
+      function escapeHtml(s) {
+        return String(s ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function normalizeText(s) {
+        return String(s || "").replace(/\s+/g, "").toLowerCase();
+      }
+
+      function normalizeHeader(s) {
+        return String(s || "")
+          .replace(/\s+/g, "")
+          .replace(/[()\[\]{}]/g, "")
+          .toLowerCase();
+      }
+
+      function formatMaybeNumber(v) {
+        return (v == null || Number.isNaN(v)) ? "-" : String(v);
+      }
+
+      function mergeNotes(...notes) {
+        return notes
+          .map(x => String(x || "").trim())
+          .filter(Boolean)
+          .filter((v, i, arr) => arr.indexOf(v) === i)
+          .join(" / ");
+      }
+
+      function ymdToUTC(ymd) {
+        if (!ymd) return null;
+        const [y, m, d] = String(ymd).split("-").map(Number);
+        if (!y || !m || !d) return null;
+        return new Date(Date.UTC(y, m - 1, d));
+      }
+
+      function utcToYmd(date) {
+        if (!date) return "";
+        const y = date.getUTCFullYear();
+        const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+        const d = String(date.getUTCDate()).padStart(2, "0");
+        return `${y}-${m}-${d}`;
+      }
+
+      function addDaysUTC(date, days) {
+        return new Date(date.getTime() + days * 86400000);
+      }
+
+      function isLeapYear(y) {
+        return (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0);
+      }
+
+      function isSaturdayUTC(date) {
+        return date.getUTCDay() === 6;
+      }
+
+      function countDaysExclSaturdayUTC(startUTC, endUTC) {
+        if (!startUTC || !endUTC) return 0;
+        let s = startUTC, e = endUTC;
+        if (e < s) [s, e] = [e, s];
+
+        let c = 0;
+        for (let d = new Date(s.getTime()); d <= e; d = addDaysUTC(d, 1)) {
+          if (isSaturdayUTC(d)) continue;
+          c += 1;
+        }
+        return c;
+      }
+
+      function diffFullYearsUTC(startUTC, endUTC) {
+        if (!startUTC || !endUTC) return 0;
+        if (startUTC > endUTC) return 0;
+
+        let y = endUTC.getUTCFullYear() - startUTC.getUTCFullYear();
+        let annivYear = startUTC.getUTCFullYear() + y;
+
+        let m = startUTC.getUTCMonth();
+        let d = startUTC.getUTCDate();
+
+        if (m === 1 && d === 29 && !isLeapYear(annivYear)) d = 28;
+
+        const anniv = new Date(Date.UTC(annivYear, m, d));
+        if (anniv > endUTC) y -= 1;
+
+        return Math.max(0, y);
+      }
+
+      function calcSeniorityAddDays(serviceYears) {
+        if (serviceYears < 3) return 0;
+        return 1 + Math.floor((serviceYears - 3) / 2);
+      }
+
+      function clamp25(days) {
+        return Math.min(25, Math.max(0, days));
+      }
+
+      function round1(x) {
+        return Math.round((Number(x) || 0) * 10) / 10;
+      }
+
+      function nextMarch1After(convUTC) {
+        const y = convUTC.getUTCFullYear();
+        const mar1ThisYear = new Date(Date.UTC(y, 2, 1));
+        if (mar1ThisYear > convUTC) return mar1ThisYear;
+        return new Date(Date.UTC(y + 1, 2, 1));
+      }
+
+      function fiscalYearLabelForGrantUTC(grantUTC) {
+        return `${grantUTC.getUTCFullYear()}회계연도`;
+      }
+
+      function computeTransitionContext(convUTC) {
+        const firstGrantUTC = nextMarch1After(convUTC);
+        const secondGrantUTC = new Date(Date.UTC(firstGrantUTC.getUTCFullYear() + 1, 2, 1));
+
+        const perfStartUTC = new Date(Date.UTC(firstGrantUTC.getUTCFullYear() - 1, 2, 1));
+        const perfEndUTC = addDaysUTC(firstGrantUTC, -1);
+
+        let preStart = perfStartUTC;
+        let preEnd = addDaysUTC(convUTC, -1);
+
+        let postStart = convUTC;
+        let postEnd = perfEndUTC;
+
+        const denomDays = countDaysExclSaturdayUTC(perfStartUTC, perfEndUTC);
+
+        const preDays = (preEnd >= perfStartUTC)
+          ? countDaysExclSaturdayUTC(preStart, preEnd)
+          : 0;
+
+        const postDays = (postStart <= perfEndUTC)
+          ? countDaysExclSaturdayUTC(postStart, postEnd)
+          : 0;
+
+        return {
+          firstGrantUTC,
+          secondGrantUTC,
+          perfStartUTC,
+          perfEndUTC,
+          preStart,
+          preEnd,
+          postStart,
+          postEnd,
+          denomDays,
+          preDays,
+          postDays
+        };
+      }
+
+      function detectPrevJobMeta(prevJobRaw) {
+        const raw = String(prevJobRaw || "").trim();
+        const t = normalizeText(raw);
+
+        if (t.includes("초등돌봄")) {
+          return { key: "care", label: "초등돌봄전담사", inferredWeekly: 30, note: "" };
+        }
+        if (t.includes("방과후") && (t.includes("단시간") || t.includes("초단시간") || t.includes("15시간미만"))) {
+          return { key: "aftpart", label: raw || "방과후전담사(단시간)", inferredWeekly: null, note: "" };
+        }
+        if (t.includes("방과후")) {
+          return { key: "aft", label: "방과후전담사", inferredWeekly: 25, note: "" };
+        }
+        return { key: "custom", label: raw || "기타 직종", inferredWeekly: null, note: "" };
+      }
+
+      function getSinglePrevJobMeta() {
+        if (sPrevJob.value === "aft") {
+          return { key: "aft", label: "방과후전담사" };
+        }
+        if (sPrevJob.value === "care") {
+          return { key: "care", label: "초등돌봄전담사" };
+        }
+        if (sPrevJob.value === "aftpart") {
+          return { key: "aftpart", label: "방과후전담사(단시간)" };
+        }
+        return { key: "custom", label: "기타 직종" };
+      }
+
+      function parseMaybeNumber(v) {
+        const s = String(v ?? "").replace(/[^0-9.\-]/g, "").trim();
+        if (!s) return NaN;
+        const n = Number(s);
+        return Number.isFinite(n) ? n : NaN;
+      }
+
+      function validateWeeklyHours(prevJobKey, rawValue) {
+        const hasValue = String(rawValue ?? "").trim() !== "";
+        const weekly = Number(rawValue);
+
+        if (prevJobKey === "aftpart") {
+          if (!hasValue) return { ok: true, value: null };
+          if (!(weekly > 0 && weekly < 15)) {
+            return { ok: false, message: "<b>방과후전담사(단시간)</b>의 전환 전 주 유급시간은 15시간 미만으로 입력해 주세요." };
+          }
+          return { ok: true, value: weekly };
+        }
+
+        if (!(weekly > 0 && weekly <= 40)) {
+          return { ok: false, message: "<b>전환 전 주 유급시간</b>은 1~40 범위 숫자여야 합니다." };
+        }
+        return { ok: true, value: weekly };
+      }
+
+      function calcGeneralWorker({ name, hireUTC, weeklyPaidHours, convUTC }) {
+        const ctx = computeTransitionContext(convUTC);
+
+        const service1 = diffFullYearsUTC(hireUTC, ctx.firstGrantUTC);
+        const add1 = calcSeniorityAddDays(service1);
+        const standardDays1 = clamp25(15 + add1);
+
+        const wHours = Number(weeklyPaidHours || 0);
+        if (!(wHours > 0 && wHours <= 40)) {
+          throw new Error("전환 전 주 유급시간은 1~40 범위의 숫자로 입력해야 합니다.");
+        }
+
+        const denom = Math.max(1, ctx.denomDays);
+
+        const preHoursRaw =
+          standardDays1 * (wHours / 40) * (ctx.preDays / denom) * 8;
+
+        const postHoursRaw =
+          standardDays1 * (ctx.postDays / denom) * 8;
+
+        const totalHoursRaw = preHoursRaw + postHoursRaw;
+
+        const preHours = round1(preHoursRaw);
+        const postHours = round1(postHoursRaw);
+        const totalHours = round1(totalHoursRaw);
+        const dayEq = round1(totalHoursRaw / 8);
+
+        const service2 = diffFullYearsUTC(hireUTC, ctx.secondGrantUTC);
+        const add2 = calcSeniorityAddDays(service2);
+        const standardDays2 = clamp25(15 + add2);
+
+        return {
+          calcMode: "general",
+          name: name || "",
+          hireYmd: utcToYmd(hireUTC),
+          weeklyPaidHours: wHours,
+          ctx,
+          convYmd: utcToYmd(convUTC),
+          scope1Label: fiscalYearLabelForGrantUTC(ctx.firstGrantUTC),
+          scope2Label: fiscalYearLabelForGrantUTC(ctx.secondGrantUTC),
+          grant1Label: utcToYmd(ctx.firstGrantUTC),
+          grant2Label: utcToYmd(ctx.secondGrantUTC),
+          grant1Ymd: utcToYmd(ctx.firstGrantUTC),
+          service1,
+          add1,
+          standardDays1,
+          preHours,
+          postHours,
+          totalHours,
+          dayEq,
+          grant2Ymd: utcToYmd(ctx.secondGrantUTC),
+          service2,
+          add2,
+          standardDays2,
+          result1Hours: totalHours,
+          result1Days: dayEq,
+          result2Days: standardDays2,
+          noteCalc: ""
+        };
+      }
+
+      function calcAftPartSpecialWorker({ name, hireUTC, weeklyPaidHours, convUTC }) {
+        const convYmd = utcToYmd(convUTC);
+        if (convYmd !== "2024-08-01") {
+          throw new Error("방과후전담사(단시간) 특례 계산은 직종전환일이 2024-08-01인 경우에만 지원합니다.");
+        }
+
+        const ctx = computeTransitionContext(convUTC);
+        const fiscal2024Days = 7;
+        const fiscal2024Hours = round1(fiscal2024Days * 8);
+
+        const fiscal2025MonthlyDays = 4;
+        const fiscal2025ProportionalDays = round1(15 * (ctx.postDays / Math.max(1, ctx.denomDays)));
+        const fiscal2025Days = round1(fiscal2025MonthlyDays + fiscal2025ProportionalDays);
+
+        const grant2028UTC = new Date(Date.UTC(2028, 2, 1));
+        const service2028 = diffFullYearsUTC(convUTC, grant2028UTC);
+        const add2028 = calcSeniorityAddDays(service2028);
+        const days2028 = clamp25(15 + add2028);
+
+        return {
+          calcMode: "aftpart-special",
+          name: name || "",
+          hireYmd: utcToYmd(hireUTC),
+          weeklyPaidHours: Number.isFinite(Number(weeklyPaidHours)) ? Number(weeklyPaidHours) : null,
+          ctx,
+          convYmd,
+          scope1Label: "2024회계연도",
+          scope2Label: "2025회계연도",
+          grant1Label: "2024.8.1.~2025.2.28. 개근 월수 기준",
+          grant2Label: "2025.3.1.~2026.2.28. 특례표 기준",
+          result1Hours: fiscal2024Hours,
+          result1Days: fiscal2024Days,
+          result2Days: fiscal2025Days,
+          fiscal2024Days,
+          fiscal2024Hours,
+          fiscal2025MonthlyDays,
+          fiscal2025ProportionalDays,
+          fiscal2025Days,
+          fiscal2025ProportionalBaseDays: ctx.postDays,
+          fiscal2025ProportionalDenomDays: ctx.denomDays,
+          days2026: 15,
+          days2027: 15,
+          days2028,
+          service2028,
+          add2028,
+          seniorityBaseYmd: convYmd,
+          noteCalc: "방과후전담사(단시간) 특례 적용"
+        };
+      }
+
+      function calcForWorker({ name, hireUTC, weeklyPaidHours, convUTC, prevJobKey }) {
+        if (prevJobKey === "aftpart") {
+          return calcAftPartSpecialWorker({ name, hireUTC, weeklyPaidHours, convUTC });
+        }
+        return calcGeneralWorker({ name, hireUTC, weeklyPaidHours, convUTC });
+      }
+
+      function excelSerialToYmd(serial) {
+        const n = Number(serial);
+        if (!Number.isFinite(n)) return "";
+        const utc = new Date(Date.UTC(1899, 11, 30) + Math.round(n) * 86400000);
+        return utcToYmd(utc);
+      }
+
+      function parseLooseDateToYmd(v) {
+        if (v == null || v === "") return "";
+
+        if (Object.prototype.toString.call(v) === "[object Date]" && !isNaN(v)) {
+          const y = v.getFullYear();
+          const m = String(v.getMonth() + 1).padStart(2, "0");
+          const d = String(v.getDate()).padStart(2, "0");
+          return `${y}-${m}-${d}`;
+        }
+
+        if (typeof v === "number" && v > 20000 && v < 70000) {
+          return excelSerialToYmd(v);
+        }
+
+        const s = String(v).trim();
+        if (!s) return "";
+
+        if (/^\d{5}$/.test(s) || /^\d{4,5}\.0$/.test(s)) {
+          return excelSerialToYmd(Number(s));
+        }
+
+        const m = s.match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
+        if (m) {
+          const y = Number(m[1]);
+          const mo = String(Number(m[2])).padStart(2, "0");
+          const d = String(Number(m[3])).padStart(2, "0");
+          return `${y}-${mo}-${d}`;
+        }
+
+        return "";
+      }
+
+      function findHeaderRow(rows) {
+        let bestIdx = -1;
+        let bestScore = -1;
+
+        const groups = [
+          ["이름", "성명", "name"],
+          ["직종 전환 전 직종", "전환 전 직종", "전직종", "이전 직종", "기존 직종"],
+          ["전환 전 직종 주 유급 근무시간", "전환 전 주 유급 근무시간", "주 유급 근무시간", "주유급시간", "주근무시간"],
+          ["최초임용일", "임용일", "최초계약일", "hire date"],
+          ["직종전환 일자", "직종 전환 일자", "직종전환일", "전환일자", "conversion date"]
+        ];
+
+        for (let i = 0; i < Math.min(rows.length, 20); i++) {
+          const row = rows[i];
+          if (!Array.isArray(row)) continue;
+          const joined = row.map(normalizeHeader).join("|");
+          let score = 0;
+          for (const group of groups) {
+            if (group.some(key => joined.includes(normalizeHeader(key)))) score += 1;
+          }
+          if (score > bestScore) {
+            bestScore = score;
+            bestIdx = i;
+          }
+        }
+
+        return bestScore >= 3 ? bestIdx : -1;
+      }
+
+      function findColumnIndex(headers, candidates) {
+        const nh = headers.map(normalizeHeader);
+        for (const c of candidates) {
+          const target = normalizeHeader(c);
+          const idx = nh.findIndex(h => h === target);
+          if (idx >= 0) return idx;
+        }
+        for (const c of candidates) {
+          const target = normalizeHeader(c);
+          const idx = nh.findIndex(h => h && (h.includes(target) || target.includes(h)));
+          if (idx >= 0) return idx;
+        }
+        return -1;
+      }
+
+      function readFileAsArrayBuffer(file) {
+        return new Promise((resolve, reject) => {
+          const fr = new FileReader();
+          fr.onload = () => resolve(fr.result);
+          fr.onerror = () => reject(new Error("파일 읽기 실패"));
+          fr.readAsArrayBuffer(file);
+        });
+      }
+
+      function readBatchRowsFromWorkbook(wb) {
+        const sheetName = wb.SheetNames[0];
+        if (!sheetName) throw new Error("시트가 없습니다.");
+        const ws = wb.Sheets[sheetName];
+        return XLSX.utils.sheet_to_json(ws, {
+          header: 1,
+          raw: false,
+          defval: "",
+          dateNF: "yyyy-mm-dd"
+        });
+      }
+
+      const state = { batch: [], selectedBatchFile: null };
+
+      const convDate = $("#convDate");
+      const autoInfo = $("#autoInfo");
+      const batchFile = $("#batchFile");
+      const batchDropzone = $("#batchDropzone");
+      const uploadMsg = $("#uploadMsg");
+
+      const sName = $("#sName");
+      const sHire = $("#sHire");
+      const sPrevJob = $("#sPrevJob");
+      const sWeeklyHours = $("#sWeeklyHours");
+
+      const btnAddToBatch = $("#btnAddToBatch");
+      const btnResetSingle = $("#btnResetSingle");
+      const btnLoadBatchFile = $("#btnLoadBatchFile");
+      const btnDownloadTemplateCsv = $("#btnDownloadTemplateCsv");
+      const btnDownloadTemplateXlsx = $("#btnDownloadTemplateXlsx");
+
+      const singleMsg = $("#singleMsg");
+      const singleDetail = $("#singleDetail");
+      const singleDetailBody = $("#singleDetailBody");
+
+      const btnRenderBatch = $("#btnRenderBatch");
+      const btnClearBatch = $("#btnClearBatch");
+      const btnDownloadCsv = $("#btnDownloadCsv");
+      const btnDownloadXlsx = $("#btnDownloadXlsx");
+
+      const batchMsg = $("#batchMsg");
+      const batchTbody = $("#batchTable tbody");
+
+      function setAutoInfo() {
+        const convUTC = ymdToUTC(convDate.value);
+        if (!convUTC) {
+          setMsg(autoInfo, "warn", "기본 직종전환 일자를 입력해 주세요.");
+          return;
+        }
+
+        const ctx = computeTransitionContext(convUTC);
+
+        const preSpan = `${utcToYmd(ctx.perfStartUTC)} ~ ${utcToYmd(addDaysUTC(convUTC, -1))}`;
+        const postSpan = `${utcToYmd(convUTC)} ~ ${utcToYmd(ctx.perfEndUTC)}`;
+
+        setMsg(autoInfo, "", `
+          <div><b>전환 첫 부여일</b>: <span class="kbd">${escapeHtml(utcToYmd(ctx.firstGrantUTC))}</span></div>
+          <div><b>다음 부여일</b>: <span class="kbd">${escapeHtml(utcToYmd(ctx.secondGrantUTC))}</span></div>
+          <div><b>전환 첫 부여 산정기간</b>: <span class="kbd">${escapeHtml(utcToYmd(ctx.perfStartUTC))} ~ ${escapeHtml(utcToYmd(ctx.perfEndUTC))}</span></div>
+          <div style="margin-top:8px;">
+            <span class="pill">토요일 제외 연간 기준일수 <strong>${ctx.denomDays}</strong>일</span>
+          </div>
+          <hr/>
+          <div><b>전환 전 기간</b>: ${escapeHtml(preSpan)} · <b>${ctx.preDays}</b>일</div>
+          <div><b>전환 후 기간</b>: ${escapeHtml(postSpan)} · <b>${ctx.postDays}</b>일</div>
+          <div class="mini">※ 방과후전담사(단시간)은 2024.8.1. 직종전환 특례표를 별도로 적용합니다.</div>
+        `);
+      }
+
+      function syncWeeklyHoursUI() {
+        const v = sPrevJob.value;
+        sWeeklyHours.placeholder = "";
+
+        if (v === "aft") {
+          sWeeklyHours.value = "25";
+          sWeeklyHours.disabled = true;
+        } else if (v === "care") {
+          sWeeklyHours.value = "30";
+          sWeeklyHours.disabled = true;
+        } else if (v === "aftpart") {
+          sWeeklyHours.disabled = false;
+          sWeeklyHours.placeholder = "예: 14.5 (선택 입력)";
+          if (Number(sWeeklyHours.value) >= 15 || sWeeklyHours.value === "25" || sWeeklyHours.value === "30") {
+            sWeeklyHours.value = "";
+          }
+        } else {
+          sWeeklyHours.disabled = false;
+          if (!sWeeklyHours.value) sWeeklyHours.value = "";
+        }
+      }
+
+      function renderSingleDetail(r) {
+        if (!singleDetail || !singleDetailBody) return;
+
+        const weeklyText = r.weeklyPaidHours == null
+          ? "-"
+          : `<b>${escapeHtml(String(r.weeklyPaidHours))}</b>시간`;
+
+        let rows = [
+          ["성명", escapeHtml(r.name || "-")],
+          ["전환 전 직종", escapeHtml(r.prevJobLabel || "-")],
+          ["최초임용일", `<span class="kbd">${escapeHtml(r.hireYmd)}</span>`],
+          ["직종전환 일자", `<span class="kbd">${escapeHtml(r.convYmd || "")}</span>`],
+          ["전환 전 주 유급시간", weeklyText],
+          ["비고", escapeHtml(r.note || "-")],
+          ["", ""]
+        ];
+
+        if (r.calcMode === "aftpart-special") {
+          rows = rows.concat([
+            ["[2024회계연도] 적용 방식", "전환 이전 미발생 / 전환 이후 개근 월수만큼 발생"],
+            ["2024회계연도 발생일수", `<b>${r.fiscal2024Days}</b>일`],
+            ["2024회계연도 시간 환산", `<b>${r.fiscal2024Hours}</b>시간`],
+            ["", ""],
+            ["[2025회계연도] 2025.3.1.~2025.7.31.", `<b>${r.fiscal2025MonthlyDays}</b>일 (개근 월수분)`],
+            ["2025.8.1.~2026.2.28. 비례휴가", `<b>${r.fiscal2025ProportionalDays}</b>일`],
+            ["비례휴가 산식", `기본일수 15일 × <b>${r.fiscal2025ProportionalBaseDays}</b>일 ÷ <b>${r.fiscal2025ProportionalDenomDays}</b>일`],
+            ["2025회계연도 합계", `<b>${r.fiscal2025Days}</b>일`],
+            ["", ""],
+            ["[이후 안내] 2026회계연도", `<b>${r.days2026}</b>일`],
+            ["2027회계연도", `<b>${r.days2027}</b>일`],
+            ["2028회계연도 예상", `<b>${r.days2028}</b>일`],
+            ["재직연수 기산일", `<span class="kbd">${escapeHtml(r.seniorityBaseYmd)}</span>`],
+          ]);
+        } else {
+          const ctx = r.ctx;
+          rows = rows.concat([
+            ["[첫 적용 회계연도] 구분", `<b>${escapeHtml(r.scope1Label)}</b> (부여일 <span class="kbd">${escapeHtml(r.grant1Ymd)}</span>)`],
+            ["근속(만)", `${r.service1}년`],
+            ["근속가산", `${r.add1}일`],
+            ["기준일수(상한25)", `<b>${r.standardDays1}</b>일`],
+            ["산정기간", `<span class="kbd">${escapeHtml(utcToYmd(ctx.perfStartUTC))} ~ ${escapeHtml(utcToYmd(ctx.perfEndUTC))}</span>`],
+            ["연간 기준일수(토 제외)", `<b>${ctx.denomDays}</b>일`],
+            ["전환 전(토 제외)", `${escapeHtml(utcToYmd(ctx.perfStartUTC))} ~ ${escapeHtml(utcToYmd(addDaysUTC(ymdToUTC(r.convYmd), -1)))} · <b>${ctx.preDays}</b>일`],
+            ["전환 후(토 제외)", `${escapeHtml(r.convYmd)} ~ ${escapeHtml(utcToYmd(ctx.perfEndUTC))} · <b>${ctx.postDays}</b>일`],
+            ["전환 전 환산시간", `<b>${r.preHours}</b>시간`],
+            ["전환 후 환산시간", `<b>${r.postHours}</b>시간`],
+            ["합계(시간)", `<b>${r.totalHours}</b>시간`],
+            ["일 환산(시간÷8)", `<b>${r.dayEq}</b>일 (약)`],
+            ["", ""],
+            ["[다음 회계연도] 구분", `<b>${escapeHtml(r.scope2Label)}</b> (부여일 <span class="kbd">${escapeHtml(r.grant2Ymd)}</span>)`],
+            ["근속(만)", `${r.service2}년`],
+            ["근속가산", `${r.add2}일`],
+            ["부여일수(상한25)", `<b>${r.standardDays2}</b>일`],
+          ]);
+        }
+
+        singleDetailBody.innerHTML = rows.map(([k, v]) => {
+          const kk = escapeHtml(k);
+          return `<tr><th class="nowrap">${kk}</th><td>${v}</td></tr>`;
+        }).join("");
+
+        singleDetail.classList.remove("hidden");
+      }
+
+      function buildComputedBatch() {
+        const computed = [];
+        const issues = [];
+
+        for (const it of state.batch) {
+          try {
+            const hireUTC = ymdToUTC(it.hireYmd);
+            const effectiveConvYmd = it.convFromGlobal ? (convDate.value || it.convYmd) : it.convYmd;
+            const convUTC = ymdToUTC(effectiveConvYmd);
+            if (!hireUTC || !convUTC) throw new Error("날짜 형식 오류");
+
+            const out = calcForWorker({
+              name: it.name,
+              hireUTC,
+              weeklyPaidHours: it.weeklyPaidHours,
+              convUTC,
+              prevJobKey: it.prevJobKey
+            });
+
+            computed.push({
+              ...out,
+              prevJobKey: it.prevJobKey || "custom",
+              prevJobLabel: it.prevJobLabel || "기타 직종",
+              convYmd: effectiveConvYmd,
+              note: mergeNotes(it.note, out.noteCalc)
+            });
+          } catch (e) {
+            issues.push(`${it.name || "(무기명)"}: ${e.message || String(e)}`);
+          }
+        }
+
+        return { computed, issues };
+      }
+
+      function addSingleToBatchAndPreview() {
+        try {
+          const convUTC = ymdToUTC(convDate.value);
+          if (!convUTC) {
+            setMsg(singleMsg, "err", "먼저 <b>기본 직종전환 일자</b>를 입력해 주세요.");
+            singleDetail?.classList.add("hidden");
+            return;
+          }
+
+          const hireUTC = ymdToUTC(sHire.value);
+          if (!hireUTC) {
+            setMsg(singleMsg, "err", "<b>최초임용일</b>을 입력해 주세요.");
+            singleDetail?.classList.add("hidden");
+            return;
+          }
+
+          const prevMeta = getSinglePrevJobMeta();
+          const weeklyCheck = validateWeeklyHours(prevMeta.key, sWeeklyHours.value);
+          if (!weeklyCheck.ok) {
+            setMsg(singleMsg, "err", weeklyCheck.message);
+            singleDetail?.classList.add("hidden");
+            return;
+          }
+          if (prevMeta.key === "aftpart" && convDate.value !== "2024-08-01") {
+            setMsg(singleMsg, "err", "<b>방과후전담사(단시간)</b> 특례 계산은 <b>직종전환일 2024-08-01</b>인 경우만 지원합니다.");
+            singleDetail?.classList.add("hidden");
+            return;
+          }
+
+          const name = (sName.value || "").trim() || "(무기명)";
+
+          const out = calcForWorker({
+            name,
+            hireUTC,
+            weeklyPaidHours: weeklyCheck.value,
+            convUTC,
+            prevJobKey: prevMeta.key
+          });
+
+          const previewRow = {
+            ...out,
+            prevJobKey: prevMeta.key,
+            prevJobLabel: prevMeta.label,
+            convYmd: convDate.value,
+            note: mergeNotes(out.noteCalc)
+          };
+
+          state.batch.push({
+            name,
+            hireYmd: sHire.value,
+            weeklyPaidHours: weeklyCheck.value,
+            convYmd: convDate.value,
+            convFromGlobal: false,
+            prevJobKey: prevMeta.key,
+            prevJobLabel: prevMeta.label,
+            note: ""
+          });
+
+          setMsg(singleMsg, "ok", `
+            <div><b>목록에 추가 완료</b>: ${escapeHtml(name)}</div>
+            <div style="margin-top:6px;">
+              <b>${escapeHtml(out.scope1Label)}</b> (${escapeHtml(out.grant1Label)}):
+              <span class="pill"><strong>${out.result1Hours}</strong>시간</span>
+              <span class="pill">약 <strong>${out.result1Days}</strong>일</span>
+            </div>
+            <div style="margin-top:6px;">
+              <b>${escapeHtml(out.scope2Label)}</b> (${escapeHtml(out.grant2Label)}):
+              <span class="pill"><strong>${out.result2Days}</strong>일</span>
+            </div>
+            <div class="mini" style="margin-top:8px;">
+              ${out.calcMode === "aftpart-special"
+                ? "※ 방과후전담사(단시간)은 2024.8.1. 직종전환 특례표 기준으로 계산했습니다."
+                : "※ 시간은 소수점 둘째 자리에서 반올림하여 첫째 자리까지 표시합니다."}
+            </div>
+          `);
+
+          renderSingleDetail(previewRow);
+          renderBatch();
+
+        } catch (e) {
+          setMsg(singleMsg, "err", escapeHtml(e.message || String(e)));
+          singleDetail?.classList.add("hidden");
+        }
+      }
+
+      function resetSingle() {
+        sName.value = "";
+        sHire.value = "";
+        sPrevJob.value = "aft";
+        syncWeeklyHoursUI();
+        setMsg(singleMsg, "warn", "값을 입력하고 <b>조회 명단에 추가하기</b>를 눌러주세요.");
+        singleDetail?.classList.add("hidden");
+      }
+
+      async function loadBatchFromFile() {
+        try {
+          const file = state.selectedBatchFile || batchFile.files?.[0];
+          if (!file) {
+            setMsg(uploadMsg, "err", "불러올 엑셀 파일을 먼저 선택해 주세요.");
+            return;
+          }
+          if (typeof XLSX === "undefined") {
+            setMsg(uploadMsg, "err", "엑셀 라이브러리를 불러오지 못했습니다. 네트워크 환경을 확인해 주세요.");
+            return;
+          }
+
+          const buf = await readFileAsArrayBuffer(file);
+          const wb = XLSX.read(buf, { type: "array", cellDates: true });
+          const rows = readBatchRowsFromWorkbook(wb);
+
+          const headerIdx = findHeaderRow(rows);
+          if (headerIdx < 0) throw new Error("헤더 행을 찾지 못했습니다. 업로드 양식과 헤더명을 확인해 주세요.");
+
+          const headers = rows[headerIdx].map(x => String(x || "").trim());
+          const dataRows = rows.slice(headerIdx + 1).filter(r => Array.isArray(r) && r.some(x => String(x || "").trim() !== ""));
+
+          const colName = findColumnIndex(headers, ["이름(선택가능)", "이름", "성명", "name"]);
+          const colPrev = findColumnIndex(headers, ["직종 전환 전 직종", "전환 전 직종", "전직종", "이전 직종", "기존 직종"]);
+          const colWeekly = findColumnIndex(headers, ["전환 전 직종 주 유급 근무시간", "전환 전 주 유급 근무시간", "주 유급 근무시간", "주유급시간", "주근무시간"]);
+          const colHire = findColumnIndex(headers, ["최초임용일", "임용일", "최초계약일", "hire date"]);
+          const colConv = findColumnIndex(headers, ["직종전환 일자", "직종 전환 일자", "직종전환일", "전환일자", "conversion date"]);
+
+          if (colPrev < 0 || colHire < 0 || (colWeekly < 0 && colPrev < 0)) {
+            throw new Error("필수 컬럼(전환 전 직종 / 최초임용일 / 주 유급 근무시간)을 찾지 못했습니다.");
+          }
+
+          const nextBatch = [];
+          const errors = [];
+          const warnings = [];
+
+          for (let i = 0; i < dataRows.length; i++) {
+            const row = dataRows[i];
+            const rowNo = headerIdx + i + 2;
+
+            const name = (colName >= 0 ? String(row[colName] || "").trim() : "") || "(무기명)";
+            const prevJobRaw = colPrev >= 0 ? String(row[colPrev] || "").trim() : "";
+            const prevMeta = detectPrevJobMeta(prevJobRaw);
+            const prevJobKey = prevMeta.key || "custom";
+
+            let weekly = colWeekly >= 0 ? parseMaybeNumber(row[colWeekly]) : NaN;
+            if (!Number.isFinite(weekly) && prevMeta.inferredWeekly != null) weekly = prevMeta.inferredWeekly;
+
+            const hireYmd = colHire >= 0 ? parseLooseDateToYmd(row[colHire]) : "";
+            const rowConvYmd = colConv >= 0 ? parseLooseDateToYmd(row[colConv]) : "";
+            const convFromGlobal = !rowConvYmd;
+            const convYmd = rowConvYmd || convDate.value || "";
+
+            if (!hireYmd) {
+              errors.push(`행 ${rowNo}: 최초임용일을 읽지 못했습니다.`);
+              continue;
+            }
+            if (!convYmd) {
+              errors.push(`행 ${rowNo}: 직종전환 일자가 없고 상단 기본값도 비어 있습니다.`);
+              continue;
+            }
+
+            let weeklyPaidHours = Number.isFinite(weekly) ? weekly : null;
+
+            if (prevJobKey === "aftpart") {
+              if (convYmd !== "2024-08-01") {
+                errors.push(`행 ${rowNo}: 방과후전담사(단시간) 특례는 직종전환 일자 2024-08-01인 경우만 지원합니다.`);
+                continue;
+              }
+              if (weeklyPaidHours != null && !(weeklyPaidHours > 0 && weeklyPaidHours < 15)) {
+                errors.push(`행 ${rowNo}: 방과후전담사(단시간)의 전환 전 주 유급 근무시간은 15시간 미만이어야 합니다.`);
+                continue;
+              }
+            } else {
+              if (!(weeklyPaidHours > 0 && weeklyPaidHours <= 40)) {
+                errors.push(`행 ${rowNo}: 전환 전 주 유급 근무시간이 1~40 범위가 아닙니다.`);
+                continue;
+              }
+            }
+
+            let note = prevMeta.note || "";
+            if (!prevJobRaw) {
+              note = mergeNotes(note, "전환 전 직종 미입력");
+            }
+            if (prevJobKey === "aftpart" && weeklyPaidHours == null) {
+              note = mergeNotes(note, "전환 전 주 유급시간 미입력(특례 계산에는 미사용)");
+            }
+
+            if (note) warnings.push(`행 ${rowNo}: ${note}`);
+
+            nextBatch.push({
+              name,
+              hireYmd,
+              weeklyPaidHours,
+              convYmd,
+              convFromGlobal,
+              prevJobKey,
+              prevJobLabel: prevMeta.label || prevJobRaw || "기타 직종",
+              note
+            });
+          }
+
+          state.batch = nextBatch;
+          renderBatch();
+
+          const errList = errors.length
+            ? `<div style="margin-top:8px;"><b>제외된 행</b><ul>${errors.slice(0, 12).map(x => `<li>${escapeHtml(x)}</li>`).join("")}${errors.length > 12 ? `<li>외 ${errors.length - 12}건 더 있음</li>` : ""}</ul></div>`
+            : "";
+
+          const warnList = warnings.length
+            ? `<div style="margin-top:8px;"><b>검토 메모</b><ul>${warnings.slice(0, 12).map(x => `<li>${escapeHtml(x)}</li>`).join("")}${warnings.length > 12 ? `<li>외 ${warnings.length - 12}건 더 있음</li>` : ""}</ul></div>`
+            : "";
+
+          setMsg(uploadMsg, nextBatch.length ? "ok" : "warn", `
+            <div><b>엑셀 불러오기 완료</b></div>
+            <div>파일명: <span class="kbd">${escapeHtml(file.name)}</span></div>
+            <div style="margin-top:6px;">
+              <span class="pill">등록 ${nextBatch.length}명</span>
+              <span class="pill">제외 ${errors.length}건</span>
+              <span class="pill">검토 ${warnings.length}건</span>
+            </div>
+            <div class="mini" style="margin-top:8px;">※ 현재 조회 명단은 업로드 파일 내용으로 교체했습니다.</div>
+            ${errList}
+            ${warnList}
+          `);
+        } catch (e) {
+          setMsg(uploadMsg, "err", `<b>엑셀 불러오기 실패</b><br/>${escapeHtml(e.message || String(e))}`);
+        }
+      }
+
+      function renderBatch() {
+        if (state.batch.length === 0) {
+          setMsg(batchMsg, "warn", "목록이 비어 있습니다. 위에서 <b>조회 명단에 추가하기</b> 또는 <b>엑셀 불러오기</b>로 대상자를 먼저 쌓아주세요.");
+          batchTbody.innerHTML = "";
+          return;
+        }
+
+        const { computed, issues } = buildComputedBatch();
+
+        if (computed.length === 0) {
+          setMsg(batchMsg, "err", `계산 가능한 대상자가 없습니다.${issues.length ? `<br/>${escapeHtml(issues[0])}` : ""}`);
+          batchTbody.innerHTML = "";
+          return;
+        }
+
+        const convSet = Array.from(new Set(computed.map(r => r.convYmd)));
+        const convText = convSet.length === 1
+          ? `직종전환일자 <span class="kbd">${escapeHtml(convSet[0])}</span>`
+          : `직종전환일자 <span class="kbd">행별 개별 적용 (${convSet.length}개)</span>`;
+        const specialCount = computed.filter(r => r.calcMode === "aftpart-special").length;
+
+        setMsg(batchMsg, issues.length ? "warn" : "ok", `
+          <div><b>대상자</b>: ${computed.length}명</div>
+          <div class="mini">${convText} · 계산 결과는 행별 전환일자로 산정함</div>
+          ${specialCount ? `<div class="mini" style="margin-top:6px;">※ 방과후전담사(단시간) 특례 적용 ${specialCount}명 포함</div>` : ""}
+          ${issues.length ? `<div class="mini" style="margin-top:8px;">※ 계산 제외 ${issues.length}건 있음</div>` : ""}
+        `);
+
+        batchTbody.innerHTML = "";
+        computed.forEach((r, idx) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td class="center nowrap">${idx + 1}</td>
+            <td class="nowrap">${escapeHtml(r.name || "")}</td>
+            <td class="nowrap">${escapeHtml(r.prevJobLabel || "")}</td>
+            <td class="nowrap">${escapeHtml(r.hireYmd)}</td>
+            <td class="nowrap">${escapeHtml(r.convYmd)}</td>
+            <td class="nowrap">${escapeHtml(formatMaybeNumber(r.weeklyPaidHours))}${r.weeklyPaidHours == null ? "" : "h/주"}</td>
+            <td class="nowrap">${escapeHtml(r.scope1Label)}</td>
+            <td class="right nowrap"><b>${escapeHtml(formatMaybeNumber(r.result1Hours))}</b>h</td>
+            <td class="right nowrap">${escapeHtml(formatMaybeNumber(r.result1Days))}일</td>
+            <td class="nowrap">${escapeHtml(r.scope2Label)}</td>
+            <td class="right nowrap"><b>${escapeHtml(formatMaybeNumber(r.result2Days))}</b>일</td>
+            <td>${escapeHtml(r.note || "-")}</td>
+            <td class="center nowrap"><button class="btn btn-lightgrey" type="button" data-del="${idx}">삭제</button></td>
+          `;
+          batchTbody.appendChild(tr);
+        });
+
+        batchTbody.querySelectorAll("button[data-del]").forEach(btn => {
+          btn.addEventListener("click", () => {
+            const i = Number(btn.getAttribute("data-del"));
+            if (!Number.isFinite(i)) return;
+            state.batch.splice(i, 1);
+            renderBatch();
+          });
+        });
+      }
+
+      function clearBatch() {
+        state.batch = [];
+        state.selectedBatchFile = null;
+        if (batchFile) batchFile.value = "";
+        setMsg(uploadMsg, "warn", "업로드/조회 명단을 초기화했습니다.");
+        renderBatch();
+      }
+
+      function downloadCsv() {
+        const { computed } = buildComputedBatch();
+        if (!computed.length) {
+          alert("다운로드할 계산 결과가 없습니다.");
+          return;
+        }
+
+        const header = [
+          "성명",
+          "전환전직종",
+          "최초임용일",
+          "직종전환일자",
+          "전환전_주유급시간",
+          "계산구분",
+          "첫적용회계연도",
+          "첫적용기준",
+          "첫적용연차_시간",
+          "첫적용연차_일환산",
+          "다음회계연도",
+          "다음회계연도_기준",
+          "다음회계연차_일수",
+          "비고"
+        ];
+
+        const lines = [header.join(",")];
+
+        for (const r of computed) {
+          const row = [
+            r.name,
+            r.prevJobLabel,
+            r.hireYmd,
+            r.convYmd,
+            r.weeklyPaidHours ?? "",
+            r.calcMode === "aftpart-special" ? "방과후전담사(단시간) 특례" : "일반 직종전환 비례식",
+            r.scope1Label,
+            r.grant1Label,
+            r.result1Hours,
+            r.result1Days,
+            r.scope2Label,
+            r.grant2Label,
+            r.result2Days,
+            r.note || ""
+          ].map(x => {
+            const s = String(x ?? "");
+            if (/[",\n\r]/.test(s)) return `"${s.replaceAll('"', '""')}"`;
+            return s;
+          });
+
+          lines.push(row.join(","));
+        }
+
+        const csv = "\uFEFF" + lines.join("\r\n");
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `늘봄전담사_직종전환_연차계산_결과.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+
+      function downloadXlsx() {
+        const { computed } = buildComputedBatch();
+        if (!computed.length) {
+          alert("다운로드할 계산 결과가 없습니다.");
+          return;
+        }
+        if (typeof XLSX === "undefined") {
+          alert("엑셀 라이브러리를 불러오지 못했습니다.");
+          return;
+        }
+
+        const rows = [
+          [
+            "성명",
+            "전환 전 직종",
+            "최초 임용일",
+            "직종전환 일자",
+            "전환 전 주 유급 근무시간",
+            "계산구분",
+            "첫 적용 회계연도",
+            "첫 적용 기준",
+            "첫 적용 연차(시간)",
+            "첫 적용 연차(일 환산)",
+            "다음 회계연도",
+            "다음 회계연도 기준",
+            "다음 회계연도 연차(일)",
+            "비고"
+          ]
+        ];
+
+        computed.forEach(r => {
+          rows.push([
+            r.name,
+            r.prevJobLabel,
+            r.hireYmd,
+            r.convYmd,
+            r.weeklyPaidHours ?? "",
+            r.calcMode === "aftpart-special" ? "방과후전담사(단시간) 특례" : "일반 직종전환 비례식",
+            r.scope1Label,
+            r.grant1Label,
+            r.result1Hours,
+            r.result1Days,
+            r.scope2Label,
+            r.grant2Label,
+            r.result2Days,
+            r.note || ""
+          ]);
+        });
+
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "계산결과");
+        XLSX.writeFile(wb, "늘봄전담사_직종전환_연차계산_결과.xlsx");
+      }
+
+      function downloadTemplateCsv() {
+        const lines = [
+          "이름(선택가능),직종 전환 전 직종,전환 전 직종 주 유급 근무시간,최초임용일,직종전환 일자",
+          "홍길동,초등돌봄전담사,30,2016-03-01,2024-08-01",
+          "김늘봄,방과후전담사,25,2018-09-01,2024-08-01",
+          "박단시간,방과후전담사(단시간),14.5,2012-03-01,2024-08-01",
+          ",기타 직종,20,2020-03-01,2024-08-01"
+        ];
+        const csv = "\uFEFF" + lines.join("\r\n");
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "늘봄전담사_직종전환_업로드양식.csv";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+
+      function downloadTemplateXlsx() {
+        if (typeof XLSX === "undefined") {
+          alert("엑셀 라이브러리를 불러오지 못했습니다.");
+          return;
+        }
+
+        const rows = [
+          ["이름(선택가능)", "직종 전환 전 직종", "전환 전 직종 주 유급 근무시간", "최초임용일", "직종전환 일자"],
+          ["홍길동", "초등돌봄전담사", 30, "2016-03-01", "2024-08-01"],
+          ["김늘봄", "방과후전담사", 25, "2018-09-01", "2024-08-01"],
+          ["박단시간", "방과후전담사(단시간)", 14.5, "2012-03-01", "2024-08-01"],
+          ["", "기타 직종", 20, "2020-03-01", "2024-08-01"]
+        ];
+
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "업로드양식");
+        XLSX.writeFile(wb, "늘봄전담사_직종전환_업로드양식.xlsx");
+      }
+
+      function bindDropzone() {
+        if (!batchDropzone || !batchFile) return;
+
+        batchDropzone.addEventListener("click", () => batchFile.click());
+
+        ["dragenter", "dragover"].forEach(evt => {
+          batchDropzone.addEventListener(evt, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            batchDropzone.classList.add("dragover");
+          });
+        });
+
+        ["dragleave", "drop"].forEach(evt => {
+          batchDropzone.addEventListener(evt, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            batchDropzone.classList.remove("dragover");
+          });
+        });
+
+        batchDropzone.addEventListener("drop", (e) => {
+          const files = Array.from(e.dataTransfer?.files || []);
+          if (!files.length) return;
+          state.selectedBatchFile = files[0];
+          setMsg(uploadMsg, "warn", `파일 선택됨: <span class="kbd">${escapeHtml(files[0].name)}</span><br/>이제 <b>엑셀 불러오기</b>를 눌러주세요.`);
+        });
+
+        batchFile.addEventListener("change", () => {
+          const file = state.selectedBatchFile || batchFile.files?.[0];
+          if (!file) return;
+          setMsg(uploadMsg, "warn", `파일 선택됨: <span class="kbd">${escapeHtml(file.name)}</span><br/>이제 <b>엑셀 불러오기</b>를 눌러주세요.`);
+        });
+      }
+
+      function init() {
+        convDate.value = "2024-08-01";
+        setAutoInfo();
+
+        sPrevJob.value = "aft";
+        syncWeeklyHoursUI();
+        resetSingle();
+        bindDropzone();
+
+        convDate.addEventListener("change", () => {
+          setAutoInfo();
+          renderBatch();
+        });
+
+        sPrevJob.addEventListener("change", syncWeeklyHoursUI);
+
+        btnAddToBatch.addEventListener("click", addSingleToBatchAndPreview);
+        btnResetSingle.addEventListener("click", resetSingle);
+        btnLoadBatchFile.addEventListener("click", loadBatchFromFile);
+        btnDownloadTemplateCsv.addEventListener("click", downloadTemplateCsv);
+        btnDownloadTemplateXlsx.addEventListener("click", downloadTemplateXlsx);
+
+        btnRenderBatch.addEventListener("click", () => {
+          renderBatch();
+          document.getElementById("batchTable")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+
+        btnClearBatch.addEventListener("click", clearBatch);
+        btnDownloadCsv.addEventListener("click", downloadCsv);
+        btnDownloadXlsx.addEventListener("click", downloadXlsx);
+
+        renderBatch();
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+      } else {
+        init();
+      }
+    })();
+  </script>
+
+  <script src="/static/footer.js"></script>
+  <script src="/static/global-loader.js?v=1"></script>
+</body>
+</html>
