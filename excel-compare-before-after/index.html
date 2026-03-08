@@ -1,0 +1,1862 @@
+
+
+
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>엑셀 원본·수정본 차이 분석기</title>
+  <meta name="description" content="원본 엑셀과 수정본 엑셀을 시트, 행, 셀 단위로 비교해 차이를 분석합니다." />
+
+  <link rel="icon" href="/static/favicon.ico" />
+  <link rel="stylesheet" href="/static/style.css" />
+
+  <!-- SheetJS: 브라우저에서 엑셀 읽기 -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <style>
+    .compare-page .section,
+    .compare-page .card {
+      overflow: hidden;
+    }
+
+    .hero-title {
+      margin-bottom: 10px;
+    }
+
+    .hero-sub {
+      margin: 0;
+      color: #4b5563;
+      text-align: center;
+    }
+
+    .callout strong {
+      color: #111;
+    }
+
+    .upload-grid {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      margin-top: 12px;
+    }
+
+    .upload-card h3 {
+      margin-top: 0;
+    }
+
+    .upload-zone {
+      border: 2px dashed #c7ced9;
+      border-radius: 16px;
+      background: #fafafa;
+      min-height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px 16px;
+      cursor: pointer;
+      transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.08s ease;
+      user-select: none;
+    }
+
+    .upload-zone:hover {
+      background: #f4f7ff;
+      border-color: #8ea7ff;
+    }
+
+    .upload-zone.is-dragover {
+      background: #eef4ff;
+      border-color: #111;
+      transform: translateY(-1px);
+    }
+
+    .upload-zone:focus-visible {
+      outline: 3px solid rgba(17, 17, 17, 0.18);
+      outline-offset: 2px;
+    }
+
+    .upload-zone input[type="file"] {
+      display: none;
+    }
+
+    .upload-icon {
+      font-size: 2rem;
+      line-height: 1;
+      margin-bottom: 10px;
+    }
+
+    .upload-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #111;
+      margin-bottom: 6px;
+    }
+
+    .upload-desc {
+      font-size: 0.98rem;
+      color: #4b5563;
+    }
+
+    .upload-meta {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      background: #fff;
+      min-height: 88px;
+    }
+
+    .upload-meta strong {
+      display: block;
+      margin-bottom: 4px;
+      color: #111;
+      word-break: break-all;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      border: 1px solid #d1d5db;
+      background: #f9fafb;
+      color: #374151;
+      white-space: nowrap;
+    }
+
+    .status-pill.ready {
+      background: #eefbf3;
+      border-color: #b9e6c7;
+      color: #1f6d3d;
+    }
+
+    .status-pill.busy {
+      background: #eef4ff;
+      border-color: #c9d8ff;
+      color: #2348a6;
+    }
+
+    .status-pill.error {
+      background: #fff1f2;
+      border-color: #fecdd3;
+      color: #be123c;
+    }
+
+    .action-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .status-box {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      background: #fafafa;
+      color: #374151;
+    }
+
+    .status-box.state-ready {
+      background: #f6fbff;
+      border-color: #dbeafe;
+      color: #1e3a8a;
+    }
+
+    .status-box.state-success {
+      background: #f0fdf4;
+      border-color: #bbf7d0;
+      color: #166534;
+    }
+
+    .status-box.state-error {
+      background: #fff1f2;
+      border-color: #fecdd3;
+      color: #9f1239;
+    }
+
+    .status-box.state-running {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+      color: #1d4ed8;
+    }
+
+    .summary-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      margin-top: 12px;
+    }
+
+    .summary-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      background: #fff;
+      padding: 16px 18px;
+    }
+
+    .summary-label {
+      margin: 0;
+      color: #6b7280;
+      font-size: 0.95rem;
+    }
+
+    .summary-value {
+      margin: 8px 0 4px;
+      font-size: 1.9rem;
+      line-height: 1.1;
+      font-weight: 800;
+      color: #111;
+    }
+
+    .summary-help {
+      margin: 0;
+      color: #4b5563;
+      font-size: 0.94rem;
+    }
+
+    .summary-list {
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    .summary-list li {
+      margin: 8px 0;
+    }
+
+    .table-wrap .compare-table {
+      min-width: 980px;
+    }
+
+    .compare-table th,
+    .compare-table td {
+      text-align: left;
+      vertical-align: top;
+      white-space: normal;
+    }
+
+    .compare-table td.num,
+    .compare-table th.num {
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-width: 74px;
+      border-radius: 999px;
+      padding: 6px 10px;
+      border: 1px solid #d1d5db;
+      font-size: 0.9rem;
+      font-weight: 700;
+      line-height: 1;
+      white-space: nowrap;
+      background: #f9fafb;
+      color: #374151;
+    }
+
+    .badge.same {
+      background: #f3f4f6;
+      border-color: #d1d5db;
+      color: #374151;
+    }
+
+    .badge.changed {
+      background: #eef4ff;
+      border-color: #c7d2fe;
+      color: #1d4ed8;
+    }
+
+    .badge.added {
+      background: #ecfdf5;
+      border-color: #a7f3d0;
+      color: #047857;
+    }
+
+    .badge.removed {
+      background: #fff1f2;
+      border-color: #fecdd3;
+      color: #be123c;
+    }
+
+    .badge.warn {
+      background: #fff7ed;
+      border-color: #fed7aa;
+      color: #c2410c;
+    }
+
+    .badge.small {
+      min-width: auto;
+      padding: 4px 8px;
+      font-size: 0.82rem;
+    }
+
+    .sheet-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      background: #fff;
+      padding: 18px 20px;
+    }
+
+    .sheet-card-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .sheet-card-title {
+      margin: 0;
+      font-size: 1.25rem;
+      color: #111;
+      word-break: break-all;
+    }
+
+    .metric-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 10px 0 14px;
+    }
+
+    .metric-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      font-size: 0.93rem;
+      color: #374151;
+      white-space: nowrap;
+    }
+
+    .metric-chip strong {
+      color: #111;
+    }
+
+    .mono-block {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .detail-note {
+      margin: 0 0 12px;
+      color: #4b5563;
+    }
+
+    .detail-table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      margin-top: 10px;
+      padding-bottom: 6px;
+    }
+
+    .detail-table {
+      width: 100%;
+      min-width: 900px;
+      border-collapse: collapse;
+      background: #fff;
+    }
+
+    .detail-table th,
+    .detail-table td {
+      border: 1px solid #e5e7eb;
+      padding: 8px 10px;
+      text-align: left;
+      vertical-align: top;
+      font-size: 0.98rem;
+    }
+
+    .detail-table th {
+      background: #f9fafb;
+      font-weight: 700;
+      color: #111;
+    }
+
+    .detail-table td.num,
+    .detail-table th.num {
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .cell-box {
+      max-width: 340px;
+    }
+
+    .cell-box .muted {
+      display: block;
+      margin-top: 6px;
+      font-size: 0.9rem;
+    }
+
+    .preview-table {
+      width: 100%;
+      min-width: 680px;
+      border-collapse: collapse;
+      background: #fff;
+    }
+
+    .preview-table th,
+    .preview-table td {
+      border: 1px solid #e5e7eb;
+      padding: 8px 10px;
+      font-size: 0.96rem;
+      vertical-align: top;
+      text-align: left;
+    }
+
+    .preview-table th {
+      background: #f9fafb;
+      font-weight: 700;
+    }
+
+    .empty-box {
+      border: 1px dashed #d1d5db;
+      border-radius: 12px;
+      padding: 18px 16px;
+      text-align: center;
+      color: #6b7280;
+      background: #fafafa;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .swap-hint {
+      margin: 0;
+      color: #6b7280;
+      font-size: 0.95rem;
+    }
+
+    .legend-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .legend-row .badge {
+      min-width: auto;
+    }
+
+    .file-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .file-summary .card {
+      margin: 0;
+      background: #fafafa;
+    }
+
+    @media (max-width: 640px) {
+      .upload-zone {
+        min-height: 180px;
+      }
+
+      .summary-value {
+        font-size: 1.6rem;
+      }
+
+      .sheet-card {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+<body class="compare-page">
+  <a href="#main" class="skip-link">본문 바로가기</a>
+
+  <header class="site-header">
+    <div class="shell">
+      <h1 class="hero-title">엑셀 원본·수정본 차이 분석기</h1>
+      <p class="hero-sub">원본 파일과 수정본 파일을 비교해 시트, 행, 셀 단위 차이를 한 번에 정리합니다.</p>
+    </div>
+  </header>
+
+  <main id="main" class="container">
+    <section class="section page-head">
+      <p class="subtitle">브라우저에서만 처리하며, 서버 업로드 없이 비교합니다.</p>
+      <div class="callout">
+        <ul class="list-tight">
+          <li><strong>지원 형식:</strong> .xlsx, .xlsm, .xls, .xlsb, .csv</li>
+          <li><strong>비교 범위:</strong> 시트 추가/삭제, 공통 시트의 행 추가/삭제/수정, 셀 값 변경, 수식 변경</li>
+          <li><strong>현재 버전 제한:</strong> 셀 서식, 색상, 폰트, 열 너비, 주석, 이미지, 병합 모양 자체는 비교하지 않습니다.</li>
+        </ul>
+      </div>
+    </section>
+
+    <nav class="quick-nav section" aria-label="빠른 이동">
+      <div class="chip-row">
+        <a class="chip" href="#upload">파일 넣기</a>
+        <a class="chip" href="#summarySection">분석 요약</a>
+        <a class="chip" href="#sheetSection">시트별 차이</a>
+        <a class="chip" href="#detailSection">시트별 상세</a>
+      </div>
+    </nav>
+
+    <section class="section" id="upload">
+      <h2>파일 넣기</h2>
+      <p class="note">원본과 수정본을 각각 드래그하거나 클릭해서 넣으세요. 파일 두 개가 준비되면 분석할 수 있습니다.</p>
+
+      <div class="upload-grid">
+        <div class="card upload-card">
+          <div class="row between gap">
+            <h3 class="local-h2">원본 파일</h3>
+            <span class="status-pill" id="originalState">미선택</span>
+          </div>
+
+          <label class="upload-zone" id="originalDropZone" tabindex="0" aria-label="원본 파일 업로드 영역">
+            <input id="originalInput" type="file" accept=".xlsx,.xlsm,.xls,.xlsb,.csv" />
+            <div>
+              <div class="upload-icon">📄</div>
+              <div class="upload-title">원본 파일 드래그</div>
+              <div class="upload-desc">또는 클릭해서 선택</div>
+            </div>
+          </label>
+
+          <div class="upload-meta" id="originalMeta">아직 파일이 없습니다.</div>
+
+          <div class="row gap">
+            <button type="button" class="btn ghost" id="clearOriginal">원본 비우기</button>
+          </div>
+        </div>
+
+        <div class="card upload-card">
+          <div class="row between gap">
+            <h3 class="local-h2">수정본 파일</h3>
+            <span class="status-pill" id="modifiedState">미선택</span>
+          </div>
+
+          <label class="upload-zone" id="modifiedDropZone" tabindex="0" aria-label="수정본 파일 업로드 영역">
+            <input id="modifiedInput" type="file" accept=".xlsx,.xlsm,.xls,.xlsb,.csv" />
+            <div>
+              <div class="upload-icon">📝</div>
+              <div class="upload-title">수정본 파일 드래그</div>
+              <div class="upload-desc">또는 클릭해서 선택</div>
+            </div>
+          </label>
+
+          <div class="upload-meta" id="modifiedMeta">아직 파일이 없습니다.</div>
+
+          <div class="row gap">
+            <button type="button" class="btn ghost" id="clearModified">수정본 비우기</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="action-bar">
+          <button type="button" class="btn ghost" id="btnSwap">원본/수정본 바꾸기</button>
+          <button type="button" class="btn primary" id="btnAnalyze" disabled>분석 실행</button>
+          <button type="button" class="btn ghost" id="btnDownloadJson" disabled>JSON 내려받기</button>
+        </div>
+        <p class="swap-hint">파일을 잘못 넣었으면 “원본/수정본 바꾸기”로 즉시 뒤집을 수 있습니다.</p>
+        <div class="status-box" id="runStatus">파일 두 개를 넣으면 분석할 수 있습니다.</div>
+      </div>
+    </section>
+
+    <section class="section hidden" id="summarySection">
+      <h2>분석 요약</h2>
+
+      <div class="file-summary" id="fileSummary"></div>
+
+      <div class="summary-grid" id="summaryGrid"></div>
+
+      <div class="card">
+        <h3 class="local-h2">한눈 요약</h3>
+        <div id="narrativeSummary" class="detail-note">아직 분석 결과가 없습니다.</div>
+        <div class="legend-row">
+          <span class="badge same">동일</span>
+          <span class="badge changed">변경</span>
+          <span class="badge added">추가</span>
+          <span class="badge removed">삭제</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section hidden" id="sheetSection">
+      <h2>시트별 차이</h2>
+      <div class="table-wrap">
+        <table class="sheetlike compare-table">
+          <thead>
+            <tr>
+              <th>시트명</th>
+              <th>상태</th>
+              <th class="num">원본 행</th>
+              <th class="num">수정본 행</th>
+              <th class="num">추가 행</th>
+              <th class="num">삭제 행</th>
+              <th class="num">수정 행</th>
+              <th class="num">변경 셀</th>
+            </tr>
+          </thead>
+          <tbody id="sheetSummaryBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section hidden" id="detailSection">
+      <h2>시트별 상세</h2>
+      <p class="note">상세 표는 너무 길어질 경우 앞부분만 표시하고, 전체 건수는 그대로 안내합니다.</p>
+      <div id="detailList" class="tool-grid"></div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const MAX_LOOKAHEAD = 30;
+      const MAX_PREVIEW_ROWS = 10;
+      const MAX_PREVIEW_COLS = 8;
+      const MAX_CHANGED_CELLS_DISPLAY = 400;
+      const MAX_CHANGED_ROWS_DISPLAY = 200;
+      const EMPTY_CELL = Object.freeze({ text: "", formula: "", type: "blank" });
+
+      const state = {
+        originalFile: null,
+        modifiedFile: null,
+        originalWorkbook: null,
+        modifiedWorkbook: null,
+        report: null,
+        busy: false,
+      };
+
+      const els = {
+        originalInput: document.getElementById("originalInput"),
+        modifiedInput: document.getElementById("modifiedInput"),
+        originalDropZone: document.getElementById("originalDropZone"),
+        modifiedDropZone: document.getElementById("modifiedDropZone"),
+        originalMeta: document.getElementById("originalMeta"),
+        modifiedMeta: document.getElementById("modifiedMeta"),
+        originalState: document.getElementById("originalState"),
+        modifiedState: document.getElementById("modifiedState"),
+        clearOriginal: document.getElementById("clearOriginal"),
+        clearModified: document.getElementById("clearModified"),
+        btnSwap: document.getElementById("btnSwap"),
+        btnAnalyze: document.getElementById("btnAnalyze"),
+        btnDownloadJson: document.getElementById("btnDownloadJson"),
+        runStatus: document.getElementById("runStatus"),
+        summarySection: document.getElementById("summarySection"),
+        sheetSection: document.getElementById("sheetSection"),
+        detailSection: document.getElementById("detailSection"),
+        summaryGrid: document.getElementById("summaryGrid"),
+        narrativeSummary: document.getElementById("narrativeSummary"),
+        sheetSummaryBody: document.getElementById("sheetSummaryBody"),
+        detailList: document.getElementById("detailList"),
+        fileSummary: document.getElementById("fileSummary"),
+      };
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function safeText(value) {
+        return value == null ? "" : String(value);
+      }
+
+      function truncate(value, maxLength) {
+        const text = safeText(value);
+        if (text.length <= maxLength) return text;
+        return text.slice(0, Math.max(0, maxLength - 1)) + "…";
+      }
+
+      function formatNumber(value) {
+        return new Intl.NumberFormat("ko-KR").format(Number(value || 0));
+      }
+
+      function formatBytes(bytes) {
+        const value = Number(bytes || 0);
+        if (!Number.isFinite(value) || value <= 0) return "0 B";
+        const units = ["B", "KB", "MB", "GB"];
+        let size = value;
+        let index = 0;
+        while (size >= 1024 && index < units.length - 1) {
+          size /= 1024;
+          index += 1;
+        }
+        return `${size.toFixed(size >= 100 || index === 0 ? 0 : 1)} ${units[index]}`;
+      }
+
+      function formatDateTime(timestamp) {
+        if (!timestamp) return "-";
+        const date = new Date(timestamp);
+        if (Number.isNaN(date.getTime())) return "-";
+        return new Intl.DateTimeFormat("ko-KR", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(date);
+      }
+
+      function setStatusBox(message, tone) {
+        els.runStatus.textContent = message;
+        els.runStatus.className = "status-box";
+        if (tone) {
+          els.runStatus.classList.add(`state-${tone}`);
+        }
+      }
+
+      function setFileState(role, status, message) {
+        const el = role === "original" ? els.originalState : els.modifiedState;
+        el.textContent = message;
+        el.className = "status-pill";
+        if (status) {
+          el.classList.add(status);
+        }
+      }
+
+      function isAcceptedFile(file) {
+        if (!file || !file.name) return false;
+        return /\.(xlsx|xlsm|xls|xlsb|csv)$/i.test(file.name);
+      }
+
+      function tick() {
+        return new Promise((resolve) => {
+          requestAnimationFrame(() => setTimeout(resolve, 0));
+        });
+      }
+
+      function updateActionState() {
+        const ready = !!(state.originalFile && state.modifiedFile) && !state.busy;
+        els.btnAnalyze.disabled = !ready;
+        els.btnSwap.disabled = state.busy || !(state.originalFile || state.modifiedFile);
+        els.clearOriginal.disabled = state.busy || !state.originalFile;
+        els.clearModified.disabled = state.busy || !state.modifiedFile;
+        els.btnDownloadJson.disabled = !state.report || state.busy;
+      }
+
+      function setBusy(nextBusy) {
+        state.busy = nextBusy;
+        els.originalInput.disabled = nextBusy;
+        els.modifiedInput.disabled = nextBusy;
+        updateActionState();
+      }
+
+      function updateFileMeta(role) {
+        const file = role === "original" ? state.originalFile : state.modifiedFile;
+        const metaEl = role === "original" ? els.originalMeta : els.modifiedMeta;
+
+        if (!file) {
+          metaEl.innerHTML = "아직 파일이 없습니다.";
+          setFileState(role, "", "미선택");
+          updateActionState();
+          return;
+        }
+
+        metaEl.innerHTML = [
+          `<strong>${escapeHtml(file.name)}</strong>`,
+          `<div>크기: ${escapeHtml(formatBytes(file.size))}</div>`,
+          `<div>수정 시각: ${escapeHtml(formatDateTime(file.lastModified))}</div>`,
+        ].join("");
+
+        setFileState(role, "ready", "준비됨");
+        updateActionState();
+      }
+
+      function resetReportView() {
+        state.originalWorkbook = null;
+        state.modifiedWorkbook = null;
+        state.report = null;
+        els.summarySection.classList.add("hidden");
+        els.sheetSection.classList.add("hidden");
+        els.detailSection.classList.add("hidden");
+        els.summaryGrid.innerHTML = "";
+        els.narrativeSummary.innerHTML = "아직 분석 결과가 없습니다.";
+        els.sheetSummaryBody.innerHTML = "";
+        els.detailList.innerHTML = "";
+        els.fileSummary.innerHTML = "";
+        updateActionState();
+      }
+
+      function assignFile(role, file) {
+        if (!isAcceptedFile(file)) {
+          setStatusBox("엑셀(.xlsx, .xlsm, .xls, .xlsb) 또는 CSV 파일만 넣을 수 있습니다.", "error");
+          return;
+        }
+
+        resetReportView();
+
+        if (role === "original") {
+          state.originalFile = file;
+        } else {
+          state.modifiedFile = file;
+        }
+
+        updateFileMeta(role);
+
+        if (state.originalFile && state.modifiedFile) {
+          setStatusBox("파일 두 개가 준비되었습니다. 분석 실행을 누르세요.", "ready");
+        } else {
+          setStatusBox("다른 한쪽 파일도 넣어주세요.", "ready");
+        }
+      }
+
+      function clearFile(role) {
+        resetReportView();
+        if (role === "original") {
+          state.originalFile = null;
+          els.originalInput.value = "";
+        } else {
+          state.modifiedFile = null;
+          els.modifiedInput.value = "";
+        }
+        updateFileMeta(role);
+
+        if (!state.originalFile && !state.modifiedFile) {
+          setStatusBox("파일 두 개를 넣으면 분석할 수 있습니다.");
+        } else {
+          setStatusBox("남은 파일은 유지되었습니다. 다른 한쪽 파일을 다시 넣어주세요.", "ready");
+        }
+      }
+
+      function swapFiles() {
+        if (!(state.originalFile || state.modifiedFile)) return;
+        resetReportView();
+        const temp = state.originalFile;
+        state.originalFile = state.modifiedFile;
+        state.modifiedFile = temp;
+        updateFileMeta("original");
+        updateFileMeta("modified");
+
+        if (state.originalFile && state.modifiedFile) {
+          setStatusBox("원본과 수정본 자리를 바꿨습니다. 필요하면 바로 분석하세요.", "ready");
+        } else {
+          setStatusBox("파일 위치를 바꿨습니다.", "ready");
+        }
+      }
+
+      function bindDropZone(inputEl, zoneEl, role) {
+        zoneEl.addEventListener("keydown", (event) => {
+          if (state.busy) return;
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            inputEl.click();
+          }
+        });
+
+        inputEl.addEventListener("change", (event) => {
+          const file = event.target.files && event.target.files[0];
+          if (file) assignFile(role, file);
+        });
+
+        ["dragenter", "dragover"].forEach((type) => {
+          zoneEl.addEventListener(type, (event) => {
+            if (state.busy) return;
+            event.preventDefault();
+            event.stopPropagation();
+            zoneEl.classList.add("is-dragover");
+          });
+        });
+
+        ["dragleave", "dragend"].forEach((type) => {
+          zoneEl.addEventListener(type, (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            zoneEl.classList.remove("is-dragover");
+          });
+        });
+
+        zoneEl.addEventListener("drop", (event) => {
+          if (state.busy) return;
+          event.preventDefault();
+          event.stopPropagation();
+          zoneEl.classList.remove("is-dragover");
+          const files = Array.from(event.dataTransfer?.files || []);
+          const accepted = files.find(isAcceptedFile);
+          if (accepted) {
+            assignFile(role, accepted);
+          } else {
+            setStatusBox("드롭된 파일 중 비교 가능한 엑셀/CSV 파일이 없습니다.", "error");
+          }
+        });
+      }
+
+      function normalizeCell(cell) {
+        if (!cell) return EMPTY_CELL;
+
+        let text = "";
+        if (cell.w != null && String(cell.w).length > 0) {
+          text = String(cell.w);
+        } else if (cell.v == null) {
+          text = "";
+        } else if (cell.v instanceof Date) {
+          text = cell.v.toISOString();
+        } else {
+          text = String(cell.v);
+        }
+
+        return {
+          text: text.replace(/\r\n/g, "\n"),
+          formula: cell.f ? String(cell.f).replace(/\r\n/g, "\n") : "",
+          type: cell.t || typeof cell.v || "unknown",
+        };
+      }
+
+      function cellText(cell) {
+        return cell ? safeText(cell.text) : "";
+      }
+
+      function cellFormula(cell) {
+        return cell ? safeText(cell.formula) : "";
+      }
+
+      function isCellEmpty(cell) {
+        return !cell || (!cellText(cell) && !cellFormula(cell));
+      }
+
+      function isRowEmpty(row) {
+        return !row || row.every(isCellEmpty);
+      }
+
+      function columnLabel(index) {
+        let n = Number(index) + 1;
+        let label = "";
+        while (n > 0) {
+          const mod = (n - 1) % 26;
+          label = String.fromCharCode(65 + mod) + label;
+          n = Math.floor((n - mod) / 26);
+        }
+        return label || "A";
+      }
+
+      function parseSheet(ws) {
+        if (!ws || !ws["!ref"]) {
+          return {
+            rowCount: 0,
+            colCount: 0,
+            rows: [],
+          };
+        }
+
+        const range = XLSX.utils.decode_range(ws["!ref"]);
+        const rows = [];
+
+        for (let r = range.s.r; r <= range.e.r; r += 1) {
+          const row = [];
+          let lastNonEmpty = -1;
+
+          for (let c = range.s.c; c <= range.e.c; c += 1) {
+            const address = XLSX.utils.encode_cell({ r, c });
+            const cell = normalizeCell(ws[address]);
+            row.push(cell);
+            if (!isCellEmpty(cell)) {
+              lastNonEmpty = c - range.s.c;
+            }
+          }
+
+          if (lastNonEmpty >= 0) {
+            row.length = lastNonEmpty + 1;
+          } else {
+            row.length = 0;
+          }
+          rows.push(row);
+        }
+
+        while (rows.length && isRowEmpty(rows[rows.length - 1])) {
+          rows.pop();
+        }
+
+        const colCount = rows.reduce((max, row) => Math.max(max, row.length), 0);
+
+        return {
+          rowCount: rows.length,
+          colCount,
+          rows,
+        };
+      }
+
+      async function parseWorkbook(file) {
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer, {
+          type: "array",
+          cellDates: true,
+          cellFormula: true,
+          cellHTML: false,
+          cellNF: false,
+          cellText: true,
+        });
+
+        const sheets = {};
+        workbook.SheetNames.forEach((name) => {
+          sheets[name] = parseSheet(workbook.Sheets[name]);
+        });
+
+        return {
+          fileName: file.name,
+          fileSize: file.size,
+          lastModified: file.lastModified,
+          sheetNames: [...workbook.SheetNames],
+          sheets,
+        };
+      }
+
+      function rowSignature(row) {
+        if (!row || row.length === 0) return "[]";
+        let last = row.length - 1;
+        while (last >= 0 && !cellText(row[last])) {
+          last -= 1;
+        }
+        const parts = [];
+        for (let i = 0; i <= last; i += 1) {
+          parts.push(cellText(row[i]));
+        }
+        return JSON.stringify(parts);
+      }
+
+      function findAhead(list, startIndex, target, maxLookahead) {
+        const end = Math.min(list.length, startIndex + maxLookahead);
+        for (let i = startIndex; i < end; i += 1) {
+          if (list[i] === target) return i;
+        }
+        return -1;
+      }
+
+      function previewRow(row, maxItems) {
+        if (!row || row.length === 0) return "(빈 행)";
+        const parts = [];
+        for (let i = 0; i < row.length; i += 1) {
+          const text = cellText(row[i]);
+          if (!text) continue;
+          parts.push(`${columnLabel(i)}: ${truncate(text, 40)}`);
+          if (parts.length >= maxItems) break;
+        }
+        return parts.length ? parts.join(" | ") : "(빈 행)";
+      }
+
+      function diffCellsInAlignedRows(originalRowIndex, modifiedRowIndex, originalRow, modifiedRow) {
+        const diffs = [];
+        const maxCols = Math.max(originalRow.length, modifiedRow.length);
+
+        for (let c = 0; c < maxCols; c += 1) {
+          const before = originalRow[c] || EMPTY_CELL;
+          const after = modifiedRow[c] || EMPTY_CELL;
+          const sameText = cellText(before) === cellText(after);
+          const sameFormula = cellFormula(before) === cellFormula(after);
+          if (sameText && sameFormula) continue;
+
+          let changeKind = "value";
+          if (!isCellEmpty(before) && isCellEmpty(after)) {
+            changeKind = "cleared";
+          } else if (isCellEmpty(before) && !isCellEmpty(after)) {
+            changeKind = "filled";
+          } else if (sameText && !sameFormula) {
+            changeKind = "formula-only";
+          } else if (!sameText && (cellFormula(before) || cellFormula(after))) {
+            changeKind = "formula-and-value";
+          }
+
+          diffs.push({
+            originalRow: originalRowIndex + 1,
+            modifiedRow: modifiedRowIndex + 1,
+            columnIndex: c,
+            columnLabel: columnLabel(c),
+            originalAddress: `${columnLabel(c)}${originalRowIndex + 1}`,
+            modifiedAddress: `${columnLabel(c)}${modifiedRowIndex + 1}`,
+            beforeText: cellText(before),
+            afterText: cellText(after),
+            beforeFormula: cellFormula(before),
+            afterFormula: cellFormula(after),
+            changeKind,
+          });
+        }
+
+        return diffs;
+      }
+
+      function diffSheet(sheetName, originalSheet, modifiedSheet) {
+        const originalRows = originalSheet.rows;
+        const modifiedRows = modifiedSheet.rows;
+        const originalSignatures = originalRows.map(rowSignature);
+        const modifiedSignatures = modifiedRows.map(rowSignature);
+
+        const addedRows = [];
+        const removedRows = [];
+        const alignedPairs = [];
+
+        let i = 0;
+        let j = 0;
+
+        while (i < originalRows.length || j < modifiedRows.length) {
+          if (i < originalRows.length && j < modifiedRows.length && originalSignatures[i] === modifiedSignatures[j]) {
+            alignedPairs.push({ originalRowIndex: i, modifiedRowIndex: j, matchedBy: "same-signature" });
+            i += 1;
+            j += 1;
+            continue;
+          }
+
+          if (i >= originalRows.length) {
+            addedRows.push({
+              modifiedRow: j + 1,
+              preview: previewRow(modifiedRows[j], 6),
+              cells: modifiedRows[j],
+            });
+            j += 1;
+            continue;
+          }
+
+          if (j >= modifiedRows.length) {
+            removedRows.push({
+              originalRow: i + 1,
+              preview: previewRow(originalRows[i], 6),
+              cells: originalRows[i],
+            });
+            i += 1;
+            continue;
+          }
+
+          const hitInModified = findAhead(modifiedSignatures, j + 1, originalSignatures[i], MAX_LOOKAHEAD);
+          const hitInOriginal = findAhead(originalSignatures, i + 1, modifiedSignatures[j], MAX_LOOKAHEAD);
+          const addGap = hitInModified === -1 ? Infinity : hitInModified - j;
+          const removeGap = hitInOriginal === -1 ? Infinity : hitInOriginal - i;
+
+          if (addGap < removeGap) {
+            while (j < hitInModified) {
+              addedRows.push({
+                modifiedRow: j + 1,
+                preview: previewRow(modifiedRows[j], 6),
+                cells: modifiedRows[j],
+              });
+              j += 1;
+            }
+            continue;
+          }
+
+          if (removeGap < addGap) {
+            while (i < hitInOriginal) {
+              removedRows.push({
+                originalRow: i + 1,
+                preview: previewRow(originalRows[i], 6),
+                cells: originalRows[i],
+              });
+              i += 1;
+            }
+            continue;
+          }
+
+          alignedPairs.push({ originalRowIndex: i, modifiedRowIndex: j, matchedBy: "paired-mismatch" });
+          i += 1;
+          j += 1;
+        }
+
+        const modifiedRowsList = [];
+        const changedCells = [];
+        let formulaOnlyChanges = 0;
+
+        alignedPairs.forEach((pair) => {
+          const beforeRow = originalRows[pair.originalRowIndex] || [];
+          const afterRow = modifiedRows[pair.modifiedRowIndex] || [];
+          const rowChanges = diffCellsInAlignedRows(pair.originalRowIndex, pair.modifiedRowIndex, beforeRow, afterRow);
+
+          if (rowChanges.length > 0) {
+            modifiedRowsList.push({
+              originalRow: pair.originalRowIndex + 1,
+              modifiedRow: pair.modifiedRowIndex + 1,
+              changedCellCount: rowChanges.length,
+              beforePreview: previewRow(beforeRow, 6),
+              afterPreview: previewRow(afterRow, 6),
+            });
+
+            rowChanges.forEach((change) => {
+              if (change.changeKind === "formula-only") {
+                formulaOnlyChanges += 1;
+              }
+              changedCells.push(change);
+            });
+          }
+        });
+
+        const status = addedRows.length || removedRows.length || modifiedRowsList.length ? "changed" : "same";
+
+        return {
+          name: sheetName,
+          status,
+          originalRowCount: originalSheet.rowCount,
+          modifiedRowCount: modifiedSheet.rowCount,
+          originalColCount: originalSheet.colCount,
+          modifiedColCount: modifiedSheet.colCount,
+          addedRows,
+          removedRows,
+          modifiedRows: modifiedRowsList,
+          changedCells,
+          formulaOnlyChanges,
+          previewOriginal: originalSheet,
+          previewModified: modifiedSheet,
+          counts: {
+            addedRows: addedRows.length,
+            removedRows: removedRows.length,
+            modifiedRows: modifiedRowsList.length,
+            changedCells: changedCells.length,
+          },
+        };
+      }
+
+      function buildReport(originalWorkbook, modifiedWorkbook) {
+        const originalNames = originalWorkbook.sheetNames;
+        const modifiedNames = modifiedWorkbook.sheetNames;
+        const originalSet = new Set(originalNames);
+        const modifiedSet = new Set(modifiedNames);
+
+        const addedSheetNames = modifiedNames.filter((name) => !originalSet.has(name));
+        const removedSheetNames = originalNames.filter((name) => !modifiedSet.has(name));
+        const commonSheetNames = originalNames.filter((name) => modifiedSet.has(name));
+
+        const sheets = [];
+        const totals = {
+          totalOriginalSheets: originalNames.length,
+          totalModifiedSheets: modifiedNames.length,
+          commonSheets: commonSheetNames.length,
+          sameSheets: 0,
+          changedSheets: 0,
+          addedSheets: addedSheetNames.length,
+          removedSheets: removedSheetNames.length,
+          addedRows: 0,
+          removedRows: 0,
+          modifiedRows: 0,
+          changedCells: 0,
+          formulaOnlyChanges: 0,
+        };
+
+        commonSheetNames.forEach((sheetName) => {
+          const diff = diffSheet(
+            sheetName,
+            originalWorkbook.sheets[sheetName],
+            modifiedWorkbook.sheets[sheetName]
+          );
+          sheets.push(diff);
+          if (diff.status === "same") {
+            totals.sameSheets += 1;
+          } else {
+            totals.changedSheets += 1;
+          }
+          totals.addedRows += diff.counts.addedRows;
+          totals.removedRows += diff.counts.removedRows;
+          totals.modifiedRows += diff.counts.modifiedRows;
+          totals.changedCells += diff.counts.changedCells;
+          totals.formulaOnlyChanges += diff.formulaOnlyChanges;
+        });
+
+        addedSheetNames.forEach((sheetName) => {
+          const sheet = modifiedWorkbook.sheets[sheetName];
+          sheets.push({
+            name: sheetName,
+            status: "added-sheet",
+            originalRowCount: 0,
+            modifiedRowCount: sheet.rowCount,
+            originalColCount: 0,
+            modifiedColCount: sheet.colCount,
+            addedRows: [],
+            removedRows: [],
+            modifiedRows: [],
+            changedCells: [],
+            formulaOnlyChanges: 0,
+            previewOriginal: null,
+            previewModified: sheet,
+            counts: {
+              addedRows: 0,
+              removedRows: 0,
+              modifiedRows: 0,
+              changedCells: 0,
+            },
+          });
+        });
+
+        removedSheetNames.forEach((sheetName) => {
+          const sheet = originalWorkbook.sheets[sheetName];
+          sheets.push({
+            name: sheetName,
+            status: "removed-sheet",
+            originalRowCount: sheet.rowCount,
+            modifiedRowCount: 0,
+            originalColCount: sheet.colCount,
+            modifiedColCount: 0,
+            addedRows: [],
+            removedRows: [],
+            modifiedRows: [],
+            changedCells: [],
+            formulaOnlyChanges: 0,
+            previewOriginal: sheet,
+            previewModified: null,
+            counts: {
+              addedRows: 0,
+              removedRows: 0,
+              modifiedRows: 0,
+              changedCells: 0,
+            },
+          });
+        });
+
+        const sheetOrder = new Map();
+        [...originalNames, ...addedSheetNames].forEach((name, index) => {
+          if (!sheetOrder.has(name)) sheetOrder.set(name, index);
+        });
+        removedSheetNames.forEach((name, index) => {
+          if (!sheetOrder.has(name)) sheetOrder.set(name, 100000 + index);
+        });
+
+        sheets.sort((a, b) => (sheetOrder.get(a.name) || 0) - (sheetOrder.get(b.name) || 0));
+
+        return {
+          generatedAt: new Date().toISOString(),
+          originalWorkbook: {
+            fileName: originalWorkbook.fileName,
+            fileSize: originalWorkbook.fileSize,
+            lastModified: originalWorkbook.lastModified,
+            sheetNames: originalWorkbook.sheetNames,
+          },
+          modifiedWorkbook: {
+            fileName: modifiedWorkbook.fileName,
+            fileSize: modifiedWorkbook.fileSize,
+            lastModified: modifiedWorkbook.lastModified,
+            sheetNames: modifiedWorkbook.sheetNames,
+          },
+          totals,
+          sheets,
+        };
+      }
+
+      function statusBadge(status) {
+        switch (status) {
+          case "same":
+            return '<span class="badge same">동일</span>';
+          case "changed":
+            return '<span class="badge changed">변경</span>';
+          case "added-sheet":
+            return '<span class="badge added">시트 추가</span>';
+          case "removed-sheet":
+            return '<span class="badge removed">시트 삭제</span>';
+          default:
+            return '<span class="badge">확인 필요</span>';
+        }
+      }
+
+      function changeKindLabel(kind) {
+        switch (kind) {
+          case "filled":
+            return '<span class="badge added small">값 입력</span>';
+          case "cleared":
+            return '<span class="badge removed small">값 삭제</span>';
+          case "formula-only":
+            return '<span class="badge warn small">수식만 변경</span>';
+          case "formula-and-value":
+            return '<span class="badge changed small">수식+값 변경</span>';
+          default:
+            return '<span class="badge changed small">값 변경</span>';
+        }
+      }
+
+      function renderFileSummary(report) {
+        const cards = [
+          {
+            title: "원본",
+            fileName: report.originalWorkbook.fileName,
+            fileSize: formatBytes(report.originalWorkbook.fileSize),
+            lastModified: formatDateTime(report.originalWorkbook.lastModified),
+            sheets: report.originalWorkbook.sheetNames.length,
+          },
+          {
+            title: "수정본",
+            fileName: report.modifiedWorkbook.fileName,
+            fileSize: formatBytes(report.modifiedWorkbook.fileSize),
+            lastModified: formatDateTime(report.modifiedWorkbook.lastModified),
+            sheets: report.modifiedWorkbook.sheetNames.length,
+          },
+        ];
+
+        els.fileSummary.innerHTML = cards
+          .map(
+            (item) => `
+              <div class="card">
+                <h3 class="local-h2">${escapeHtml(item.title)}</h3>
+                <p><strong>${escapeHtml(item.fileName)}</strong></p>
+                <p class="muted">크기: ${escapeHtml(item.fileSize)} / 수정 시각: ${escapeHtml(item.lastModified)}</p>
+                <p class="muted">시트 수: ${escapeHtml(formatNumber(item.sheets))}</p>
+              </div>
+            `
+          )
+          .join("");
+      }
+
+      function renderSummaryCards(report) {
+        const totals = report.totals;
+        const cards = [
+          {
+            label: "변경된 시트",
+            value: totals.changedSheets,
+            help: `공통 시트 ${formatNumber(totals.commonSheets)}개 중 ${formatNumber(totals.changedSheets)}개 변경`,
+          },
+          {
+            label: "추가/삭제 시트",
+            value: totals.addedSheets + totals.removedSheets,
+            help: `추가 ${formatNumber(totals.addedSheets)}개 · 삭제 ${formatNumber(totals.removedSheets)}개`,
+          },
+          {
+            label: "변경 셀",
+            value: totals.changedCells,
+            help: `값/수식 차이 셀 ${formatNumber(totals.changedCells)}건`,
+          },
+          {
+            label: "행 변화",
+            value: totals.addedRows + totals.removedRows + totals.modifiedRows,
+            help: `추가 ${formatNumber(totals.addedRows)} · 삭제 ${formatNumber(totals.removedRows)} · 수정 ${formatNumber(totals.modifiedRows)}`,
+          },
+        ];
+
+        els.summaryGrid.innerHTML = cards
+          .map(
+            (card) => `
+              <div class="summary-card">
+                <p class="summary-label">${escapeHtml(card.label)}</p>
+                <p class="summary-value">${escapeHtml(formatNumber(card.value))}</p>
+                <p class="summary-help">${escapeHtml(card.help)}</p>
+              </div>
+            `
+          )
+          .join("");
+      }
+
+      function renderNarrativeSummary(report) {
+        const totals = report.totals;
+        const changedSheets = report.sheets
+          .filter((sheet) => sheet.status === "changed")
+          .sort((a, b) => b.counts.changedCells - a.counts.changedCells)
+          .slice(0, 3);
+
+        const lines = [];
+
+        if (
+          totals.changedSheets === 0 &&
+          totals.addedSheets === 0 &&
+          totals.removedSheets === 0
+        ) {
+          lines.push("두 파일은 현재 비교 범위 기준으로 차이가 없습니다.");
+        } else {
+          lines.push(
+            `공통 시트 ${formatNumber(totals.commonSheets)}개 중 ${formatNumber(totals.changedSheets)}개가 바뀌었습니다.`
+          );
+
+          if (totals.addedSheets || totals.removedSheets) {
+            lines.push(
+              `시트 자체 변화는 추가 ${formatNumber(totals.addedSheets)}개, 삭제 ${formatNumber(totals.removedSheets)}개입니다.`
+            );
+          }
+
+          lines.push(
+            `행 기준으로는 추가 ${formatNumber(totals.addedRows)}행, 삭제 ${formatNumber(totals.removedRows)}행, 수정 ${formatNumber(totals.modifiedRows)}행이 잡혔고, 셀 변화는 총 ${formatNumber(totals.changedCells)}건입니다.`
+          );
+
+          if (totals.formulaOnlyChanges > 0) {
+            lines.push(`표시 값은 같지만 수식만 바뀐 셀도 ${formatNumber(totals.formulaOnlyChanges)}건 있습니다.`);
+          }
+
+          if (changedSheets.length > 0) {
+            const topText = changedSheets
+              .map(
+                (sheet) => `${sheet.name}(${formatNumber(sheet.counts.changedCells)}셀)`
+              )
+              .join(", ");
+            lines.push(`가장 많이 바뀐 시트는 ${topText} 순입니다.`);
+          }
+        }
+
+        els.narrativeSummary.innerHTML = `
+          <ul class="summary-list">
+            ${lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}
+          </ul>
+        `;
+      }
+
+      function renderSheetTable(report) {
+        els.sheetSummaryBody.innerHTML = report.sheets
+          .map(
+            (sheet) => `
+              <tr>
+                <td><strong>${escapeHtml(sheet.name)}</strong></td>
+                <td>${statusBadge(sheet.status)}</td>
+                <td class="num">${escapeHtml(formatNumber(sheet.originalRowCount))}</td>
+                <td class="num">${escapeHtml(formatNumber(sheet.modifiedRowCount))}</td>
+                <td class="num">${escapeHtml(formatNumber(sheet.counts.addedRows))}</td>
+                <td class="num">${escapeHtml(formatNumber(sheet.counts.removedRows))}</td>
+                <td class="num">${escapeHtml(formatNumber(sheet.counts.modifiedRows))}</td>
+                <td class="num">${escapeHtml(formatNumber(sheet.counts.changedCells))}</td>
+              </tr>
+            `
+          )
+          .join("");
+      }
+
+      function makeSheetPreviewTable(sheet) {
+        if (!sheet || !sheet.rows || sheet.rows.length === 0) {
+          return '<div class="empty-box">미리 볼 내용이 없습니다.</div>';
+        }
+
+        const rows = sheet.rows.slice(0, MAX_PREVIEW_ROWS);
+        const colCount = Math.min(
+          MAX_PREVIEW_COLS,
+          rows.reduce((max, row) => Math.max(max, row.length), 0)
+        );
+
+        if (colCount === 0) {
+          return '<div class="empty-box">빈 시트입니다.</div>';
+        }
+
+        const head = Array.from({ length: colCount }, (_, index) => `<th>${escapeHtml(columnLabel(index))}</th>`).join("");
+        const body = rows
+          .map((row, rowIndex) => {
+            const cells = Array.from({ length: colCount }, (_, colIndex) => {
+              const cell = row[colIndex] || EMPTY_CELL;
+              return `<td>${escapeHtml(cellText(cell)) || "&nbsp;"}</td>`;
+            }).join("");
+            return `<tr><th class="num">${escapeHtml(formatNumber(rowIndex + 1))}</th>${cells}</tr>`;
+          })
+          .join("");
+
+        const truncation = sheet.rows.length > MAX_PREVIEW_ROWS || sheet.colCount > MAX_PREVIEW_COLS
+          ? `<p class="detail-note">앞 ${formatNumber(MAX_PREVIEW_ROWS)}행, ${formatNumber(MAX_PREVIEW_COLS)}열만 미리 보여줍니다.</p>`
+          : "";
+
+        return `
+          ${truncation}
+          <div class="detail-table-wrap">
+            <table class="preview-table">
+              <thead>
+                <tr>
+                  <th class="num">행</th>
+                  ${head}
+                </tr>
+              </thead>
+              <tbody>${body}</tbody>
+            </table>
+          </div>
+        `;
+      }
+
+      function renderChangedCellsTable(changedCells) {
+        if (!changedCells.length) {
+          return '<div class="empty-box">변경된 셀이 없습니다.</div>';
+        }
+
+        const rows = changedCells.slice(0, MAX_CHANGED_CELLS_DISPLAY);
+        const extraNote = changedCells.length > rows.length
+          ? `<p class="detail-note">총 ${formatNumber(changedCells.length)}건 중 앞 ${formatNumber(rows.length)}건만 표시합니다.</p>`
+          : "";
+
+        const body = rows
+          .map((cell) => {
+            const beforeFormula = cell.beforeFormula ? `<span class="muted">수식: =${escapeHtml(cell.beforeFormula)}</span>` : "";
+            const afterFormula = cell.afterFormula ? `<span class="muted">수식: =${escapeHtml(cell.afterFormula)}</span>` : "";
+            return `
+              <tr>
+                <td>${changeKindLabel(cell.changeKind)}</td>
+                <td class="num">${escapeHtml(formatNumber(cell.originalRow))}</td>
+                <td class="num">${escapeHtml(formatNumber(cell.modifiedRow))}</td>
+                <td>${escapeHtml(cell.columnLabel)}</td>
+                <td class="mono-block">${escapeHtml(cell.originalAddress)} → ${escapeHtml(cell.modifiedAddress)}</td>
+                <td class="cell-box mono-block">${escapeHtml(cell.beforeText) || "(빈값)"}${beforeFormula}</td>
+                <td class="cell-box mono-block">${escapeHtml(cell.afterText) || "(빈값)"}${afterFormula}</td>
+              </tr>
+            `;
+          })
+          .join("");
+
+        return `
+          ${extraNote}
+          <div class="detail-table-wrap">
+            <table class="detail-table">
+              <thead>
+                <tr>
+                  <th>종류</th>
+                  <th class="num">원본 행</th>
+                  <th class="num">수정 행</th>
+                  <th>열</th>
+                  <th>주소</th>
+                  <th>이전 값</th>
+                  <th>이후 값</th>
+                </tr>
+              </thead>
+              <tbody>${body}</tbody>
+            </table>
+          </div>
+        `;
+      }
+
+      function renderChangedRowsTable(rows, type) {
+        if (!rows.length) {
+          return '<div class="empty-box">해당 행 변화가 없습니다.</div>';
+        }
+
+        const limitedRows = rows.slice(0, MAX_CHANGED_ROWS_DISPLAY);
+        const extraNote = rows.length > limitedRows.length
+          ? `<p class="detail-note">총 ${formatNumber(rows.length)}건 중 앞 ${formatNumber(limitedRows.length)}건만 표시합니다.</p>`
+          : "";
+
+        const headerRow =
+          type === "modified"
+            ? `
+              <tr>
+                <th class="num">원본 행</th>
+                <th class="num">수정 행</th>
+                <th class="num">변경 셀 수</th>
+                <th>원본 미리보기</th>
+                <th>수정본 미리보기</th>
+              </tr>
+            `
+            : `
+              <tr>
+                <th class="num">행 번호</th>
+                <th>미리보기</th>
+              </tr>
+            `;
+
+        const body = limitedRows
+          .map((row) => {
+            if (type === "modified") {
+              return `
+                <tr>
+                  <td class="num">${escapeHtml(formatNumber(row.originalRow))}</td>
+                  <td class="num">${escapeHtml(formatNumber(row.modifiedRow))}</td>
+                  <td class="num">${escapeHtml(formatNumber(row.changedCellCount))}</td>
+                  <td class="mono-block">${escapeHtml(row.beforePreview)}</td>
+                  <td class="mono-block">${escapeHtml(row.afterPreview)}</td>
+                </tr>
+              `;
+            }
+
+            const rowNumber = type === "added" ? row.modifiedRow : row.originalRow;
+            return `
+              <tr>
+                <td class="num">${escapeHtml(formatNumber(rowNumber))}</td>
+                <td class="mono-block">${escapeHtml(row.preview)}</td>
+              </tr>
+            `;
+          })
+          .join("");
+
+        return `
+          ${extraNote}
+          <div class="detail-table-wrap">
+            <table class="detail-table">
+              <thead>${headerRow}</thead>
+              <tbody>${body}</tbody>
+            </table>
+          </div>
+        `;
+      }
+
+      function renderDetailCards(report) {
+        const changedSheets = report.sheets.filter((sheet) => sheet.status !== "same");
+
+        if (changedSheets.length === 0) {
+          els.detailList.innerHTML = '<div class="empty-box">상세로 펼쳐볼 차이가 없습니다.</div>';
+          return;
+        }
+
+        els.detailList.innerHTML = changedSheets
+          .map((sheet) => {
+            const metricChips = `
+              <div class="metric-row">
+                <span class="metric-chip"><strong>원본 행</strong> ${escapeHtml(formatNumber(sheet.originalRowCount))}</span>
+                <span class="metric-chip"><strong>수정본 행</strong> ${escapeHtml(formatNumber(sheet.modifiedRowCount))}</span>
+                <span class="metric-chip"><strong>추가 행</strong> ${escapeHtml(formatNumber(sheet.counts.addedRows))}</span>
+                <span class="metric-chip"><strong>삭제 행</strong> ${escapeHtml(formatNumber(sheet.counts.removedRows))}</span>
+                <span class="metric-chip"><strong>수정 행</strong> ${escapeHtml(formatNumber(sheet.counts.modifiedRows))}</span>
+                <span class="metric-chip"><strong>변경 셀</strong> ${escapeHtml(formatNumber(sheet.counts.changedCells))}</span>
+              </div>
+            `;
+
+            if (sheet.status === "added-sheet") {
+              return `
+                <article class="sheet-card">
+                  <div class="sheet-card-header">
+                    <h3 class="sheet-card-title">${escapeHtml(sheet.name)}</h3>
+                    ${statusBadge(sheet.status)}
+                  </div>
+                  <p class="detail-note">수정본에만 존재하는 새 시트입니다.</p>
+                  ${metricChips}
+                  <details class="shot-details" open>
+                    <summary class="shot-summary">시트 미리보기</summary>
+                    ${makeSheetPreviewTable(sheet.previewModified)}
+                  </details>
+                </article>
+              `;
+            }
+
+            if (sheet.status === "removed-sheet") {
+              return `
+                <article class="sheet-card">
+                  <div class="sheet-card-header">
+                    <h3 class="sheet-card-title">${escapeHtml(sheet.name)}</h3>
+                    ${statusBadge(sheet.status)}
+                  </div>
+                  <p class="detail-note">원본에만 존재하고 수정본에서는 사라진 시트입니다.</p>
+                  ${metricChips}
+                  <details class="shot-details" open>
+                    <summary class="shot-summary">원본 시트 미리보기</summary>
+                    ${makeSheetPreviewTable(sheet.previewOriginal)}
+                  </details>
+                </article>
+              `;
+            }
+
+            return `
+              <article class="sheet-card">
+                <div class="sheet-card-header">
+                  <h3 class="sheet-card-title">${escapeHtml(sheet.name)}</h3>
+                  ${statusBadge(sheet.status)}
+                </div>
+                <p class="detail-note">행 정렬은 단순 행번호 비교가 아니라 근처 행을 함께 보며 추가/삭제를 분리하는 방식으로 처리합니다.</p>
+                ${metricChips}
+
+                <details class="shot-details" open>
+                  <summary class="shot-summary">변경된 셀 보기 (${escapeHtml(formatNumber(sheet.changedCells.length))}건)</summary>
+                  ${renderChangedCellsTable(sheet.changedCells)}
+                </details>
+
+                <details class="shot-details">
+                  <summary class="shot-summary">수정된 행 보기 (${escapeHtml(formatNumber(sheet.modifiedRows.length))}건)</summary>
+                  ${renderChangedRowsTable(sheet.modifiedRows, "modified")}
+                </details>
+
+                <details class="shot-details">
+                  <summary class="shot-summary">추가된 행 보기 (${escapeHtml(formatNumber(sheet.addedRows.length))}건)</summary>
+                  ${renderChangedRowsTable(sheet.addedRows, "added")}
+                </details>
+
+                <details class="shot-details">
+                  <summary class="shot-summary">삭제된 행 보기 (${escapeHtml(formatNumber(sheet.removedRows.length))}건)</summary>
+                  ${renderChangedRowsTable(sheet.removedRows, "removed")}
+                </details>
+              </article>
+            `;
+          })
+          .join("");
+      }
+
+      function renderReport(report) {
+        renderFileSummary(report);
+        renderSummaryCards(report);
+        renderNarrativeSummary(report);
+        renderSheetTable(report);
+        renderDetailCards(report);
+        els.summarySection.classList.remove("hidden");
+        els.sheetSection.classList.remove("hidden");
+        els.detailSection.classList.remove("hidden");
+      }
+
+      async function runAnalysis() {
+        if (state.busy) return;
+        if (!state.originalFile || !state.modifiedFile) {
+          setStatusBox("원본과 수정본 파일을 둘 다 넣어주세요.", "error");
+          return;
+        }
+        if (typeof XLSX === "undefined") {
+          setStatusBox("엑셀 분석 라이브러리를 불러오지 못했습니다. 인터넷 연결 또는 CDN 경로를 확인해주세요.", "error");
+          return;
+        }
+
+        try {
+          setBusy(true);
+          setStatusBox("엑셀 파일을 읽는 중입니다...", "running");
+          await tick();
+
+          const [originalWorkbook, modifiedWorkbook] = await Promise.all([
+            parseWorkbook(state.originalFile),
+            parseWorkbook(state.modifiedFile),
+          ]);
+
+          state.originalWorkbook = originalWorkbook;
+          state.modifiedWorkbook = modifiedWorkbook;
+
+          setStatusBox("시트와 행, 셀 차이를 분석하는 중입니다...", "running");
+          await tick();
+
+          const report = buildReport(originalWorkbook, modifiedWorkbook);
+          state.report = report;
+          renderReport(report);
+
+          if (
+            report.totals.changedSheets === 0 &&
+            report.totals.addedSheets === 0 &&
+            report.totals.removedSheets === 0
+          ) {
+            setStatusBox("분석 완료: 현재 비교 범위 기준으로 두 파일은 동일합니다.", "success");
+          } else {
+            setStatusBox("분석 완료: 차이를 요약과 상세 영역에 정리했습니다.", "success");
+          }
+        } catch (error) {
+          console.error(error);
+          setStatusBox(
+            `분석 중 오류가 발생했습니다. 암호화된 파일이거나 손상된 파일일 수 있습니다. (${error && error.message ? error.message : "알 수 없는 오류"})`,
+            "error"
+          );
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      function downloadJsonReport() {
+        if (!state.report) return;
+        const baseName = (state.modifiedFile?.name || state.originalFile?.name || "excel-diff")
+          .replace(/\.[^.]+$/, "")
+          .replace(/[^\w\-가-힣]+/g, "_");
+        const blob = new Blob([JSON.stringify(state.report, null, 2)], {
+          type: "application/json;charset=utf-8",
+        });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = `${baseName}_diff_report.json`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+
+      bindDropZone(els.originalInput, els.originalDropZone, "original");
+      bindDropZone(els.modifiedInput, els.modifiedDropZone, "modified");
+
+      els.clearOriginal.addEventListener("click", () => clearFile("original"));
+      els.clearModified.addEventListener("click", () => clearFile("modified"));
+      els.btnSwap.addEventListener("click", swapFiles);
+      els.btnAnalyze.addEventListener("click", runAnalysis);
+      els.btnDownloadJson.addEventListener("click", downloadJsonReport);
+
+      updateFileMeta("original");
+      updateFileMeta("modified");
+      updateActionState();
+    })();
+  </script>
+
+  <script src="/static/footer.js"></script>
+<script src="/static/global-loader.js?v=1"></script>
+</body>
+</html>
+
+
+
+
