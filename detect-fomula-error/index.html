@@ -3,165 +3,250 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>엑셀 수식 깨짐 탐지기</title>
-
-  
-  <link rel="icon" href="/static/favicon.ico" />
-  <link rel="stylesheet" href="/static/style.css" />
+  <title>엑셀 수식 깨짐 탐지기 (완전 오프라인 · 공통 CSS 충돌 회피판)</title>
   <style>
+
     :root {
-      --bg: #f6f7fb;
-      --card: #ffffff;
-      --ink: #111827;
-      --muted: #6b7280;
-      --line: #e5e7eb;
-      --primary: #111827;
-      --primary-weak: #eef2ff;
-      --warn: #92400e;
-      --warn-bg: #fff7ed;
-      --danger: #991b1b;
-      --danger-bg: #fef2f2;
-      --ok: #065f46;
-      --ok-bg: #ecfdf5;
-      --shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
+      --ffc-bg: #f5f7fb;
+      --ffc-surface: #ffffff;
+      --ffc-surface-soft: #f9fafc;
+      --ffc-ink: #111827;
+      --ffc-ink-soft: #374151;
+      --ffc-muted: #6b7280;
+      --ffc-line: #e5e7eb;
+      --ffc-accent: #1d4ed8;
+      --ffc-accent-soft: #eaf1ff;
+      --ffc-warn: #9a3412;
+      --ffc-warn-bg: #fff7ed;
+      --ffc-danger: #991b1b;
+      --ffc-danger-bg: #fef2f2;
+      --ffc-ok: #065f46;
+      --ffc-ok-bg: #ecfdf5;
+      --ffc-shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
     }
 
-    * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; }
-    body {
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--ffc-bg);
+    }
+
+    body.ffc-page {
+      color: var(--ffc-ink);
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
         "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-      background: var(--bg);
-      color: var(--ink);
-      line-height: 1.55;
     }
 
-    .wrap {
+    .ffc-shell {
       max-width: 1180px;
       margin: 0 auto;
       padding: 24px 16px 48px;
     }
 
-    h1 {
+    #ffcApp,
+    #ffcApp * {
+      box-sizing: border-box;
+    }
+
+    #ffcApp {
+      font-size: 16px;
+      color: var(--ffc-ink);
+      line-height: 1.55;
+      word-break: keep-all;
+    }
+
+    #ffcApp div,
+    #ffcApp span,
+    #ffcApp p,
+    #ffcApp label,
+    #ffcApp li,
+    #ffcApp td,
+    #ffcApp th,
+    #ffcApp code,
+    #ffcApp strong,
+    #ffcApp small {
+      color: inherit;
+      font-size: inherit;
+    }
+
+    #ffcApp h1,
+    #ffcApp h2,
+    #ffcApp h3,
+    #ffcApp h4,
+    #ffcApp p {
+      margin: 0;
+    }
+
+    #ffcApp .ffc-title {
       margin: 0 0 10px;
       font-size: 2rem;
       line-height: 1.2;
+      color: var(--ffc-ink);
     }
 
-    p { margin: 0; }
-
-    .lead {
-      color: #374151;
+    #ffcApp .ffc-lead {
       margin-bottom: 18px;
+      color: var(--ffc-ink-soft);
+      font-size: 1rem;
     }
 
-    .card {
-      background: var(--card);
-      border: 1px solid var(--line);
+    #ffcApp .ffc-card {
+      background: var(--ffc-surface);
+      border: 1px solid var(--ffc-line);
       border-radius: 16px;
-      box-shadow: var(--shadow);
+      box-shadow: var(--ffc-shadow);
       padding: 18px;
       margin-bottom: 16px;
     }
 
-    .grid {
+    #ffcApp .ffc-grid {
       display: grid;
       gap: 14px;
     }
 
-    .grid.controls {
-      grid-template-columns: 1.4fr 0.9fr 0.9fr;
+    #ffcApp .ffc-grid.ffc-controls {
+      grid-template-columns: 1.4fr 0.9fr 1.1fr;
       align-items: end;
     }
 
-    .field {
+    #ffcApp .ffc-field {
       display: grid;
       gap: 8px;
+      min-width: 0;
     }
 
-    .field label,
-    .small-title {
+    #ffcApp .ffc-field-label,
+    #ffcApp .ffc-small-title {
       font-weight: 700;
-      font-size: 0.95rem;
+      font-size: 0.96rem;
+      color: var(--ffc-ink);
     }
 
-    .dropzone {
-      border: 2px dashed #c7d2fe;
+    #ffcApp .ffc-dropzone {
+      border: 2px dashed #bfd2ff;
       border-radius: 14px;
       padding: 18px;
-      background: #fafbff;
+      background: #fafcff;
       transition: 0.15s ease;
     }
 
-    .dropzone.dragover {
-      border-color: #4f46e5;
-      background: #eef2ff;
+    #ffcApp .ffc-dropzone.is-dragover {
+      border-color: var(--ffc-accent);
+      background: var(--ffc-accent-soft);
     }
 
-    .row {
+    #ffcApp .ffc-row {
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
       align-items: center;
     }
 
-    input[type="file"],
-    input[type="number"],
-    button,
-    select,
-    textarea {
+    #ffcApp .ffc-row.ffc-row-between {
+      justify-content: space-between;
+    }
+
+    #ffcApp input[type="file"],
+    #ffcApp input[type="number"],
+    #ffcApp button,
+    #ffcApp select,
+    #ffcApp textarea {
       font: inherit;
     }
 
-    input[type="number"] {
+    #ffcApp input[type="number"] {
       width: 100%;
       padding: 11px 12px;
       border: 1px solid #d1d5db;
       border-radius: 12px;
       background: #fff;
+      color: var(--ffc-ink);
     }
 
-    .checks {
+    #ffcApp .ffc-checks {
       display: grid;
       gap: 8px;
+      color: var(--ffc-ink-soft);
       font-size: 0.95rem;
-      color: #374151;
     }
 
-    .btn {
+    #ffcApp .ffc-checks label {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    #ffcApp .ffc-btn {
       appearance: none;
       border: 1px solid #111827;
-      background: #111827;
-      color: white;
       border-radius: 12px;
       padding: 11px 14px;
       font-weight: 700;
       cursor: pointer;
+      background: #111827;
+      color: #ffffff !important;
+      text-decoration: none;
+      box-shadow: none;
     }
 
-    .btn:hover { filter: brightness(0.95); }
-    .btn.secondary {
-      background: white;
-      color: #111827;
+    #ffcApp .ffc-btn:hover {
+      filter: brightness(0.96);
+    }
+
+    #ffcApp .ffc-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      filter: none;
+    }
+
+    #ffcApp .ffc-btn.ffc-btn-secondary {
+      background: #ffffff;
+      color: #111827 !important;
       border-color: #d1d5db;
     }
 
-    .muted {
-      color: var(--muted);
+    #ffcApp .ffc-btn.ffc-btn-secondary:hover {
+      background: #f9fafb;
+    }
+
+    #ffcApp .ffc-btn,
+    #ffcApp .ffc-btn * {
+      color: inherit !important;
+    }
+
+    #ffcApp .ffc-muted {
+      color: var(--ffc-muted) !important;
       font-size: 0.92rem;
     }
 
-    .hint {
-      margin-top: 8px;
+    #ffcApp .ffc-hint,
+    #ffcApp .ffc-warn-box,
+    #ffcApp .ffc-compat-note {
       padding: 12px 13px;
       border-radius: 12px;
-      background: #f9fafb;
-      color: #374151;
-      font-size: 0.93rem;
       border: 1px solid #eef2f7;
+      margin-top: 10px;
+      font-size: 0.93rem;
     }
 
-    .status {
+    #ffcApp .ffc-hint {
+      background: #f9fafb;
+      color: var(--ffc-ink-soft);
+    }
+
+    #ffcApp .ffc-warn-box {
+      background: var(--ffc-warn-bg);
+      border-color: #fed7aa;
+      color: var(--ffc-warn);
+    }
+
+    #ffcApp .ffc-compat-note {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+      color: #1e40af;
+    }
+
+    #ffcApp .ffc-status {
       display: inline-flex;
       gap: 8px;
       align-items: center;
@@ -174,32 +259,33 @@
       margin-bottom: 10px;
     }
 
-    .kpis {
+    #ffcApp .ffc-kpis {
       display: grid;
       gap: 12px;
       grid-template-columns: repeat(5, minmax(0, 1fr));
       margin-top: 6px;
     }
 
-    .kpi {
-      border: 1px solid var(--line);
+    #ffcApp .ffc-kpi {
+      border: 1px solid var(--ffc-line);
       border-radius: 14px;
       padding: 14px;
       background: #fff;
     }
 
-    .kpi .num {
+    #ffcApp .ffc-kpi-num {
       font-size: 1.55rem;
       font-weight: 800;
       margin-bottom: 4px;
+      color: var(--ffc-ink);
     }
 
-    .kpi .lbl {
-      color: var(--muted);
+    #ffcApp .ffc-kpi-label {
+      color: var(--ffc-muted) !important;
       font-size: 0.9rem;
     }
 
-    .pill {
+    #ffcApp .ffc-pill {
       display: inline-flex;
       align-items: center;
       border-radius: 999px;
@@ -209,32 +295,33 @@
       white-space: nowrap;
     }
 
-    .pill.high { background: var(--danger-bg); color: var(--danger); }
-    .pill.medium { background: var(--warn-bg); color: var(--warn); }
-    .pill.low { background: #eff6ff; color: #1d4ed8; }
-    .pill.ok { background: var(--ok-bg); color: var(--ok); }
+    #ffcApp .ffc-pill.is-high { background: var(--ffc-danger-bg); color: var(--ffc-danger) !important; }
+    #ffcApp .ffc-pill.is-medium { background: var(--ffc-warn-bg); color: var(--ffc-warn) !important; }
+    #ffcApp .ffc-pill.is-low { background: #eff6ff; color: #1d4ed8 !important; }
+    #ffcApp .ffc-pill.is-ok { background: var(--ffc-ok-bg); color: var(--ffc-ok) !important; }
 
-    .sheet-grid {
+    #ffcApp .ffc-sheet-grid {
       display: grid;
       gap: 12px;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     }
 
-    .sheet-card {
-      border: 1px solid var(--line);
+    #ffcApp .ffc-sheet-card {
+      border: 1px solid var(--ffc-line);
       border-radius: 14px;
       padding: 14px;
       background: #fff;
     }
 
-    .sheet-card h3 {
+    #ffcApp .ffc-sheet-card h3 {
       margin: 0 0 8px;
       font-size: 1rem;
       line-height: 1.35;
       word-break: break-all;
+      color: var(--ffc-ink);
     }
 
-    .sheet-stat {
+    #ffcApp .ffc-sheet-stat {
       display: flex;
       justify-content: space-between;
       gap: 8px;
@@ -242,7 +329,7 @@
       font-size: 0.92rem;
     }
 
-    .toolbar {
+    #ffcApp .ffc-toolbar {
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
@@ -251,48 +338,51 @@
       margin-bottom: 12px;
     }
 
-    .toolbar .left,
-    .toolbar .right {
+    #ffcApp .ffc-toolbar-left,
+    #ffcApp .ffc-toolbar-right {
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
       align-items: center;
     }
 
-    .chip {
+    #ffcApp .ffc-chip {
       display: inline-flex;
       align-items: center;
       gap: 6px;
       padding: 8px 10px;
       border: 1px solid #d1d5db;
       border-radius: 999px;
-      background: white;
+      background: #ffffff;
+      color: var(--ffc-ink-soft) !important;
       font-size: 0.9rem;
       cursor: pointer;
       user-select: none;
+      text-decoration: none;
     }
 
-    .chip.active {
+    #ffcApp .ffc-chip.is-active {
       background: #eef2ff;
       border-color: #4f46e5;
-      color: #3730a3;
+      color: #3730a3 !important;
       font-weight: 700;
     }
 
-    .table-wrap {
+    #ffcApp .ffc-table-wrap {
       overflow-x: auto;
-      border: 1px solid var(--line);
+      border: 1px solid var(--ffc-line);
       border-radius: 14px;
       background: white;
     }
 
-    table {
+    #ffcApp table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 1200px;
+      min-width: 1240px;
     }
 
-    th, td {
+    #ffcApp th,
+    #ffcApp td {
       padding: 12px 10px;
       border-bottom: 1px solid #eef2f7;
       vertical-align: top;
@@ -300,21 +390,25 @@
       text-align: left;
     }
 
-    th {
+    #ffcApp th {
       position: sticky;
       top: 0;
       background: #f9fafb;
       z-index: 1;
       font-size: 0.9rem;
+      color: var(--ffc-ink);
     }
 
-    tr:hover td { background: #fcfcff; }
+    #ffcApp tr:hover td {
+      background: #fcfcff;
+    }
 
-    code, pre {
+    #ffcApp code,
+    #ffcApp pre {
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
     }
 
-    .formula {
+    #ffcApp .ffc-formula {
       white-space: pre-wrap;
       word-break: break-word;
       font-size: 0.87rem;
@@ -323,108 +417,141 @@
       border: 1px solid #eef2f7;
       border-radius: 10px;
       padding: 8px 9px;
+      color: var(--ffc-ink);
     }
 
-    .empty {
+    #ffcApp .ffc-empty {
       padding: 28px 16px;
       text-align: center;
-      color: var(--muted);
+      color: var(--ffc-muted) !important;
     }
 
-    details summary {
+    #ffcApp details summary {
       cursor: pointer;
       font-weight: 700;
       margin-bottom: 8px;
+      color: var(--ffc-ink);
     }
 
-    .footer-note {
+    #ffcApp .ffc-footer-note {
       margin-top: 14px;
-      color: var(--muted);
+      color: var(--ffc-muted) !important;
       font-size: 0.92rem;
     }
 
     @media (max-width: 980px) {
-      .grid.controls { grid-template-columns: 1fr; }
-      .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #ffcApp .ffc-grid.ffc-controls {
+        grid-template-columns: 1fr;
+      }
+
+      #ffcApp .ffc-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
     }
 
     @media (max-width: 640px) {
-      .wrap { padding: 18px 12px 36px; }
-      h1 { font-size: 1.6rem; }
-      .kpis { grid-template-columns: 1fr; }
+      .ffc-shell {
+        padding: 18px 12px 36px;
+      }
+
+      #ffcApp .ffc-title {
+        font-size: 1.6rem;
+      }
+
+      #ffcApp .ffc-kpis {
+        grid-template-columns: 1fr;
+      }
     }
+
   </style>
 </head>
-<body>
-  <div class="wrap">
-    <h1>엑셀 수식 깨짐 탐지기</h1>
-    <p class="lead">
-      엑셀 파일을 브라우저에서 바로 읽어, 주변 수식 패턴과 다른 셀·수식이 빠진 셀·오류 값을 가진 셀을 찾아줍니다.
-      반복 복사형 수식에서 특히 잘 잡습니다.
-    </p>
 
-    <div class="card">
-      <div class="grid controls">
-        <div class="field">
-          <label for="fileInput">엑셀 파일</label>
-          <div id="dropzone" class="dropzone">
-            <div class="row" style="justify-content: space-between; align-items: center;">
-              <div>
-                <div style="font-weight: 700; margin-bottom: 4px;">파일을 끌어놓거나 선택하세요</div>
-                <div class="muted">지원: .xlsx, .xls, .xlsm, .xlsb, .ods</div>
+<body class="ffc-page">
+  <main class="ffc-shell">
+    <div id="ffcApp" class="ffc-app">
+      <h1 class="ffc-title">엑셀 수식 깨짐 탐지기 (완전 오프라인 · 공통 CSS 충돌 회피판)</h1>
+      <p class="ffc-lead">
+        브라우저 안에서 ZIP/XML을 직접 읽어, 주변 수식 패턴과 다른 셀·수식이 빠진 셀·오류 값을 가진 셀을 찾아줍니다.
+        공통 style.css / footer.js가 함께 로드되는 환경에서도 버튼 글씨, 카드, 칩 필터가 깨지지 않도록 앱 전용 클래스로 분리했습니다.
+      </p>
+
+      <div class="ffc-card">
+        <div class="ffc-grid ffc-controls">
+          <div class="ffc-field">
+            <label for="fileInput" class="ffc-field-label">엑셀 파일</label>
+            <div id="dropzone" class="ffc-dropzone">
+              <div class="ffc-row ffc-row-between">
+                <div>
+                  <div style="font-weight: 700; margin-bottom: 4px;">파일을 끌어놓거나 선택하세요</div>
+                  <div class="ffc-muted">이 완전 오프라인판은 .xlsx / .xlsm 을 지원합니다.</div>
+                </div>
+                <input id="fileInput" type="file" accept=".xlsx,.xlsm" />
               </div>
-              <input id="fileInput" type="file" accept=".xlsx,.xls,.xlsm,.xlsb,.ods" />
+            </div>
+            <div id="selectedFile" class="ffc-muted">선택된 파일 없음</div>
+          </div>
+
+          <div class="ffc-field">
+            <label for="maxGap" class="ffc-field-label">이웃 탐색 반경</label>
+            <input id="maxGap" type="number" min="1" max="5" step="1" value="2" />
+            <div class="ffc-muted">좌우/상하 몇 칸까지 같은 패턴을 볼지 정합니다.</div>
+          </div>
+
+          <div class="ffc-field">
+            <div class="ffc-small-title">검사 방향 / 옵션</div>
+            <div class="ffc-checks">
+              <label><input id="compareRow" type="checkbox" checked /> 동일 행 안에서 좌우 수식 비교</label>
+              <label><input id="compareCol" type="checkbox" checked /> 동일 열 안에서 상하 수식 비교</label>
+              <label><input id="detectOverwritten" type="checkbox" checked /> 수식이 값/텍스트로 덮인 셀도 찾기</label>
+              <label><input id="detectBlankGap" type="checkbox" checked /> 수식 사이에 한 칸 빈 셀도 찾기</label>
+              <label><input id="strictBarrier" type="checkbox" checked /> 숫자/텍스트가 끼면 같은 구간으로 보지 않기</label>
             </div>
           </div>
-          <div id="selectedFile" class="muted">선택된 파일 없음</div>
         </div>
 
-        <div class="field">
-          <label for="maxGap">이웃 탐색 반경</label>
-          <input id="maxGap" type="number" min="1" max="5" step="1" value="2" />
-          <div class="muted">좌우/상하 몇 칸까지 같은 패턴을 볼지 정합니다.</div>
+        <div class="ffc-row" style="margin-top: 14px;">
+          <button id="scanBtn" type="button" class="ffc-btn">검사 시작</button>
+          <button id="downloadCsvBtn" type="button" class="ffc-btn ffc-btn-secondary" disabled>결과 CSV 다운로드</button>
+          <button id="copyJsonBtn" type="button" class="ffc-btn ffc-btn-secondary" disabled>결과 JSON 복사</button>
         </div>
 
-        <div class="field">
-          <div class="small-title">옵션</div>
-          <div class="checks">
-            <label><input id="detectOverwritten" type="checkbox" checked /> 수식이 값/텍스트로 덮인 셀도 찾기</label>
-            <label><input id="detectBlankGap" type="checkbox" checked /> 수식 사이에 한 칸 빈 셀도 찾기</label>
-            <label><input id="strictBarrier" type="checkbox" checked /> 숫자/텍스트가 끼면 같은 구간으로 보지 않기</label>
-          </div>
+        <div class="ffc-hint">
+          이 도구는 <strong>계산값을 다시 계산해서 맞다/틀리다를 판정</strong>하는 방식이 아니라,
+          <strong>셀 기준 상대참조 패턴</strong>을 정규화해서 주변과 다른 셀을 찾는 방식입니다.
+          그래서 복사형 수식에는 강하지만, 의도적으로 다른 합계행·누계·특수 예외행은 “의심”으로 잡힐 수 있습니다.
+        </div>
+
+        <div class="ffc-warn-box">
+          완전 오프라인을 위해 외부 라이브러리를 넣지 않은 버전이라서, 지원 범위는 <strong>.xlsx / .xlsm</strong> 위주입니다.
+          <strong>.xls / .xlsb / .ods</strong>까지 모두 먹이려면 SheetJS 같은 파서를 통째로 내장한 더 큰 파일이 필요합니다.
+        </div>
+
+        <div class="ffc-compat-note">
+          공통 CSS와의 충돌을 피하려고 <code>.btn</code>, <code>.card</code>, <code>.chip</code>, <code>.row</code>, <code>.grid</code> 같은 범용 이름을 쓰지 않고
+          앱 전용 <code>ffc-*</code> 클래스를 사용합니다.
         </div>
       </div>
 
-      <div class="row" style="margin-top: 14px;">
-        <button id="scanBtn" class="btn">검사 시작</button>
-        <button id="downloadCsvBtn" class="btn secondary" disabled>결과 CSV 다운로드</button>
-        <button id="copyJsonBtn" class="btn secondary" disabled>결과 JSON 복사</button>
-      </div>
+      <div id="statusHost" aria-live="polite"></div>
+      <div id="summaryHost"></div>
+      <div id="sheetHost"></div>
+      <div id="resultHost"></div>
 
-      <div class="hint">
-        이 도구는 <strong>계산값을 다시 계산해서 맞다/틀리다를 판정</strong>하는 방식이 아니라,
-        <strong>셀 기준 상대참조 패턴</strong>을 정규화해서 주변과 다른 셀을 찾는 방식입니다.
-        그래서 복사형 수식에는 강하지만, 의도적으로 다른 합계행·누계·특수 예외행은 “의심”으로 잡힐 수 있습니다.
+      <div class="ffc-footer-note">
+        브라우저에서 처리하므로 원본 파일은 서버로 전송되지 않습니다. 아주 큰 파일은 시간이 조금 걸릴 수 있습니다.
+        최신 Chrome/Edge 계열 브라우저에서 가장 안정적으로 동작합니다.
       </div>
     </div>
+  </main>
 
-    <div id="statusHost"></div>
-    <div id="summaryHost"></div>
-    <div id="sheetHost"></div>
-    <div id="resultHost"></div>
-
-    <div class="footer-note">
-      브라우저에서 처리하므로 원본 파일은 서버로 전송되지 않습니다. 아주 큰 파일은 시간이 조금 걸릴 수 있습니다.
-    </div>
-  </div>
-
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script>
     const ui = {
       fileInput: document.getElementById('fileInput'),
       dropzone: document.getElementById('dropzone'),
       selectedFile: document.getElementById('selectedFile'),
       maxGap: document.getElementById('maxGap'),
+      compareRow: document.getElementById('compareRow'),
+      compareCol: document.getElementById('compareCol'),
       detectOverwritten: document.getElementById('detectOverwritten'),
       detectBlankGap: document.getElementById('detectBlankGap'),
       strictBarrier: document.getElementById('strictBarrier'),
@@ -440,7 +567,6 @@
     let currentFile = null;
     let lastFindings = [];
     let lastSummary = null;
-
     function escapeHtml(str) {
       return String(str ?? '')
         .replace(/&/g, '&amp;')
@@ -452,7 +578,7 @@
 
     function setStatus(text) {
       ui.statusHost.innerHTML = text
-        ? `<div class="status">${escapeHtml(text)}</div>`
+        ? `<div class="ffc-status">${escapeHtml(text)}</div>`
         : '';
     }
 
@@ -475,7 +601,7 @@
     }
 
     function parseA1(addr) {
-      const m = /^(\$?)([A-Z]{1,3})(\$?)(\d+)$/i.exec(String(addr || ''));
+      const m = /^(\$?)([A-Z]{1,4})(\$?)(\d+)$/i.exec(String(addr || ''));
       if (!m) return null;
       return {
         colAbs: !!m[1],
@@ -489,6 +615,65 @@
       if (!parts) return '#REF!';
       if (parts.row < 1 || parts.col < 1) return '#REF!';
       return `${parts.colAbs ? '$' : ''}${numToCol(parts.col)}${parts.rowAbs ? '$' : ''}${parts.row}`;
+    }
+
+    function decodeCell(addr) {
+      const p = parseA1(addr);
+      if (!p) throw new Error(`잘못된 셀 주소: ${addr}`);
+      return { r: p.row - 1, c: p.col - 1, row: p.row, col: p.col };
+    }
+
+    function encodeCell(pos) {
+      return `${numToCol((pos.c ?? 0) + 1)}${(pos.r ?? 0) + 1}`;
+    }
+
+    function decodeRange(ref) {
+      const text = String(ref || 'A1:A1').trim();
+      const [a, b] = text.includes(':') ? text.split(':') : [text, text];
+      const s = decodeCell(a);
+      const e = decodeCell(b);
+      return {
+        s: { r: Math.min(s.r, e.r), c: Math.min(s.c, e.c) },
+        e: { r: Math.max(s.r, e.r), c: Math.max(s.c, e.c) }
+      };
+    }
+
+    function encodeRange(range) {
+      return `${encodeCell(range.s)}:${encodeCell(range.e)}`;
+    }
+
+    function normalizeZipPath(path) {
+      return String(path || '')
+        .replace(/\\/g, '/')
+        .replace(/^\.\//, '')
+        .replace(/^\//, '')
+        .split('/')
+        .reduce((acc, part) => {
+          if (!part || part === '.') return acc;
+          if (part === '..') {
+            acc.pop();
+            return acc;
+          }
+          acc.push(part);
+          return acc;
+        }, [])
+        .join('/');
+    }
+
+    function resolvePartPath(sourcePartPath, target) {
+      if (!target) return '';
+      if (/^[a-z]+:/i.test(target)) return target;
+      if (target.startsWith('/')) return normalizeZipPath(target.slice(1));
+      const baseDir = sourcePartPath ? String(sourcePartPath).split('/').slice(0, -1).join('/') : '';
+      return normalizeZipPath(baseDir ? `${baseDir}/${target}` : target);
+    }
+
+    function relsPathForPart(partPath) {
+      const norm = normalizeZipPath(partPath);
+      const idx = norm.lastIndexOf('/');
+      const dir = idx >= 0 ? norm.slice(0, idx) : '';
+      const base = idx >= 0 ? norm.slice(idx + 1) : norm;
+      return normalizeZipPath(dir ? `${dir}/_rels/${base}.rels` : `_rels/${base}.rels`);
     }
 
     function maskDoubleQuotedStrings(formula) {
@@ -505,7 +690,7 @@
       return String(text || '').replace(/\u0007(\d+)\u0007/g, (_, i) => bag[Number(i)] ?? '');
     }
 
-    const REF_RE = /((?:(?:\[[^\]]+\])?(?:'[^']*(?:''[^']*)*'|[A-Za-z0-9_\u00A0-\uFFFF.]+)!)?)(\$?[A-Z]{1,3}\$?\d+)(?::(\$?[A-Z]{1,3}\$?\d+))?/g;
+    const REF_RE = /((?:(?:\[[^\]]+\])?(?:'[^']*(?:''[^']*)*'|[A-Za-z0-9_\u00A0-\uFFFF.]+)!)?)(\$?[A-Z]{1,4}\$?\d+)(?::(\$?[A-Z]{1,4}\$?\d+))?/g;
 
     function mapFormulaRefs(formula, mapper) {
       const raw = String(formula || '').replace(/^=/, '');
@@ -552,19 +737,19 @@
       });
     }
 
-    function cellDisplay(cell) {
-      if (!cell) return '';
-      if (cell.w != null && String(cell.w) !== '') return String(cell.w);
-      if (cell.v == null) return '';
-      return String(cell.v);
-    }
-
     function isMeaningfulCell(cell) {
       if (!cell) return false;
       if (cell.f) return true;
       if (cell.v == null) return false;
       if (typeof cell.v === 'string' && cell.v.trim() === '') return false;
       return true;
+    }
+
+    function cellDisplay(cell) {
+      if (!cell) return '';
+      if (cell.w != null && String(cell.w) !== '') return String(cell.w);
+      if (cell.v == null) return '';
+      return String(cell.v);
     }
 
     function isExplicitErrorCell(meta) {
@@ -580,7 +765,7 @@
     }
 
     function addrOf(row, col) {
-      return XLSX.utils.encode_cell({ r: row - 1, c: col - 1 });
+      return encodeCell({ r: row - 1, c: col - 1 });
     }
 
     function nearestFormula(map, sheetName, row, col, dRow, dCol, maxGap, strictBarrier) {
@@ -637,42 +822,351 @@
       return String(a || '').trim() === String(b || '').trim();
     }
 
-    async function analyzeWorkbook(file, opts) {
-      setStatus('파일을 읽는 중…');
+    function getAttr(node, name) {
+      if (!node || !node.attributes) return '';
+      const exact = node.getAttribute && node.getAttribute(name);
+      if (exact != null) return exact;
+      const parts = String(name).split(':');
+      const local = parts[parts.length - 1];
+      for (const attr of Array.from(node.attributes)) {
+        const attrLocal = attr.localName || String(attr.name || '').split(':').pop();
+        const attrName = attr.name || '';
+        if (attrName === name) return attr.value;
+        if (attrLocal === local && parts.length === 1) return attr.value;
+      }
+      return '';
+    }
+
+    function getRelId(node) {
+      if (!node || !node.attributes) return '';
+      if (node.getAttribute && node.getAttribute('r:id') != null) return node.getAttribute('r:id');
+      for (const attr of Array.from(node.attributes)) {
+        if ((attr.localName === 'id' && attr.prefix === 'r') || attr.name === 'r:id') return attr.value;
+      }
+      return '';
+    }
+
+    function localNameOf(node) {
+      return node?.localName || String(node?.nodeName || '').split(':').pop();
+    }
+
+    function firstChildByLocalName(node, name) {
+      for (const child of Array.from(node?.childNodes || [])) {
+        if (child.nodeType === 1 && localNameOf(child) === name) return child;
+      }
+      return null;
+    }
+
+    function childElementsByLocalName(node, name) {
+      return Array.from(node?.childNodes || []).filter((child) => child.nodeType === 1 && localNameOf(child) === name);
+    }
+
+    function descendantsByLocalName(node, name) {
+      return Array.from(node?.getElementsByTagName('*') || []).filter((el) => localNameOf(el) === name);
+    }
+
+    function firstDescendantByLocalName(node, name) {
+      return descendantsByLocalName(node, name)[0] || null;
+    }
+
+    function parseXmlText(text, label) {
+      const doc = new DOMParser().parseFromString(text, 'application/xml');
+      const err = doc.getElementsByTagName('parsererror')[0];
+      if (err) throw new Error(`${label} XML 파싱 실패`);
+      return doc;
+    }
+
+    function decodeZipFileName(bytes, flags) {
+      const utf8 = (flags & 0x0800) !== 0;
+      if (utf8) return new TextDecoder('utf-8').decode(bytes);
+      let out = '';
+      for (let i = 0; i < bytes.length; i++) out += String.fromCharCode(bytes[i]);
+      return out;
+    }
+
+    async function inflateZipData(bytes) {
+      if (typeof DecompressionStream !== 'function') {
+        throw new Error('이 브라우저는 ZIP deflate 압축 해제를 지원하지 않습니다. 최신 Chrome/Edge에서 열어 주세요.');
+      }
+      const formats = ['deflate-raw', 'deflate'];
+      let lastErr = null;
+      for (const format of formats) {
+        try {
+          const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream(format));
+          const buf = await new Response(stream).arrayBuffer();
+          return new Uint8Array(buf);
+        } catch (err) {
+          lastErr = err;
+        }
+      }
+      throw lastErr || new Error('ZIP 압축 해제 실패');
+    }
+
+    function findEndOfCentralDirectory(bytes) {
+      const min = Math.max(0, bytes.length - 65557);
+      for (let i = bytes.length - 22; i >= min; i--) {
+        if (
+          bytes[i] === 0x50 &&
+          bytes[i + 1] === 0x4b &&
+          bytes[i + 2] === 0x05 &&
+          bytes[i + 3] === 0x06
+        ) return i;
+      }
+      return -1;
+    }
+
+    async function openZip(arrayBuffer) {
+      const bytes = new Uint8Array(arrayBuffer);
+      const view = new DataView(arrayBuffer);
+      const eocd = findEndOfCentralDirectory(bytes);
+      if (eocd < 0) throw new Error('ZIP 구조를 찾지 못했습니다. .xlsx / .xlsm 파일인지 확인해 주세요.');
+
+      const cdSize = view.getUint32(eocd + 12, true);
+      const cdOffset = view.getUint32(eocd + 16, true);
+      const entries = new Map();
+      const cache = new Map();
+      let ptr = cdOffset;
+      const end = cdOffset + cdSize;
+
+      while (ptr < end) {
+        if (view.getUint32(ptr, true) !== 0x02014b50) {
+          throw new Error('ZIP 중앙 디렉터리 파싱 실패');
+        }
+        const flags = view.getUint16(ptr + 8, true);
+        const method = view.getUint16(ptr + 10, true);
+        const compSize = view.getUint32(ptr + 20, true);
+        const uncompSize = view.getUint32(ptr + 24, true);
+        const nameLen = view.getUint16(ptr + 28, true);
+        const extraLen = view.getUint16(ptr + 30, true);
+        const commentLen = view.getUint16(ptr + 32, true);
+        const localOff = view.getUint32(ptr + 42, true);
+        const nameBytes = bytes.slice(ptr + 46, ptr + 46 + nameLen);
+        const fileName = normalizeZipPath(decodeZipFileName(nameBytes, flags));
+        entries.set(fileName, { fileName, flags, method, compSize, uncompSize, localOff });
+        ptr += 46 + nameLen + extraLen + commentLen;
+      }
+
+      async function getBytes(path) {
+        const key = normalizeZipPath(path);
+        if (!entries.has(key)) throw new Error(`ZIP 내부 경로를 찾지 못했습니다: ${key}`);
+        if (cache.has(key)) return cache.get(key);
+        const entry = entries.get(key);
+        const off = entry.localOff;
+        if (view.getUint32(off, true) !== 0x04034b50) {
+          throw new Error(`ZIP 로컬 헤더 파싱 실패: ${key}`);
+        }
+        const nameLen = view.getUint16(off + 26, true);
+        const extraLen = view.getUint16(off + 28, true);
+        const dataStart = off + 30 + nameLen + extraLen;
+        const comp = bytes.slice(dataStart, dataStart + entry.compSize);
+        let out;
+        if (entry.method === 0) out = comp;
+        else if (entry.method === 8) out = await inflateZipData(comp);
+        else throw new Error(`지원하지 않는 ZIP 압축 방식(${entry.method})입니다: ${key}`);
+        cache.set(key, out);
+        return out;
+      }
+
+      async function getText(path) {
+        const data = await getBytes(path);
+        return new TextDecoder('utf-8').decode(data);
+      }
+
+      return {
+        entries,
+        has(path) { return entries.has(normalizeZipPath(path)); },
+        async getBytes(path) { return getBytes(path); },
+        async getText(path) { return getText(path); }
+      };
+    }
+
+    async function parseRelationships(zip, relsPath, sourcePartPath) {
+      if (!zip.has(relsPath)) return new Map();
+      const xml = await zip.getText(relsPath);
+      const doc = parseXmlText(xml, relsPath);
+      const map = new Map();
+      for (const rel of descendantsByLocalName(doc, 'Relationship')) {
+        const id = getAttr(rel, 'Id');
+        const type = getAttr(rel, 'Type');
+        const target = getAttr(rel, 'Target');
+        const targetMode = getAttr(rel, 'TargetMode');
+        map.set(id, {
+          id,
+          type,
+          target,
+          targetMode,
+          fullPath: targetMode === 'External' ? target : resolvePartPath(sourcePartPath, target)
+        });
+      }
+      return map;
+    }
+
+    function collectText(node) {
+      if (!node) return '';
+      return node.textContent || '';
+    }
+
+    async function readWorkbookParts(file) {
+      const lower = String(file.name || '').toLowerCase();
+      if (!/\.(xlsx|xlsm)$/i.test(lower)) {
+        throw new Error('이 완전 오프라인판은 .xlsx / .xlsm 만 지원합니다.');
+      }
+
       const buffer = await file.arrayBuffer();
-      const wb = XLSX.read(buffer, { cellFormula: true, cellText: true, xlfn: true });
+      const zip = await openZip(buffer);
+      const rootRels = await parseRelationships(zip, '_rels/.rels', '');
+      let workbookPath = '';
+      for (const rel of rootRels.values()) {
+        if (/\/officeDocument$/i.test(rel.type || '')) {
+          workbookPath = rel.fullPath;
+          break;
+        }
+      }
+      workbookPath = workbookPath || 'xl/workbook.xml';
+      if (!zip.has(workbookPath)) {
+        throw new Error('workbook.xml 을 찾지 못했습니다. 손상된 파일일 수 있습니다.');
+      }
+
+      const workbookXml = await zip.getText(workbookPath);
+      const workbookDoc = parseXmlText(workbookXml, workbookPath);
+      const workbookRels = await parseRelationships(zip, relsPathForPart(workbookPath), workbookPath);
+
+      let sharedStrings = [];
+      let sharedStringsPath = '';
+      for (const rel of workbookRels.values()) {
+        if (/\/sharedStrings$/i.test(rel.type || '')) {
+          sharedStringsPath = rel.fullPath;
+          break;
+        }
+      }
+      if (sharedStringsPath && zip.has(sharedStringsPath)) {
+        const sstXml = await zip.getText(sharedStringsPath);
+        const sstDoc = parseXmlText(sstXml, sharedStringsPath);
+        sharedStrings = descendantsByLocalName(sstDoc, 'si').map((si) => collectText(si));
+      }
+
+      const sheetNodes = descendantsByLocalName(workbookDoc, 'sheet');
+      const sheets = sheetNodes.map((node) => {
+        const name = getAttr(node, 'name');
+        const rid = getRelId(node);
+        const rel = workbookRels.get(rid);
+        return {
+          sheetName: name,
+          sheetId: getAttr(node, 'sheetId'),
+          relId: rid,
+          path: rel?.fullPath || ''
+        };
+      }).filter((x) => x.path);
+
+      return { zip, workbookPath, sharedStrings, sheets };
+    }
+
+    async function parseWorksheet(zip, sheetInfo, sharedStrings) {
+      const xml = await zip.getText(sheetInfo.path);
+      const doc = parseXmlText(xml, sheetInfo.path);
+      const sheetData = firstDescendantByLocalName(doc, 'sheetData');
+      const rows = childElementsByLocalName(sheetData, 'row');
+      const cells = [];
+      const sharedFormulaBase = new Map();
+      let maxRow = 1;
+      let maxCol = 1;
+
+      for (const rowEl of rows) {
+        const rowNum = Number(getAttr(rowEl, 'r') || 0);
+        const cellEls = childElementsByLocalName(rowEl, 'c');
+        for (const c of cellEls) {
+          const addr = getAttr(c, 'r');
+          if (!addr) continue;
+          const pos = decodeCell(addr);
+          const row = pos.row;
+          const col = pos.col;
+          if (row > maxRow) maxRow = row;
+          if (col > maxCol) maxCol = col;
+
+          const t = getAttr(c, 't') || '';
+          const fNode = firstChildByLocalName(c, 'f');
+          const vNode = firstChildByLocalName(c, 'v');
+          const isNode = firstChildByLocalName(c, 'is');
+          const vText = vNode ? collectText(vNode) : '';
+          let formula = '';
+
+          if (fNode) {
+            const fType = getAttr(fNode, 't') || '';
+            const si = getAttr(fNode, 'si') || '';
+            const fText = collectText(fNode);
+            if (fType === 'shared') {
+              if (fText) {
+                formula = fText;
+                if (si) sharedFormulaBase.set(si, { formula, row, col });
+              } else if (si && sharedFormulaBase.has(si)) {
+                const base = sharedFormulaBase.get(si);
+                formula = shiftFormulaToCell(base.formula, base.row, base.col, row, col);
+              }
+            } else {
+              formula = fText;
+            }
+          }
+
+          let value = '';
+          if (t === 's') value = sharedStrings[Number(vText) || 0] ?? vText;
+          else if (t === 'inlineStr') value = collectText(isNode);
+          else if (t === 'b') value = vText === '1' ? 'TRUE' : vText === '0' ? 'FALSE' : vText;
+          else value = vText;
+
+          const cell = {
+            t: t || (formula ? 'n' : ''),
+            f: formula || '',
+            v: value,
+            w: value
+          };
+          cells.push({ row, col, cell });
+        }
+      }
+
+      const dimNode = firstDescendantByLocalName(doc, 'dimension');
+      const dimRef = getAttr(dimNode, 'ref');
+      const range = dimRef
+        ? decodeRange(dimRef)
+        : { s: { r: 0, c: 0 }, e: { r: Math.max(0, maxRow - 1), c: Math.max(0, maxCol - 1) } };
+
+      return {
+        sheetName: sheetInfo.sheetName,
+        path: sheetInfo.path,
+        range,
+        cells
+      };
+    }
+
+    async function analyzeWorkbook(file, opts) {
+      setStatus('파일 구조를 읽는 중…');
+      const book = await readWorkbookParts(file);
 
       const map = new Map();
       const sheets = [];
       let formulaCellCount = 0;
       let meaningfulCellCount = 0;
 
-      for (const sheetName of wb.SheetNames) {
-        setStatus(`시트 준비 중… ${sheetName}`);
+      for (const sheetInfo of book.sheets) {
+        setStatus(`시트 읽는 중… ${sheetInfo.sheetName}`);
         await new Promise((r) => setTimeout(r, 0));
-        const ws = wb.Sheets[sheetName];
-        const rangeText = ws['!ref'] || 'A1:A1';
-        const range = XLSX.utils.decode_range(rangeText);
+        const parsed = await parseWorksheet(book.zip, sheetInfo, book.sharedStrings);
+
         const formulaCells = [];
         const nonFormulaMeaningfulCells = [];
         const formulaIndexRow = new Map();
         const formulaIndexCol = new Map();
 
-        const keys = Object.keys(ws).filter((k) => !k.startsWith('!'));
-        for (const addr of keys) {
-          const decoded = XLSX.utils.decode_cell(addr);
-          const row = decoded.r + 1;
-          const col = decoded.c + 1;
-          const meta = makeMeta(sheetName, row, col, ws[addr]);
-          map.set(keyOf(sheetName, row, col), meta);
+        for (const item of parsed.cells) {
+          const meta = makeMeta(parsed.sheetName, item.row, item.col, item.cell);
+          map.set(keyOf(parsed.sheetName, item.row, item.col), meta);
           if (meta.isMeaningful) meaningfulCellCount++;
           if (meta.isFormula) {
             formulaCells.push(meta);
             formulaCellCount++;
-            if (!formulaIndexRow.has(row)) formulaIndexRow.set(row, []);
-            if (!formulaIndexCol.has(col)) formulaIndexCol.set(col, []);
-            formulaIndexRow.get(row).push(meta);
-            formulaIndexCol.get(col).push(meta);
+            if (!formulaIndexRow.has(meta.row)) formulaIndexRow.set(meta.row, []);
+            if (!formulaIndexCol.has(meta.col)) formulaIndexCol.set(meta.col, []);
+            formulaIndexRow.get(meta.row).push(meta);
+            formulaIndexCol.get(meta.col).push(meta);
           } else if (meta.isMeaningful) {
             nonFormulaMeaningfulCells.push(meta);
           }
@@ -682,9 +1176,9 @@
         for (const arr of formulaIndexCol.values()) arr.sort((a, b) => a.row - b.row);
 
         sheets.push({
-          sheetName,
-          ws,
-          range,
+          sheetName: parsed.sheetName,
+          path: parsed.path,
+          range: parsed.range,
           formulaCells,
           nonFormulaMeaningfulCells,
           formulaIndexRow,
@@ -698,7 +1192,6 @@
       for (const sheet of sheets) {
         setStatus(`검사 중… ${sheet.sheetName}`);
         await new Promise((r) => setTimeout(r, 0));
-        let localFindings = 0;
 
         for (const meta of sheet.formulaCells) {
           const left = nearestFormula(map, meta.sheet, meta.row, meta.col, 0, -1, opts.maxGap, opts.strictBarrier);
@@ -723,7 +1216,7 @@
             });
           }
 
-          if (left && right && left.sig === right.sig && meta.sig !== left.sig) {
+          if (opts.compareRow && left && right && left.sig === right.sig && meta.sig !== left.sig) {
             const e1 = shiftFormulaToCell(left.formula, left.row, left.col, meta.row, meta.col);
             const e2 = shiftFormulaToCell(right.formula, right.row, right.col, meta.row, meta.col);
             addOrMergeFinding(findingsMap, {
@@ -741,7 +1234,7 @@
             });
           }
 
-          if (up && down && up.sig === down.sig && meta.sig !== up.sig) {
+          if (opts.compareCol && up && down && up.sig === down.sig && meta.sig !== up.sig) {
             const e1 = shiftFormulaToCell(up.formula, up.row, up.col, meta.row, meta.col);
             const e2 = shiftFormulaToCell(down.formula, down.row, down.col, meta.row, meta.col);
             addOrMergeFinding(findingsMap, {
@@ -767,7 +1260,7 @@
             const up = nearestFormula(map, meta.sheet, meta.row, meta.col, -1, 0, opts.maxGap, opts.strictBarrier);
             const down = nearestFormula(map, meta.sheet, meta.row, meta.col, 1, 0, opts.maxGap, opts.strictBarrier);
 
-            if (left && right && left.sig === right.sig) {
+            if (opts.compareRow && left && right && left.sig === right.sig) {
               const e1 = shiftFormulaToCell(left.formula, left.row, left.col, meta.row, meta.col);
               const e2 = shiftFormulaToCell(right.formula, right.row, right.col, meta.row, meta.col);
               addOrMergeFinding(findingsMap, {
@@ -785,7 +1278,7 @@
               });
             }
 
-            if (up && down && up.sig === down.sig) {
+            if (opts.compareCol && up && down && up.sig === down.sig) {
               const e1 = shiftFormulaToCell(up.formula, up.row, up.col, meta.row, meta.col);
               const e2 = shiftFormulaToCell(down.formula, down.row, down.col, meta.row, meta.col);
               addOrMergeFinding(findingsMap, {
@@ -806,65 +1299,66 @@
         }
 
         if (opts.detectBlankGap) {
-          for (const [row, arr] of sheet.formulaIndexRow.entries()) {
-            for (let i = 0; i < arr.length - 1; i++) {
-              const a = arr[i];
-              const b = arr[i + 1];
-              if (b.col - a.col !== 2) continue;
-              if (a.sig !== b.sig) continue;
-              const mid = map.get(keyOf(sheet.sheetName, row, a.col + 1));
-              if (mid && mid.isMeaningful) continue;
-              addOrMergeFinding(findingsMap, {
-                sheet: sheet.sheetName,
-                row,
-                col: a.col + 1,
-                addr: addrOf(row, a.col + 1),
-                currentFormula: '',
-                currentValue: '',
-                explicitError: false,
-                axes: ['row'],
-                expected: [shiftFormulaToCell(a.formula, a.row, a.col, row, a.col + 1)],
-                evidence: [`행 기준으로 ${a.addr} 와 ${b.addr} 사이에 수식 한 칸이 비어 보입니다.`],
-                flags: ['blank-gap']
-              });
+          if (opts.compareRow) {
+            for (const [row, arr] of sheet.formulaIndexRow.entries()) {
+              for (let i = 0; i < arr.length - 1; i++) {
+                const a = arr[i];
+                const b = arr[i + 1];
+                if (b.col - a.col !== 2) continue;
+                if (a.sig !== b.sig) continue;
+                const mid = map.get(keyOf(sheet.sheetName, row, a.col + 1));
+                if (mid && mid.isMeaningful) continue;
+                addOrMergeFinding(findingsMap, {
+                  sheet: sheet.sheetName,
+                  row,
+                  col: a.col + 1,
+                  addr: addrOf(row, a.col + 1),
+                  currentFormula: '',
+                  currentValue: '',
+                  explicitError: false,
+                  axes: ['row'],
+                  expected: [shiftFormulaToCell(a.formula, a.row, a.col, row, a.col + 1)],
+                  evidence: [`행 기준으로 ${a.addr} 와 ${b.addr} 사이에 수식 한 칸이 비어 보입니다.`],
+                  flags: ['blank-gap']
+                });
+              }
             }
           }
 
-          for (const [col, arr] of sheet.formulaIndexCol.entries()) {
-            for (let i = 0; i < arr.length - 1; i++) {
-              const a = arr[i];
-              const b = arr[i + 1];
-              if (b.row - a.row !== 2) continue;
-              if (a.sig !== b.sig) continue;
-              const mid = map.get(keyOf(sheet.sheetName, a.row + 1, col));
-              if (mid && mid.isMeaningful) continue;
-              addOrMergeFinding(findingsMap, {
-                sheet: sheet.sheetName,
-                row: a.row + 1,
-                col,
-                addr: addrOf(a.row + 1, col),
-                currentFormula: '',
-                currentValue: '',
-                explicitError: false,
-                axes: ['col'],
-                expected: [shiftFormulaToCell(a.formula, a.row, a.col, a.row + 1, col)],
-                evidence: [`열 기준으로 ${a.addr} 와 ${b.addr} 사이에 수식 한 칸이 비어 보입니다.`],
-                flags: ['blank-gap']
-              });
+          if (opts.compareCol) {
+            for (const [col, arr] of sheet.formulaIndexCol.entries()) {
+              for (let i = 0; i < arr.length - 1; i++) {
+                const a = arr[i];
+                const b = arr[i + 1];
+                if (b.row - a.row !== 2) continue;
+                if (a.sig !== b.sig) continue;
+                const mid = map.get(keyOf(sheet.sheetName, a.row + 1, col));
+                if (mid && mid.isMeaningful) continue;
+                addOrMergeFinding(findingsMap, {
+                  sheet: sheet.sheetName,
+                  row: a.row + 1,
+                  col,
+                  addr: addrOf(a.row + 1, col),
+                  currentFormula: '',
+                  currentValue: '',
+                  explicitError: false,
+                  axes: ['col'],
+                  expected: [shiftFormulaToCell(a.formula, a.row, a.col, a.row + 1, col)],
+                  evidence: [`열 기준으로 ${a.addr} 와 ${b.addr} 사이에 수식 한 칸이 비어 보입니다.`],
+                  flags: ['blank-gap']
+                });
+              }
             }
           }
         }
 
-        for (const entry of findingsMap.values()) {
-          if (entry.sheet === sheet.sheetName) localFindings++;
-        }
-
+        const localFindings = Array.from(findingsMap.values()).filter((entry) => entry.sheet === sheet.sheetName).length;
         sheetStats.push({
           sheetName: sheet.sheetName,
           formulaCells: sheet.formulaCells.length,
           meaningfulCells: sheet.formulaCells.length + sheet.nonFormulaMeaningfulCells.length,
           findings: localFindings,
-          usedRange: XLSX.utils.encode_range(sheet.range)
+          usedRange: encodeRange(sheet.range)
         });
       }
 
@@ -916,36 +1410,46 @@
 
       return {
         workbookName: file.name,
-        sheetCount: wb.SheetNames.length,
+        sheetCount: book.sheets.length,
         formulaCellCount,
         meaningfulCellCount,
         findings,
-        sheetStats
+        sheetStats,
+        supportedFormats: ['.xlsx', '.xlsm'],
+        comparisonModes: { row: !!opts.compareRow, col: !!opts.compareCol }
       };
+    }
+
+
+    function comparisonModeText(summary) {
+      const modes = [];
+      if (summary?.comparisonModes?.row) modes.push('행 기준 좌우 비교');
+      if (summary?.comparisonModes?.col) modes.push('열 기준 상하 비교');
+      return modes.join(' / ') || '행/열 비교 끔 (명시적 오류와 기타 옵션 기반 탐지만 수행)';
     }
 
     function renderSummary(summary) {
       const high = summary.findings.filter((x) => x.confidence === '높음').length;
-      const medium = summary.findings.filter((x) => x.confidence === '보통').length;
       const errorCount = summary.findings.filter((x) => x.issue === 'Excel 오류 값/참조 오류').length;
 
       ui.summaryHost.innerHTML = `
-        <div class="card">
-          <div class="toolbar">
-            <div class="left">
+        <div class="ffc-card">
+          <div class="ffc-toolbar">
+            <div class="ffc-toolbar-left">
               <div style="font-weight: 800; font-size: 1.05rem;">검사 요약</div>
-              <span class="pill ${summary.findings.length ? 'medium' : 'ok'}">${summary.findings.length ? '의심 셀 발견' : '이상 패턴 없음'}</span>
+              <span class="ffc-pill ${summary.findings.length ? 'is-medium' : 'is-ok'}">${summary.findings.length ? '의심 셀 발견' : '이상 패턴 없음'}</span>
             </div>
-            <div class="right muted">파일: ${escapeHtml(summary.workbookName)}</div>
+            <div class="ffc-toolbar-right ffc-muted">파일: ${escapeHtml(summary.workbookName)}</div>
           </div>
-          <div class="kpis">
-            <div class="kpi"><div class="num">${summary.sheetCount.toLocaleString('ko-KR')}</div><div class="lbl">시트 수</div></div>
-            <div class="kpi"><div class="num">${summary.formulaCellCount.toLocaleString('ko-KR')}</div><div class="lbl">수식 셀 수</div></div>
-            <div class="kpi"><div class="num">${summary.findings.length.toLocaleString('ko-KR')}</div><div class="lbl">의심 셀 수</div></div>
-            <div class="kpi"><div class="num">${high.toLocaleString('ko-KR')}</div><div class="lbl">높음 신뢰도</div></div>
-            <div class="kpi"><div class="num">${errorCount.toLocaleString('ko-KR')}</div><div class="lbl">명시적 오류(#REF! 등)</div></div>
+          <div class="ffc-kpis">
+            <div class="ffc-kpi"><div class="ffc-kpi-num">${summary.sheetCount.toLocaleString('ko-KR')}</div><div class="ffc-kpi-label">시트 수</div></div>
+            <div class="ffc-kpi"><div class="ffc-kpi-num">${summary.formulaCellCount.toLocaleString('ko-KR')}</div><div class="ffc-kpi-label">수식 셀 수</div></div>
+            <div class="ffc-kpi"><div class="ffc-kpi-num">${summary.findings.length.toLocaleString('ko-KR')}</div><div class="ffc-kpi-label">의심 셀 수</div></div>
+            <div class="ffc-kpi"><div class="ffc-kpi-num">${high.toLocaleString('ko-KR')}</div><div class="ffc-kpi-label">높음 신뢰도</div></div>
+            <div class="ffc-kpi"><div class="ffc-kpi-num">${errorCount.toLocaleString('ko-KR')}</div><div class="ffc-kpi-label">명시적 오류(#REF! 등)</div></div>
           </div>
-          <div class="hint" style="margin-top: 14px;">
+          <div class="ffc-hint" style="margin-top: 14px;">
+            현재 검사 방향: <strong>${escapeHtml(comparisonModeText(summary))}</strong><br/>
             “의심”은 확정 오류가 아니라 패턴 이탈 신호입니다. 합계행, 누계, 예외 처리 행/열은 사람이 한 번 더 보는 게 맞습니다.
           </div>
         </div>
@@ -954,15 +1458,15 @@
 
     function renderSheetStats(summary) {
       ui.sheetHost.innerHTML = `
-        <div class="card">
+        <div class="ffc-card">
           <div style="font-weight: 800; font-size: 1.05rem; margin-bottom: 12px;">시트별 현황</div>
-          <div class="sheet-grid">
+          <div class="ffc-sheet-grid">
             ${summary.sheetStats.map((s) => `
-              <div class="sheet-card">
+              <div class="ffc-sheet-card">
                 <h3>${escapeHtml(s.sheetName)}</h3>
-                <div class="muted">사용 범위: ${escapeHtml(s.usedRange)}</div>
-                <div class="sheet-stat"><span>수식 셀</span><strong>${s.formulaCells.toLocaleString('ko-KR')}</strong></div>
-                <div class="sheet-stat"><span>의심 셀</span><strong>${s.findings.toLocaleString('ko-KR')}</strong></div>
+                <div class="ffc-muted">사용 범위: ${escapeHtml(s.usedRange)}</div>
+                <div class="ffc-sheet-stat"><span>수식 셀</span><strong>${s.formulaCells.toLocaleString('ko-KR')}</strong></div>
+                <div class="ffc-sheet-stat"><span>의심 셀</span><strong>${s.findings.toLocaleString('ko-KR')}</strong></div>
               </div>
             `).join('')}
           </div>
@@ -970,12 +1474,28 @@
       `;
     }
 
+    function rowToHtml(row) {
+      const pillClass = row.confidence === '높음' ? 'is-high' : row.confidence === '보통' ? 'is-medium' : 'is-low';
+      return `
+        <tr>
+          <td>${escapeHtml(row.sheet)}</td>
+          <td><strong>${escapeHtml(row.addr)}</strong><div class="ffc-muted">R${row.row} C${row.col}</div></td>
+          <td>${escapeHtml(row.issue)}</td>
+          <td><span class="ffc-pill ${pillClass}">${escapeHtml(row.confidence)}</span></td>
+          <td>${row.currentFormula ? `<div class="ffc-formula"><code>${escapeHtml(row.currentFormula)}</code></div>` : '<span class="ffc-muted">(수식 없음)</span>'}</td>
+          <td>${row.currentValue ? `<div class="ffc-formula"><code>${escapeHtml(row.currentValue)}</code></div>` : '<span class="ffc-muted">(빈 셀)</span>'}</td>
+          <td>${row.expectedFormula ? `<div class="ffc-formula"><code>=${escapeHtml(row.expectedFormula)}</code></div>` : '<span class="ffc-muted">(추정 불가)</span>'}</td>
+          <td>${escapeHtml(row.evidence)}</td>
+        </tr>
+      `;
+    }
+
     function renderResults(summary) {
       const findings = summary.findings;
       if (!findings.length) {
         ui.resultHost.innerHTML = `
-          <div class="card">
-            <div class="empty">눈에 띄는 패턴 이탈 셀을 찾지 못했습니다.</div>
+          <div class="ffc-card">
+            <div class="ffc-empty">눈에 띄는 패턴 이탈 셀을 찾지 못했습니다.</div>
           </div>
         `;
         return;
@@ -983,25 +1503,25 @@
 
       const sheetButtons = ['전체', ...Array.from(new Set(findings.map((x) => x.sheet)))];
       ui.resultHost.innerHTML = `
-        <div class="card">
-          <div class="toolbar">
-            <div class="left">
+        <div class="ffc-card">
+          <div class="ffc-toolbar">
+            <div class="ffc-toolbar-left">
               <div style="font-weight: 800; font-size: 1.05rem;">의심 셀 목록</div>
-              <span class="pill medium">총 ${findings.length.toLocaleString('ko-KR')}건</span>
+              <span class="ffc-pill is-medium">총 ${findings.length.toLocaleString('ko-KR')}건</span>
             </div>
-            <div class="right muted">헤더를 기준으로 정렬된 표입니다.</div>
+            <div class="ffc-toolbar-right ffc-muted">현재 검사 방향: ${escapeHtml(comparisonModeText(summary))}</div>
           </div>
-          <div class="toolbar" style="margin-top: -2px;">
-            <div class="left" id="sheetFilters">
-              ${sheetButtons.map((name, idx) => `<button type="button" class="chip ${idx === 0 ? 'active' : ''}" data-sheet="${escapeHtml(name)}">${escapeHtml(name)}</button>`).join('')}
+          <div class="ffc-toolbar" style="margin-top: -2px;">
+            <div class="ffc-toolbar-left" id="sheetFilters">
+              ${sheetButtons.map((name, idx) => `<button type="button" class="ffc-chip ${idx === 0 ? 'is-active' : ''}" data-sheet="${escapeHtml(name)}">${escapeHtml(name)}</button>`).join('')}
             </div>
-            <div class="right">
-              <span class="pill high">높음</span>
-              <span class="pill medium">보통</span>
-              <span class="pill low">낮음</span>
+            <div class="ffc-toolbar-right">
+              <span class="ffc-pill is-high">높음</span>
+              <span class="ffc-pill is-medium">보통</span>
+              <span class="ffc-pill is-low">낮음</span>
             </div>
           </div>
-          <div class="table-wrap">
+          <div class="ffc-table-wrap">
             <table>
               <thead>
                 <tr>
@@ -1022,40 +1542,25 @@
           </div>
           <details style="margin-top: 12px;">
             <summary>판정 기준 간단 설명</summary>
-            <div class="muted">
-              좌우 또는 상하 이웃 수식의 상대참조 패턴이 서로 같은데 현재 셀이 다르면 “패턴 이탈”로 보고,
+            <div class="ffc-muted">
+              행 비교가 켜져 있으면 같은 행 안에서 좌우 이웃 수식 패턴을 비교하고,
+              열 비교가 켜져 있으면 같은 열 안에서 상하 이웃 수식 패턴을 비교합니다.
               그 자리에 수식이 없으면 “수식 누락/값 덮어씀 의심”으로 표시합니다.
             </div>
           </details>
         </div>
       `;
 
-      const chips = Array.from(document.querySelectorAll('#sheetFilters .chip'));
+      const chips = Array.from(document.querySelectorAll('#sheetFilters .ffc-chip'));
       chips.forEach((chip) => {
         chip.addEventListener('click', () => {
-          chips.forEach((c) => c.classList.remove('active'));
-          chip.classList.add('active');
+          chips.forEach((c) => c.classList.remove('is-active'));
+          chip.classList.add('is-active');
           const sheet = chip.dataset.sheet;
           const filtered = sheet === '전체' ? findings : findings.filter((x) => x.sheet === sheet);
           document.getElementById('resultTbody').innerHTML = filtered.map((row) => rowToHtml(row)).join('');
         });
       });
-    }
-
-    function rowToHtml(row) {
-      const pillClass = row.confidence === '높음' ? 'high' : row.confidence === '보통' ? 'medium' : 'low';
-      return `
-        <tr>
-          <td>${escapeHtml(row.sheet)}</td>
-          <td><strong>${escapeHtml(row.addr)}</strong><div class="muted">R${row.row} C${row.col}</div></td>
-          <td>${escapeHtml(row.issue)}</td>
-          <td><span class="pill ${pillClass}">${escapeHtml(row.confidence)}</span></td>
-          <td>${row.currentFormula ? `<div class="formula"><code>${escapeHtml(row.currentFormula)}</code></div>` : '<span class="muted">(수식 없음)</span>'}</td>
-          <td>${row.currentValue ? `<div class="formula"><code>${escapeHtml(row.currentValue)}</code></div>` : '<span class="muted">(빈 셀)</span>'}</td>
-          <td>${row.expectedFormula ? `<div class="formula"><code>=${escapeHtml(row.expectedFormula)}</code></div>` : '<span class="muted">(추정 불가)</span>'}</td>
-          <td>${escapeHtml(row.evidence)}</td>
-        </tr>
-      `;
     }
 
     function toCsv(rows) {
@@ -1104,6 +1609,8 @@
       try {
         const opts = {
           maxGap: Math.max(1, Math.min(5, Number(ui.maxGap.value) || 2)),
+          compareRow: ui.compareRow.checked,
+          compareCol: ui.compareCol.checked,
           detectOverwritten: ui.detectOverwritten.checked,
           detectBlankGap: ui.detectBlankGap.checked,
           strictBarrier: ui.strictBarrier.checked
@@ -1117,13 +1624,18 @@
         renderResults(summary);
         ui.downloadCsvBtn.disabled = false;
         ui.copyJsonBtn.disabled = false;
-        setStatus(`검사 완료: 의심 셀 ${summary.findings.length.toLocaleString('ko-KR')}건`);
+
+        const axisBits = [];
+        if (opts.compareRow) axisBits.push('행');
+        if (opts.compareCol) axisBits.push('열');
+        const axisText = axisBits.length ? axisBits.join('/') : '행/열 비교 없음';
+        setStatus(`검사 완료: 의심 셀 ${summary.findings.length.toLocaleString('ko-KR')}건 · 비교 기준 ${axisText}`);
       } catch (err) {
         console.error(err);
         setStatus('오류가 발생했습니다. 파일 형식 또는 시트 구조를 확인해 주세요.');
         ui.resultHost.innerHTML = `
-          <div class="card">
-            <div class="empty">오류 메시지: ${escapeHtml(err?.message || String(err))}</div>
+          <div class="ffc-card">
+            <div class="ffc-empty">오류 메시지: ${escapeHtml(err?.message || String(err))}</div>
           </div>
         `;
       } finally {
@@ -1140,7 +1652,7 @@
       ui.dropzone.addEventListener(evtName, (e) => {
         e.preventDefault();
         e.stopPropagation();
-        ui.dropzone.classList.add('dragover');
+        ui.dropzone.classList.add('is-dragover');
       });
     });
 
@@ -1148,7 +1660,7 @@
       ui.dropzone.addEventListener(evtName, (e) => {
         e.preventDefault();
         e.stopPropagation();
-        ui.dropzone.classList.remove('dragover');
+        ui.dropzone.classList.remove('is-dragover');
       });
     });
 
@@ -1156,9 +1668,13 @@
       const file = e.dataTransfer?.files?.[0] || null;
       if (!file) return;
       currentFile = file;
-      const dt = new DataTransfer();
-      dt.items.add(file);
-      ui.fileInput.files = dt.files;
+      try {
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        ui.fileInput.files = dt.files;
+      } catch (_) {
+        // 일부 브라우저는 files 재할당을 막습니다. 선택 상태 표시는 currentFile로 충분합니다.
+      }
       refreshSelectedFileText();
     });
 
@@ -1184,7 +1700,6 @@
     refreshSelectedFileText();
   </script>
 
-  
 <script src="/static/footer.js"></script>
 <script src="/static/global-loader.js?v=1"></script>
 </body>
