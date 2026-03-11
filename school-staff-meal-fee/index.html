@@ -6,10 +6,10 @@
   <title>교직원 급식비 집계 및 에듀파인 업로드 파일 생성기</title>
 
 
-<link rel="icon" href="/static/favicon.ico" />
+
+  <link rel="icon" href="/static/favicon.ico" />
   <link rel="stylesheet" href="/static/style.css" />
-
-
+  
   <style>
     :root{
       --bg:#ffffff;
@@ -17,16 +17,19 @@
       --muted:#6b7280;
       --line:#e5e7eb;
       --card:#f9fafb;
+
       --focus:#2563eb33;
       --active:#2563eb;
       --computed:#f3f4f6;
+
       --warn:#b45309;
       --ok:#047857;
       --bad:#b91c1c;
+
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
       --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Noto Sans KR", "맑은 고딕", sans-serif;
 
-      /* 고정 컬럼 폭(틀고정 left 오프셋 계산용) */
+      /* 틀고정 컬럼 폭 */
       --w-no: 72px;
       --w-name: 140px;
     }
@@ -39,6 +42,7 @@
       color:var(--ink);
       line-height:1.5;
     }
+
     header{
       position:sticky;
       top:0;
@@ -81,6 +85,7 @@
       font-size:16px;
       font-weight:900;
     }
+
     .row{
       display:flex;
       flex-wrap:wrap;
@@ -98,6 +103,7 @@
       color:var(--muted);
       font-weight:800;
     }
+
     input[type="text"], input[type="number"], textarea, select{
       padding:10px 12px;
       border:1px solid var(--line);
@@ -114,6 +120,7 @@
       background:#f8fafc;
       color:#111827;
     }
+
     textarea{
       width:100%;
       min-height:120px;
@@ -197,7 +204,7 @@
       font-weight:900;
     }
 
-    /* ===== Sheet-like grid ===== */
+    /* ===== Sheet ===== */
     .sheetWrap{
       border:1px solid var(--line);
       border-radius:14px;
@@ -206,6 +213,13 @@
       max-width:100%;
       max-height: 62vh;
       position:relative;
+    }
+    .sheetWrap:focus{
+      outline:none;
+    }
+    .sheetWrap:focus-visible{
+      box-shadow:0 0 0 3px var(--focus);
+      border-color:#93c5fd;
     }
 
     table.sheet{
@@ -258,14 +272,18 @@
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
+      user-select:none; /* 선택은 편집 시 editor에서 */
     }
-    .cell[contenteditable="true"]{ cursor:text; }
+
     .cell.numeric{ text-align:right; font-variant-numeric: tabular-nums; }
     .cell.center{ text-align:center; }
 
     .cell.computed{
       background:var(--computed);
       color:#111827;
+    }
+    .cell.editable{
+      background:#fff;
     }
 
     .cell.active{
@@ -275,8 +293,13 @@
     .cell.computed.active{
       background:#e5e7eb;
     }
+    .cell.editing{
+      box-shadow: inset 0 0 0 2px var(--active);
+      background:#fff;
+    }
 
-    .cell[contenteditable="true"]:empty::before{
+    /* placeholder */
+    .cell.editable:empty::before{
       content: attr(data-ph);
       color:#9ca3af;
     }
@@ -306,12 +329,28 @@
       z-index:30;
       background:#f8fafc;
     }
-
     tfoot .sticky-col-0,
     tfoot .sticky-col-1{
       z-index:25;
       background:#f8fafc;
     }
+
+    /* 셀 에디터(오버레이) */
+    .cell-editor{
+      position: fixed;
+      z-index: 9999;
+      display:none;
+      box-sizing:border-box;
+      font: inherit;
+      padding:10px 8px;
+      border:2px solid var(--active);
+      border-radius:10px;
+      background:#fff;
+      outline:none;
+      box-shadow:0 0 0 3px var(--focus);
+    }
+    .cell-editor.is-visible{ display:block; }
+    .cell-editor.numeric{ text-align:right; font-variant-numeric: tabular-nums; }
 
     .log{
       font-family:var(--mono);
@@ -340,10 +379,9 @@
 <body>
 <header>
   <div class="wrap">
-    <h1>교직원 급식비 산정 · 에듀파인 업로드 엑셀 생성기</h1>
+    <h1>교직원 급식비 집계 및 에듀파인 업로드 파일 생성기</h1>
     <p class="muted">
-      ·엑셀 파일에 이름 써서 셀 복사하고 화면에 복붙하면 자동으로 입력됨 <br/>
-      ·결과 엑셀 파일은 급식비 산정내역 1부 및 에듀파인 업로드 서식 2부 (식품비/운영비) 생성됨
+      엑셀 붙여넣기 가능함
     </p>
   </div>
 </header>
@@ -353,72 +391,79 @@
     <div class="grid">
 
       <section class="card">
-        <h2>1. 기본값 입력</h2>
+        <h2>1) 기본값 입력</h2>
 
         <div class="row">
           <div class="field">
-            <label>징수 월</label>
+            <label>대상월(파일명)</label>
             <input id="inpMonth" type="text" placeholder="예: 2025-12" />
           </div>
           <div class="field">
-            <label>급식 일수 (기본값)</label>
+            <label>급식일수(기본값)</label>
             <input id="inpDays" type="number" min="0" step="1" placeholder="예: 22" />
           </div>
           <div class="field">
-            <label>식품비 단가</label>
+            <label>식품비 단가(1일)</label>
             <input id="inpFoodUnit" type="number" min="0" step="1" placeholder="예: 3990" />
           </div>
           <div class="field">
-            <label>운영비 단가</label>
+            <label>운영비 단가(1일)</label>
             <input id="inpOpUnit" type="number" min="0" step="1" placeholder="예: 440" />
           </div>
           <div class="field">
-            <label>1식 단가 (식품비+운영비)</label>
+            <label>1식 단가(자동)</label>
             <input id="inpMealUnit" type="text" readonly value="0" />
           </div>
         </div>
 
         <div class="row" style="margin-top:10px">
           <div class="field" style="min-width:260px;flex:1">
-            <label>징수기간 입력</label>
-            <input id="inpPeriod" type="text" placeholder="예: 2026.3.1.~2026.3.31." />
+            <label>징수기간(선택)</label>
+            <input id="inpPeriod" type="text" placeholder="예: 12.1.~12.31." />
           </div>
           <div class="field" style="min-width:220px">
-            <label>출금 예정 일자</label>
-            <input id="inpTransfer" type="text" placeholder="예: 2026.3.10." />
+            <label>이체일(선택)</label>
+            <input id="inpTransfer" type="text" placeholder="예: 2025.12.8.(월)" />
           </div>
 
           <div class="btns">
-            <button id="btnRecalc" class="primary">계산하기</button>
-            <button id="btnApplyDefaultDays" class="ghost">급식일수 일괄 적용</button>
+            <span class="pill" title="원본 엑셀 규칙: 식품비/총액은 10원 단위 절사, 운영비는 절사 없음">
+              10원 단위 절사 규칙(원본)
+            </span>
+            <button id="btnRecalc" class="primary" type="button">재계산</button>
+            <button id="btnApplyDefaultDays" class="ghost" type="button">빈 급식일수에 기본값 적용</button>
           </div>
         </div>
 
+        <p class="note">
+          급식일수 칸이 비어 있으면 “기본값 급식일수”를 사용합니다.
+          급식일수에 <code>=$D$3-3</code> 같은 형태도 붙여넣으면 자동 계산됩니다.
+        </p>
       </section>
 
       <section class="card">
-        <h2>2. 징수 대상자 명단 입력</h2>
+        <h2>2) 명단 입력(엑셀 → 붙여넣기)</h2>
 
         <div class="row" style="align-items:flex-start">
           <div class="field" style="flex:1; min-width:320px">
-            <label>엑셀에서 복사하고 여기에 붙여넣기 가능합니다.</label>
+            <label>엑셀에서 복사한 표를 그대로 Ctrl+V (예: 성명/직종/급식일수)</label>
             <textarea id="taPaste" placeholder="예시)
 성명	직종	급식일수
-신경호	교사	=$D$3
-김성진	행정실무사	=$D$3-2
+홍길동	교사	=$D$3
+김철수	행정실무사	=$D$3-2
 
 ※ 헤더(성명/직종/급식일수)가 포함돼도 자동으로 건너뜁니다.
 ※ 열이 1개면 '성명', 2~4개면 자동 매핑합니다."></textarea>
           </div>
 
-          <div class="btns" style="min-width:220px; align-items:flex-start">
-            <button id="btnPasteOverwrite" class="primary">붙여넣기 → 명단 덮어쓰기</button>
-            <button id="btnPasteAppend" class="ghost">붙여넣기 → 아래에 추가</button>
-            <button id="btnPasteClear" class="warn">붙여넣기 내용 지우기</button>
+          <div class="btns" style="min-width:260px; align-items:flex-start">
+            <button id="btnPasteOverwrite" class="primary" type="button">붙여넣기 → 명단 덮어쓰기</button>
+            <button id="btnPasteAppend" class="ghost" type="button">붙여넣기 → 아래에 추가</button>
+            <button id="btnPasteClear" class="warn" type="button">붙여넣기 내용 지우기</button>
 
             <div style="height:8px"></div>
 
-            <span class="pill">팁: 아래 표(성명 칸) 클릭 후 Ctrl+V 해도 됩니다</span>
+            <span class="pill">팁: 아래 표에서 원하는 셀 선택 → Ctrl+V도 됩니다</span>
           </div>
         </div>
 
@@ -436,7 +481,7 @@
               </select>
             </div>
             <div class="btns">
-              <button id="btnImportSheet" class="primary" disabled>선택 시트 불러오기</button>
+              <button id="btnImportSheet" class="primary" type="button" disabled>선택 시트 불러오기</button>
             </div>
           </div>
           <p class="note">
@@ -446,28 +491,28 @@
       </section>
 
       <section class="card">
-        <h2>3) 교직원 명단 편집 (헤더/순번/성명 틀고정 · 방향키 이동)</h2>
+        <h2>3) 교직원 명단 편집 (엑셀 느낌)</h2>
 
         <div class="btns" style="margin-bottom:10px">
           <div class="field" style="min-width:140px">
             <label>행 추가 개수</label>
             <input id="inpAddN" type="number" min="1" step="1" value="5" />
           </div>
-          <button id="btnAddRows">행 추가(스크롤 유지)</button>
-          <button id="btnDelRow" class="warn">현재 행 삭제</button>
+          <button id="btnAddRows" type="button">행 추가(스크롤 유지)</button>
+          <button id="btnDelRow" class="warn" type="button">현재 행 삭제</button>
 
-          <span class="pill">방향키: 이동 · Enter: 아래 · Tab: 오른쪽 · Ctrl+V: 붙여넣기(자동 행 확장)</span>
+          <span class="pill">클릭=선택 · 더블클릭/F2=편집 · Enter/Tab=이동 · Ctrl+V=범위 붙여넣기</span>
         </div>
 
         <div class="btns" style="margin-bottom:10px">
-          <button id="btnSortName" class="ghost">가나다 정렬</button>
-          <button id="btnSortPrincipalFirst" class="ghost">교장/교감 최상단 + 나머지 가나다</button>
-          <button id="btnClearAll" class="ghost">전체 초기화</button>
+          <button id="btnSortName" class="ghost" type="button">가나다 정렬</button>
+          <button id="btnSortPrincipalFirst" class="ghost" type="button">교장/교감 최상단 + 나머지 가나다</button>
+          <button id="btnClearAll" class="ghost" type="button">전체 초기화</button>
         </div>
 
-        <div class="sheetWrap" id="sheetWrap" aria-label="교직원 급식비 입력 그리드">
+        <div class="sheetWrap" id="sheetWrap" tabindex="0" aria-label="교직원 급식비 입력 그리드">
           <table class="sheet" role="grid" aria-readonly="false">
-            <colgroup id="gridCols">
+            <colgroup>
               <col class="c-no">
               <col class="c-name">
               <col class="c-job">
@@ -496,19 +541,20 @@
       <section class="card">
         <h2>4) 다운로드</h2>
         <div class="btns">
-          <button id="btnDlSummary" class="primary">① 징수내역 집계 엑셀 다운로드</button>
-          <button id="btnDlFood" class="primary">② 에듀파인 식품비 업로드 엑셀 다운로드</button>
-          <button id="btnDlOp" class="primary">③ 에듀파인 운영비 업로드 엑셀 다운로드</button>
+          <button id="btnDlSummary" class="primary" type="button">① 징수내역 집계 엑셀 다운로드</button>
+          <button id="btnDlFood" class="primary" type="button">② 에듀파인 식품비 업로드 엑셀 다운로드</button>
+          <button id="btnDlOp" class="primary" type="button">③ 에듀파인 운영비 업로드 엑셀 다운로드</button>
         </div>
 
         <p class="note">
           에듀파인 업로드용 템플릿은 내장되어 있습니다.
-          (시트명: <code>학교대상수납요구서식</code>, 헤더: 선택/*주야/*계열/*학과/*학년/*반/*번호/*성명/*대상금액)
+          (시트명: <code>학교대상수납요구서식</code>)
         </p>
 
         <p class="note">
-          집계 엑셀 상단 셀 위치 요구사항 반영:
-          <code>G3=이체일자</code>, <code>H3=이체일 입력값</code>, <code>D4=운영비 단가</code>, <code>E4=운영비 단가 입력값</code>
+          집계 엑셀 상단 셀 위치 반영:
+          <code>G3=이체일자</code>, <code>H3=이체일 입력값</code>,
+          <code>D4=운영비 단가</code>, <code>E4=운영비 단가 입력값</code>
         </p>
       </section>
 
@@ -520,6 +566,9 @@
     </div>
   </div>
 </main>
+
+<!-- 오버레이 셀 에디터 -->
+<input id="cellEditor" class="cell-editor" type="text" autocomplete="off" spellcheck="false" />
 
 <!-- SheetJS (XLSX) -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -565,7 +614,6 @@
     if (n === null) return fallback;
     return Math.round(n);
   }
-
   function roundDown10(x){
     const n = Number(x);
     if (!Number.isFinite(n)) return 0;
@@ -580,7 +628,6 @@
     if (!s) return defaultDays;
 
     if (/^\d+\s*일$/.test(s)) return Math.max(0, parseInt(s,10));
-
     if (s.startsWith("=")) s = s.slice(1);
 
     // $D$3 / D3를 defaultDays로 치환
@@ -609,13 +656,13 @@
   // ==========
   const COLS = [
     { key:"no",    label:"순번",     editable:false, cls:"center" },
-    { key:"name",  label:"성명",     editable:true,  cls:"" },
-    { key:"job",   label:"직종",     editable:true,  cls:"" },
+    { key:"name",  label:"성명",     editable:true,  cls:"",        ph:"" },
+    { key:"job",   label:"직종",     editable:true,  cls:"",        ph:"" },
     { key:"days",  label:"급식일수", editable:true,  cls:"numeric", ph:"(기본값)" },
     { key:"food",  label:"식품비",   editable:false, cls:"numeric computed" },
     { key:"op",    label:"운영비",   editable:false, cls:"numeric computed" },
     { key:"total", label:"금액",     editable:false, cls:"numeric computed" },
-    { key:"note",  label:"비고",     editable:true,  cls:"" },
+    { key:"note",  label:"비고",     editable:true,  cls:"",        ph:"" },
   ];
 
   // ==========
@@ -624,6 +671,8 @@
   const state = {
     rows: [],
     active: { r: 0, c: 1 },
+    editing: false,
+    edit: null, // {r,c,key,original}
     rosterWb: null,
     rosterBuf: null,
   };
@@ -632,6 +681,7 @@
   // DOM
   // ==========
   const sheetWrap = $("#sheetWrap");
+  const editor = $("#cellEditor");
 
   const inpMonth = $("#inpMonth");
   const inpDays = $("#inpDays");
@@ -675,6 +725,8 @@
     return { no: 0, name:"", job:"", days:"", food:0, op:0, total:0, note:"" };
   }
 
+  function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+
   // ==========
   // Render
   // ==========
@@ -698,7 +750,8 @@
 
       const div = document.createElement("div");
       div.className = "cell " + (COLS[c].cls || "");
-      div.setAttribute("contenteditable","false");
+      div.dataset.row = "foot";
+      div.dataset.col = String(c);
 
       if (c === 0){
         div.textContent = "합계";
@@ -710,43 +763,59 @@
       }else{
         div.textContent = "";
       }
+
       td.appendChild(div);
       gridFoot.appendChild(td);
     }
   }
 
-  function clampActive(){
-    const rr = Math.max(0, Math.min(state.rows.length-1, state.active.r));
-    const cc = Math.max(0, Math.min(COLS.length-1, state.active.c));
-    state.active = { r: rr, c: cc };
-  }
-
-  function getCell(r,c){
+  function getCellEl(r,c){
     return gridBody.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
   }
 
-  function clearActiveClass(){
-    $$(".cell.active", gridBody).forEach(el => el.classList.remove("active"));
+  let activeEl = null;
+
+  function applyActiveClass(){
+    if (activeEl) activeEl.classList.remove("active");
+    const {r,c} = state.active;
+    const el = getCellEl(r,c);
+    if (el){
+      el.classList.add("active");
+      activeEl = el;
+    }else{
+      activeEl = null;
+    }
   }
 
-  function focusCell(r,c, scroll=false){
-    if (state.rows.length === 0) return;
-    const rr = Math.max(0, Math.min(state.rows.length-1, r));
-    const cc = Math.max(0, Math.min(COLS.length-1, c));
-    state.active = { r: rr, c: cc };
-
-    const cell = getCell(rr,cc);
+  function scrollCellIntoView(r,c){
+    const cell = getCellEl(r,c);
     if (!cell) return;
 
-    clearActiveClass();
-    cell.classList.add("active");
-    cell.focus({ preventScroll: !scroll });
+    const rect = cell.getBoundingClientRect();
+    const wrect = sheetWrap.getBoundingClientRect();
+    const pad = 38;
+
+    if (rect.top < wrect.top + pad) sheetWrap.scrollTop -= (wrect.top + pad - rect.top);
+    if (rect.bottom > wrect.bottom - pad) sheetWrap.scrollTop += (rect.bottom - (wrect.bottom - pad));
+
+    if (rect.left < wrect.left + 16) sheetWrap.scrollLeft -= (wrect.left + 16 - rect.left);
+    if (rect.right > wrect.right - 16) sheetWrap.scrollLeft += (rect.right - (wrect.right - 16));
+  }
+
+  function setActive(r,c,{scroll=false}={}){
+    if (!state.rows.length) return;
+    const rr = clamp(r, 0, state.rows.length-1);
+    const cc = clamp(c, 0, COLS.length-1);
+    state.active = { r: rr, c: cc };
+
+    applyActiveClass();
+    if (scroll) scrollCellIntoView(rr,cc);
   }
 
   function syncNoColumn(){
     for (let i=0; i<state.rows.length; i++){
       state.rows[i].no = i+1;
-      const cell = getCell(i,0);
+      const cell = getCellEl(i,0);
       if (cell) cell.textContent = String(i+1);
     }
   }
@@ -754,7 +823,9 @@
   function renderBody({ preserveScroll=true } = {}){
     const prevScrollTop = preserveScroll ? sheetWrap.scrollTop : 0;
     const prevScrollLeft = preserveScroll ? sheetWrap.scrollLeft : 0;
-    const prevActive = { ...state.active };
+
+    // 편집 중이면 일단 커밋해서 안전하게(렌더로 DOM가 바뀌면 editor 기준이 꼬일 수 있음)
+    if (state.editing) commitEdit({refocus:false});
 
     gridBody.innerHTML = "";
 
@@ -772,13 +843,11 @@
         div.className = "cell " + (col.cls || "");
         div.dataset.row = String(r);
         div.dataset.col = String(c);
-        div.tabIndex = 0;
 
         if (col.editable){
-          div.setAttribute("contenteditable","true");
+          div.classList.add("editable");
           if (col.ph) div.setAttribute("data-ph", col.ph);
         }else{
-          div.setAttribute("contenteditable","false");
           div.classList.add("computed");
         }
 
@@ -792,16 +861,14 @@
       gridBody.appendChild(tr);
     }
 
-    clampActive();
-    syncNoColumn();
-    recalcAll();
-
     if (preserveScroll){
       sheetWrap.scrollTop = prevScrollTop;
       sheetWrap.scrollLeft = prevScrollLeft;
     }
 
-    focusCell(prevActive.r, prevActive.c, false);
+    syncNoColumn();
+    recalcAll();
+    setActive(state.active.r, state.active.c, {scroll:false});
   }
 
   // ==========
@@ -854,14 +921,14 @@
       sumOp += op;
       sumTotal += total;
 
-      const cFood = getCell(i, 4);
-      const cOp = getCell(i, 5);
-      const cTotal = getCell(i, 6);
+      const cFood = getCellEl(i, 4);
+      const cOp = getCellEl(i, 5);
+      const cTotal = getCellEl(i, 6);
       if (cFood) cFood.textContent = String(food);
       if (cOp) cOp.textContent = String(op);
       if (cTotal) cTotal.textContent = String(total);
 
-      const cNo = getCell(i, 0);
+      const cNo = getCellEl(i, 0);
       if (cNo) cNo.textContent = String(i+1);
     }
 
@@ -874,17 +941,240 @@
   }
 
   // ==========
-  // Grid events (navigation + paste auto-extend)
+  // Editor (Excel-like)
   // ==========
-  function updateStateFromCell(cell){
+  function nearestEditableCol(c){
+    if (COLS[c] && COLS[c].editable) return c;
+    for (let d=1; d<COLS.length; d++){
+      const r = c + d;
+      if (r < COLS.length && COLS[r].editable) return r;
+      const l = c - d;
+      if (l >= 0 && COLS[l].editable) return l;
+    }
+    return null;
+  }
+
+  function positionEditor(){
+    if (!state.editing || !state.edit) return;
+    const {r,c} = state.edit;
+    const cell = getCellEl(r,c);
+    if (!cell) return;
+    const rect = cell.getBoundingClientRect();
+    editor.style.top = rect.top + "px";
+    editor.style.left = rect.left + "px";
+    editor.style.width = rect.width + "px";
+    editor.style.height = rect.height + "px";
+
+    // 숫자 정렬(급식일수는 numeric)
+    const isNumeric = (COLS[c] && (COLS[c].key === "days"));
+    editor.classList.toggle("numeric", !!isNumeric);
+  }
+
+  function stopEdit(){
+    if (!state.editing || !state.edit) return;
+    const {r,c} = state.edit;
+    const cell = getCellEl(r,c);
+    if (cell) cell.classList.remove("editing");
+
+    state.editing = false;
+    state.edit = null;
+
+    editor.classList.remove("is-visible");
+    editor.style.display = "none";
+  }
+
+  function commitEdit({move=null, refocus=true}={}){
+    if (!state.editing || !state.edit) return;
+
+    const {r,c,key} = state.edit;
+    const value = editor.value.trim();
+
+    state.rows[r][key] = value;
+
+    const cell = getCellEl(r,c);
+    if (cell) cell.textContent = value;
+
+    stopEdit();
+    scheduleRecalc();
+
+    if (move){
+      setActive(r + move.dr, c + move.dc, {scroll:true});
+    }
+
+    if (refocus){
+      sheetWrap.focus({preventScroll:true});
+    }
+  }
+
+  function cancelEdit({refocus=true}={}){
+    if (!state.editing) return;
+    stopEdit();
+    if (refocus) sheetWrap.focus({preventScroll:true});
+  }
+
+  function startEdit({overwrite=false, initialChar=""}={}){
+    if (!state.rows.length) return;
+
+    // 편집 가능 컬럼으로 보정
+    let {r,c} = state.active;
+    const c2 = nearestEditableCol(c);
+    if (c2 === null) return;
+    if (c2 !== c){
+      setActive(r,c2,{scroll:false});
+      c = c2;
+    }
+
+    const col = COLS[c];
+    if (!col.editable) return;
+
+    // 이미 편집 중이면 먼저 커밋(셀 이동/재선택 상황)
+    if (state.editing) commitEdit({refocus:false});
+
+    const cell = getCellEl(r,c);
+    if (!cell) return;
+
+    const key = col.key;
+    const original = String(state.rows[r][key] ?? "");
+
+    state.editing = true;
+    state.edit = { r,c,key,original };
+
+    cell.classList.add("editing");
+
+    editor.value = overwrite ? String(initialChar) : original;
+
+    positionEditor();
+    editor.style.display = "block";
+    editor.classList.add("is-visible");
+
+    editor.focus({preventScroll:true});
+
+    // caret
+    const pos = editor.value.length;
+    try{ editor.setSelectionRange(pos,pos); }catch(_){}
+
+    // 입력 시작이면 커서 끝
+    if (overwrite){
+      try{ editor.setSelectionRange(editor.value.length, editor.value.length); }catch(_){}
+    }
+  }
+
+  // 편집 중 스크롤/리사이즈 시 editor 재배치
+  sheetWrap.addEventListener("scroll", () => {
+    if (state.editing) positionEditor();
+  }, { passive:true });
+
+  window.addEventListener("resize", () => {
+    if (state.editing) positionEditor();
+  });
+
+  editor.addEventListener("keydown", (e) => {
+    if (!state.editing) return;
+
+    if (e.key === "Enter"){
+      e.preventDefault();
+      commitEdit({move:{dr:1, dc:0}});
+      return;
+    }
+    if (e.key === "Tab"){
+      e.preventDefault();
+      commitEdit({move:{dr:0, dc: e.shiftKey ? -1 : 1}});
+      return;
+    }
+    if (e.key === "Escape"){
+      e.preventDefault();
+      cancelEdit();
+      return;
+    }
+  });
+
+  editor.addEventListener("blur", () => {
+    // 클릭으로 다른 셀 선택 시 자연스럽게 저장
+    if (state.editing) commitEdit({refocus:false});
+  });
+
+  // ==========
+  // Grid interactions (click/select, dblclick/edit, keyboard nav, paste)
+  // ==========
+  gridBody.addEventListener("click", (e) => {
+    const cell = e.target.closest(".cell");
+    if (!cell) return;
+
+    // 편집 중이면 먼저 커밋
+    if (state.editing) commitEdit({refocus:false});
+
     const r = toInt(cell.dataset.row, 0);
     const c = toInt(cell.dataset.col, 0);
+    setActive(r,c,{scroll:false});
+
+    // 키보드 이동을 위해 래퍼에 포커스
+    sheetWrap.focus({preventScroll:true});
+  });
+
+  gridBody.addEventListener("dblclick", (e) => {
+    const cell = e.target.closest(".cell");
+    if (!cell) return;
+
+    const r = toInt(cell.dataset.row, 0);
+    const c = toInt(cell.dataset.col, 0);
+    setActive(r,c,{scroll:false});
+
+    // 편집 시작
+    startEdit({overwrite:false});
+  });
+
+  function clearActiveCell(){
+    const {r,c} = state.active;
     const col = COLS[c];
     if (!col || !col.editable) return;
-    if (!state.rows[r]) return;
 
-    state.rows[r][col.key] = cell.textContent.trim();
+    state.rows[r][col.key] = "";
+    const cell = getCellEl(r,c);
+    if (cell) cell.textContent = "";
+
+    scheduleRecalc();
   }
+
+  sheetWrap.addEventListener("keydown", (e) => {
+    if (!state.rows.length) return;
+
+    // 편집 중이면 editor가 처리
+    if (state.editing) return;
+
+    const {r,c} = state.active;
+
+    const k = e.key;
+
+    // 이동 키
+    if (k === "ArrowUp"){ e.preventDefault(); setActive(r-1,c,{scroll:true}); return; }
+    if (k === "ArrowDown"){ e.preventDefault(); setActive(r+1,c,{scroll:true}); return; }
+    if (k === "ArrowLeft"){ e.preventDefault(); setActive(r,c-1,{scroll:true}); return; }
+    if (k === "ArrowRight"){ e.preventDefault(); setActive(r,c+1,{scroll:true}); return; }
+
+    if (k === "Enter"){ e.preventDefault(); setActive(r+1,c,{scroll:true}); return; }
+    if (k === "Tab"){ e.preventDefault(); setActive(r, c + (e.shiftKey ? -1 : 1), {scroll:true}); return; }
+
+    // 삭제
+    if (k === "Backspace" || k === "Delete"){
+      e.preventDefault();
+      clearActiveCell();
+      return;
+    }
+
+    // 편집 시작
+    if (k === "F2"){
+      e.preventDefault();
+      startEdit({overwrite:false});
+      return;
+    }
+
+    // 글자 입력 시작: 엑셀처럼 덮어쓰기 편집 시작
+    if (!e.ctrlKey && !e.metaKey && !e.altKey && typeof k === "string" && k.length === 1){
+      e.preventDefault();
+      startEdit({overwrite:true, initialChar:k});
+      return;
+    }
+  });
 
   function stripHeaderRow(matrix){
     if (!matrix.length) return matrix;
@@ -907,110 +1197,61 @@
     return true;
   }
 
-  function bindGridEvents(){
-    gridBody.addEventListener("focusin", (e) => {
-      const cell = e.target.closest(".cell");
-      if (!cell) return;
-      const r = toInt(cell.dataset.row, 0);
-      const c = toInt(cell.dataset.col, 0);
-      state.active = { r, c };
-      clearActiveClass();
-      cell.classList.add("active");
-    });
+  function applyMatrixPaste(text){
+    let rows = String(text || "").replace(/\r/g,"").split("\n");
+    let matrix = rows
+      .filter(r => r.length > 0)
+      .map(r => r.split("\t"));
 
-    gridBody.addEventListener("keydown", (e) => {
-      const cell = e.target.closest(".cell");
-      if (!cell) return;
+    matrix = stripHeaderRow(matrix);
+    if (!matrix.length) return;
 
-      const r = toInt(cell.dataset.row, 0);
-      const c = toInt(cell.dataset.col, 0);
-      const key = e.key;
+    // 시작 열이 계산열이면 기본적으로 성명 열(1)부터
+    let startR = state.active.r;
+    let startC = state.active.c;
+    if (!COLS[startC] || !COLS[startC].editable){
+      startC = 1; // 성명
+      setActive(startR, startC, {scroll:false});
+    }
 
-      if (key === "Tab"){
-        e.preventDefault();
-        focusCell(r, e.shiftKey ? (c-1) : (c+1), true);
-        return;
+    const required = startR + matrix.length;
+    const expanded = ensureRows(required);
+
+    if (expanded){
+      renderBody({preserveScroll:true});
+    }
+
+    for (let dr=0; dr<matrix.length; dr++){
+      const rr = startR + dr;
+      if (rr >= state.rows.length) break;
+
+      for (let dc=0; dc<matrix[dr].length; dc++){
+        const cc = startC + dc;
+        if (cc >= COLS.length) break;
+        if (!COLS[cc].editable) continue;
+
+        const val = String(matrix[dr][dc] ?? "").trim();
+        state.rows[rr][COLS[cc].key] = val;
+
+        const cell = getCellEl(rr,cc);
+        if (cell) cell.textContent = val;
       }
-      if (key === "Enter"){
-        e.preventDefault();
-        focusCell(r+1, c, true);
-        return;
-      }
-      if (key === "ArrowUp" || key === "ArrowDown" || key === "ArrowLeft" || key === "ArrowRight"){
-        e.preventDefault();
-        if (key === "ArrowUp") focusCell(r-1, c, true);
-        if (key === "ArrowDown") focusCell(r+1, c, true);
-        if (key === "ArrowLeft") focusCell(r, c-1, true);
-        if (key === "ArrowRight") focusCell(r, c+1, true);
-        return;
-      }
+    }
 
-      if (key === "Delete" && !e.ctrlKey && !e.metaKey){
-        const col = COLS[c];
-        if (col && col.editable){
-          e.preventDefault();
-          cell.textContent = "";
-          updateStateFromCell(cell);
-          scheduleRecalc();
-        }
-      }
-    });
-
-    gridBody.addEventListener("input", (e) => {
-      const cell = e.target.closest(".cell");
-      if (!cell) return;
-      updateStateFromCell(cell);
-      scheduleRecalc();
-    });
-
-    // 엑셀 붙여넣기 → 자동으로 행 확장
-    gridBody.addEventListener("paste", (e) => {
-      const cell = e.target.closest(".cell");
-      if (!cell) return;
-
-      const startR = toInt(cell.dataset.row, 0);
-      const startC = toInt(cell.dataset.col, 0);
-
-      const text = (e.clipboardData || window.clipboardData).getData("text");
-      if (!text) return;
-
-      e.preventDefault();
-
-      let rows = text.replace(/\r/g,"").split("\n");
-      let matrix = rows
-        .filter(r => r.length > 0)
-        .map(r => r.split("\t"));
-
-      matrix = stripHeaderRow(matrix);
-      if (!matrix.length) return;
-
-      const required = startR + matrix.length;
-      const expanded = ensureRows(required);
-
-      if (expanded){
-        renderBody({ preserveScroll:true });
-      }
-
-      for (let dr=0; dr<matrix.length; dr++){
-        const rr = startR + dr;
-        if (rr >= state.rows.length) break;
-
-        for (let dc=0; dc<matrix[dr].length; dc++){
-          const cc = startC + dc;
-          if (cc >= COLS.length) break;
-          if (!COLS[cc].editable) continue;
-
-          const target = getCell(rr, cc);
-          if (!target) continue;
-
-          target.textContent = matrix[dr][dc];
-          updateStateFromCell(target);
-        }
-      }
-
-      scheduleRecalc();
-    });
+    scheduleRecalc();
+    log(`범위 붙여넣기 완료: ${matrix.length}행`);
   }
+
+  sheetWrap.addEventListener("paste", (e) => {
+    // 편집 중이면 input 자체 paste로 처리
+    if (state.editing) return;
+
+    const text = (e.clipboardData || window.clipboardData).getData("text");
+    if (!text) return;
+
+    e.preventDefault();
+    applyMatrixPaste(text);
+  });
 
   // ==========
   // Paste box → roster
@@ -1040,14 +1281,14 @@
       if (cols === 1){
         name = row[0];
       }else if (cols === 2){
-        if (isNum(row[0]) && row[1]){ // 순번, 성명
+        if (isNum(row[0]) && row[1]){
           name = row[1];
         }else{
           name = row[0];
           job = row[1];
         }
       }else if (cols === 3){
-        if (isNum(row[0])){ // 순번, 성명, 직종
+        if (isNum(row[0])){
           name = row[1];
           job = row[2];
         }else{
@@ -1090,6 +1331,8 @@
   }
 
   function setRoster(rows, mode){
+    if (state.editing) commitEdit({refocus:false});
+
     const prevScrollTop = sheetWrap.scrollTop;
     const prevScrollLeft = sheetWrap.scrollLeft;
 
@@ -1105,13 +1348,221 @@
     state.rows.push(...add);
     if (state.rows.length === 0) state.rows = [blankRow(), blankRow(), blankRow()];
     renderBody({ preserveScroll:true });
+
     sheetWrap.scrollTop = prevScrollTop;
     sheetWrap.scrollLeft = prevScrollLeft;
-    log(`붙여넣기 반영(추가): +${add.length}명 (총 ${state.rows.filter(r=>String(r.name||"").trim()).length}명)`);
+
+    log(`붙여넣기 반영(추가): +${add.length}명`);
   }
 
   // ==========
-  // Excel import (optional)
+  // Sorting
+  // ==========
+  function sortByName(){
+    if (state.editing) commitEdit({refocus:false});
+
+    state.rows.sort((a,b) => String(a.name ?? "").localeCompare(String(b.name ?? ""), "ko"));
+    state.active = { r:0, c:1 };
+    renderBody({ preserveScroll:false });
+    log("가나다 정렬 완료");
+  }
+
+  function sortPrincipalFirst(){
+    if (state.editing) commitEdit({refocus:false});
+
+    const rank = (r) => {
+      const j = String(r.job ?? "");
+      if (j.includes("교장")) return 0;
+      if (j.includes("교감")) return 1;
+      return 2;
+    };
+    state.rows.sort((a,b) => {
+      const ra = rank(a), rb = rank(b);
+      if (ra !== rb) return ra - rb;
+      return String(a.name ?? "").localeCompare(String(b.name ?? ""), "ko");
+    });
+
+    state.active = { r:0, c:1 };
+    renderBody({ preserveScroll:false });
+    log("교장/교감 최상단 + 나머지 가나다 정렬 완료");
+  }
+
+  // ==========
+  // Actions
+  // ==========
+  function applyDefaultDaysToBlank(){
+    const def = toInt(inpDays.value, 0);
+    if (!def){
+      log("기본 급식일수가 비어 있어 적용할 수 없습니다.", "warn");
+      return;
+    }
+
+    // 렌더 전체를 갈지 말고, 일수 셀만 갱신(자연스러운 UX)
+    for (let i=0; i<state.rows.length; i++){
+      if (!String(state.rows[i].days ?? "").trim()){
+        state.rows[i].days = String(def);
+        const cell = getCellEl(i, 3);
+        if (cell) cell.textContent = String(def);
+      }
+    }
+
+    scheduleRecalc();
+    log("빈 급식일수 칸에 기본값을 입력했습니다.");
+  }
+
+  function addRowsKeepScroll(n){
+    const addN = Math.max(1, toInt(n, 1));
+    const prevScrollTop = sheetWrap.scrollTop, prevScrollLeft = sheetWrap.scrollLeft;
+
+    for (let i=0; i<addN; i++) state.rows.push(blankRow());
+
+    renderBody({ preserveScroll:true });
+    sheetWrap.scrollTop = prevScrollTop; sheetWrap.scrollLeft = prevScrollLeft;
+
+    log(`행 추가 완료: +${addN} (총 ${state.rows.length}행)`);
+  }
+
+  function delActiveRow(){
+    if (state.editing) commitEdit({refocus:false});
+    if (state.rows.length === 0) return;
+
+    const r = state.active.r;
+    const victim = state.rows[r]?.name ? ` (${state.rows[r].name})` : "";
+
+    state.rows.splice(r, 1);
+    if (state.rows.length === 0) state.rows = [blankRow(), blankRow(), blankRow()];
+
+    state.active.r = clamp(r, 0, state.rows.length-1);
+
+    renderBody({ preserveScroll:true });
+    log(`현재 행 삭제 완료${victim}`, "warn");
+  }
+
+  // ==========
+  // Exports
+  // ==========
+  function getFileBase(){
+    const m = (inpMonth.value || "").trim();
+    if (m) return m.replaceAll(".","").replaceAll("/","-").replaceAll(" ","");
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth()+1).padStart(2,"0");
+    return `${yyyy}-${mm}`;
+  }
+
+  function ensureHasRows(){
+    const usable = state.rows.filter(r => String(r.name ?? "").trim()).length;
+    if (!usable){
+      log("명단이 비어 있습니다. 먼저 붙여넣기/입력으로 명단을 넣어주세요.", "bad");
+      return false;
+    }
+    return true;
+  }
+
+  // 집계 엑셀: 셀 위치 요구사항 반영
+  // G3/H3: 이체일자/이체일
+  // D4/E4: 운영비 단가/값
+  function buildSummaryWorkbook(){
+    const base = getFileBase();
+    const title = `교직원 급식비 징수내역 집계 (${base})`;
+
+    const defaultDays = toInt(inpDays.value, 0);
+    const foodUnit = toInt(inpFoodUnit.value, 0);
+    const opUnit = toInt(inpOpUnit.value, 0);
+    const mealUnit = foodUnit + opUnit;
+
+    const period = (inpPeriod.value || "").trim();
+    const transfer = (inpTransfer.value || "").trim();
+
+    const header = ["순번","성명","직종","급식일수","식품비","운영비","금액","비고"];
+    const aoa = [];
+
+    aoa.push([title]);  // A1
+    aoa.push([]);       // A2
+
+    // 3행: G3/H3
+    aoa.push([
+      "급식일수(기본값)", defaultDays, "",
+      "식품비 단가", foodUnit, "",
+      "이체일자", transfer
+    ]);
+
+    // 4행: D4/E4
+    aoa.push([
+      "1식 단가", mealUnit, "",
+      "운영비 단가", opUnit, "",
+      "징수기간", period
+    ]);
+
+    aoa.push([]);
+    aoa.push(header);
+
+    let sumFood=0, sumOp=0, sumTotal=0;
+
+    const rows = state.rows
+      .filter(r => String(r.name ?? "").trim())
+      .map((r, idx) => {
+        const days = parseDays(r.days, defaultDays);
+        const food = roundDown10(days * foodUnit);
+        const op = days * opUnit;
+        const total = roundDown10(food + op);
+        sumFood += food; sumOp += op; sumTotal += total;
+        return [idx+1, r.name, r.job || "", days, food, op, total, r.note || ""];
+      });
+
+    rows.forEach(r => aoa.push(r));
+    aoa.push(["합계","","","", sumFood, sumOp, sumTotal, ""]);
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws["!cols"] = [
+      { wch: 6 }, { wch: 12 }, { wch: 18 }, { wch: 10 },
+      { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 30 },
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "징수내역집계");
+    return { wb, filename: `${base}_교직원급식비_징수내역집계.xlsx` };
+  }
+
+  function buildEdufineWorkbook(kind){
+    // kind: "food" | "op"
+    const base = getFileBase();
+    const sheetName = "학교대상수납요구서식";
+
+    const defaultDays = toInt(inpDays.value, 0);
+    const foodUnit = toInt(inpFoodUnit.value, 0);
+    const opUnit = toInt(inpOpUnit.value, 0);
+
+    const header = ["선택","* 주/야","* 계열","* 학과","* 학년","* 반","* 번호","* 성명","* 대상금액"];
+    const aoa = [header];
+
+    for (const r of state.rows){
+      const name = String(r.name ?? "").trim();
+      if (!name) continue;
+
+      const days = parseDays(r.days, defaultDays);
+      const food = roundDown10(days * foodUnit);
+      const op = days * opUnit;
+
+      const amount = (kind === "food") ? food : op;
+      aoa.push(["", "", "", "", "교직원", "교직원", "", name, amount]);
+    }
+
+    const wsOut = XLSX.utils.aoa_to_sheet(aoa);
+    wsOut["!cols"] = [
+      { wch: 8 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
+      { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 14 }, { wch: 12 }
+    ];
+
+    const wbOut = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wbOut, wsOut, sheetName);
+
+    const label = (kind === "food") ? "식품비" : "운영비";
+    return { wb: wbOut, filename: `${base}_에듀파인_교직원_${label}.xlsx` };
+  }
+
+  // ==========
+  // Optional Excel import
   // ==========
   function readFileAsArrayBuffer(file){
     return new Promise((resolve,reject) => {
@@ -1151,7 +1602,7 @@
       if (defaults.title) break;
     }
 
-    function findNumericRightOf(label, maxRows=30){
+    function findNumericRightOf(label, maxRows=40){
       for (let r=0; r<Math.min(aoa.length, maxRows); r++){
         const row = aoa[r] || [];
         for (let c=0; c<row.length; c++){
@@ -1171,11 +1622,11 @@
       return null;
     }
 
-    defaults.days = findNumericRightOf("급식일수", 40);
-    defaults.foodUnit = findNumericRightOf("식품비", 20);
-    defaults.opUnit = findNumericRightOf("운영비", 20);
+    defaults.days = findNumericRightOf("급식일수", 50);
+    defaults.foodUnit = findNumericRightOf("식품비", 30);
+    defaults.opUnit = findNumericRightOf("운영비", 30);
 
-    function findTextRightOf(label, maxRows=40){
+    function findTextRightOf(label, maxRows=60){
       for (let r=0; r<Math.min(aoa.length, maxRows); r++){
         const row = aoa[r] || [];
         for (let c=0; c<row.length; c++){
@@ -1192,8 +1643,8 @@
       return "";
     }
 
-    defaults.transfer = findTextRightOf("이체일", 40);
-    defaults.period = findTextRightOf("징수 기간", 40);
+    defaults.transfer = findTextRightOf("이체일", 60);
+    defaults.period = findTextRightOf("징수 기간", 60);
 
     let headerR = -1;
     const norm = (v) => String(v ?? "").replace(/\s+/g,"").trim();
@@ -1268,221 +1719,10 @@
   }
 
   // ==========
-  // Sorting
-  // ==========
-  function sortByName(){
-    const prevScrollTop = sheetWrap.scrollTop, prevScrollLeft = sheetWrap.scrollLeft;
-    state.rows.sort((a,b) => String(a.name ?? "").localeCompare(String(b.name ?? ""), "ko"));
-    renderBody({ preserveScroll:true });
-    sheetWrap.scrollTop = prevScrollTop; sheetWrap.scrollLeft = prevScrollLeft;
-    log("가나다 정렬 완료");
-  }
-
-  function sortPrincipalFirst(){
-    const prevScrollTop = sheetWrap.scrollTop, prevScrollLeft = sheetWrap.scrollLeft;
-    const rank = (r) => {
-      const j = String(r.job ?? "");
-      if (j.includes("교장")) return 0;
-      if (j.includes("교감")) return 1;
-      return 2;
-    };
-    state.rows.sort((a,b) => {
-      const ra = rank(a), rb = rank(b);
-      if (ra !== rb) return ra - rb;
-      return String(a.name ?? "").localeCompare(String(b.name ?? ""), "ko");
-    });
-    renderBody({ preserveScroll:true });
-    sheetWrap.scrollTop = prevScrollTop; sheetWrap.scrollLeft = prevScrollLeft;
-    log("교장/교감 최상단 + 나머지 가나다 정렬 완료");
-  }
-
-  // ==========
-  // Exports
-  // ==========
-  function getFileBase(){
-    const m = (inpMonth.value || "").trim();
-    if (m) return m.replaceAll(".","").replaceAll("/","-").replaceAll(" ","");
-    const d = new Date();
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth()+1).padStart(2,"0");
-    return `${yyyy}-${mm}`;
-  }
-
-  function ensureHasRows(){
-    const usable = state.rows.filter(r => String(r.name ?? "").trim()).length;
-    if (!usable){
-      log("명단이 비어 있습니다. 먼저 붙여넣기/입력으로 명단을 넣어주세요.", "bad");
-      return false;
-    }
-    return true;
-  }
-
-  // ✅ 집계 엑셀: 셀 위치 요구사항 반영
-  // G3: 이체일자 / H3: 이체일 입력값
-  // D4: 운영비 단가 / E4: 운영비 단가 입력값
-  function buildSummaryWorkbook(){
-    const base = getFileBase();
-    const title = `교직원 급식비 징수내역 집계 (${base})`;
-
-    const defaultDays = toInt(inpDays.value, 0);
-    const foodUnit = toInt(inpFoodUnit.value, 0);
-    const opUnit = toInt(inpOpUnit.value, 0);
-    const mealUnit = foodUnit + opUnit;
-
-    const period = (inpPeriod.value || "").trim();
-    const transfer = (inpTransfer.value || "").trim();
-
-    const header = ["순번","성명","직종","급식일수","식품비","운영비","금액","비고"];
-    const aoa = [];
-
-    // 1행: A1
-    aoa.push([title]);
-    // 2행: 빈 줄
-    aoa.push([]);
-
-    // 3행: G3/H3 = 이체일자/이체일
-    // A3 B3 C3 D3 E3 F3 G3 H3
-    aoa.push([
-      "급식일수(기본값)", defaultDays, "",
-      "식품비 단가", foodUnit, "",
-      "이체일자", transfer
-    ]);
-
-    // 4행: D4/E4 = 운영비 단가/값
-    // A4 B4 C4 D4 E4 F4 G4 H4
-    aoa.push([
-      "1식 단가", mealUnit, "",
-      "운영비 단가", opUnit, "",
-      "징수기간", period
-    ]);
-
-    // 5행: 빈 줄
-    aoa.push([]);
-    // 6행: 헤더
-    aoa.push(header);
-
-    let sumFood=0, sumOp=0, sumTotal=0;
-
-    const rows = state.rows
-      .filter(r => String(r.name ?? "").trim())
-      .map((r, idx) => {
-        const days = parseDays(r.days, defaultDays);
-        const food = roundDown10(days * foodUnit);
-        const op = days * opUnit;
-        const total = roundDown10(food + op);
-        sumFood += food; sumOp += op; sumTotal += total;
-        return [idx+1, r.name, r.job || "", days, food, op, total, r.note || ""];
-      });
-
-    rows.forEach(r => aoa.push(r));
-    aoa.push(["합계","","","", sumFood, sumOp, sumTotal, ""]);
-
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws["!cols"] = [
-      { wch: 6 }, { wch: 12 }, { wch: 18 }, { wch: 10 },
-      { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 30 },
-    ];
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "징수내역집계");
-    return { wb, filename: `${base}_교직원급식비_징수내역집계.xlsx` };
-  }
-
-  function buildEdufineWorkbook(kind){
-    // kind: "food" | "op"
-    const base = getFileBase();
-    const sheetName = "학교대상수납요구서식";
-
-    const defaultDays = toInt(inpDays.value, 0);
-    const foodUnit = toInt(inpFoodUnit.value, 0);
-    const opUnit = toInt(inpOpUnit.value, 0);
-
-    const header = ["선택","* 주/야","* 계열","* 학과","* 학년","* 반","* 번호","* 성명","* 대상금액"];
-    const aoa = [header];
-
-    for (const r of state.rows){
-      const name = String(r.name ?? "").trim();
-      if (!name) continue;
-
-      const days = parseDays(r.days, defaultDays);
-      const food = roundDown10(days * foodUnit);
-      const op = days * opUnit;
-
-      const amount = (kind === "food") ? food : op;
-      aoa.push(["", "", "", "", "교직원", "교직원", "", name, amount]);
-    }
-
-    const wsOut = XLSX.utils.aoa_to_sheet(aoa);
-    wsOut["!cols"] = [
-      { wch: 8 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
-      { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 14 }, { wch: 12 }
-    ];
-
-    const wbOut = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wbOut, wsOut, sheetName);
-
-    const label = (kind === "food") ? "식품비" : "운영비";
-    return { wb: wbOut, filename: `${base}_에듀파인_교직원_${label}.xlsx` };
-  }
-
-  // ==========
-  // Actions
-  // ==========
-  function applyDefaultDaysToBlank(){
-    const def = toInt(inpDays.value, 0);
-    if (!def){
-      log("기본 급식일수가 비어 있어 적용할 수 없습니다.", "warn");
-      return;
-    }
-    const prevScrollTop = sheetWrap.scrollTop, prevScrollLeft = sheetWrap.scrollLeft;
-
-    for (const r of state.rows){
-      if (!String(r.days ?? "").trim()){
-        r.days = String(def);
-      }
-    }
-    renderBody({ preserveScroll:true });
-
-    sheetWrap.scrollTop = prevScrollTop; sheetWrap.scrollLeft = prevScrollLeft;
-    log("빈 급식일수 칸에 기본값을 입력했습니다.");
-  }
-
-  function addRowsKeepScroll(n){
-    const addN = Math.max(1, toInt(n, 1));
-    const prevScrollTop = sheetWrap.scrollTop, prevScrollLeft = sheetWrap.scrollLeft;
-
-    for (let i=0; i<addN; i++) state.rows.push(blankRow());
-
-    renderBody({ preserveScroll:true });
-    sheetWrap.scrollTop = prevScrollTop; sheetWrap.scrollLeft = prevScrollLeft;
-
-    log(`행 추가 완료: +${addN} (총 ${state.rows.length}행)`);
-  }
-
-  function delActiveRow(){
-    if (state.rows.length === 0) return;
-    const r = state.active.r;
-    if (r < 0 || r >= state.rows.length) return;
-
-    const victim = state.rows[r]?.name ? ` (${state.rows[r].name})` : "";
-    const prevScrollTop = sheetWrap.scrollTop, prevScrollLeft = sheetWrap.scrollLeft;
-
-    state.rows.splice(r, 1);
-    if (state.rows.length === 0) state.rows = [blankRow(), blankRow(), blankRow()];
-
-    state.active.r = Math.min(r, state.rows.length-1);
-
-    renderBody({ preserveScroll:true });
-    sheetWrap.scrollTop = prevScrollTop; sheetWrap.scrollLeft = prevScrollLeft;
-
-    log(`현재 행 삭제 완료${victim}`, "warn");
-  }
-
-  // ==========
   // Event wiring
   // ==========
-  inpFoodUnit.addEventListener("input", () => { updateMealUnit(); scheduleRecalc(); });
-  inpOpUnit.addEventListener("input", () => { updateMealUnit(); scheduleRecalc(); });
+  inpFoodUnit.addEventListener("input", () => scheduleRecalc());
+  inpOpUnit.addEventListener("input", () => scheduleRecalc());
   inpDays.addEventListener("input", () => scheduleRecalc());
 
   btnRecalc.addEventListener("click", () => { recalcAll(); log("재계산 완료"); });
@@ -1508,6 +1748,8 @@
   btnSortPrincipalFirst.addEventListener("click", sortPrincipalFirst);
 
   btnClearAll.addEventListener("click", () => {
+    if (state.editing) commitEdit({refocus:false});
+
     state.rows = [blankRow(), blankRow(), blankRow()];
     state.active = { r:0, c:1 };
     state.rosterWb = null;
@@ -1552,9 +1794,7 @@
     log(`다운로드 생성: ${filename}`);
   });
 
-  // ==========
   // Optional Excel import
-  // ==========
   fileRoster.addEventListener("change", async () => {
     const file = fileRoster.files && fileRoster.files[0];
     if (!file) return;
@@ -1629,10 +1869,9 @@
     state.rows = [blankRow(), blankRow(), blankRow()];
     renderBody({ preserveScroll:false });
 
-    bindGridEvents();
     updateMealUnit();
 
-    log("준비 완료. 엑셀에서 명단 복사 → 표에 Ctrl+V 해보세요(자동 행 확장).");
+    log("준비 완료. 표를 클릭해서 선택하고, 더블클릭/F2로 편집하세요. (엑셀 범위 Ctrl+V도 가능)");
     if (!window.XLSX){
       log("주의: XLSX 라이브러리가 로드되지 않았습니다(CDN 차단 가능).", "warn");
     }
@@ -1641,8 +1880,7 @@
   init();
 })();
 </script>
-
-
+  
 <script src="/static/footer.js"></script>
 <script src="/static/global-loader.js?v=1"></script>
 </body>
