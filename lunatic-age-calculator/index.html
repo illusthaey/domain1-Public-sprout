@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/static/style.css" />
+  <title>만나이 계산기 (엑셀형)</title>
+
+
+
+  
+<script src="/static/footer.js"></script>
+<script src="/static/global-loader.js?v=1"></script>
+  <style>
+    /* style.css를 존중하면서 “시트 느낌”만 조금 보강 */
+    .sheetlike td { vertical-align: middle; }
+    .sheetlike td input[type="text"]{
+      width: 100%;
+      min-width: 0;
+    }
+    .sheetlike .out-age { font-weight: 800; color: #111; }
+    .sheetlike .out-note { font-size: 0.95rem; color: #555; line-height: 1.35; }
+    .msg { margin: 10px 0 0; }
+    .msg[data-kind="error"] { color: #b91c1c; font-weight: 700; }
+    .msg[data-kind="success"] { color: #166534; font-weight: 700; }
+    .msg[data-kind="info"] { color: #374151; }
+    .kbd-hint code{
+      padding: 2px 6px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: #fafafa;
+      font-size: 0.95rem;
+    }
+    .nowrap { white-space: nowrap; }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+    <h1>만나이 계산기</h1>
+    <p class="subtitle muted">엑셀처럼 여러 명을 한 번에 계산합니다. 날짜는 키보드로 입력하세요(예: 19900131, 1990-01-31).</p>
+
+    <section class="section">
+      <div class="row between gap" style="flex-wrap: wrap;">
+        <div class="row gap" style="flex-wrap: wrap;">
+          <div class="row gap">
+            <strong class="nowrap">2/29 비윤년 생일 처리</strong>
+            <label class="row" style="gap:6px;">
+              <input type="radio" name="leapPolicy" value="feb28" checked />
+              2/28
+            </label>
+            <label class="row" style="gap:6px;">
+              <input type="radio" name="leapPolicy" value="mar1" />
+              3/1
+            </label>
+          </div>
+          <div class="muted kbd-hint">
+            이동: <code>↑</code><code>↓</code> / <code>←</code><code>→</code>(끝/처음일 때) · <code>Enter</code>(아래) · <code>Shift+Enter</code>(위) · <code>Ctrl+;</code>(오늘)
+          </div>
+        </div>
+
+        <div class="row gap" style="flex-wrap: wrap;">
+          <button type="button" class="btn pastel-mint" id="btnCalcAll">전체 계산</button>
+          <button type="button" class="btn pastel-blue" id="btnFillToday">기준일 오늘 채우기</button>
+          <button type="button" class="btn pastel-purple" id="btnAddRow">행 추가</button>
+          <button type="button" class="btn pastel-grey" id="btnReset">초기화</button>
+        </div>
+      </div>
+
+      <p id="msg" class="msg" aria-live="polite"></p>
+
+      <div class="table-wrap">
+        <table class="sheetlike" id="sheet" aria-label="만나이 계산 시트">
+          <thead>
+            <tr>
+              <th style="width:64px;">No</th>
+              <th style="min-width:160px;">이름</th>
+              <th style="min-width:190px;">생년월일</th>
+              <th style="min-width:190px;">기준일(비우면 오늘)</th>
+              <th style="width:110px;">만나이</th>
+              <th style="min-width:260px;">비고</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+
+      <p class="note muted">
+        날짜 입력 허용: YYYY-MM-DD / YYYY/MM/DD / YYYY.MM.DD / YYYYMMDD · 포커스가 빠지면 가능한 경우 YYYY-MM-DD로 자동 정리됩니다.
+      </p>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const $ = (sel, el=document) => el.querySelector(sel);
+      const $$ = (sel, el=document) => Array.from(el.querySelectorAll(sel));
+
+      const tbody = $("#tbody");
+      const msgEl = $("#msg");
+
+      const btnCalcAll = $("#btnCalcAll");
+      const btnFillToday = $("#btnFillToday");
+      const btnAddRow = $("#btnAddRow");
+      const btnReset = $("#btnReset");
+
+      const COL_COUNT = 3; // 0:name, 1:birth, 2:asOf
+      const DEFAULT_ROWS = 5;
+
+      function pad2(n){ return String(n).padStart(2,"0"); }
+
+      function todayYMD(){
+        const d = new Date();
+        return { y: d.getFullYear(), m: d.getMonth()+1, d: d.getDate() };
+      }
+
+      function ymdToISO(ymd){
+        return `${ymd.y}-${pad2(ymd.m)}-${pad2(ymd.d)}`;
+      }
+
+      function isLeapYear(y){
+        return (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0);
+      }
+
+      function maxDayOfMonth(y, m){
+        return new Date(y, m, 0).getDate();
+      }
+
+      // 입력 허용: YYYY-MM-DD / YYYY/MM/DD / YYYY.MM.DD / YYYYMMDD
+      function parseFlexibleDate(raw){
+        if (!raw) return null;
+        const s = String(raw).trim();
+        if (!s) return null;
+
+        // 1) 구분자 포함
+        const m1 = s.match(/^(\d{4})\s*[-\/.]\s*(\d{1,2})\s*[-\/.]\s*(\d{1,2})$/);
+        if (m1){
+          const y = Number(m1[1]), mo = Number(m1[2]), da = Number(m1[3]);
+          return validateYMD({ y, m: mo, d: da });
+        }
+
+        // 2) 숫자만 8자리(YYYYMMDD)
+        const digits = s.replace(/\D/g, "");
+        if (digits.length === 8){
+          const y = Number(digits.slice(0,4));
+          const mo = Number(digits.slice(4,6));
+          const da = Number(digits.slice(6,8));
+          return validateYMD({ y, m: mo, d: da });
+        }
+
+        return null;
+      }
+
+      function validateYMD(ymd){
+        if (!ymd) return null;
+        const { y, m, d } = ymd;
+        if (!Number.isInteger(y) || !Number.isInteger(m) || !Number.isInteger(d)) return null;
+        if (y < 1 || y > 9999) return null;
+        if (m < 1 || m > 12) return null;
+        const md = maxDayOfMonth(y, m);
+        if (d < 1 || d > md) return null;
+        return { y, m, d };
+      }
+
+      function compareYMD(a, b){
+        if (a.y !== b.y) return a.y - b.y;
+        if (a.m !== b.m) return a.m - b.m;
+        return a.d - b.d;
+      }
+
+      function leapPolicy(){
+        const r = document.querySelector('input[name="leapPolicy"]:checked');
+        return r ? r.value : "feb28";
+      }
+
+      function birthdayInYear(birth, year, policy){
+        let bm = birth.m, bd = birth.d;
+        if (birth.m === 2 && birth.d === 29 && !isLeapYear(year)){
+          if (policy === "mar1"){ bm = 3; bd = 1; }
+          else { bm = 2; bd = 28; }
+        }
+        return { y: year, m: bm, d: bd };
+      }
+
+      function calcManNai(birth, asOf, policy){
+        if (compareYMD(asOf, birth) < 0){
+          return { ok:false, error:"기준일이 생년월일보다 빠릅니다." };
+        }
+        let age = asOf.y - birth.y;
+        const bThis = birthdayInYear(birth, asOf.y, policy);
+        const hadBirthday = compareYMD(asOf, bThis) >= 0;
+        if (!hadBirthday) age -= 1;
+        return { ok:true, age, hadBirthday, birthdayThisYear: bThis };
+      }
+
+      function setMessage(text, kind="info"){
+        msgEl.textContent = text || "";
+        msgEl.dataset.kind = kind;
+      }
+
+      function makeInput(row, col, placeholder){
+        const input = document.createElement("input");
+        input.type = "text";
+        input.autocomplete = "off";
+        input.spellcheck = false;
+        input.inputMode = "numeric"; // 모바일 숫자 키패드 힌트
+        input.placeholder = placeholder || "";
+        input.dataset.row = String(row);
+        input.dataset.col = String(col);
+        input.addEventListener("keydown", onGridKeydown);
+        input.addEventListener("paste", onGridPaste);
+        input.addEventListener("blur", onMaybeNormalizeDate);
+        input.addEventListener("input", () => {
+          // 너무 공격적으로 실시간 계산하면 타이핑 중 흔들리니,
+          // 날짜 칸은 blur에서 정규화/검증, 여기서는 “조용히” row 계산만.
+          calcRow(row, { quiet: true });
+        });
+        return input;
+      }
+
+      function renderRow(rowIndex){
+        const tr = document.createElement("tr");
+        tr.dataset.row = String(rowIndex);
+
+        const tdNo = document.createElement("td");
+        tdNo.textContent = String(rowIndex + 1);
+        tr.appendChild(tdNo);
+
+        const tdName = document.createElement("td");
+        const nameIn = makeInput(rowIndex, 0, "이름(선택)");
+        nameIn.inputMode = "text";
+        tdName.appendChild(nameIn);
+        tr.appendChild(tdName);
+
+        const tdBirth = document.createElement("td");
+        const birthIn = makeInput(rowIndex, 1, "YYYY-MM-DD 또는 YYYYMMDD");
+        tdBirth.appendChild(birthIn);
+        tr.appendChild(tdBirth);
+
+        const tdAsOf = document.createElement("td");
+        const asOfIn = makeInput(rowIndex, 2, "비우면 오늘");
+        tdAsOf.appendChild(asOfIn);
+        tr.appendChild(tdAsOf);
+
+        const tdAge = document.createElement("td");
+        tdAge.className = "out-age";
+        tdAge.textContent = "";
+        tdAge.dataset.out = "age";
+        tr.appendChild(tdAge);
+
+        const tdNote = document.createElement("td");
+        tdNote.className = "out-note";
+        tdNote.textContent = "";
+        tdNote.dataset.out = "note";
+        tr.appendChild(tdNote);
+
+        return tr;
+      }
+
+      function rebuildDefault(){
+        tbody.innerHTML = "";
+        for (let i=0;i<DEFAULT_ROWS;i++){
+          tbody.appendChild(renderRow(i));
+        }
+      }
+
+      function addRow(){
+        const rowIndex = tbody.children.length;
+        tbody.appendChild(renderRow(rowIndex));
+        // 새 행의 “이름” 칸으로 포커스
+        const el = getInput(rowIndex, 0);
+        if (el) el.focus();
+      }
+
+      function resetAll(){
+        rebuildDefault();
+        setMessage("초기화 완료", "info");
+        // 첫 칸 포커스
+        const first = getInput(0, 0);
+        if (first) first.focus();
+      }
+
+      function getInput(row, col){
+        return document.querySelector(`input[data-row="${row}"][data-col="${col}"]`);
+      }
+
+      function getRowEl(row){
+        return tbody.querySelector(`tr[data-row="${row}"]`);
+      }
+
+      function setRowOutput(row, ageText, noteText){
+        const tr = getRowEl(row);
+        if (!tr) return;
+        const ageTd = tr.querySelector('[data-out="age"]');
+        const noteTd = tr.querySelector('[data-out="note"]');
+        ageTd.textContent = ageText || "";
+        noteTd.textContent = noteText || "";
+      }
+
+      function isRowEmpty(row){
+        const name = getInput(row,0)?.value?.trim() || "";
+        const birth = getInput(row,1)?.value?.trim() || "";
+        const asOf = getInput(row,2)?.value?.trim() || "";
+        return !name && !birth && !asOf;
+      }
+
+      function onMaybeNormalizeDate(e){
+        const input = e.target;
+        const col = Number(input.dataset.col);
+        // 날짜 칸(생년월일=1, 기준일=2)만 정규화
+        if (col !== 1 && col !== 2) return;
+
+        const parsed = parseFlexibleDate(input.value);
+        if (parsed){
+          input.value = ymdToISO(parsed);
+        }
+      }
+
+      function calcRow(row, { quiet=false } = {}){
+        // 완전 빈 행은 결과도 비움
+        if (isRowEmpty(row)){
+          setRowOutput(row, "", "");
+          return;
+        }
+
+        const birthRaw = (getInput(row,1)?.value || "").trim();
+        const asOfRaw = (getInput(row,2)?.value || "").trim();
+
+        const birth = parseFlexibleDate(birthRaw);
+        if (!birth){
+          setRowOutput(row, "", "생년월일 형식 오류");
+          if (!quiet) setMessage(`(${row+1}행) 생년월일 형식을 확인해 주세요.`, "error");
+          return;
+        }
+
+        const asOf = asOfRaw ? parseFlexibleDate(asOfRaw) : todayYMD();
+        if (!asOf){
+          setRowOutput(row, "", "기준일 형식 오류");
+          if (!quiet) setMessage(`(${row+1}행) 기준일 형식을 확인해 주세요.`, "error");
+          return;
+        }
+
+        const pol = leapPolicy();
+        const res = calcManNai(birth, asOf, pol);
+        if (!res.ok){
+          setRowOutput(row, "", res.error);
+          if (!quiet) setMessage(`(${row+1}행) ${res.error}`, "error");
+          return;
+        }
+
+        const bThis = res.birthdayThisYear;
+        const note = [
+          `기준일: ${ymdToISO(asOf)}`,
+          `올해 생일: ${ymdToISO(bThis)} (${res.hadBirthday ? "지남/당일" : "아직"})`
+        ].join(" · ");
+
+        setRowOutput(row, `${res.age}세`, note);
+      }
+
+      function calcAll(){
+        let anyError = false;
+        for (let r=0;r<tbody.children.length;r++){
+          const beforeMsg = msgEl.textContent;
+          calcRow(r, { quiet: true });
+          // 각 행에 에러가 있으면 비고에 남아있음
+          const tr = getRowEl(r);
+          const note = tr?.querySelector('[data-out="note"]')?.textContent || "";
+          if (note.includes("오류") || note.includes("빠릅니다")) anyError = true;
+          // msg는 quiet라 바뀌지 않음
+          msgEl.textContent = beforeMsg;
+        }
+        setMessage(anyError ? "일부 행에 오류가 있습니다. 비고를 확인해 주세요." : "전체 계산 완료", anyError ? "error" : "success");
+      }
+
+      function fillTodayToBlankAsOf(){
+        const t = ymdToISO(todayYMD());
+        for (let r=0;r<tbody.children.length;r++){
+          const asOf = getInput(r,2);
+          if (asOf && !asOf.value.trim()){
+            asOf.value = t;
+          }
+        }
+        setMessage("비어있는 기준일에 오늘 날짜를 채웠습니다.", "info");
+        calcAll();
+      }
+
+      function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
+
+      function moveFocus(fromRow, fromCol, dRow, dCol){
+        const maxRow = tbody.children.length - 1;
+        const newRow = clamp(fromRow + dRow, 0, maxRow);
+        const newCol = clamp(fromCol + dCol, 0, COL_COUNT - 1);
+        const target = getInput(newRow, newCol);
+        if (target){
+          target.focus();
+          // 셀 이동 느낌: 전체 선택
+          target.select?.();
+        }
+      }
+
+      function caretAtStart(input){
+        return input.selectionStart === 0 && input.selectionEnd === 0;
+      }
+
+      function caretAtEnd(input){
+        const len = input.value.length;
+        return input.selectionStart === len && input.selectionEnd === len;
+      }
+
+      function onGridKeydown(e){
+        const input = e.target;
+        const row = Number(input.dataset.row);
+        const col = Number(input.dataset.col);
+
+        // Ctrl+; => 오늘 날짜 입력(기준일 칸에서 특히 유용)
+        if (e.ctrlKey && !e.shiftKey && !e.altKey && e.key === ";"){
+          const t = ymdToISO(todayYMD());
+          input.value = t;
+          calcRow(row);
+          setMessage("오늘 날짜를 입력했습니다.", "info");
+          e.preventDefault();
+          return;
+        }
+
+        // Enter: 아래 / Shift+Enter: 위
+        if (e.key === "Enter"){
+          e.preventDefault();
+          moveFocus(row, col, e.shiftKey ? -1 : 1, 0);
+          return;
+        }
+
+        // Up/Down: 항상 셀 이동(단일라인 input에선 기본 동작이 거의 없음)
+        if (e.key === "ArrowUp"){
+          e.preventDefault();
+          moveFocus(row, col, -1, 0);
+          return;
+        }
+        if (e.key === "ArrowDown"){
+          e.preventDefault();
+          moveFocus(row, col, 1, 0);
+          return;
+        }
+
+        // Left/Right: 커서가 맨 앞/뒤일 때만 셀 이동 (입력 중 커서 이동과 충돌 방지)
+        if (e.key === "ArrowLeft" && caretAtStart(input)){
+          e.preventDefault();
+          moveFocus(row, col, 0, -1);
+          return;
+        }
+        if (e.key === "ArrowRight" && caretAtEnd(input)){
+          e.preventDefault();
+          moveFocus(row, col, 0, 1);
+          return;
+        }
+      }
+
+      // 엑셀처럼 탭/줄바꿈 붙여넣기 지원
+      function onGridPaste(e){
+        const input = e.target;
+        const startRow = Number(input.dataset.row);
+        const startCol = Number(input.dataset.col);
+
+        const text = e.clipboardData?.getData("text");
+        if (!text) return;
+
+        // 단일 값이면 기본 paste 허용
+        const hasGridShape = text.includes("\t") || text.includes("\n") || text.includes("\r");
+        if (!hasGridShape) return;
+
+        e.preventDefault();
+
+        const rows = text
+          .replace(/\r\n/g, "\n")
+          .replace(/\r/g, "\n")
+          .split("\n")
+          .filter(line => line.length > 0);
+
+        for (let r=0; r<rows.length; r++){
+          const cells = rows[r].split("\t");
+          const targetRow = startRow + r;
+          // 부족하면 행 자동 추가
+          while (targetRow >= tbody.children.length) addRow();
+
+          for (let c=0; c<cells.length; c++){
+            const targetCol = startCol + c;
+            if (targetCol >= COL_COUNT) break;
+            const t = getInput(targetRow, targetCol);
+            if (!t) continue;
+            t.value = cells[c].trim();
+            // 날짜 칸은 가능한 경우 정규화
+            if (targetCol === 1 || targetCol === 2){
+              const p = parseFlexibleDate(t.value);
+              if (p) t.value = ymdToISO(p);
+            }
+          }
+        }
+
+        setMessage("붙여넣기 완료", "success");
+        calcAll();
+      }
+
+      // 이벤트
+      btnCalcAll.addEventListener("click", calcAll);
+      btnFillToday.addEventListener("click", fillTodayToBlankAsOf);
+      btnAddRow.addEventListener("click", addRow);
+      btnReset.addEventListener("click", resetAll);
+
+      $$('input[name="leapPolicy"]').forEach(r => {
+        r.addEventListener("change", () => {
+          calcAll();
+          setMessage("윤일 처리 옵션을 적용했습니다.", "info");
+        });
+      });
+
+      // 초기 렌더
+      rebuildDefault();
+      setMessage("시트에 입력 후 ‘전체 계산’을 누르세요. (또는 입력 중 자동으로 비고가 업데이트됩니다)", "info");
+
+      // 첫 칸 포커스
+      const first = getInput(0,0);
+      if (first) first.focus();
+    })();
+  </script>
+
+  
+<script src="/static/footer.js"></script>
+<script src="/static/global-loader.js?v=1"></script>
+</body>
+</html>
