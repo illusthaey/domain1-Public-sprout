@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>엑셀 뷰어</title>
+  <meta name="description" content="드래그앤드롭으로 엑셀 파일을 올리고, 반영하기 버튼으로 시트를 그대로 웹 표로 보여주는 단일 HTML 뷰어" />
+
+  <!--
+    운영 배포 시에는 아래 CDN 스크립트를 직접 내려받아 같은 서버에 두고
+    로컬 경로(/static/xlsx.full.min.js 등)로 바꾸는 것을 권장합니다.
+    공식 문서 기준으로 SheetJS CDN이 공식 배포 경로입니다.
+  -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#fffdf7;
+      --card:#ffffff;
+      --line:#e5e7eb;
+      --line-strong:#cbd5e1;
+      --text:#111827;
+      --muted:#6b7280;
+      --accent:#2563eb;
+      --accent-soft:#dbeafe;
+      --ok:#166534;
+      --ok-bg:#dcfce7;
+      --warn:#92400e;
+      --warn-bg:#fef3c7;
+      --error:#991b1b;
+      --error-bg:#fee2e2;
+      --shadow:0 8px 26px rgba(15, 23, 42, .06);
+      --radius:16px;
+      --sheet-header:#f8fafc;
+      --sheet-header-strong:#eef2f7;
+      --sheet-empty:#fafafa;
+      --sheet-link:#1d4ed8;
+      --sticky-shadow:1px 0 0 0 rgba(203,213,225,.9), 0 1px 0 0 rgba(203,213,225,.9);
+    }
+
+    *{box-sizing:border-box}
+    html{font-size:16px}
+    body{
+      margin:0;
+      background:
+        radial-gradient(circle at 0% 0%, rgba(37,99,235,.07), transparent 22%),
+        radial-gradient(circle at 100% 0%, rgba(16,185,129,.06), transparent 18%),
+        var(--bg);
+      color:var(--text);
+      font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR","Apple SD Gothic Neo","맑은 고딕",sans-serif;
+      line-height:1.5;
+      word-break:keep-all;
+    }
+
+    a{color:inherit}
+    .shell{
+      max-width:1280px;
+      margin:0 auto;
+      padding:24px 16px 40px;
+    }
+    .page-head{
+      margin-bottom:18px;
+    }
+    .page-title{
+      margin:0 0 8px;
+      font-size:2rem;
+      line-height:1.2;
+      font-weight:800;
+      letter-spacing:-0.03em;
+    }
+    .page-sub{
+      margin:0;
+      color:var(--muted);
+      font-size:1rem;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns:minmax(300px, 420px) minmax(0, 1fr);
+      gap:18px;
+      align-items:start;
+    }
+    @media (max-width: 980px){
+      .grid{grid-template-columns:1fr}
+    }
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:18px;
+    }
+    .card h2{
+      margin:0 0 12px;
+      font-size:1.15rem;
+      font-weight:800;
+      letter-spacing:-0.02em;
+    }
+    .card h3{
+      margin:18px 0 10px;
+      font-size:1rem;
+      font-weight:700;
+    }
+    .muted{
+      color:var(--muted);
+      font-size:.95rem;
+    }
+
+    .drop-zone{
+      position:relative;
+      min-height:180px;
+      border:2px dashed var(--line-strong);
+      border-radius:18px;
+      background:
+        linear-gradient(180deg, rgba(248,250,252,.95), rgba(255,255,255,.98));
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      padding:22px;
+      transition:border-color .15s ease, background-color .15s ease, transform .08s ease, box-shadow .15s ease;
+      cursor:pointer;
+      user-select:none;
+    }
+    .drop-zone:hover{
+      border-color:#94a3b8;
+      box-shadow:0 0 0 4px rgba(148,163,184,.08);
+    }
+    .drop-zone.is-dragover{
+      border-color:var(--accent);
+      background:linear-gradient(180deg, #f8fbff, #eff6ff);
+      box-shadow:0 0 0 4px rgba(37,99,235,.12);
+      transform:translateY(-1px);
+    }
+    .drop-zone:focus-visible{
+      outline:none;
+      border-color:var(--accent);
+      box-shadow:0 0 0 4px rgba(37,99,235,.15);
+    }
+    .drop-zone strong{
+      display:block;
+      font-size:1.1rem;
+      margin-bottom:8px;
+    }
+    .drop-zone small{
+      display:block;
+      color:var(--muted);
+      margin-top:8px;
+    }
+
+    .file-row{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      margin-top:14px;
+    }
+    .file-chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      min-height:40px;
+      padding:8px 12px;
+      border:1px solid var(--line);
+      border-radius:999px;
+      background:#f8fafc;
+      font-size:.95rem;
+    }
+    .file-chip .dot{
+      width:9px;
+      height:9px;
+      border-radius:50%;
+      background:#9ca3af;
+      flex:none;
+    }
+    .file-chip.ready .dot{
+      background:#22c55e;
+      box-shadow:0 0 0 4px rgba(34,197,94,.12);
+    }
+
+    .toolbar{
+      display:grid;
+      gap:12px;
+      margin-top:16px;
+    }
+    .field{
+      display:grid;
+      gap:6px;
+    }
+    .field label{
+      font-size:.95rem;
+      font-weight:700;
+    }
+    select, button, input[type="checkbox"]{
+      font:inherit;
+    }
+    select{
+      width:100%;
+      min-height:44px;
+      padding:10px 12px;
+      border:1px solid var(--line-strong);
+      border-radius:12px;
+      background:#fff;
+      color:var(--text);
+    }
+    select:disabled{
+      background:#f8fafc;
+      color:#9ca3af;
+    }
+    .check{
+      display:flex;
+      align-items:flex-start;
+      gap:10px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:12px 14px;
+      background:#fafafa;
+      font-size:.95rem;
+    }
+    .check input{
+      margin-top:2px;
+      transform:scale(1.05);
+    }
+
+    .btn-row{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:2px;
+    }
+    .btn{
+      appearance:none;
+      border:1px solid #111827;
+      background:#fff;
+      color:#111827;
+      border-radius:12px;
+      min-height:44px;
+      padding:10px 16px;
+      font-weight:700;
+      cursor:pointer;
+      transition:transform .06s ease, background-color .15s ease, box-shadow .15s ease, opacity .15s ease;
+    }
+    .btn:hover{background:#f3f4f6}
+    .btn:active{transform:translateY(1px)}
+    .btn:disabled{
+      cursor:not-allowed;
+      opacity:.5;
+    }
+    .btn.primary{
+      background:#111827;
+      color:#fff;
+    }
+    .btn.primary:hover{
+      background:#000;
+    }
+    .btn.soft{
+      border-color:#cbd5e1;
+      background:#f8fafc;
+    }
+
+    .status{
+      margin-top:14px;
+      padding:12px 14px;
+      border-radius:12px;
+      font-size:.95rem;
+      border:1px solid var(--line);
+      background:#f8fafc;
+      color:#334155;
+      white-space:pre-wrap;
+    }
+    .status.ok{
+      border-color:#bbf7d0;
+      background:var(--ok-bg);
+      color:var(--ok);
+    }
+    .status.warn{
+      border-color:#fde68a;
+      background:var(--warn-bg);
+      color:var(--warn);
+    }
+    .status.error{
+      border-color:#fecaca;
+      background:var(--error-bg);
+      color:var(--error);
+    }
+
+    .meta{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-bottom:14px;
+    }
+    .meta-badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 12px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:#f8fafc;
+      font-size:.92rem;
+    }
+    .meta-badge strong{
+      font-weight:800;
+    }
+
+    .viewer-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-bottom:12px;
+    }
+    .viewer-title{
+      margin:0;
+      font-size:1.15rem;
+      font-weight:800;
+    }
+    .viewer-sub{
+      margin:4px 0 0;
+      color:var(--muted);
+      font-size:.95rem;
+    }
+
+    .sheet-wrap{
+      border:1px solid var(--line);
+      border-radius:16px;
+      overflow:auto;
+      background:#fff;
+      max-height:70vh;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.7);
+    }
+
+    .sheet-grid{
+      border-collapse:separate;
+      border-spacing:0;
+      width:max-content;
+      min-width:100%;
+      table-layout:fixed;
+      background:#fff;
+      color:#111827;
+    }
+    .sheet-grid col.row-number-col{
+      width:58px;
+    }
+    .sheet-grid th,
+    .sheet-grid td{
+      border-right:1px solid var(--line);
+      border-bottom:1px solid var(--line);
+      padding:8px 10px;
+      vertical-align:middle;
+      overflow-wrap:anywhere;
+      white-space:pre-wrap;
+      background:#fff;
+      min-width:48px;
+    }
+    .sheet-grid thead th{
+      position:sticky;
+      top:0;
+      z-index:4;
+      background:var(--sheet-header);
+      text-align:center;
+      font-weight:800;
+      box-shadow:0 1px 0 0 var(--line);
+    }
+    .sheet-grid .row-header{
+      position:sticky;
+      left:0;
+      z-index:3;
+      background:var(--sheet-header);
+      text-align:center;
+      font-weight:800;
+      box-shadow:var(--sticky-shadow);
+    }
+    .sheet-grid .corner{
+      position:sticky;
+      left:0;
+      top:0;
+      z-index:5;
+      background:var(--sheet-header-strong);
+      box-shadow:var(--sticky-shadow);
+    }
+    .sheet-grid td.num{
+      text-align:right;
+      font-variant-numeric:tabular-nums;
+    }
+    .sheet-grid td.is-empty{
+      background:var(--sheet-empty);
+    }
+    .sheet-grid td a{
+      color:var(--sheet-link);
+      text-decoration:underline;
+      text-underline-offset:2px;
+    }
+
+    .placeholder{
+      min-height:360px;
+      display:grid;
+      place-items:center;
+      text-align:center;
+      color:var(--muted);
+      padding:28px;
+    }
+    .placeholder strong{
+      display:block;
+      color:var(--text);
+      font-size:1.05rem;
+      margin-bottom:8px;
+    }
+
+    .info-list{
+      margin:10px 0 0;
+      padding-left:18px;
+      color:#374151;
+      font-size:.95rem;
+    }
+    .info-list li{margin:6px 0}
+
+    .footer-note{
+      margin-top:14px;
+      color:var(--muted);
+      font-size:.92rem;
+    }
+
+    @media print{
+      body{
+        background:#fff;
+      }
+      .no-print{
+        display:none !important;
+      }
+      .shell{
+        max-width:none;
+        padding:0;
+      }
+      .grid{
+        display:block;
+      }
+      .card{
+        border:0;
+        box-shadow:none;
+        padding:0;
+        background:#fff;
+      }
+      .sheet-wrap{
+        max-height:none;
+        overflow:visible;
+        border:1px solid #bbb;
+        border-radius:0;
+      }
+      .sheet-grid th,
+      .sheet-grid td{
+        font-size:11px;
+        padding:4px 6px;
+      }
+      .sheet-grid thead th,
+      .sheet-grid .row-header,
+      .sheet-grid .corner{
+        position:static;
+        box-shadow:none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="page-head no-print">
+      <h1 class="page-title">엑셀 뷰어</h1>
+      <p class="page-sub">
+        엑셀 파일을 드래그해서 올리고 <strong>반영하기</strong>를 누르면, 선택한 시트를 웹 표로 보여줍니다.
+        서버 업로드 없이 브라우저 안에서만 처리됩니다.
+      </p>
+    </header>
+
+    <section class="grid">
+      <aside class="card no-print">
+        <h2>파일 올리기</h2>
+
+        <div id="dropZone" class="drop-zone" tabindex="0" role="button" aria-label="엑셀 파일 업로드">
+          <div>
+            <strong>여기에 엑셀 파일을 끌어다 놓으세요</strong>
+            <div>.xlsx, .xls, .xlsm, .xlsb, .csv, .ods 지원</div>
+            <small>클릭해서 파일 선택도 가능합니다.</small>
+          </div>
+        </div>
+
+        <input id="fileInput" type="file" accept=".xlsx,.xls,.xlsm,.xlsb,.csv,.ods" hidden />
+
+        <div class="file-row">
+          <div id="fileChip" class="file-chip" aria-live="polite">
+            <span class="dot" aria-hidden="true"></span>
+            <span id="fileLabel">아직 선택된 파일이 없습니다</span>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <div class="field">
+            <label for="sheetSelect">시트 선택</label>
+            <select id="sheetSelect" disabled>
+              <option>먼저 파일을 올려주세요</option>
+            </select>
+          </div>
+
+          <label class="check">
+            <input id="showHidden" type="checkbox" />
+            <span>
+              숨김 행/열도 표시
+              <br />
+              <span class="muted">체크하지 않으면 엑셀에서 숨긴 행/열은 화면에서 제외합니다.</span>
+            </span>
+          </label>
+
+          <div class="btn-row">
+            <button id="applyBtn" class="btn primary" disabled>반영하기</button>
+            <button id="clearBtn" class="btn soft" disabled>초기화</button>
+            <button id="printBtn" class="btn soft" type="button">인쇄</button>
+          </div>
+        </div>
+
+        <div id="statusBox" class="status" role="status" aria-live="polite">
+          파일을 올리면 여기에서 상태를 안내합니다.
+        </div>
+
+        <h3>동작 특징</h3>
+        <ul class="info-list">
+          <li>병합 셀, 열 너비, 행 높이, 빈칸 위치를 최대한 유지합니다.</li>
+          <li>셀에 링크가 있으면 클릭 가능한 링크로 표시합니다.</li>
+          <li>큰 시트는 브라우저가 잠깐 버벅일 수 있어, 반영 전에 한 번 더 확인합니다.</li>
+          <li>웹에서 완전히 같은 서식까지 100% 복제하는 건 한계가 있어, 핵심은 <strong>내용과 구조</strong> 재현에 맞췄습니다.</li>
+        </ul>
+
+        <p class="footer-note">
+          운영 배포 시에는 SheetJS 스크립트를 CDN 대신 로컬 파일로 내려받아 두는 편이 더 안정적입니다.
+        </p>
+      </aside>
+
+      <section class="card">
+        <div class="viewer-head">
+          <div>
+            <h2 class="viewer-title">미리보기</h2>
+            <p id="viewerSub" class="viewer-sub">아직 반영된 시트가 없습니다.</p>
+          </div>
+
+          <div id="metaRow" class="meta" aria-live="polite">
+            <span class="meta-badge"><strong>파일</strong> -</span>
+            <span class="meta-badge"><strong>시트</strong> -</span>
+            <span class="meta-badge"><strong>크기</strong> -</span>
+          </div>
+        </div>
+
+        <div id="sheetWrap" class="sheet-wrap">
+          <div class="placeholder">
+            <div>
+              <strong>엑셀을 올린 뒤 반영하기를 눌러주세요</strong>
+              현재는 표시할 시트가 없습니다.
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      /** @type {any} */
+      const XLSX_LIB = window.XLSX;
+      if (!XLSX_LIB) {
+        alert("SheetJS 라이브러리를 불러오지 못했습니다. 네트워크 상태나 스크립트 경로를 확인해주세요.");
+        return;
+      }
+
+      const state = {
+        workbook: null,
+        fileName: "",
+        lastRenderedSheet: "",
+        lastRenderedStats: null
+      };
+
+      const els = {
+        dropZone: document.getElementById("dropZone"),
+        fileInput: document.getElementById("fileInput"),
+        fileChip: document.getElementById("fileChip"),
+        fileLabel: document.getElementById("fileLabel"),
+        sheetSelect: document.getElementById("sheetSelect"),
+        showHidden: document.getElementById("showHidden"),
+        applyBtn: document.getElementById("applyBtn"),
+        clearBtn: document.getElementById("clearBtn"),
+        printBtn: document.getElementById("printBtn"),
+        statusBox: document.getElementById("statusBox"),
+        viewerSub: document.getElementById("viewerSub"),
+        metaRow: document.getElementById("metaRow"),
+        sheetWrap: document.getElementById("sheetWrap")
+      };
+
+      function setStatus(message, kind = "info") {
+        els.statusBox.textContent = message;
+        els.statusBox.className = "status";
+        if (kind === "ok") els.statusBox.classList.add("ok");
+        else if (kind === "warn") els.statusBox.classList.add("warn");
+        else if (kind === "error") els.statusBox.classList.add("error");
+      }
+
+      function setFileChip(label, ready = false) {
+        els.fileLabel.textContent = label;
+        els.fileChip.classList.toggle("ready", ready);
+      }
+
+      function updateMeta(fileName = "-", sheetName = "-", sizeText = "-") {
+        els.metaRow.innerHTML = "";
+        [
+          ["파일", fileName],
+          ["시트", sheetName],
+          ["크기", sizeText]
+        ].forEach(([k, v]) => {
+          const badge = document.createElement("span");
+          badge.className = "meta-badge";
+          badge.innerHTML = `<strong>${escapeHTML(k)}</strong> ${escapeHTML(v)}`;
+          els.metaRow.appendChild(badge);
+        });
+      }
+
+      function resetViewer() {
+        els.sheetWrap.innerHTML = `
+          <div class="placeholder">
+            <div>
+              <strong>엑셀을 올린 뒤 반영하기를 눌러주세요</strong>
+              현재는 표시할 시트가 없습니다.
+            </div>
+          </div>
+        `;
+        els.viewerSub.textContent = "아직 반영된 시트가 없습니다.";
+        updateMeta();
+      }
+
+      function clearAll() {
+        state.workbook = null;
+        state.fileName = "";
+        state.lastRenderedSheet = "";
+        state.lastRenderedStats = null;
+
+        els.fileInput.value = "";
+        els.sheetSelect.innerHTML = "<option>먼저 파일을 올려주세요</option>";
+        els.sheetSelect.disabled = true;
+        els.applyBtn.disabled = true;
+        els.clearBtn.disabled = true;
+        els.showHidden.checked = false;
+
+        setFileChip("아직 선택된 파일이 없습니다", false);
+        setStatus("파일을 올리면 여기에서 상태를 안내합니다.");
+        resetViewer();
+      }
+
+      function escapeHTML(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function openPicker() {
+        els.fileInput.click();
+      }
+
+      function preventDefaults(event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+
+      function isProbablySpreadsheet(file) {
+        if (!file) return false;
+        const name = (file.name || "").toLowerCase();
+        return /\.(xlsx|xls|xlsm|xlsb|csv|ods)$/i.test(name);
+      }
+
+      async function handleFile(file) {
+        if (!file) return;
+
+        setFileChip(file.name || "이름 없는 파일", false);
+        els.sheetSelect.disabled = true;
+        els.applyBtn.disabled = true;
+        setStatus("파일을 읽는 중입니다...");
+
+        if (!isProbablySpreadsheet(file)) {
+          setStatus("확장자가 엑셀 파일처럼 보이지 않지만, 일단 읽기를 시도합니다.", "warn");
+        }
+
+        try {
+          const buffer = await file.arrayBuffer();
+
+          const workbook = XLSX_LIB.read(buffer, {
+            cellDates: true,
+            cellStyles: true,
+            dense: false
+          });
+
+          if (!workbook || !Array.isArray(workbook.SheetNames) || workbook.SheetNames.length === 0) {
+            throw new Error("시트를 찾지 못했습니다.");
+          }
+
+          state.workbook = workbook;
+          state.fileName = file.name || "이름 없는 파일";
+
+          populateSheetSelect(workbook.SheetNames);
+          setFileChip(state.fileName, true);
+          els.sheetSelect.disabled = false;
+          els.applyBtn.disabled = false;
+          els.clearBtn.disabled = false;
+
+          setStatus(
+            `파일 준비 완료: ${state.fileName}\n시트를 고른 뒤 “반영하기”를 누르세요.`,
+            "ok"
+          );
+        } catch (error) {
+          console.error(error);
+          state.workbook = null;
+          state.fileName = "";
+          els.sheetSelect.innerHTML = "<option>읽기 실패</option>";
+          els.sheetSelect.disabled = true;
+          els.applyBtn.disabled = true;
+          els.clearBtn.disabled = true;
+          setFileChip("파일 읽기 실패", false);
+          setStatus(
+            "파일을 읽지 못했습니다. 손상된 파일이거나 암호가 걸려 있을 수 있습니다.\n" +
+            `상세: ${error && error.message ? error.message : String(error)}`,
+            "error"
+          );
+          resetViewer();
+        }
+      }
+
+      function populateSheetSelect(sheetNames) {
+        els.sheetSelect.innerHTML = "";
+        sheetNames.forEach((name, index) => {
+          const option = document.createElement("option");
+          option.value = name;
+          option.textContent = `${index + 1}. ${name}`;
+          els.sheetSelect.appendChild(option);
+        });
+      }
+
+      function clamp(num, min, max) {
+        return Math.max(min, Math.min(max, num));
+      }
+
+      function calcColumnWidthPx(meta) {
+        if (!meta) return 96;
+        if (typeof meta.wpx === "number" && Number.isFinite(meta.wpx)) {
+          return clamp(Math.round(meta.wpx), 40, 480);
+        }
+        if (typeof meta.wch === "number" && Number.isFinite(meta.wch)) {
+          return clamp(Math.round(meta.wch * 8 + 16), 40, 480);
+        }
+        if (
+          typeof meta.width === "number" &&
+          Number.isFinite(meta.width) &&
+          typeof meta.MDW === "number" &&
+          Number.isFinite(meta.MDW) &&
+          meta.MDW > 0
+        ) {
+          return clamp(Math.round(meta.width * meta.MDW), 40, 480);
+        }
+        return 96;
+      }
+
+      function calcRowHeightPx(meta) {
+        if (!meta) return null;
+        if (typeof meta.hpx === "number" && Number.isFinite(meta.hpx)) {
+          return clamp(Math.round(meta.hpx), 20, 240);
+        }
+        if (typeof meta.hpt === "number" && Number.isFinite(meta.hpt)) {
+          return clamp(Math.round((meta.hpt * 96) / 72), 20, 240);
+        }
+        return null;
+      }
+
+      function cellKey(r, c) {
+        return `${r}:${c}`;
+      }
+
+      function formatDateObject(date) {
+        if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
+        const yy = String(date.getFullYear());
+        const mm = String(date.getMonth() + 1).padStart(2, "0");
+        const dd = String(date.getDate()).padStart(2, "0");
+        const hh = String(date.getHours()).padStart(2, "0");
+        const mi = String(date.getMinutes()).padStart(2, "0");
+        const ss = String(date.getSeconds()).padStart(2, "0");
+        if (hh === "00" && mi === "00" && ss === "00") return `${yy}-${mm}-${dd}`;
+        return `${yy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+      }
+
+      function getDisplayText(cell) {
+        if (!cell) return "";
+        if (typeof cell.w === "string" && cell.w.length > 0) return cell.w;
+        if (cell.t === "d") return formatDateObject(cell.v);
+        if (cell.t === "b") return cell.v ? "TRUE" : "FALSE";
+        if (cell.t === "e") return typeof cell.w === "string" && cell.w ? cell.w : "#ERROR!";
+        if (cell.v == null) {
+          if (cell.f) return `=${cell.f}`;
+          return "";
+        }
+        return String(cell.v);
+      }
+
+      function isNumericCell(cell) {
+        if (!cell) return false;
+        if (cell.t === "n") return true;
+        if (typeof cell.z === "string" && /[%₩$¥€#,0]/.test(cell.z)) return true;
+        return false;
+      }
+
+      function normalizeColor(colorObj) {
+        if (!colorObj || typeof colorObj !== "object") return "";
+        let rgb = colorObj.rgb || colorObj.argb || "";
+        if (typeof rgb !== "string") return "";
+        rgb = rgb.replace(/^FF/i, "");
+        if (/^[0-9A-Fa-f]{6}$/.test(rgb)) return `#${rgb}`;
+        return "";
+      }
+
+      function applyBasicStyle(cell, target) {
+        if (!cell || !cell.s || typeof cell.s !== "object") return;
+
+        const style = cell.s;
+
+        if (style.alignment && typeof style.alignment === "object") {
+          const { horizontal, vertical, wrapText } = style.alignment;
+          if (["left", "center", "right"].includes(horizontal)) {
+            target.style.textAlign = horizontal;
+          }
+          if (["top", "center", "bottom"].includes(vertical)) {
+            target.style.verticalAlign = vertical === "center" ? "middle" : vertical;
+          }
+          if (wrapText === false) target.style.whiteSpace = "nowrap";
+          if (wrapText === true) target.style.whiteSpace = "pre-wrap";
+        }
+
+        if (style.font && typeof style.font === "object") {
+          if (style.font.bold) target.style.fontWeight = "700";
+          if (style.font.italic) target.style.fontStyle = "italic";
+
+          const fontColor = normalizeColor(style.font.color);
+          if (fontColor) target.style.color = fontColor;
+        }
+
+        if (style.fill && typeof style.fill === "object") {
+          const bg = normalizeColor(style.fill.fgColor || style.fill.bgColor);
+          if (bg) target.style.backgroundColor = bg;
+        }
+      }
+
+      function appendCellContent(td, cell, text) {
+        if (cell && cell.l && cell.l.Target) {
+          const link = document.createElement("a");
+          link.href = cell.l.Target;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.textContent = text || cell.l.Target;
+          td.appendChild(link);
+          return;
+        }
+
+        td.textContent = text;
+      }
+
+      function buildMergeMaps(worksheet, visibleRows, visibleCols) {
+        const anchorMap = new Map();
+        const covered = new Set();
+        const merges = Array.isArray(worksheet["!merges"]) ? worksheet["!merges"] : [];
+
+        for (const merge of merges) {
+          const rowsInRange = visibleRows.filter((r) => r >= merge.s.r && r <= merge.e.r);
+          const colsInRange = visibleCols.filter((c) => c >= merge.s.c && c <= merge.e.c);
+
+          if (rowsInRange.length === 0 || colsInRange.length === 0) continue;
+
+          const anchorR = rowsInRange[0];
+          const anchorC = colsInRange[0];
+          const anchor = cellKey(anchorR, anchorC);
+
+          anchorMap.set(anchor, {
+            src: { r: merge.s.r, c: merge.s.c },
+            rowSpan: rowsInRange.length,
+            colSpan: colsInRange.length
+          });
+
+          for (const r of rowsInRange) {
+            for (const c of colsInRange) {
+              if (r === anchorR && c === anchorC) continue;
+              covered.add(cellKey(r, c));
+            }
+          }
+        }
+
+        return { anchorMap, covered, mergeCount: merges.length };
+      }
+
+      function getVisibleIndices(start, end, metaList, includeHidden) {
+        const out = [];
+        for (let i = start; i <= end; i += 1) {
+          const hidden = !!(metaList && metaList[i] && metaList[i].hidden);
+          if (!includeHidden && hidden) continue;
+          out.push(i);
+        }
+        return out;
+      }
+
+      function renderWorksheet(sheetName) {
+        if (!state.workbook) {
+          setStatus("먼저 엑셀 파일을 올려주세요.", "warn");
+          return;
+        }
+
+        const worksheet = state.workbook.Sheets[sheetName];
+        if (!worksheet) {
+          setStatus(`선택한 시트(${sheetName})를 찾지 못했습니다.`, "error");
+          return;
+        }
+
+        const ref = worksheet["!ref"] || worksheet["!fullref"];
+        if (!ref) {
+          els.sheetWrap.innerHTML = `
+            <div class="placeholder">
+              <div>
+                <strong>빈 시트입니다</strong>
+                시트 범위를 찾지 못했습니다.
+              </div>
+            </div>
+          `;
+          els.viewerSub.textContent = `파일: ${state.fileName || "-"} / 시트: ${sheetName}`;
+          updateMeta(state.fileName || "-", sheetName, "0 × 0");
+          setStatus(`"${sheetName}" 시트는 비어 있거나 표시 범위가 없습니다.`, "warn");
+          return;
+        }
+
+        const includeHidden = !!els.showHidden.checked;
+        const range = XLSX_LIB.utils.decode_range(ref);
+        const rowsMeta = worksheet["!rows"] || [];
+        const colsMeta = worksheet["!cols"] || [];
+
+        const visibleRows = getVisibleIndices(range.s.r, range.e.r, rowsMeta, includeHidden);
+        const visibleCols = getVisibleIndices(range.s.c, range.e.c, colsMeta, includeHidden);
+
+        const totalCellsEstimate = visibleRows.length * visibleCols.length;
+        if (totalCellsEstimate > 250000) {
+          const ok = window.confirm(
+            `행 ${visibleRows.length.toLocaleString()}개 × 열 ${visibleCols.length.toLocaleString()}개 ` +
+            `(${totalCellsEstimate.toLocaleString()}칸) 입니다.\n` +
+            "브라우저가 느려질 수 있는데 계속 반영할까요?"
+          );
+          if (!ok) {
+            setStatus("대용량 시트 반영을 취소했습니다.", "warn");
+            return;
+          }
+        }
+
+        const table = document.createElement("table");
+        table.className = "sheet-grid";
+
+        const colgroup = document.createElement("colgroup");
+        const rowHeaderCol = document.createElement("col");
+        rowHeaderCol.className = "row-number-col";
+        colgroup.appendChild(rowHeaderCol);
+
+        visibleCols.forEach((colIndex) => {
+          const col = document.createElement("col");
+          col.style.width = `${calcColumnWidthPx(colsMeta[colIndex])}px`;
+          colgroup.appendChild(col);
+        });
+        table.appendChild(colgroup);
+
+        const thead = document.createElement("thead");
+        const headRow = document.createElement("tr");
+
+        const corner = document.createElement("th");
+        corner.className = "corner";
+        corner.textContent = "";
+        headRow.appendChild(corner);
+
+        visibleCols.forEach((colIndex) => {
+          const th = document.createElement("th");
+          th.textContent = XLSX_LIB.utils.encode_col(colIndex);
+          headRow.appendChild(th);
+        });
+        thead.appendChild(headRow);
+        table.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
+        const { anchorMap, covered, mergeCount } = buildMergeMaps(worksheet, visibleRows, visibleCols);
+
+        for (const rowIndex of visibleRows) {
+          const tr = document.createElement("tr");
+          const rowHeight = calcRowHeightPx(rowsMeta[rowIndex]);
+          if (rowHeight) tr.style.height = `${rowHeight}px`;
+
+          const rowHeader = document.createElement("th");
+          rowHeader.className = "row-header";
+          rowHeader.textContent = String(rowIndex + 1);
+          tr.appendChild(rowHeader);
+
+          for (const colIndex of visibleCols) {
+            const key = cellKey(rowIndex, colIndex);
+            if (covered.has(key)) continue;
+
+            const mergeInfo = anchorMap.get(key);
+            const address = mergeInfo
+              ? XLSX_LIB.utils.encode_cell(mergeInfo.src)
+              : XLSX_LIB.utils.encode_cell({ r: rowIndex, c: colIndex });
+
+            const cell = worksheet[address];
+            const td = document.createElement("td");
+            const text = getDisplayText(cell);
+
+            if (mergeInfo) {
+              if (mergeInfo.rowSpan > 1) td.rowSpan = mergeInfo.rowSpan;
+              if (mergeInfo.colSpan > 1) td.colSpan = mergeInfo.colSpan;
+            }
+
+            if (!text) td.classList.add("is-empty");
+            if (isNumericCell(cell)) td.classList.add("num");
+            if (cell && cell.f) td.title = `수식: =${cell.f}`;
+
+            appendCellContent(td, cell, text);
+            applyBasicStyle(cell, td);
+
+            tr.appendChild(td);
+          }
+
+          tbody.appendChild(tr);
+        }
+
+        table.appendChild(tbody);
+
+        els.sheetWrap.innerHTML = "";
+        els.sheetWrap.appendChild(table);
+
+        const statsText = `${visibleRows.length.toLocaleString()}행 × ${visibleCols.length.toLocaleString()}열`;
+        updateMeta(state.fileName || "-", sheetName, statsText);
+        els.viewerSub.textContent =
+          `파일: ${state.fileName || "-"} / 시트: ${sheetName} / 병합 ${mergeCount.toLocaleString()}개`;
+        state.lastRenderedSheet = sheetName;
+        state.lastRenderedStats = {
+          rows: visibleRows.length,
+          cols: visibleCols.length,
+          mergeCount,
+          includeHidden
+        };
+
+        setStatus(
+          `"${sheetName}" 시트를 반영했습니다.\n` +
+          `행 ${visibleRows.length.toLocaleString()}개, 열 ${visibleCols.length.toLocaleString()}개, 병합 ${mergeCount.toLocaleString()}개`,
+          "ok"
+        );
+      }
+
+      function handleSelectedFiles(fileList) {
+        const file = fileList && fileList[0];
+        if (!file) return;
+        handleFile(file);
+      }
+
+      els.dropZone.addEventListener("click", openPicker);
+      els.dropZone.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openPicker();
+        }
+      });
+
+      ["dragenter", "dragover", "dragleave", "drop"].forEach((type) => {
+        els.dropZone.addEventListener(type, preventDefaults, false);
+        document.body.addEventListener(type, preventDefaults, false);
+      });
+
+      ["dragenter", "dragover"].forEach((type) => {
+        els.dropZone.addEventListener(type, () => {
+          els.dropZone.classList.add("is-dragover");
+        });
+      });
+
+      ["dragleave", "drop"].forEach((type) => {
+        els.dropZone.addEventListener(type, () => {
+          els.dropZone.classList.remove("is-dragover");
+        });
+      });
+
+      els.dropZone.addEventListener("drop", (event) => {
+        const files = event.dataTransfer ? event.dataTransfer.files : null;
+        handleSelectedFiles(files);
+      });
+
+      els.fileInput.addEventListener("change", (event) => {
+        const input = event.currentTarget;
+        handleSelectedFiles(input.files);
+      });
+
+      els.applyBtn.addEventListener("click", () => {
+        renderWorksheet(els.sheetSelect.value);
+      });
+
+      els.clearBtn.addEventListener("click", clearAll);
+
+      els.printBtn.addEventListener("click", () => {
+        window.print();
+      });
+
+      clearAll();
+    })();
+  </script>
+</body>
+</html>
