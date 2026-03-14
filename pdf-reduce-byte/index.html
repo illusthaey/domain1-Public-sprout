@@ -3,12 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PDF 용량 줄이기</title>
- 
+  <title>PDF 용량 절반 압축기</title>
+  <meta name="description" content="브라우저에서 PDF를 불러와 목표 용량 비율(기본 50%)에 가깝게 압축하는 단일 HTML 페이지" />
 
-  <link rel="stylesheet" href="/static/style.css" />
-  <script src="/static/footer.js" defer></script>
-
+  <!-- PDF 처리 라이브러리 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 
@@ -436,25 +434,46 @@
         width: 100%;
       }
     }
+
+
+    .simple-footer {
+      max-width: 960px;
+      margin: 0 auto 32px;
+      padding: 0 16px;
+      color: #6b7280;
+      font-size: 0.92rem;
+      text-align: center;
+      line-height: 1.6;
+    }
+
   </style>
 </head>
+<body>
+  <a href="#main" class="skip-link">본문 바로가기</a>
 
-  
-  <body>
-  
-  <main class="container">
-    <section class="section">
-      <h1>PDF 용량 절단기</h1>
-      <p class="muted">
-        ·pdf 첨부하면 용량 줄여줌. 단, 이미지로 변환해서 압축하기 때문에 텍스트가 유지되지는 않습니다. 용량 단축이 불가피할 때 사용하십시오.
+  <main id="main" class="container page-index">
+    <section class="section page-head">
+      <h1>PDF 용량 절반 압축기</h1>
+      <p class="subtitle">
+        PDF를 브라우저에서 직접 읽어 <strong>목표 용량 비율(기본 50%)</strong>에 가깝게 다시 저장합니다.
       </p>
+
+      <div class="callout hero-note">
+        <strong>먼저 알고 쓰면 덜 억울한 점</strong>
+        <ul class="list-tight">
+          <li>이 페이지는 <strong>서버 업로드 없이 브라우저 안에서만</strong> 작업합니다.</li>
+          <li><strong>정확히 50%를 보장</strong>하는 건 PDF 구조상 어렵고, 여러 번 시도해서 <strong>최대한 근접</strong>하게 맞춥니다.</li>
+          <li>압축 과정에서 페이지를 이미지로 다시 묶기 때문에 <strong>텍스트 검색·복사·하이퍼링크·폼</strong>은 유지되지 않거나 약해질 수 있습니다.</li>
+          <li>스캔본·사진 많은 PDF에는 잘 맞고, 원래부터 텍스트 위주인 PDF는 효과가 약할 수 있습니다.</li>
+        </ul>
+      </div>
     </section>
 
-    <section class="section">
-      <h2>파일 업로드</h2>
+    <section class="section" id="upload-section">
+      <h2>파일 선택</h2>
 
       <div id="dropZone" class="drop-zone" role="button" tabindex="0" aria-controls="fileInput">
-        <strong>PDF 파일을 끌어다 놓거나 클릭해서 선택하십시오</strong>
+        <strong>PDF 파일을 끌어다 놓거나 클릭해서 선택</strong>
         <p id="selectedFileName" class="muted">선택된 파일 없음</p>
       </div>
       <input id="fileInput" class="hidden-input" type="file" accept="application/pdf" />
@@ -465,6 +484,12 @@
         <div class="pill"><span>다운로드명</span><strong class="mono">*_compressed.pdf</strong></div>
       </div>
 
+      <div class="grid three" style="margin-top:16px;">
+        <div class="field">
+          <label for="targetPercent">목표 용량 비율 (%)</label>
+          <input id="targetPercent" type="number" min="20" max="95" step="1" value="50" inputmode="numeric" />
+          <div class="inline-help">예: 50이면 원본의 절반, 70이면 원본의 70% 정도를 목표로 합니다.</div>
+        </div>
 
         <div class="field">
           <label for="preset">압축 성향</label>
@@ -473,22 +498,25 @@
             <option value="quality">품질 우선</option>
             <option value="small">용량 우선</option>
           </select>
+          <div class="inline-help">처음엔 기본으로 돌리고, 목표 미달이면 용량 우선을 써보면 됩니다.</div>
         </div>
 
         <div class="field">
-          <label for="maxAttempts">재압축 시도 횟수</label>
+          <label for="maxAttempts">최대 시도 횟수</label>
           <select id="maxAttempts">
             <option value="3">3회</option>
             <option value="4">4회</option>
             <option value="5" selected>5회</option>
             <option value="6">6회</option>
           </select>
+          <div class="inline-help">횟수가 많을수록 목표엔 가까워지지만 시간이 더 걸립니다.</div>
         </div>
+      </div>
 
       <div class="action-row">
         <button id="startBtn" type="button" class="btn primary pastel-blue">압축 시작</button>
-        <button id="downloadBtn" type="button" class="btn ghost pastel-mint" disabled>결과 파일 다운로드</button>
-        <button id="resetBtn" type="button" class="btn ghost pastel-grey">초기화하기</button>
+        <button id="downloadBtn" type="button" class="btn ghost pastel-mint" disabled>압축본 다운로드</button>
+        <button id="resetBtn" type="button" class="btn ghost pastel-grey">초기화</button>
       </div>
     </section>
 
@@ -552,6 +580,12 @@
       <p class="note">가장 먼저 목표를 통과한 결과를 우선 선택하고, 끝까지 못 맞춘 경우엔 가장 작은 결과를 남깁니다.</p>
     </section>
   </main>
+
+
+
+  <footer class="simple-footer">
+    개인 브라우저에서만 처리되며 서버로 업로드하지 않습니다. · 텍스트 검색/복사는 약해질 수 있습니다.
+  </footer>
 
   <script>
     (() => {
@@ -1097,6 +1131,5 @@
 
 <script src="/static/footer.js"></script>
 <script src="/static/global-loader.js?v=1"></script>
-  
 </body>
 </html>
