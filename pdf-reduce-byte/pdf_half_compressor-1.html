@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF 용량 절반 압축기</title>
+  <meta name="description" content="브라우저에서 PDF를 불러와 목표 용량 비율(기본 50%)에 가깝게 압축하는 단일 HTML 페이지" />
+
+  <!-- PDF 처리 라이브러리 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      font-size: 16px;
+    }
+
+    body {
+      margin: 0;
+      background: #ffffff;
+      color: #111111;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", Arial, sans-serif;
+      line-height: 1.6;
+      word-break: keep-all;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    main {
+      display: block;
+    }
+
+    h1, h2, h3 {
+      margin: 0 0 12px;
+      line-height: 1.3;
+      color: #111111;
+    }
+
+    h1 {
+      font-size: 2.1rem;
+      text-align: center;
+    }
+
+    h2 {
+      font-size: 1.45rem;
+    }
+
+    p {
+      margin: 10px 0;
+    }
+
+    ul {
+      margin: 12px 0;
+      padding-left: 22px;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 24px 16px;
+    }
+
+    .page-index {
+      background: #ffffff;
+    }
+
+    .section {
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 20px 22px;
+      background: #ffffff;
+      margin: 18px 0;
+    }
+
+    .callout {
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      background: #f8fafc;
+      padding: 14px 16px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #4b5563;
+      margin-top: 8px;
+    }
+
+    .note,
+    .muted {
+      color: #4b5563;
+      font-size: 0.98rem;
+    }
+
+    .list-tight {
+      margin: 8px 0 0;
+    }
+
+    .grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .grid.three {
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: 12px;
+      border: 1px solid #222222;
+      background: #ffffff;
+      color: #111111;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn:hover:not(:disabled) {
+      background: #f3f4f6;
+    }
+
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .btn.primary {
+      background: #111111;
+      color: #ffffff;
+      border-color: #111111;
+    }
+
+    .btn.ghost {
+      background: #f9fafb;
+      border-color: #d1d5db;
+    }
+
+    .btn.pastel-blue { background: #e6f0ff; }
+    .btn.pastel-mint { background: #dff7ea; }
+    .btn.pastel-grey { background: #f3f4f6; }
+
+    input,
+    select,
+    button {
+      font: inherit;
+    }
+
+    input[type="number"],
+    select {
+      width: 100%;
+      min-width: 0;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid #d1d5db;
+      background: #ffffff;
+      color: #111111;
+    }
+
+    input[type="number"]:focus,
+    select:focus,
+    .btn:focus-visible,
+    .drop-zone:focus-visible {
+      outline: 2px solid rgba(99, 102, 241, 0.45);
+      outline-offset: 2px;
+    }
+
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 10px;
+      z-index: 9999;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: #111111;
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .skip-link:focus {
+      left: 10px;
+    }
+
+    .page-head {
+      margin-bottom: 16px;
+    }
+
+    .hero-note {
+      margin-top: 10px;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+      align-content: start;
+    }
+
+    .field label,
+    .field .label {
+      font-weight: 700;
+      color: #111;
+    }
+
+    .drop-zone {
+      border: 2px dashed #c8ccd4;
+      border-radius: 18px;
+      background: #fafbff;
+      padding: 28px 18px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.08s ease;
+      user-select: none;
+    }
+
+    .drop-zone:hover,
+    .drop-zone:focus-visible,
+    .drop-zone.is-dragover {
+      border-color: #7c83ff;
+      background: #f0f3ff;
+      outline: none;
+      transform: translateY(-1px);
+    }
+
+    .drop-zone strong {
+      display: block;
+      font-size: 1.15rem;
+      color: #111;
+      margin-bottom: 6px;
+    }
+
+    .drop-zone .muted {
+      margin: 0;
+    }
+
+    .badge-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid #d7dbe4;
+      background: #fff;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .pill strong {
+      color: #111;
+    }
+
+    .action-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .action-row .btn {
+      min-width: 120px;
+      text-align: center;
+    }
+
+    .stats-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+
+    .stat-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      padding: 14px 16px;
+      background: #fff;
+    }
+
+    .stat-label {
+      margin: 0 0 6px;
+      color: #6b7280;
+      font-size: 0.96rem;
+    }
+
+    .stat-value {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #111;
+      line-height: 1.25;
+      word-break: break-word;
+    }
+
+    .progress-wrap {
+      margin-top: 12px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 14px;
+      background: #edf1f7;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid #dbe1eb;
+    }
+
+    .progress-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #7c83ff, #60a5fa);
+      transition: width 0.12s ease;
+    }
+
+    .status-line {
+      margin-top: 10px;
+      font-weight: 700;
+      color: #1f2937;
+    }
+
+    .console {
+      margin-top: 12px;
+      max-height: 280px;
+      overflow: auto;
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: 14px;
+      border: 1px solid #1e293b;
+      padding: 14px 16px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 0.92rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+      user-select: text;
+    }
+
+    .console .time {
+      color: #93c5fd;
+    }
+
+    .console .ok {
+      color: #86efac;
+    }
+
+    .console .warn {
+      color: #fcd34d;
+    }
+
+    .console .err {
+      color: #fca5a5;
+    }
+
+    .summary-banner {
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid #d7dbe4;
+      background: #f8fbff;
+      margin-top: 10px;
+    }
+
+    .summary-banner strong {
+      color: #111;
+    }
+
+    .simple-table td.center,
+    .simple-table th.center {
+      text-align: center;
+    }
+
+    .simple-table td.left,
+    .simple-table th.left {
+      text-align: left;
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+
+    .hidden-input {
+      position: absolute !important;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .inline-help {
+      font-size: 0.95rem;
+      color: #4b5563;
+    }
+
+    .callout ul {
+      margin-top: 8px;
+      margin-bottom: 0;
+    }
+
+    .result-ok {
+      color: #166534;
+    }
+
+    .result-warn {
+      color: #92400e;
+    }
+
+    .result-bad {
+      color: #991b1b;
+    }
+
+    @media (max-width: 640px) {
+      .drop-zone {
+        padding: 22px 14px;
+      }
+
+      .action-row .btn {
+        width: 100%;
+      }
+    }
+
+
+    .simple-footer {
+      max-width: 960px;
+      margin: 0 auto 32px;
+      padding: 0 16px;
+      color: #6b7280;
+      font-size: 0.92rem;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+  </style>
+</head>
+<body>
+  <a href="#main" class="skip-link">본문 바로가기</a>
+
+  <main id="main" class="container page-index">
+    <section class="section page-head">
+      <h1>PDF 용량 절반 압축기</h1>
+      <p class="subtitle">
+        PDF를 브라우저에서 직접 읽어 <strong>목표 용량 비율(기본 50%)</strong>에 가깝게 다시 저장합니다.
+      </p>
+
+      <div class="callout hero-note">
+        <strong>먼저 알고 쓰면 덜 억울한 점</strong>
+        <ul class="list-tight">
+          <li>이 페이지는 <strong>서버 업로드 없이 브라우저 안에서만</strong> 작업합니다.</li>
+          <li><strong>정확히 50%를 보장</strong>하는 건 PDF 구조상 어렵고, 여러 번 시도해서 <strong>최대한 근접</strong>하게 맞춥니다.</li>
+          <li>압축 과정에서 페이지를 이미지로 다시 묶기 때문에 <strong>텍스트 검색·복사·하이퍼링크·폼</strong>은 유지되지 않거나 약해질 수 있습니다.</li>
+          <li>스캔본·사진 많은 PDF에는 잘 맞고, 원래부터 텍스트 위주인 PDF는 효과가 약할 수 있습니다.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section" id="upload-section">
+      <h2>파일 선택</h2>
+
+      <div id="dropZone" class="drop-zone" role="button" tabindex="0" aria-controls="fileInput">
+        <strong>PDF 파일을 끌어다 놓거나 클릭해서 선택</strong>
+        <p id="selectedFileName" class="muted">선택된 파일 없음</p>
+      </div>
+      <input id="fileInput" class="hidden-input" type="file" accept="application/pdf" />
+
+      <div class="badge-row">
+        <div class="pill"><span>처리 방식</span><strong>브라우저 로컬</strong></div>
+        <div class="pill"><span>기본 목표</span><strong>원본의 50%</strong></div>
+        <div class="pill"><span>다운로드명</span><strong class="mono">*_compressed.pdf</strong></div>
+      </div>
+
+      <div class="grid three" style="margin-top:16px;">
+        <div class="field">
+          <label for="targetPercent">목표 용량 비율 (%)</label>
+          <input id="targetPercent" type="number" min="20" max="95" step="1" value="50" inputmode="numeric" />
+          <div class="inline-help">예: 50이면 원본의 절반, 70이면 원본의 70% 정도를 목표로 합니다.</div>
+        </div>
+
+        <div class="field">
+          <label for="preset">압축 성향</label>
+          <select id="preset">
+            <option value="balanced" selected>기본(권장)</option>
+            <option value="quality">품질 우선</option>
+            <option value="small">용량 우선</option>
+          </select>
+          <div class="inline-help">처음엔 기본으로 돌리고, 목표 미달이면 용량 우선을 써보면 됩니다.</div>
+        </div>
+
+        <div class="field">
+          <label for="maxAttempts">최대 시도 횟수</label>
+          <select id="maxAttempts">
+            <option value="3">3회</option>
+            <option value="4">4회</option>
+            <option value="5" selected>5회</option>
+            <option value="6">6회</option>
+          </select>
+          <div class="inline-help">횟수가 많을수록 목표엔 가까워지지만 시간이 더 걸립니다.</div>
+        </div>
+      </div>
+
+      <div class="action-row">
+        <button id="startBtn" type="button" class="btn primary pastel-blue">압축 시작</button>
+        <button id="downloadBtn" type="button" class="btn ghost pastel-mint" disabled>압축본 다운로드</button>
+        <button id="resetBtn" type="button" class="btn ghost pastel-grey">초기화</button>
+      </div>
+    </section>
+
+    <section class="section" id="result-section">
+      <h2>결과</h2>
+
+      <div id="summaryBanner" class="summary-banner">
+        아직 실행 전입니다. 파일을 선택한 뒤 <strong>압축 시작</strong>을 누르세요.
+      </div>
+
+      <div class="stats-grid" style="margin-top:14px;">
+        <div class="stat-card">
+          <p class="stat-label">원본 용량</p>
+          <p id="statOriginal" class="stat-value">-</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-label">목표 용량</p>
+          <p id="statTarget" class="stat-value">-</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-label">압축 결과</p>
+          <p id="statCompressed" class="stat-value">-</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-label">원본 대비</p>
+          <p id="statRatio" class="stat-value">-</p>
+        </div>
+      </div>
+
+      <div class="progress-wrap">
+        <div class="progress-bar" aria-hidden="true">
+          <div id="progressFill" class="progress-fill"></div>
+        </div>
+        <div id="statusLine" class="status-line">대기 중</div>
+      </div>
+
+      <div id="logBox" class="console" aria-live="polite">로그가 여기에 표시됩니다.</div>
+    </section>
+
+    <section class="section" id="attempt-section">
+      <h2>시도 기록</h2>
+      <div class="table-wrap">
+        <table class="sheetlike simple-table">
+          <thead>
+            <tr>
+              <th class="center">시도</th>
+              <th class="center">렌더 배율</th>
+              <th class="center">JPEG 품질</th>
+              <th class="center">결과 용량</th>
+              <th class="center">원본 대비</th>
+              <th class="left">판정</th>
+            </tr>
+          </thead>
+          <tbody id="attemptBody">
+            <tr>
+              <td colspan="6" class="center">아직 실행 전</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">가장 먼저 목표를 통과한 결과를 우선 선택하고, 끝까지 못 맞춘 경우엔 가장 작은 결과를 남깁니다.</p>
+    </section>
+  </main>
+
+
+
+  <footer class="simple-footer">
+    개인 브라우저에서만 처리되며 서버로 업로드하지 않습니다. · 텍스트 검색/복사는 약해질 수 있습니다.
+  </footer>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const WORKER_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      const PRESETS = {
+        balanced: { scale: 1.55, quality: 0.84 },
+        quality: { scale: 1.7, quality: 0.9 },
+        small: { scale: 1.35, quality: 0.74 },
+      };
+      const LIMITS = {
+        minScale: 0.5,
+        maxScale: 2.0,
+        minQuality: 0.32,
+        maxQuality: 0.92,
+        maxCanvasSide: 2200,
+      };
+
+      const state = {
+        file: null,
+        originalBytes: 0,
+        outputBlob: null,
+        outputName: '',
+        working: false,
+      };
+
+      const $ = (selector) => document.querySelector(selector);
+      const els = {
+        fileInput: $('#fileInput'),
+        dropZone: $('#dropZone'),
+        selectedFileName: $('#selectedFileName'),
+        targetPercent: $('#targetPercent'),
+        preset: $('#preset'),
+        maxAttempts: $('#maxAttempts'),
+        startBtn: $('#startBtn'),
+        downloadBtn: $('#downloadBtn'),
+        resetBtn: $('#resetBtn'),
+        progressFill: $('#progressFill'),
+        statusLine: $('#statusLine'),
+        logBox: $('#logBox'),
+        attemptBody: $('#attemptBody'),
+        summaryBanner: $('#summaryBanner'),
+        statOriginal: $('#statOriginal'),
+        statTarget: $('#statTarget'),
+        statCompressed: $('#statCompressed'),
+        statRatio: $('#statRatio'),
+      };
+
+      function clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+      }
+
+      function formatBytes(bytes) {
+        if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+        const units = ['B', 'KB', 'MB', 'GB'];
+        const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+        const num = bytes / (1024 ** index);
+        const fixed = num >= 100 || index === 0 ? 0 : num >= 10 ? 1 : 2;
+        return `${num.toFixed(fixed)} ${units[index]}`;
+      }
+
+      function formatRatio(bytes, originalBytes) {
+        if (!originalBytes) return '-';
+        return `${((bytes / originalBytes) * 100).toFixed(1)}%`;
+      }
+
+      function formatChange(diffBytes, originalBytes) {
+        if (!originalBytes) return '-';
+        const pct = Math.abs((diffBytes / originalBytes) * 100).toFixed(1);
+        if (diffBytes > 0) return `${pct}% 감소`;
+        if (diffBytes < 0) return `${pct}% 증가`;
+        return '변화 없음';
+      }
+
+      function escapeHtml(text) {
+        return String(text)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function nowTime() {
+        const d = new Date();
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        const ss = String(d.getSeconds()).padStart(2, '0');
+        return `${hh}:${mm}:${ss}`;
+      }
+
+      function log(message, tone = '') {
+        const cls = tone ? ` ${tone}` : '';
+        const line = `<span class="time">[${nowTime()}]</span> <span class="${cls.trim()}">${escapeHtml(message)}</span>`;
+        if (els.logBox.textContent.trim() === '로그가 여기에 표시됩니다.') {
+          els.logBox.innerHTML = line;
+        } else {
+          els.logBox.innerHTML += `\n${line}`;
+        }
+        els.logBox.scrollTop = els.logBox.scrollHeight;
+      }
+
+      function clearLog() {
+        els.logBox.textContent = '로그가 여기에 표시됩니다.';
+      }
+
+      function setBusy(isBusy) {
+        state.working = isBusy;
+        els.startBtn.disabled = isBusy || !state.file;
+        els.resetBtn.disabled = isBusy;
+        els.fileInput.disabled = isBusy;
+        els.targetPercent.disabled = isBusy;
+        els.preset.disabled = isBusy;
+        els.maxAttempts.disabled = isBusy;
+        els.dropZone.setAttribute('aria-disabled', String(isBusy));
+      }
+
+      function setProgress(percent, statusText) {
+        const safePercent = clamp(Number(percent) || 0, 0, 100);
+        els.progressFill.style.width = `${safePercent}%`;
+        if (statusText) {
+          els.statusLine.textContent = statusText;
+        }
+      }
+
+      function setSummary(html) {
+        els.summaryBanner.innerHTML = html;
+      }
+
+      function resetAttemptTable() {
+        els.attemptBody.innerHTML = `
+          <tr>
+            <td colspan="6" class="center">아직 실행 전</td>
+          </tr>
+        `;
+      }
+
+      function addAttemptRow(data) {
+        if (els.attemptBody.children.length === 1 && /아직 실행 전/.test(els.attemptBody.textContent)) {
+          els.attemptBody.innerHTML = '';
+        }
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="center">${escapeHtml(String(data.attempt))}</td>
+          <td class="center mono">${escapeHtml(data.scale.toFixed(3))}</td>
+          <td class="center mono">${escapeHtml(data.quality.toFixed(3))}</td>
+          <td class="center">${escapeHtml(formatBytes(data.bytes))}</td>
+          <td class="center">${escapeHtml(formatRatio(data.bytes, state.originalBytes))}</td>
+          <td class="left">${escapeHtml(data.judgement)}</td>
+        `;
+        els.attemptBody.appendChild(tr);
+      }
+
+      function sanitizeBaseName(name) {
+        const base = name.replace(/\.pdf$/i, '').trim() || 'compressed';
+        return base.replace(/[\\/:*?"<>|]+/g, '_').replace(/\s+/g, '_');
+      }
+
+      function pickFile(file) {
+        state.file = file || null;
+        state.originalBytes = file ? file.size : 0;
+        state.outputBlob = null;
+        state.outputName = '';
+        els.downloadBtn.disabled = true;
+        els.startBtn.disabled = !file;
+
+        if (!file) {
+          els.selectedFileName.textContent = '선택된 파일 없음';
+          els.statOriginal.textContent = '-';
+          els.statTarget.textContent = '-';
+          els.statCompressed.textContent = '-';
+          els.statRatio.textContent = '-';
+          setProgress(0, '대기 중');
+          resetAttemptTable();
+          clearLog();
+          return;
+        }
+
+        if (file.type && file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+          state.file = null;
+          state.originalBytes = 0;
+          els.startBtn.disabled = true;
+          els.selectedFileName.textContent = 'PDF 파일만 선택할 수 있습니다.';
+          els.statOriginal.textContent = '-';
+          els.statTarget.textContent = '-';
+          els.statCompressed.textContent = '-';
+          els.statRatio.textContent = '-';
+          setProgress(0, '대기 중');
+          resetAttemptTable();
+          clearLog();
+          setSummary('<span class="result-bad"><strong>PDF 파일만</strong> 선택할 수 있습니다.</span>');
+          log('PDF 파일이 아닌 것 같습니다. .pdf 파일을 선택해 주세요.', 'err');
+          return;
+        }
+
+        const targetBytes = Math.round(file.size * (getTargetPercent() / 100));
+        els.selectedFileName.textContent = `${file.name} (${formatBytes(file.size)})`;
+        els.statOriginal.textContent = formatBytes(file.size);
+        els.statTarget.textContent = formatBytes(targetBytes);
+        els.statCompressed.textContent = '-';
+        els.statRatio.textContent = '-';
+        setProgress(0, '준비 완료');
+        resetAttemptTable();
+        clearLog();
+        log(`파일 선택 완료: ${file.name} / ${formatBytes(file.size)}`, 'ok');
+        setSummary(`선택된 파일: <strong>${escapeHtml(file.name)}</strong> · 원본 <strong>${escapeHtml(formatBytes(file.size))}</strong> · 목표 <strong>${escapeHtml(formatBytes(targetBytes))}</strong>`);
+      }
+
+      function getTargetPercent() {
+        const value = Number(els.targetPercent.value);
+        return clamp(Number.isFinite(value) ? value : 50, 20, 95);
+      }
+
+      function updateTargetDisplay() {
+        if (!state.file) return;
+        const targetBytes = Math.round(state.file.size * (getTargetPercent() / 100));
+        els.statTarget.textContent = formatBytes(targetBytes);
+        setSummary(`선택된 파일: <strong>${escapeHtml(state.file.name)}</strong> · 원본 <strong>${escapeHtml(formatBytes(state.file.size))}</strong> · 목표 <strong>${escapeHtml(formatBytes(targetBytes))}</strong>`);
+      }
+
+      function calcNextParams(current, bytes, targetBytes) {
+        const over = Math.max(bytes / targetBytes, 1.02);
+        const scaleDrop = clamp(1 / Math.sqrt(over), 0.72, 0.94);
+        const qualityDrop = clamp(1 / Math.pow(over, 0.42), 0.72, 0.95);
+        return {
+          scale: clamp(current.scale * scaleDrop * 0.98, LIMITS.minScale, LIMITS.maxScale),
+          quality: clamp(current.quality * qualityDrop * 0.98, LIMITS.minQuality, LIMITS.maxQuality),
+        };
+      }
+
+      async function waitForLibraries() {
+        const deadline = Date.now() + 15000;
+        while (Date.now() < deadline) {
+          if (window.pdfjsLib && window.jspdf && window.jspdf.jsPDF) {
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = WORKER_SRC;
+            return;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+        throw new Error('PDF 처리 라이브러리를 불러오지 못했습니다. 네트워크 상태를 확인해 주세요.');
+      }
+
+      async function renderPdfToCompressedBuffer(pdf, params, reportPageProgress) {
+        const totalPages = pdf.numPages;
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: false });
+        let doc = null;
+
+        for (let pageNumber = 1; pageNumber <= totalPages; pageNumber += 1) {
+          const page = await pdf.getPage(pageNumber);
+          const baseViewport = page.getViewport({ scale: 1 });
+          let renderScale = params.scale;
+
+          const longestSide = Math.max(baseViewport.width * renderScale, baseViewport.height * renderScale);
+          if (longestSide > LIMITS.maxCanvasSide) {
+            renderScale *= LIMITS.maxCanvasSide / longestSide;
+          }
+
+          const renderViewport = page.getViewport({ scale: renderScale });
+          canvas.width = Math.max(1, Math.floor(renderViewport.width));
+          canvas.height = Math.max(1, Math.floor(renderViewport.height));
+
+          ctx.save();
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.restore();
+
+          await page.render({
+            canvasContext: ctx,
+            viewport: renderViewport,
+            background: 'white',
+          }).promise;
+
+          const pageWidthPt = baseViewport.width;
+          const pageHeightPt = baseViewport.height;
+          const orientation = pageWidthPt > pageHeightPt ? 'l' : 'p';
+          const imageData = canvas.toDataURL('image/jpeg', params.quality);
+
+          if (!doc) {
+            doc = new window.jspdf.jsPDF({
+              orientation,
+              unit: 'pt',
+              format: [pageWidthPt, pageHeightPt],
+              compress: true,
+              putOnlyUsedFonts: true,
+            });
+          } else {
+            doc.addPage([pageWidthPt, pageHeightPt], orientation);
+          }
+
+          doc.addImage(imageData, 'JPEG', 0, 0, pageWidthPt, pageHeightPt, undefined, 'FAST');
+
+          reportPageProgress(pageNumber, totalPages);
+
+          page.cleanup();
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          canvas.width = 1;
+          canvas.height = 1;
+        }
+
+        const arrayBuffer = doc.output('arraybuffer');
+        return arrayBuffer;
+      }
+
+      async function compressCurrentFile() {
+        if (state.working) return;
+        if (!state.file) {
+          log('먼저 PDF 파일을 선택해 주세요.', 'warn');
+          setSummary('먼저 <strong>PDF 파일</strong>을 선택해 주세요.');
+          return;
+        }
+
+        const targetPercent = getTargetPercent();
+        const targetBytes = Math.round(state.file.size * (targetPercent / 100));
+        const presetKey = PRESETS[els.preset.value] ? els.preset.value : 'balanced';
+        const maxAttempts = Math.max(1, Number(els.maxAttempts.value) || 5);
+        let params = { ...PRESETS[presetKey] };
+        let bestUnder = null;
+        let smallestOverall = null;
+
+        resetAttemptTable();
+        clearLog();
+        setBusy(true);
+        setProgress(0, 'PDF 준비 중');
+        els.downloadBtn.disabled = true;
+        els.statCompressed.textContent = '-';
+        els.statRatio.textContent = '-';
+
+        try {
+          await waitForLibraries();
+
+          log(`파일 준비: ${state.file.name} / ${formatBytes(state.file.size)}`);
+          log(`목표: 원본의 ${targetPercent}% ≈ ${formatBytes(targetBytes)}`);
+          log(`압축 성향: ${presetKey} / 최대 시도 횟수: ${maxAttempts}회`);
+
+          const bytes = await state.file.arrayBuffer();
+          const pdf = await window.pdfjsLib.getDocument({
+            data: new Uint8Array(bytes),
+            useWorkerFetch: true,
+            isEvalSupported: false,
+          }).promise;
+
+          log(`PDF 로드 완료: 총 ${pdf.numPages}페이지`, 'ok');
+          setSummary(`PDF <strong>${escapeHtml(state.file.name)}</strong> · 총 <strong>${pdf.numPages}페이지</strong> · 목표 <strong>${escapeHtml(formatBytes(targetBytes))}</strong>`);
+
+          for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+            const attemptStart = performance.now();
+            log(`시도 ${attempt}/${maxAttempts} 시작 → scale=${params.scale.toFixed(3)}, quality=${params.quality.toFixed(3)}`);
+
+            const pageProgressBase = ((attempt - 1) / maxAttempts) * 100;
+            const arrayBuffer = await renderPdfToCompressedBuffer(pdf, params, (pageNumber, totalPages) => {
+              const inner = totalPages ? (pageNumber / totalPages) * (100 / maxAttempts) : 0;
+              const progress = pageProgressBase + inner;
+              setProgress(progress, `시도 ${attempt}/${maxAttempts} · ${pageNumber}/${totalPages}페이지 처리 중`);
+            });
+
+            const resultBytes = arrayBuffer.byteLength;
+            const elapsed = ((performance.now() - attemptStart) / 1000).toFixed(1);
+            const passed = resultBytes <= targetBytes;
+            const judgement = passed
+              ? `목표 통과 · ${formatChange(state.file.size - resultBytes, state.file.size)}`
+              : `목표 미달 · ${formatBytes(resultBytes - targetBytes)} 초과`;
+
+            addAttemptRow({
+              attempt,
+              scale: params.scale,
+              quality: params.quality,
+              bytes: resultBytes,
+              judgement,
+            });
+
+            log(`시도 ${attempt} 결과: ${formatBytes(resultBytes)} (${formatRatio(resultBytes, state.file.size)}) / ${elapsed}초`, passed ? 'ok' : 'warn');
+
+            if (!smallestOverall || resultBytes < smallestOverall.bytes) {
+              smallestOverall = { arrayBuffer, bytes: resultBytes, params: { ...params }, attempt };
+            }
+            if (passed && (!bestUnder || resultBytes > bestUnder.bytes)) {
+              bestUnder = { arrayBuffer, bytes: resultBytes, params: { ...params }, attempt };
+            }
+
+            if (passed) {
+              log(`목표 용량을 통과했습니다. 시도 ${attempt} 결과를 채택합니다.`, 'ok');
+              break;
+            }
+
+            if (attempt < maxAttempts) {
+              params = calcNextParams(params, resultBytes, targetBytes);
+              log(`다음 시도를 위해 파라미터 조정 → scale=${params.scale.toFixed(3)}, quality=${params.quality.toFixed(3)}`);
+            }
+          }
+
+          const chosen = bestUnder || smallestOverall;
+          if (!chosen) {
+            throw new Error('압축 결과를 만들지 못했습니다.');
+          }
+
+          const outputBlob = new Blob([chosen.arrayBuffer], { type: 'application/pdf' });
+          const outputName = `${sanitizeBaseName(state.file.name)}_compressed.pdf`;
+          state.outputBlob = outputBlob;
+          state.outputName = outputName;
+          els.downloadBtn.disabled = false;
+
+          els.statCompressed.textContent = formatBytes(outputBlob.size);
+          els.statRatio.textContent = formatRatio(outputBlob.size, state.file.size);
+
+          const actualSaved = state.file.size - outputBlob.size;
+          const resultTone = outputBlob.size <= targetBytes ? 'result-ok' : outputBlob.size < state.file.size ? 'result-warn' : 'result-bad';
+          setSummary(`
+            <span class="${resultTone}">
+              <strong>${escapeHtml(outputName)}</strong> 생성 완료 · 결과 <strong>${escapeHtml(formatBytes(outputBlob.size))}</strong>
+              · 원본 대비 <strong>${escapeHtml(formatRatio(outputBlob.size, state.file.size))}</strong>
+              · ${escapeHtml(formatChange(actualSaved, state.file.size))}
+            </span>
+          `);
+
+          if (outputBlob.size <= targetBytes) {
+            log(`최종 선택: 시도 ${chosen.attempt} / 목표 통과`, 'ok');
+          } else if (outputBlob.size < state.file.size) {
+            log(`최종 선택: 시도 ${chosen.attempt} / 목표엔 못 미쳤지만 가장 작은 결과를 선택`, 'warn');
+          } else {
+            log('압축보다 재인코딩 오버헤드가 커서 원본보다 작아지지 않았습니다. 이 PDF는 이 방식과 궁합이 나쁩니다.', 'err');
+          }
+
+          setProgress(100, '완료');
+        } catch (error) {
+          console.error(error);
+          const message = error && error.message ? error.message : '알 수 없는 오류가 발생했습니다.';
+          log(`오류: ${message}`, 'err');
+          setSummary(`<span class="result-bad"><strong>실패:</strong> ${escapeHtml(message)}</span>`);
+          setProgress(0, '실패');
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      function downloadOutput() {
+        if (!state.outputBlob) {
+          log('먼저 압축을 실행해 주세요.', 'warn');
+          return;
+        }
+        const url = URL.createObjectURL(state.outputBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = state.outputName || 'compressed.pdf';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        log(`다운로드 시작: ${state.outputName}`, 'ok');
+      }
+
+      function resetAll() {
+        if (state.working) return;
+        state.file = null;
+        state.originalBytes = 0;
+        state.outputBlob = null;
+        state.outputName = '';
+        els.fileInput.value = '';
+        els.selectedFileName.textContent = '선택된 파일 없음';
+        els.statOriginal.textContent = '-';
+        els.statTarget.textContent = '-';
+        els.statCompressed.textContent = '-';
+        els.statRatio.textContent = '-';
+        els.downloadBtn.disabled = true;
+        els.startBtn.disabled = true;
+        setSummary('아직 실행 전입니다. 파일을 선택한 뒤 <strong>압축 시작</strong>을 누르세요.');
+        setProgress(0, '대기 중');
+        clearLog();
+        resetAttemptTable();
+      }
+
+      function handleInputFiles(fileList) {
+        const file = fileList && fileList[0] ? fileList[0] : null;
+        pickFile(file);
+      }
+
+      function bindDropZone() {
+        const openPicker = () => {
+          if (state.working) return;
+          els.fileInput.click();
+        };
+
+        els.dropZone.addEventListener('click', openPicker);
+        els.dropZone.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            openPicker();
+          }
+        });
+
+        ['dragenter', 'dragover'].forEach((type) => {
+          els.dropZone.addEventListener(type, (event) => {
+            event.preventDefault();
+            if (state.working) return;
+            els.dropZone.classList.add('is-dragover');
+          });
+        });
+
+        ['dragleave', 'drop'].forEach((type) => {
+          els.dropZone.addEventListener(type, (event) => {
+            event.preventDefault();
+            els.dropZone.classList.remove('is-dragover');
+          });
+        });
+
+        els.dropZone.addEventListener('drop', (event) => {
+          if (state.working) return;
+          handleInputFiles(event.dataTransfer.files);
+        });
+      }
+
+      function bindEvents() {
+        els.fileInput.addEventListener('change', (event) => handleInputFiles(event.target.files));
+        els.targetPercent.addEventListener('input', updateTargetDisplay);
+        els.startBtn.addEventListener('click', compressCurrentFile);
+        els.downloadBtn.addEventListener('click', downloadOutput);
+        els.resetBtn.addEventListener('click', resetAll);
+        bindDropZone();
+      }
+
+      async function init() {
+        bindEvents();
+        resetAll();
+        try {
+          await waitForLibraries();
+          log('페이지 준비 완료. PDF 파일을 넣으면 바로 압축할 수 있습니다.', 'ok');
+        } catch (error) {
+          console.error(error);
+          const message = error && error.message ? error.message : '라이브러리를 불러오지 못했습니다.';
+          log(message, 'err');
+          setSummary(`<span class="result-bad"><strong>준비 실패:</strong> ${escapeHtml(message)}</span>`);
+        }
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+    })();
+  </script>
+</body>
+</html>
