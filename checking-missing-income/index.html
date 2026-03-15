@@ -1,0 +1,1659 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <title>세외 수납 누락 검출기</title>
+
+  <link rel="stylesheet" href="/static/style.css" />
+
+  <style>
+    body {
+      background: #fff;
+    }
+
+    .page-head {
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .page-head .callout {
+      text-align: left;
+      margin-top: 14px;
+    }
+
+    .tool-intro {
+      margin-top: 10px;
+    }
+
+    .drop-zone {
+      border: 2px dashed #d1d5db;
+      border-radius: 14px;
+      background: #f9fafb;
+      padding: 18px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.05s ease;
+      min-height: 138px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .drop-zone:hover,
+    .drop-zone:focus-visible {
+      border-color: #111;
+      background: #eef2ff;
+      outline: none;
+    }
+
+    .drop-zone.is-dragover {
+      border-color: #111;
+      background: #eef2ff;
+      transform: translateY(-1px);
+    }
+
+    .drop-zone strong {
+      display: block;
+      margin-bottom: 6px;
+      color: #111;
+      font-size: 1.02rem;
+    }
+
+    .drop-zone .muted {
+      display: block;
+    }
+
+    .drop-zone-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .field-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      margin-top: 12px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field label {
+      font-size: 0.96rem;
+      color: #333;
+      font-weight: 700;
+    }
+
+    .check-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .check-inline {
+      display: inline-flex;
+      align-items: flex-start;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .check-inline input {
+      margin-top: 3px;
+    }
+
+    .file-list {
+      margin-top: 10px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .file-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      border: 1px solid #d1d5db;
+      border-radius: 999px;
+      background: #f9fafb;
+      padding: 6px 10px;
+      font-size: 0.95rem;
+      color: #333;
+      max-width: 100%;
+    }
+
+    .file-pill small {
+      color: #666;
+    }
+
+    .inline-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 16px;
+    }
+
+    .status-line {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      background: #fafafa;
+      color: #444;
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+    }
+
+    .status-line.status-good {
+      border-color: #b7e4d9;
+      background: #f0fdf9;
+      color: #0f766e;
+      font-weight: 700;
+    }
+
+    .status-line.status-warn {
+      border-color: #f3d7a6;
+      background: #fff9eb;
+      color: #b45309;
+      font-weight: 700;
+    }
+
+    .status-line.status-bad {
+      border-color: #f4c7c7;
+      background: #fff5f5;
+      color: #b91c1c;
+      font-weight: 700;
+    }
+
+    .summary-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    }
+
+    .summary-card {
+      min-height: 124px;
+    }
+
+    .summary-card h3 {
+      margin-bottom: 6px;
+    }
+
+    .summary-number {
+      font-size: 1.55rem;
+      line-height: 1.2;
+      font-weight: 800;
+      color: #111;
+      margin: 4px 0 8px;
+    }
+
+    .summary-foot {
+      font-size: 0.94rem;
+      color: #666;
+    }
+
+    .badge-good,
+    .badge-warn,
+    .badge-bad,
+    .badge-neutral {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .badge-good {
+      background: #e9f9f2;
+      color: #0f766e;
+      border: 1px solid #b7e4d9;
+    }
+
+    .badge-warn {
+      background: #fff7e6;
+      color: #b45309;
+      border: 1px solid #f3d7a6;
+    }
+
+    .badge-bad {
+      background: #fff1f1;
+      color: #b91c1c;
+      border: 1px solid #f4c7c7;
+    }
+
+    .badge-neutral {
+      background: #f3f4f6;
+      color: #374151;
+      border: 1px solid #d1d5db;
+    }
+
+    .result-head {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .result-head .row {
+      gap: 10px;
+    }
+
+    .empty-box {
+      border: 1px dashed #d1d5db;
+      border-radius: 12px;
+      background: #fafafa;
+      padding: 16px;
+      color: #555;
+    }
+
+    .simple-note {
+      font-size: 0.95rem;
+      color: #555;
+      margin-top: 8px;
+    }
+
+    .result-table {
+      min-width: 980px;
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+    }
+
+    .result-table th,
+    .result-table td {
+      border: 1px solid #e5e7eb;
+      padding: 8px 10px;
+      vertical-align: top;
+      text-align: left;
+      font-size: 0.96rem;
+      line-height: 1.5;
+    }
+
+    .result-table th {
+      background: #f9fafb;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .result-table td.numeric,
+    .result-table th.numeric {
+      text-align: right;
+    }
+
+    .result-table .cell-pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .prompt-box {
+      width: 100%;
+      min-height: 220px;
+      resize: vertical;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      line-height: 1.55;
+      background: #fff;
+    }
+
+    .count-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      border: 1px solid #d1d5db;
+      padding: 4px 10px;
+      background: #fafafa;
+      font-size: 0.9rem;
+      color: #444;
+    }
+
+    .nowrap {
+      white-space: nowrap;
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 640px) {
+      .drop-zone {
+        min-height: 118px;
+      }
+
+      .result-head {
+        align-items: flex-start;
+      }
+
+      .summary-number {
+        font-size: 1.38rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">본문 바로가기</a>
+
+  <main class="container" id="main">
+    <header class="page-head">
+      <h1>세외 수납 누락 검출기</h1>
+      <p class="subtitle">농협 입출금 거래내역과 세입세출외현금 수납결의 엑셀을 같은 날짜 기준으로 대조합니다.</p>
+
+      <div class="callout tool-intro">
+        <ul class="muted list-tight">
+          <li>판정 핵심은 <strong>같은 날짜의 은행 입금합계</strong>와 <strong>같은 날짜의 수납합계</strong> 비교입니다.</li>
+          <li>농협 거래내역은 실제로 <strong>1건 입금이 여러 수납으로 나뉘거나</strong>, 반대로 <strong>여러 입금이 1건 수납으로 합쳐질 수 있어서</strong> 단순 1:1 금액 비교만 하면 오탐이 납니다.</li>
+          <li>회계연도 시작일(기본 3.1.) 수납 중 <strong>최초수납일자</strong>가 회계연도 시작일보다 이전인 건은 이월로 보고 자동 제외할 수 있습니다.</li>
+          <li>서버·DB 없이 브라우저 안에서만 처리합니다. 업로드한 파일은 저장되지 않습니다.</li>
+        </ul>
+      </div>
+    </header>
+
+    <section class="section">
+      <h2 class="local-h2">1. 파일 업로드</h2>
+      <hr />
+
+      <div class="grid two">
+        <div class="card">
+          <h3 class="local-h3">농협 입출금 거래내역</h3>
+          <div
+            id="bankDropZone"
+            class="drop-zone"
+            role="button"
+            tabindex="0"
+            aria-label="농협 입출금 거래내역 파일 업로드"
+          >
+            <div>
+              <strong>여기로 농협 엑셀을 드래그 앤 드롭</strong>
+              <span class="muted">또는 클릭해서 여러 파일 선택</span>
+              <div class="simple-note">예: 2025.3~5, 2025.6~8, 2025.9~11, 2025.12~2026.2</div>
+            </div>
+          </div>
+          <div class="drop-zone-actions">
+            <button type="button" class="btn" id="pickBankBtn">파일 선택</button>
+            <button type="button" class="btn btn-lightgrey" id="clearBankBtn">농협 파일 비우기</button>
+          </div>
+          <input id="bankInput" type="file" accept=".xlsx,.xls,.csv" multiple hidden />
+          <div id="bankFileList" class="file-list" aria-live="polite"></div>
+        </div>
+
+        <div class="card">
+          <h3 class="local-h3">세입세출외현금 수납결의</h3>
+          <div
+            id="receiptDropZone"
+            class="drop-zone"
+            role="button"
+            tabindex="0"
+            aria-label="세입세출외현금 수납결의 파일 업로드"
+          >
+            <div>
+              <strong>여기로 수납결의 엑셀을 드래그 앤 드롭</strong>
+              <span class="muted">또는 클릭해서 파일 선택</span>
+              <div class="simple-note">한 개만 써도 되고, 필요하면 여러 파일도 합쳐서 검토할 수 있습니다.</div>
+            </div>
+          </div>
+          <div class="drop-zone-actions">
+            <button type="button" class="btn" id="pickReceiptBtn">파일 선택</button>
+            <button type="button" class="btn btn-lightgrey" id="clearReceiptBtn">수납 파일 비우기</button>
+          </div>
+          <input id="receiptInput" type="file" accept=".xlsx,.xls,.csv" multiple hidden />
+          <div id="receiptFileList" class="file-list" aria-live="polite"></div>
+        </div>
+      </div>
+
+      <div class="field-grid">
+        <div class="field">
+          <label for="startDate">검토 시작일</label>
+          <input id="startDate" type="date" value="2025-03-01" />
+        </div>
+        <div class="field">
+          <label for="endDate">검토 종료일</label>
+          <input id="endDate" type="date" value="2026-02-28" />
+        </div>
+      </div>
+
+      <div class="check-row">
+        <label class="check-inline">
+          <input id="excludeCarryover" type="checkbox" checked />
+          <span>회계연도 개시일 이월 수납 자동 제외</span>
+        </label>
+      </div>
+
+      <div class="inline-actions">
+        <button type="button" class="btn primary" id="analyzeBtn">검토 실행</button>
+        <button type="button" class="btn btn-lightgrey" id="resetAllBtn">전체 초기화</button>
+      </div>
+
+      <div id="statusLine" class="status-line" aria-live="polite">
+        파일을 올린 뒤 검토 실행을 누르세요.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="local-h2">2. AI 검토용 프롬프트</h2>
+      <hr />
+      <div class="card">
+        <textarea id="promptText" class="prompt-box" readonly></textarea>
+        <div class="inline-actions">
+          <button type="button" class="btn" id="copyPromptBtn">프롬프트 복사</button>
+        </div>
+        <div class="simple-note">날짜 입력값과 이월 제외 옵션을 바꾸면 프롬프트도 같이 바뀝니다.</div>
+      </div>
+    </section>
+
+    <section class="section hidden" id="resultSection">
+      <div class="result-head">
+        <div>
+          <h2 class="local-h2">3. 검토 결과</h2>
+          <div class="simple-note">같은 날짜 기준 합계 비교 + 같은 날짜 내 동일 금액 exact 매칭 참고</div>
+        </div>
+        <div class="row">
+          <span class="count-chip" id="resultFileCountChip">파일 0개</span>
+          <span class="count-chip" id="resultDateCountChip">날짜 0일</span>
+        </div>
+      </div>
+      <hr />
+
+      <div class="summary-grid" id="summaryCards"></div>
+
+      <div class="card" id="headlineCard" style="margin-top: 14px;"></div>
+    </section>
+
+    <section class="section hidden" id="missingSection">
+      <h2 class="local-h2">4. 수납 누락 의심 입금</h2>
+      <hr />
+      <div id="missingBody"></div>
+    </section>
+
+    <section class="section hidden" id="dateSummarySection">
+      <details class="shot-details" open>
+        <summary class="shot-summary">날짜별 비교 상세</summary>
+        <div class="simple-note">
+          상태가 <strong>합계일치(묶음/분할)</strong>로 보이면, 그 날짜는 총액은 맞지만 입금과 수납이 1:1 금액으로는 바로 안 맞는 날입니다.
+        </div>
+        <div id="dateSummaryBody" class="table-wrap" style="margin-top: 12px;"></div>
+      </details>
+    </section>
+
+    <section class="section hidden" id="groupingSection">
+      <details class="shot-details">
+        <summary class="shot-summary">묶음/분할 입금 참고</summary>
+        <div class="simple-note">
+          아래 표는 누락이 아니라, 같은 날짜 안에서 입금과 수납이 묶이거나 쪼개진 흔적입니다.
+        </div>
+        <div id="groupingBody" class="table-wrap" style="margin-top: 12px;"></div>
+      </details>
+    </section>
+
+    <section class="section hidden" id="carryoverSection">
+      <details class="shot-details">
+        <summary class="shot-summary">이월 제외 내역</summary>
+        <div class="simple-note">
+          회계연도 개시일 수납 중 최초수납일자가 더 이전인 건을 이월로 보고 비교에서 제외했습니다.
+        </div>
+        <div id="carryoverBody" class="table-wrap" style="margin-top: 12px;"></div>
+      </details>
+    </section>
+  </main>
+
+  <!-- 도교육청망 등에서 CDN이 막히면 아래 src를 /static/xlsx.full.min.js 로 바꿔서 쓰면 됩니다. -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script>
+    (function () {
+      const state = {
+        bankFiles: [],
+        receiptFiles: [],
+        bankRows: [],
+        receiptRows: [],
+        result: null
+      };
+
+      const el = {
+        bankDropZone: document.getElementById("bankDropZone"),
+        receiptDropZone: document.getElementById("receiptDropZone"),
+        bankInput: document.getElementById("bankInput"),
+        receiptInput: document.getElementById("receiptInput"),
+        bankFileList: document.getElementById("bankFileList"),
+        receiptFileList: document.getElementById("receiptFileList"),
+        pickBankBtn: document.getElementById("pickBankBtn"),
+        pickReceiptBtn: document.getElementById("pickReceiptBtn"),
+        clearBankBtn: document.getElementById("clearBankBtn"),
+        clearReceiptBtn: document.getElementById("clearReceiptBtn"),
+        analyzeBtn: document.getElementById("analyzeBtn"),
+        resetAllBtn: document.getElementById("resetAllBtn"),
+        excludeCarryover: document.getElementById("excludeCarryover"),
+        startDate: document.getElementById("startDate"),
+        endDate: document.getElementById("endDate"),
+        statusLine: document.getElementById("statusLine"),
+        promptText: document.getElementById("promptText"),
+        copyPromptBtn: document.getElementById("copyPromptBtn"),
+        resultSection: document.getElementById("resultSection"),
+        summaryCards: document.getElementById("summaryCards"),
+        headlineCard: document.getElementById("headlineCard"),
+        missingSection: document.getElementById("missingSection"),
+        missingBody: document.getElementById("missingBody"),
+        dateSummarySection: document.getElementById("dateSummarySection"),
+        dateSummaryBody: document.getElementById("dateSummaryBody"),
+        groupingSection: document.getElementById("groupingSection"),
+        groupingBody: document.getElementById("groupingBody"),
+        carryoverSection: document.getElementById("carryoverSection"),
+        carryoverBody: document.getElementById("carryoverBody"),
+        resultFileCountChip: document.getElementById("resultFileCountChip"),
+        resultDateCountChip: document.getElementById("resultDateCountChip")
+      };
+
+      function escapeHtml(value) {
+        return String(value == null ? "" : value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function formatMoney(value) {
+        const n = Number(value || 0);
+        return new Intl.NumberFormat("ko-KR").format(n) + "원";
+      }
+
+      function formatCount(value) {
+        return new Intl.NumberFormat("ko-KR").format(Number(value || 0));
+      }
+
+      function parseNumber(value) {
+        if (value == null || value === "") return null;
+        if (typeof value === "number" && Number.isFinite(value)) return Math.round(value);
+        const text = String(value).replace(/\s/g, "").replace(/,/g, "").replace(/원/g, "").replace(/₩/g, "");
+        if (!text || text === "-") return null;
+        const num = Number(text);
+        return Number.isFinite(num) ? Math.round(num) : null;
+      }
+
+      function parseDate(value) {
+        if (value == null || value === "") return null;
+
+        if (value instanceof Date && !isNaN(value.getTime())) {
+          return new Date(
+            value.getFullYear(),
+            value.getMonth(),
+            value.getDate(),
+            value.getHours(),
+            value.getMinutes(),
+            value.getSeconds()
+          );
+        }
+
+        if (typeof value === "number" && Number.isFinite(value)) {
+          const utcMillis = Math.round((value - 25569) * 86400 * 1000);
+          const date = new Date(utcMillis);
+          if (!isNaN(date.getTime())) {
+            return new Date(
+              date.getUTCFullYear(),
+              date.getUTCMonth(),
+              date.getUTCDate(),
+              date.getUTCHours(),
+              date.getUTCMinutes(),
+              date.getUTCSeconds()
+            );
+          }
+        }
+
+        const text = String(value).trim();
+        if (!text) return null;
+
+        const cleaned = text
+          .replace(/\./g, "-")
+          .replace(/\//g, "-")
+          .replace(/\s+/g, " ")
+          .trim();
+
+        const match = cleaned.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/);
+        if (match) {
+          const year = Number(match[1]);
+          const month = Number(match[2]) - 1;
+          const day = Number(match[3]);
+          const hour = Number(match[4] || 0);
+          const minute = Number(match[5] || 0);
+          const second = Number(match[6] || 0);
+          const date = new Date(year, month, day, hour, minute, second);
+          return isNaN(date.getTime()) ? null : date;
+        }
+
+        const direct = new Date(text);
+        return isNaN(direct.getTime()) ? null : direct;
+      }
+
+      function toDateKey(date) {
+        if (!(date instanceof Date) || isNaN(date.getTime())) return "";
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, "0");
+        const d = String(date.getDate()).padStart(2, "0");
+        return y + "-" + m + "-" + d;
+      }
+
+      function formatDateKey(key) {
+        return key ? key.replace(/-/g, ".") : "-";
+      }
+
+      function normalizeHeader(value) {
+        return String(value == null ? "" : value)
+          .replace(/\s+/g, "")
+          .replace(/[▲▼]/g, "")
+          .trim();
+      }
+
+      function sumBy(rows, key) {
+        return rows.reduce(function (acc, row) {
+          return acc + Number(row[key] || 0);
+        }, 0);
+      }
+
+      function groupBy(rows, key) {
+        return rows.reduce(function (acc, row) {
+          const k = row[key] || "";
+          if (!acc[k]) acc[k] = [];
+          acc[k].push(row);
+          return acc;
+        }, {});
+      }
+
+      function uniqueDates(rows, key) {
+        return Array.from(
+          rows.reduce(function (set, row) {
+            set.add(row[key]);
+            return set;
+          }, new Set())
+        ).filter(Boolean).sort();
+      }
+
+      function uniqueFiles(files) {
+        const map = new Map();
+        files.forEach(function (file) {
+          const key = [file.name, file.size, file.lastModified].join("::");
+          if (!map.has(key)) map.set(key, file);
+        });
+        return Array.from(map.values());
+      }
+
+      function dedupeRows(rows, keyBuilder) {
+        const map = new Map();
+        rows.forEach(function (row) {
+          const key = keyBuilder(row);
+          if (!map.has(key)) map.set(key, row);
+        });
+        return Array.from(map.values());
+      }
+
+      function isWithinRange(dateKey, startKey, endKey) {
+        return Boolean(dateKey) && dateKey >= startKey && dateKey <= endKey;
+      }
+
+      function buildPromptText() {
+        const start = el.startDate.value || "2025-03-01";
+        const end = el.endDate.value || "2026-02-28";
+        const carryRule = el.excludeCarryover.checked
+          ? start + " 수납건 중 최초수납일자가 " + start + "보다 이전인 건은 이월로 보고 비교에서 제외해 주세요."
+          : "회계연도 개시일 이월 제외는 적용하지 말아 주세요.";
+
+        return [
+          "농협 입출금거래내역 엑셀과 세입세출외현금 수납결의 엑셀을 비교해 주세요.",
+          "",
+          "검토 조건:",
+          "1) 검토기간: " + start + " ~ " + end,
+          "2) " + carryRule,
+          "3) 농협 거래내역은 같은 날짜 안에서 1건 입금이 여러 수납으로 나뉘거나, 여러 입금이 1건 수납으로 합쳐질 수 있으므로 단순 1:1 금액 비교만 하지 말고 같은 날짜 기준 입금합계와 수납합계를 먼저 비교해 주세요.",
+          "4) 결과는 아래 4가지로 나눠 표로 정리해 주세요.",
+          "   - 수납 누락 의심 입금",
+          "   - 합계일치(묶음/분할) 날짜",
+          "   - 이월 제외 내역",
+          "   - 날짜별 입금합계/수납합계 요약",
+          "5) 마지막에는 전체 결론을 한 줄로 정리해 주세요."
+        ].join("\n");
+      }
+
+      function setStatus(message, type) {
+        el.statusLine.textContent = message;
+        el.statusLine.className = "status-line";
+        if (type === "good") el.statusLine.classList.add("status-good");
+        if (type === "warn") el.statusLine.classList.add("status-warn");
+        if (type === "bad") el.statusLine.classList.add("status-bad");
+      }
+
+      function humanFileSize(size) {
+        const units = ["B", "KB", "MB", "GB"];
+        let n = Number(size || 0);
+        let idx = 0;
+        while (n >= 1024 && idx < units.length - 1) {
+          n /= 1024;
+          idx += 1;
+        }
+        return (idx === 0 ? String(Math.round(n)) : n.toFixed(1)) + " " + units[idx];
+      }
+
+      function renderFileListBetter(files, target) {
+        if (!files.length) {
+          target.innerHTML = '<div class="muted">올린 파일이 없습니다.</div>';
+          return;
+        }
+
+        target.innerHTML = files
+          .map(function (file) {
+            return (
+              '<div class="file-pill">' +
+              "<span>" + escapeHtml(file.name) + "</span>" +
+              "<small>" + escapeHtml(humanFileSize(file.size)) + "</small>" +
+              "</div>"
+            );
+          })
+          .join("");
+      }
+
+      function updatePromptBox() {
+        el.promptText.value = buildPromptText();
+      }
+
+      function attachDropZone(zone, input, onFiles) {
+        function openPicker() {
+          input.click();
+        }
+
+        function handleFiles(fileList) {
+          const files = Array.from(fileList || []);
+          if (!files.length) return;
+          onFiles(files);
+        }
+
+        zone.addEventListener("click", openPicker);
+        zone.addEventListener("keydown", function (event) {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            openPicker();
+          }
+        });
+
+        zone.addEventListener("dragover", function (event) {
+          event.preventDefault();
+          zone.classList.add("is-dragover");
+        });
+
+        zone.addEventListener("dragleave", function () {
+          zone.classList.remove("is-dragover");
+        });
+
+        zone.addEventListener("drop", function (event) {
+          event.preventDefault();
+          zone.classList.remove("is-dragover");
+          handleFiles(event.dataTransfer.files);
+        });
+
+        input.addEventListener("change", function (event) {
+          handleFiles(event.target.files);
+          input.value = "";
+        });
+      }
+
+      function addBankFiles(files) {
+        state.bankFiles = uniqueFiles(state.bankFiles.concat(files));
+        renderFileListBetter(state.bankFiles, el.bankFileList);
+      }
+
+      function addReceiptFiles(files) {
+        state.receiptFiles = uniqueFiles(state.receiptFiles.concat(files));
+        renderFileListBetter(state.receiptFiles, el.receiptFileList);
+      }
+
+      function clearBankFiles() {
+        state.bankFiles = [];
+        renderFileListBetter(state.bankFiles, el.bankFileList);
+      }
+
+      function clearReceiptFiles() {
+        state.receiptFiles = [];
+        renderFileListBetter(state.receiptFiles, el.receiptFileList);
+      }
+
+      function clearResults() {
+        state.result = null;
+        el.resultSection.classList.add("hidden");
+        el.missingSection.classList.add("hidden");
+        el.dateSummarySection.classList.add("hidden");
+        el.groupingSection.classList.add("hidden");
+        el.carryoverSection.classList.add("hidden");
+        el.summaryCards.innerHTML = "";
+        el.headlineCard.innerHTML = "";
+        el.missingBody.innerHTML = "";
+        el.dateSummaryBody.innerHTML = "";
+        el.groupingBody.innerHTML = "";
+        el.carryoverBody.innerHTML = "";
+        el.resultFileCountChip.textContent = "파일 0개";
+        el.resultDateCountChip.textContent = "날짜 0일";
+      }
+
+      function resetAll() {
+        clearBankFiles();
+        clearReceiptFiles();
+        clearResults();
+        setStatus("파일을 올린 뒤 검토 실행을 누르세요.");
+      }
+
+      function findHeaderRowIndex(rows, requiredTokens) {
+        for (let i = 0; i < rows.length; i += 1) {
+          const row = rows[i] || [];
+          const normalized = row.map(normalizeHeader);
+          const ok = requiredTokens.every(function (token) {
+            return normalized.some(function (cell) {
+              return cell.indexOf(token) >= 0;
+            });
+          });
+          if (ok) return i;
+        }
+        return -1;
+      }
+
+      function mapBankColumns(headerRow) {
+        const columns = {};
+        headerRow.forEach(function (cell, index) {
+          const key = normalizeHeader(cell);
+          if (key === "구분") columns.seq = index;
+          else if (key.indexOf("거래일자") >= 0) columns.date = index;
+          else if (key.indexOf("출금금액") >= 0) columns.withdraw = index;
+          else if (key.indexOf("입금금액") >= 0) columns.deposit = index;
+          else if (key.indexOf("거래내용") >= 0) columns.content = index;
+          else if (key.indexOf("거래기록사항") >= 0) columns.memo = index;
+          else if (key.indexOf("거래점") >= 0) columns.branch = index;
+        });
+        return columns;
+      }
+
+      function mapReceiptColumns(headerRow) {
+        const columns = {};
+        headerRow.forEach(function (cell, index) {
+          const key = normalizeHeader(cell);
+
+          if (key.indexOf("수납일자") >= 0) columns.date = index;
+          else if (key.indexOf("세외현금종목") >= 0) columns.category = index;
+          else if (key.indexOf("원가통계비목") >= 0) columns.account = index;
+          else if (key === "제목") columns.title = index;
+          else if (key === "납부자") columns.payer = index;
+          else if (key.indexOf("수납금액") >= 0) columns.amount = index;
+          else if (key.indexOf("기반환액") >= 0) columns.refunded = index;
+          else if (key === "잔액") columns.balance = index;
+          else if (key.indexOf("진행상태") >= 0) columns.status = index;
+          else if (key === "수납번호") columns.receiptNo = index;
+          else if (key.indexOf("최초수납일자") >= 0) columns.firstDate = index;
+          else if (key.indexOf("최초수납번호") >= 0) columns.firstReceiptNo = index;
+        });
+        return columns;
+      }
+
+      async function readWorkbook(file) {
+        const buffer = await file.arrayBuffer();
+        return XLSX.read(buffer, {
+          type: "array",
+          cellDates: false,
+          raw: false
+        });
+      }
+
+      function parseBankWorkbook(file, workbook) {
+        const rows = [];
+
+        workbook.SheetNames.forEach(function (sheetName) {
+          const sheet = workbook.Sheets[sheetName];
+          const matrix = XLSX.utils.sheet_to_json(sheet, {
+            header: 1,
+            raw: false,
+            defval: ""
+          });
+
+          const headerIndex = findHeaderRowIndex(matrix, ["거래일자", "입금금액"]);
+          if (headerIndex < 0) return;
+
+          const columns = mapBankColumns(matrix[headerIndex] || []);
+          if (columns.date == null || columns.deposit == null) return;
+
+          for (let i = headerIndex + 1; i < matrix.length; i += 1) {
+            const row = matrix[i] || [];
+            const seqText = String(row[columns.seq] == null ? "" : row[columns.seq]).trim();
+            const date = parseDate(row[columns.date]);
+            const deposit = parseNumber(row[columns.deposit]);
+            const withdraw = parseNumber(row[columns.withdraw]);
+            const content = String(row[columns.content] == null ? "" : row[columns.content]).trim();
+            const memo = String(row[columns.memo] == null ? "" : row[columns.memo]).trim();
+            const branch = String(row[columns.branch] == null ? "" : row[columns.branch]).trim();
+
+            if (!seqText || !/^\d+$/.test(seqText)) continue;
+            if (!date) continue;
+
+            rows.push({
+              sourceFile: file.name,
+              sheetName: sheetName,
+              seq: Number(seqText),
+              datetime: date,
+              dateKey: toDateKey(date),
+              deposit: deposit,
+              withdraw: withdraw,
+              content: content,
+              memo: memo,
+              branch: branch
+            });
+          }
+        });
+
+        return rows;
+      }
+
+      function parseReceiptWorkbook(file, workbook) {
+        const rows = [];
+
+        workbook.SheetNames.forEach(function (sheetName) {
+          const sheet = workbook.Sheets[sheetName];
+          const matrix = XLSX.utils.sheet_to_json(sheet, {
+            header: 1,
+            raw: false,
+            defval: ""
+          });
+
+          const headerIndex = findHeaderRowIndex(matrix, ["수납일자", "수납금액"]);
+          if (headerIndex < 0) return;
+
+          const columns = mapReceiptColumns(matrix[headerIndex] || []);
+          if (columns.date == null || columns.amount == null) return;
+
+          for (let i = headerIndex + 1; i < matrix.length; i += 1) {
+            const row = matrix[i] || [];
+            const rawDate = row[columns.date];
+
+            if (typeof rawDate === "string" && rawDate.indexOf("총") >= 0) break;
+
+            const date = parseDate(rawDate);
+            if (!date) continue;
+
+            const amount = parseNumber(row[columns.amount]);
+            if (amount == null) continue;
+
+            const firstDate = parseDate(row[columns.firstDate]);
+
+            rows.push({
+              sourceFile: file.name,
+              sheetName: sheetName,
+              date: date,
+              dateKey: toDateKey(date),
+              category: String(row[columns.category] == null ? "" : row[columns.category]).trim(),
+              account: String(row[columns.account] == null ? "" : row[columns.account]).trim(),
+              title: String(row[columns.title] == null ? "" : row[columns.title]).trim(),
+              payer: String(row[columns.payer] == null ? "" : row[columns.payer]).trim(),
+              amount: amount,
+              refunded: parseNumber(row[columns.refunded]) || 0,
+              balance: parseNumber(row[columns.balance]) || 0,
+              status: String(row[columns.status] == null ? "" : row[columns.status]).trim(),
+              receiptNo: String(row[columns.receiptNo] == null ? "" : row[columns.receiptNo]).trim(),
+              firstDate: firstDate,
+              firstDateKey: toDateKey(firstDate),
+              firstReceiptNo: String(row[columns.firstReceiptNo] == null ? "" : row[columns.firstReceiptNo]).trim()
+            });
+          }
+        });
+
+        return rows;
+      }
+
+      function exactRemainders(bankRows, receiptRows) {
+        const bankMap = new Map();
+        const receiptMap = new Map();
+
+        bankRows.forEach(function (row) {
+          const key = String(row.deposit);
+          if (!bankMap.has(key)) bankMap.set(key, []);
+          bankMap.get(key).push(row);
+        });
+
+        receiptRows.forEach(function (row) {
+          const key = String(row.amount);
+          if (!receiptMap.has(key)) receiptMap.set(key, []);
+          receiptMap.get(key).push(row);
+        });
+
+        const keys = new Set([].concat(Array.from(bankMap.keys()), Array.from(receiptMap.keys())));
+        const leftBanks = [];
+        const leftReceipts = [];
+        let matchedCount = 0;
+
+        keys.forEach(function (key) {
+          const banks = bankMap.get(key) || [];
+          const receipts = receiptMap.get(key) || [];
+          const matchCount = Math.min(banks.length, receipts.length);
+          matchedCount += matchCount;
+          if (banks.length > matchCount) leftBanks.push.apply(leftBanks, banks.slice(matchCount));
+          if (receipts.length > matchCount) leftReceipts.push.apply(leftReceipts, receipts.slice(matchCount));
+        });
+
+        return {
+          matchedCount: matchedCount,
+          leftBanks: leftBanks.sort(function (a, b) {
+            return Number(a.deposit || 0) - Number(b.deposit || 0);
+          }),
+          leftReceipts: leftReceipts.sort(function (a, b) {
+            return Number(a.amount || 0) - Number(b.amount || 0);
+          })
+        };
+      }
+
+      function amountListSummary(rows, amountKey) {
+        if (!rows.length) return "-";
+        const list = rows.map(function (row) {
+          return formatMoney(row[amountKey]);
+        });
+        const visible = list.slice(0, 8);
+        return visible.join(", ") + (list.length > 8 ? " 외 " + formatCount(list.length - 8) + "건" : "");
+      }
+
+      function analyzeRows(bankRows, receiptRows, options) {
+        const startKey = options.startKey;
+        const endKey = options.endKey;
+
+        const bankDeposits = bankRows.filter(function (row) {
+          return Number(row.deposit || 0) > 0 && isWithinRange(row.dateKey, startKey, endKey);
+        });
+
+        let filteredReceipts = receiptRows.filter(function (row) {
+          return Number(row.amount || 0) > 0 && isWithinRange(row.dateKey, startKey, endKey);
+        });
+
+        const excludedCarryovers = [];
+
+        if (options.excludeCarryover) {
+          filteredReceipts = filteredReceipts.filter(function (row) {
+            const isCarryover =
+              row.dateKey === startKey &&
+              row.firstDateKey &&
+              row.firstDateKey < startKey;
+
+            if (isCarryover) excludedCarryovers.push(row);
+            return !isCarryover;
+          });
+        }
+
+        const bankByDate = groupBy(bankDeposits, "dateKey");
+        const receiptByDate = groupBy(filteredReceipts, "dateKey");
+        const allDates = Array.from(new Set([].concat(Object.keys(bankByDate), Object.keys(receiptByDate)))).sort();
+
+        const dateSummaries = [];
+        const missingCandidates = [];
+        const overReceiptCandidates = [];
+        const groupingDates = [];
+
+        let exactMatchDates = 0;
+        let groupingMatchDates = 0;
+        let missingDates = 0;
+        let overReceiptDates = 0;
+
+        allDates.forEach(function (dateKey) {
+          const banks = (bankByDate[dateKey] || []).slice().sort(function (a, b) {
+            return a.datetime - b.datetime;
+          });
+
+          const receipts = (receiptByDate[dateKey] || []).slice().sort(function (a, b) {
+            return a.date - b.date || Number(a.amount || 0) - Number(b.amount || 0);
+          });
+
+          const bankSum = sumBy(banks, "deposit");
+          const receiptSum = sumBy(receipts, "amount");
+          const diff = bankSum - receiptSum;
+          const exact = exactRemainders(banks, receipts);
+
+          let status = "";
+          let note = "";
+
+          if (diff > 0) {
+            status = "수납누락 의심";
+            note = "은행 입금합계가 " + formatMoney(diff) + " 더 큼";
+            missingDates += 1;
+
+            (exact.leftBanks.length ? exact.leftBanks : banks).forEach(function (row) {
+              missingCandidates.push({
+                dateKey: dateKey,
+                deposit: row.deposit,
+                datetime: row.datetime,
+                content: row.content,
+                memo: row.memo,
+                sourceFile: row.sourceFile,
+                dateBankSum: bankSum,
+                dateReceiptSum: receiptSum,
+                diff: diff
+              });
+            });
+          } else if (diff < 0) {
+            status = "수납초과/날짜불일치 의심";
+            note = "수납합계가 " + formatMoney(Math.abs(diff)) + " 더 큼";
+            overReceiptDates += 1;
+
+            (exact.leftReceipts.length ? exact.leftReceipts : receipts).forEach(function (row) {
+              overReceiptCandidates.push({
+                dateKey: dateKey,
+                amount: row.amount,
+                title: row.title,
+                payer: row.payer,
+                receiptNo: row.receiptNo,
+                sourceFile: row.sourceFile,
+                dateBankSum: bankSum,
+                dateReceiptSum: receiptSum,
+                diff: diff
+              });
+            });
+          } else if (exact.leftBanks.length || exact.leftReceipts.length) {
+            status = "합계일치(묶음/분할)";
+            note =
+              "남은 은행: " +
+              amountListSummary(exact.leftBanks, "deposit") +
+              " / 남은 수납: " +
+              amountListSummary(exact.leftReceipts, "amount");
+            groupingMatchDates += 1;
+            groupingDates.push({
+              dateKey: dateKey,
+              bankSum: bankSum,
+              receiptSum: receiptSum,
+              banks: banks,
+              receipts: receipts,
+              leftBanks: exact.leftBanks,
+              leftReceipts: exact.leftReceipts
+            });
+          } else {
+            status = "합계일치(1:1)";
+            note = "같은 날짜에 금액도 바로 맞음";
+            exactMatchDates += 1;
+          }
+
+          dateSummaries.push({
+            dateKey: dateKey,
+            bankCount: banks.length,
+            receiptCount: receipts.length,
+            bankSum: bankSum,
+            receiptSum: receiptSum,
+            diff: diff,
+            status: status,
+            note: note
+          });
+        });
+
+        return {
+          bankDeposits: bankDeposits,
+          receipts: filteredReceipts,
+          excludedCarryovers: excludedCarryovers.sort(function (a, b) {
+            return Number(a.amount || 0) - Number(b.amount || 0);
+          }),
+          dateSummaries: dateSummaries,
+          missingCandidates: missingCandidates,
+          overReceiptCandidates: overReceiptCandidates,
+          groupingDates: groupingDates,
+          totals: {
+            bankDepositCount: bankDeposits.length,
+            bankDepositSum: sumBy(bankDeposits, "deposit"),
+            receiptCount: filteredReceipts.length,
+            receiptSum: sumBy(filteredReceipts, "amount"),
+            excludedCarryoverCount: excludedCarryovers.length,
+            excludedCarryoverSum: sumBy(excludedCarryovers, "amount"),
+            depositDateCount: allDates.length,
+            exactMatchDates: exactMatchDates,
+            groupingMatchDates: groupingMatchDates,
+            missingDates: missingDates,
+            overReceiptDates: overReceiptDates
+          }
+        };
+      }
+
+      function renderSummary(result) {
+        const totals = result.totals;
+        const hasIssue = totals.missingDates > 0 || totals.overReceiptDates > 0;
+
+        el.summaryCards.innerHTML = [
+          {
+            title: "은행 입금 합계",
+            value: formatMoney(totals.bankDepositSum),
+            foot: "입금 " + formatCount(totals.bankDepositCount) + "건"
+          },
+          {
+            title: "수납 합계",
+            value: formatMoney(totals.receiptSum),
+            foot: "수납 " + formatCount(totals.receiptCount) + "건"
+          },
+          {
+            title: "이월 제외",
+            value: formatMoney(totals.excludedCarryoverSum),
+            foot: formatCount(totals.excludedCarryoverCount) + "건 제외"
+          },
+          {
+            title: "날짜별 합계",
+            value: formatCount(totals.depositDateCount) + "일",
+            foot: "exact " + formatCount(totals.exactMatchDates) + "일 / 묶음분할 " + formatCount(totals.groupingMatchDates) + "일"
+          }
+        ]
+          .map(function (item) {
+            return (
+              '<div class="card summary-card">' +
+              "<h3>" + escapeHtml(item.title) + "</h3>" +
+              '<div class="summary-number">' + escapeHtml(item.value) + "</div>" +
+              '<div class="summary-foot">' + escapeHtml(item.foot) + "</div>" +
+              "</div>"
+            );
+          })
+          .join("");
+
+        if (!hasIssue) {
+          el.headlineCard.innerHTML =
+            '<div class="badge-good">결론: 수납 누락 의심 없음</div>' +
+            '<p class="simple-note">검토기간 안에서 날짜별 입금합계와 수납합계가 모두 일치했습니다. 단, 일부 날짜는 묶음/분할 입금이라 1:1 금액 매칭만 보면 오탐이 생길 수 있습니다.</p>';
+        } else {
+          const chips = [];
+          if (totals.missingDates > 0) chips.push('<span class="badge-bad">수납누락 의심 ' + formatCount(totals.missingDates) + "일</span>");
+          if (totals.overReceiptDates > 0) chips.push('<span class="badge-warn">수납초과/날짜불일치 의심 ' + formatCount(totals.overReceiptDates) + "일</span>");
+
+          el.headlineCard.innerHTML =
+            chips.join(" ") +
+            '<p class="simple-note">아래 표를 보고 날짜별 차이 금액과 후보 거래를 먼저 확인하세요. NH 거래내역은 묶음/분할이 있어서 같은 날짜 총액이 먼저입니다.</p>';
+        }
+
+        el.resultFileCountChip.textContent =
+          "파일 " + formatCount(state.bankFiles.length + state.receiptFiles.length) + "개";
+        el.resultDateCountChip.textContent =
+          "날짜 " + formatCount(result.totals.depositDateCount) + "일";
+      }
+
+      function renderMissing(result) {
+        const rows = result.missingCandidates;
+        const overRows = result.overReceiptCandidates;
+
+        if (!rows.length && !overRows.length) {
+          el.missingBody.innerHTML =
+            '<div class="empty-box">수납 누락 의심 입금이 없습니다. 날짜별 입금합계와 수납합계가 모두 맞았습니다.</div>';
+          return;
+        }
+
+        let html = "";
+
+        if (rows.length) {
+          html +=
+            '<div class="card">' +
+            '<h3 class="local-h3">수납 누락 의심 입금</h3>' +
+            '<div class="table-wrap">' +
+            '<table class="result-table">' +
+            "<thead><tr>" +
+            "<th>날짜</th>" +
+            "<th>거래일시</th>" +
+            '<th class="numeric">입금금액</th>' +
+            "<th>거래내용</th>" +
+            "<th>거래기록사항</th>" +
+            '<th class="numeric">해당일 입금합계</th>' +
+            '<th class="numeric">해당일 수납합계</th>' +
+            '<th class="numeric">차이</th>' +
+            "<th>원본파일</th>" +
+            "</tr></thead><tbody>" +
+            rows
+              .map(function (row) {
+                const timeText = row.datetime instanceof Date && !isNaN(row.datetime.getTime())
+                  ? row.datetime.getFullYear() +
+                    "-" +
+                    String(row.datetime.getMonth() + 1).padStart(2, "0") +
+                    "-" +
+                    String(row.datetime.getDate()).padStart(2, "0") +
+                    " " +
+                    String(row.datetime.getHours()).padStart(2, "0") +
+                    ":" +
+                    String(row.datetime.getMinutes()).padStart(2, "0") +
+                    ":" +
+                    String(row.datetime.getSeconds()).padStart(2, "0")
+                  : "";
+                return (
+                  "<tr>" +
+                  "<td class=\"nowrap\">" + escapeHtml(formatDateKey(row.dateKey)) + "</td>" +
+                  "<td class=\"nowrap mono\">" + escapeHtml(timeText) + "</td>" +
+                  '<td class="numeric">' + escapeHtml(formatMoney(row.deposit)) + "</td>" +
+                  "<td>" + escapeHtml(row.content || "-") + "</td>" +
+                  "<td>" + escapeHtml(row.memo || "-") + "</td>" +
+                  '<td class="numeric">' + escapeHtml(formatMoney(row.dateBankSum)) + "</td>" +
+                  '<td class="numeric">' + escapeHtml(formatMoney(row.dateReceiptSum)) + "</td>" +
+                  '<td class="numeric">' + escapeHtml(formatMoney(row.diff)) + "</td>" +
+                  "<td>" + escapeHtml(row.sourceFile || "-") + "</td>" +
+                  "</tr>"
+                );
+              })
+              .join("") +
+            "</tbody></table></div></div>";
+        }
+
+        if (overRows.length) {
+          html +=
+            '<div class="card">' +
+            '<h3 class="local-h3">수납 초과 / 날짜 불일치 의심</h3>' +
+            '<div class="table-wrap">' +
+            '<table class="result-table">' +
+            "<thead><tr>" +
+            "<th>날짜</th>" +
+            '<th class="numeric">수납금액</th>' +
+            "<th>제목</th>" +
+            "<th>납부자</th>" +
+            "<th>수납번호</th>" +
+            '<th class="numeric">해당일 입금합계</th>' +
+            '<th class="numeric">해당일 수납합계</th>' +
+            '<th class="numeric">차이</th>' +
+            "<th>원본파일</th>" +
+            "</tr></thead><tbody>" +
+            overRows
+              .map(function (row) {
+                return (
+                  "<tr>" +
+                  "<td class=\"nowrap\">" + escapeHtml(formatDateKey(row.dateKey)) + "</td>" +
+                  '<td class="numeric">' + escapeHtml(formatMoney(row.amount)) + "</td>" +
+                  "<td>" + escapeHtml(row.title || "-") + "</td>" +
+                  "<td>" + escapeHtml(row.payer || "-") + "</td>" +
+                  "<td>" + escapeHtml(row.receiptNo || "-") + "</td>" +
+                  '<td class="numeric">' + escapeHtml(formatMoney(row.dateBankSum)) + "</td>" +
+                  '<td class="numeric">' + escapeHtml(formatMoney(row.dateReceiptSum)) + "</td>" +
+                  '<td class="numeric">' + escapeHtml(formatMoney(Math.abs(row.diff))) + "</td>" +
+                  "<td>" + escapeHtml(row.sourceFile || "-") + "</td>" +
+                  "</tr>"
+                );
+              })
+              .join("") +
+            "</tbody></table></div></div>";
+        }
+
+        el.missingBody.innerHTML = html;
+      }
+
+      function renderDateSummary(result) {
+        const rows = result.dateSummaries;
+        if (!rows.length) {
+          el.dateSummaryBody.innerHTML = '<div class="empty-box">비교할 날짜가 없습니다.</div>';
+          return;
+        }
+
+        el.dateSummaryBody.innerHTML =
+          '<table class="result-table">' +
+          "<thead><tr>" +
+          "<th>날짜</th>" +
+          '<th class="numeric">은행입금건수</th>' +
+          '<th class="numeric">수납건수</th>' +
+          '<th class="numeric">입금합계</th>' +
+          '<th class="numeric">수납합계</th>' +
+          '<th class="numeric">차이</th>' +
+          "<th>상태</th>" +
+          "<th>메모</th>" +
+          "</tr></thead><tbody>" +
+          rows
+            .map(function (row) {
+              const badgeClass =
+                row.status === "합계일치(1:1)" ? "badge-good" :
+                row.status === "합계일치(묶음/분할)" ? "badge-neutral" :
+                row.status === "수납누락 의심" ? "badge-bad" :
+                "badge-warn";
+
+              return (
+                "<tr>" +
+                "<td class=\"nowrap\">" + escapeHtml(formatDateKey(row.dateKey)) + "</td>" +
+                '<td class="numeric">' + escapeHtml(formatCount(row.bankCount)) + "</td>" +
+                '<td class="numeric">' + escapeHtml(formatCount(row.receiptCount)) + "</td>" +
+                '<td class="numeric">' + escapeHtml(formatMoney(row.bankSum)) + "</td>" +
+                '<td class="numeric">' + escapeHtml(formatMoney(row.receiptSum)) + "</td>" +
+                '<td class="numeric">' + escapeHtml(formatMoney(Math.abs(row.diff))) + (row.diff === 0 ? "" : (row.diff > 0 ? " 수납부족" : " 수납초과")) + "</td>" +
+                "<td><span class=\"" + badgeClass + "\">" + escapeHtml(row.status) + "</span></td>" +
+                '<td class="cell-pre">' + escapeHtml(row.note || "-") + "</td>" +
+                "</tr>"
+              );
+            })
+            .join("") +
+          "</tbody></table>";
+      }
+
+      function renderGrouping(result) {
+        const rows = result.groupingDates;
+        if (!rows.length) {
+          el.groupingBody.innerHTML = '<div class="empty-box">묶음/분할로 분류된 날짜가 없습니다.</div>';
+          return;
+        }
+
+        el.groupingBody.innerHTML =
+          '<table class="result-table">' +
+          "<thead><tr>" +
+          "<th>날짜</th>" +
+          '<th class="numeric">입금합계</th>' +
+          '<th class="numeric">수납합계</th>' +
+          "<th>exact 매칭 후 남은 은행금액</th>" +
+          "<th>exact 매칭 후 남은 수납금액</th>" +
+          "</tr></thead><tbody>" +
+          rows
+            .map(function (row) {
+              return (
+                "<tr>" +
+                "<td class=\"nowrap\">" + escapeHtml(formatDateKey(row.dateKey)) + "</td>" +
+                '<td class="numeric">' + escapeHtml(formatMoney(row.bankSum)) + "</td>" +
+                '<td class="numeric">' + escapeHtml(formatMoney(row.receiptSum)) + "</td>" +
+                "<td>" + escapeHtml(amountListSummary(row.leftBanks, "deposit")) + "</td>" +
+                "<td>" + escapeHtml(amountListSummary(row.leftReceipts, "amount")) + "</td>" +
+                "</tr>"
+              );
+            })
+            .join("") +
+          "</tbody></table>";
+      }
+
+      function renderCarryovers(result) {
+        const rows = result.excludedCarryovers;
+        if (!rows.length) {
+          el.carryoverBody.innerHTML = '<div class="empty-box">이월 제외 내역이 없습니다.</div>';
+          return;
+        }
+
+        el.carryoverBody.innerHTML =
+          '<table class="result-table">' +
+          "<thead><tr>" +
+          "<th>수납일자</th>" +
+          '<th class="numeric">수납금액</th>' +
+          "<th>제목</th>" +
+          "<th>납부자</th>" +
+          "<th>최초수납일자</th>" +
+          "<th>수납번호</th>" +
+          "<th>최초수납번호</th>" +
+          "</tr></thead><tbody>" +
+          rows
+            .map(function (row) {
+              return (
+                "<tr>" +
+                "<td class=\"nowrap\">" + escapeHtml(formatDateKey(row.dateKey)) + "</td>" +
+                '<td class="numeric">' + escapeHtml(formatMoney(row.amount)) + "</td>" +
+                "<td>" + escapeHtml(row.title || "-") + "</td>" +
+                "<td>" + escapeHtml(row.payer || "-") + "</td>" +
+                "<td class=\"nowrap\">" + escapeHtml(formatDateKey(row.firstDateKey)) + "</td>" +
+                "<td>" + escapeHtml(row.receiptNo || "-") + "</td>" +
+                "<td>" + escapeHtml(row.firstReceiptNo || "-") + "</td>" +
+                "</tr>"
+              );
+            })
+            .join("") +
+          "</tbody></table>";
+      }
+
+      async function parseAllFiles() {
+        const bankRows = [];
+        const receiptRows = [];
+
+        for (const file of state.bankFiles) {
+          const workbook = await readWorkbook(file);
+          const rows = parseBankWorkbook(file, workbook);
+          bankRows.push.apply(bankRows, rows);
+        }
+
+        for (const file of state.receiptFiles) {
+          const workbook = await readWorkbook(file);
+          const rows = parseReceiptWorkbook(file, workbook);
+          receiptRows.push.apply(receiptRows, rows);
+        }
+
+        state.bankRows = dedupeRows(bankRows, function (row) {
+          return [
+            row.dateKey,
+            row.datetime ? row.datetime.toISOString() : "",
+            row.deposit || 0,
+            row.withdraw || 0,
+            row.content || "",
+            row.memo || "",
+            row.branch || ""
+          ].join("|");
+        });
+
+        state.receiptRows = dedupeRows(receiptRows, function (row) {
+          return [
+            row.dateKey,
+            row.amount || 0,
+            row.receiptNo || "",
+            row.title || "",
+            row.payer || ""
+          ].join("|");
+        });
+      }
+
+      async function analyze() {
+        clearResults();
+
+        if (!state.bankFiles.length) {
+          setStatus("농협 입출금 거래내역 파일을 먼저 올려 주세요.", "bad");
+          return;
+        }
+
+        if (!state.receiptFiles.length) {
+          setStatus("세입세출외현금 수납결의 파일을 먼저 올려 주세요.", "bad");
+          return;
+        }
+
+        const start = parseDate(el.startDate.value);
+        const end = parseDate(el.endDate.value);
+
+        if (!start || !end) {
+          setStatus("검토 시작일과 종료일을 확인해 주세요.", "bad");
+          return;
+        }
+
+        if (toDateKey(start) > toDateKey(end)) {
+          setStatus("검토 시작일이 종료일보다 뒤입니다.", "bad");
+          return;
+        }
+
+        try {
+          setStatus("엑셀 파일을 읽는 중입니다...", "warn");
+          await parseAllFiles();
+
+          if (!state.bankRows.length) {
+            setStatus("농협 파일에서 입출금 거래내역을 읽지 못했습니다. 파일 형식을 확인해 주세요.", "bad");
+            return;
+          }
+
+          if (!state.receiptRows.length) {
+            setStatus("수납결의 파일에서 수납내역을 읽지 못했습니다. 파일 형식을 확인해 주세요.", "bad");
+            return;
+          }
+
+          const result = analyzeRows(state.bankRows, state.receiptRows, {
+            startKey: toDateKey(start),
+            endKey: toDateKey(end),
+            excludeCarryover: el.excludeCarryover.checked
+          });
+
+          state.result = result;
+
+          renderSummary(result);
+          renderMissing(result);
+          renderDateSummary(result);
+          renderGrouping(result);
+          renderCarryovers(result);
+
+          el.resultSection.classList.remove("hidden");
+          el.missingSection.classList.remove("hidden");
+          el.dateSummarySection.classList.remove("hidden");
+          el.groupingSection.classList.remove("hidden");
+          el.carryoverSection.classList.remove("hidden");
+
+          if (!result.missingCandidates.length && !result.overReceiptCandidates.length) {
+            setStatus(
+              "검토 완료: 날짜별 입금합계와 수납합계가 모두 일치했습니다. 수납 누락 의심은 없습니다.",
+              "good"
+            );
+          } else {
+            setStatus(
+              "검토 완료: 차이가 있는 날짜가 있습니다. 아래 표를 확인해 주세요.",
+              "warn"
+            );
+          }
+        } catch (error) {
+          console.error(error);
+          setStatus("검토 중 오류가 발생했습니다. 콘솔과 파일 형식을 확인해 주세요.", "bad");
+        }
+      }
+
+      function copyPrompt() {
+        const text = el.promptText.value;
+        navigator.clipboard.writeText(text).then(function () {
+          setStatus("프롬프트를 복사했습니다.", "good");
+        }).catch(function () {
+          setStatus("클립보드 복사에 실패했습니다. 텍스트를 직접 복사해 주세요.", "warn");
+        });
+      }
+
+      function bindEvents() {
+        attachDropZone(el.bankDropZone, el.bankInput, addBankFiles);
+        attachDropZone(el.receiptDropZone, el.receiptInput, addReceiptFiles);
+
+        el.pickBankBtn.addEventListener("click", function () {
+          el.bankInput.click();
+        });
+
+        el.pickReceiptBtn.addEventListener("click", function () {
+          el.receiptInput.click();
+        });
+
+        el.clearBankBtn.addEventListener("click", function () {
+          clearBankFiles();
+        });
+
+        el.clearReceiptBtn.addEventListener("click", function () {
+          clearReceiptFiles();
+        });
+
+        el.resetAllBtn.addEventListener("click", resetAll);
+        el.analyzeBtn.addEventListener("click", analyze);
+        el.copyPromptBtn.addEventListener("click", copyPrompt);
+
+        [el.startDate, el.endDate, el.excludeCarryover].forEach(function (node) {
+          node.addEventListener("change", updatePromptBox);
+        });
+      }
+
+      function init() {
+        renderFileListBetter(state.bankFiles, el.bankFileList);
+        renderFileListBetter(state.receiptFiles, el.receiptFileList);
+        updatePromptBox();
+        bindEvents();
+      }
+
+      init();
+    })();
+  </script>
+
+  <script src="/static/footer.js"></script>
+  <script src="/static/global-loader.js?v=1"></script>
+</body>
+</html>
